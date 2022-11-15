@@ -135,7 +135,7 @@ async def old_request_to_new(
                     {
                         "type": "update_metadata",
                         # The request used to require "new_root" be in solver so the potential KeyError is good
-                        "new_metadata": "0x" + this_solver["new_root"].hex(),
+                        "new_metadata": "(0x" + this_solver["new_root"].hex() + ")",
                     }
                 ],
             ]
@@ -767,7 +767,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                         }
                     )
 
-                    change_action: WalletAction = action_aliases["direct_payment"].from_solver(change_alias)
+                    change_action: WalletAction = action_aliases["direct_payment"].from_solver(change_alias).de_alias()
 
                     if change_action.name() in outer_action_parsers:
                         new_outer_actions = [*outer_actions[coin_spend.coin], change_action]
@@ -1080,11 +1080,110 @@ async def decontruct_spend(
             {
                 **outer_description.info,
                 **inner_description.info,
+                **(await wallet_state_manager.describe_spend(spend)).info,
             }
         )
 
         final_actions.append(Solver({"with": whole_description, "do": [*outer_solvers, *inner_solvers]}))
 
     # Step 4: Attempt to group coins in some way
+    asset_types: List[List[Solver]] = []
+    amounts: List[int] = []
+    action_lists: List[List[Solver]] = []
+    for action in final_actions:
+        types: List[Solver] = action["with"]["asset_types"] if "asset_types" in action["with"] else []
+        if types in asset_types:
+            index = asset_types.index(types)
+            amounts[index] += cast_to_int(action["with"]["amount"])
+            action_lists[index].extend(action["do"])
+        else:
+            asset_types.append(types)
+            amounts.append(cast_to_int(action["with"]["amount"]))
+            action_lists.append(action["do"])
 
-    return Solver({"actions": final_actions})
+    grouped_actions: List[Solver] = []
+    for typs, amount, do in zip(asset_types, amounts, action_lists):
+        grouped_actions.append(Solver({"with": {"asset_types": typs, "amount": amount}, "do": do}))
+
+    return Solver({"actions": grouped_actions})
+
+
+async def generate_summary_complement(wallet_state_manager: Any, summary: Solver, additional_summary: Solver) -> Solver:
+    comp_actions: List[Solver] = []
+    comp_bundle_actions: List[Solver] = []
+    bundle_actions = summary["bundle_actions"] if "bundle_actions" in summary else []
+    for total_action in [*summary["actions"], *bundle_actions]:
+        actions_to_loop = [total_action] if total_action in bundle_actions else total_action["do"]
+        for action in actions_to_loop:
+            if action["type"] == OfferedAmount.name():
+                new_p2_puzhash: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+                self_payment: Payment = Payment(new_p2_puzhash, cast_to_int(action["amount"]), [new_p2_puzhash])
+                asset_types: List[Solver] = (
+                    total_action["with"]["asset_types"] if "asset_types" in total_action["with"] else []
+                )
+                comp_bundle_actions.append(RequestPayment(asset_types, None, [self_payment]).to_solver())
+            elif action["type"] == RequestPayment.name():
+                requested_payment = RequestPayment.from_solver(action)
+                offered_amount: int = sum(p.amount for p in requested_payment.payments)
+                comp_actions.append(
+                    Solver(
+                        {
+                            "with": {"asset_types": requested_payment.asset_types, "amount": str(offered_amount)},
+                            "do": [OfferedAmount(offered_amount).to_solver()],
+                        }
+                    )
+                )
+    return Solver(
+        {
+            "actions": [
+                *comp_actions,
+                *(additional_summary["actions"] if "actions" in additional_summary else []),
+            ],
+            "bundle_actions": [
+                *comp_bundle_actions,
+                *(additional_summary["bundle_actions"] if "bundle_actions" in additional_summary else []),
+            ],
+        }
+    )
+
+
+async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver, fee: uint64 = uint64(0)) -> Solver:
+    actions: List[Solver] = []
+    for key, solver in old_solver.info.items():
+        try:
+            asset_id: bytes32 = bytes32.from_hexstr(key)
+        except ValueError:
+            continue
+
+        wallet: OuterWallet = await wallet_state_manager.get_wallet_for_asset_id(key)
+        if wallet.type() == WalletType.DATA_LAYER:
+            asset_types = wallet.get_asset_types(Solver({"launcher_id": "0x" + key if key[0:2] != "0x" else key}))
+            actions.append(
+                Solver(
+                    {
+                        "with": {
+                            "asset_types": asset_types,
+                            "amount": "1",
+                        },
+                        "do": [
+                            {
+                                "type": "update_metadata",
+                                "new_metadata": "(0x" + Solver(solver)["new_root"].hex() + ")",
+                            }
+                        ],
+                    }
+                )
+            )
+            actions.append(
+                Solver(
+                    {
+                        "with": {
+                            "asset_types": asset_types,
+                            "amount": "1",
+                        },
+                        "do": [MakeAnnouncement("puzzle", Program.to(b"$")).to_solver()],
+                    }
+                )
+            )
+
+    return Solver({"actions": actions})

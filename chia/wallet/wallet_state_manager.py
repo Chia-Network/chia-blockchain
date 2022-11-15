@@ -1688,3 +1688,11 @@ class WalletStateManager:
         )
 
         return {coin: (outer_wallet, *info) for coin, info in coin_infos.items()}
+
+    async def describe_spend(self, spend: CoinSpend) -> Solver:
+        return Solver(
+            {
+                "coin_id": "0x" + spend.coin.name().hex(),
+                "amount": str(spend.coin.amount),
+            }
+        )

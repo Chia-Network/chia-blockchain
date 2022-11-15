@@ -29,8 +29,10 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.offer_request import (
     old_request_to_new,
+    old_solver_to_new,
     build_spend,
     decontruct_spend,
+    generate_summary_complement,
     offer_to_spend,
     spend_to_offer_bytes,
 )
@@ -710,35 +712,46 @@ class TradeManager:
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if solver is None:
             solver = Solver({})
-        take_offer_dict: Dict[Union[bytes32, int], int] = {}
-        arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
 
-        for asset_id, amount in arbitrage.items():
-            if asset_id is None:
-                wallet = self.wallet_state_manager.main_wallet
-                key: Union[bytes32, int] = int(wallet.id())
-            else:
-                # ATTENTION: new wallets
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                if wallet is None and amount < 0:
-                    return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
-                elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
-                    key = asset_id
+        deconstructed_spend: Optional[Solver] = await self.check_for_new_offer_type(offer)
+        if deconstructed_spend is not None:
+            complement_summary: Solver = await generate_summary_complement(
+                self.wallet_state_manager,
+                deconstructed_spend,
+                await old_solver_to_new(self.wallet_state_manager, solver),
+            )
+            complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
+            take_offer: Offer = Offer.from_bytes(spend_to_offer_bytes(complement_spend))
+        else:
+            take_offer_dict: Dict[Union[bytes32, int], int] = {}
+            arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
+
+            for asset_id, amount in arbitrage.items():
+                if asset_id is None:
+                    wallet = self.wallet_state_manager.main_wallet
+                    key: Union[bytes32, int] = int(wallet.id())
                 else:
-                    key = int(wallet.id())
-            take_offer_dict[key] = amount
+                    # ATTENTION: new wallets
+                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                    if wallet is None and amount < 0:
+                        return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
+                    elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
+                        key = asset_id
+                    else:
+                        key = int(wallet.id())
+                take_offer_dict[key] = amount
 
-        # First we validate that all of the coins in this offer exist
-        valid: bool = await self.check_offer_validity(offer, peer)
-        if not valid:
-            return False, None, "This offer is no longer valid"
-        result = await self._create_offer_for_ids(
-            take_offer_dict, offer.driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount
-        )
-        if not result[0] or result[1] is None:
-            return False, None, result[2]
+            # First we validate that all of the coins in this offer exist
+            valid: bool = await self.check_offer_validity(offer, peer)
+            if not valid:
+                return False, None, "This offer is no longer valid"
+            result = await self._create_offer_for_ids(
+                take_offer_dict, offer.driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount
+            )
+            if not result[0] or result[1] is None:
+                return False, None, result[2]
 
-        success, take_offer, error = result
+            success, take_offer, error = result
 
         complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
         self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
@@ -880,9 +893,9 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return await decontruct_spend(
+                        return await decontruct_spend(  # Advanced offer summary
                             self.wallet_state_manager, offer_to_spend(offer)
-                        )  # Advanced offer summary
+                        )
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()
@@ -902,3 +915,29 @@ class TradeManager:
                 return await DataLayerWallet.finish_graftroot_solutions(offer, solver)
 
         return offer
+
+    async def check_for_new_offer_type(self, offer: Offer) -> Optional[Solver]:
+        for puzzle_info in offer.driver_dict.values():
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                    ]
+                )
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+            ):
+                for asset_id in [*offer.requested_payments.keys(), *offer.get_offered_coins().keys()]:
+                    if asset_id is None or not (
+                        offer.driver_dict[asset_id].check_type(
+                            [
+                                AssetType.SINGLETON.value,
+                                AssetType.METADATA.value,
+                            ]
+                        )
+                        and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                    ):
+                        return await decontruct_spend(  # Advanced offer summary
+                            self.wallet_state_manager, offer_to_spend(offer)
+                        )
+        return None

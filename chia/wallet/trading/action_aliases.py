@@ -343,7 +343,7 @@ class RequestPayment:
             ],
         }
         if self.nonce is not None:
-            solver_dict["nonce"] = ("0x" + self.nonce.hex(),)
+            solver_dict["nonce"] = "0x" + self.nonce.hex()
         return Solver(solver_dict)
 
     def de_alias(self) -> WalletAction:

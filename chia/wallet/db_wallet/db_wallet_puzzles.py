@@ -16,7 +16,10 @@ from chia.wallet.trading.wallet_actions import Graftroot, WalletAction
 ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_TOP_LAYER_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 GRAFTROOT_DL_OFFERS = load_clvm("graftroot_dl_offers.clvm")
 CURRY_DL_GRAFTROOT = load_clvm("curry_dl_graftroot.clsp")
 P2_PARENT = load_clvm("p2_parent.clvm")
@@ -159,5 +162,8 @@ class RequireDLInclusion:
 
         return cls(
             [bytes32(struct.at("rf").as_python()) for struct in curried_args.at("rf").as_iter()],
-            [[bytes32(value.as_python()) for value in values.as_iter()] for values in curried_args.at("rrrf").as_iter()]
+            [
+                [bytes32(value.as_python()) for value in values.as_iter()]
+                for values in curried_args.at("rrrf").as_iter()
+            ],
         )

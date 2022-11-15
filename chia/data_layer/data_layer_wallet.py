@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, T
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
+from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import OfferIntegrityError
@@ -27,7 +28,12 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
+    NFT_STATE_LAYER_MOD,
+    NFT_STATE_LAYER_MOD_HASH,
     SINGLETON_LAUNCHER,
+    SINGLETON_LAUNCHER_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+    SINGLETON_TOP_LAYER_MOD_HASH,
     create_graftroot_offer_puz,
     create_host_fullpuz,
     create_host_layer_puzzle,
@@ -1368,6 +1374,37 @@ class DataLayerWallet:
                 return [Conditions([magic_condition])]
 
         return []
+
+    ########################
+    # OuterWallet Protocol #
+    ########################
+    def get_asset_types(self, request: Solver) -> Solver:
+        return [
+            Solver(
+                {
+                    "mod": disassemble(SINGLETON_TOP_LAYER_MOD),
+                    "solution_template": f"((1 . ({'1' if 'launcher_id' in request else '-1'} . 1)) 0 . $)",
+                    "committed_args": (
+                        "(",
+                        f"({'0x' + SINGLETON_TOP_LAYER_MOD_HASH.hex()} . ",
+                        f"({'0x' + request['launcher_id'].hex() if 'launcher_id' in request else '()'} . ",
+                        f"{'0x' + SINGLETON_LAUNCHER_HASH.hex()})) () . ())",
+                    ),
+                }
+            ),
+            Solver(
+                {
+                    "mod": disassemble(NFT_STATE_LAYER_MOD),
+                    "solution_template": f"(1 {'1' if 'metadata' in request else '-1'} 1 0 . $)",
+                    "committed_args": (
+                        "(",
+                        f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()}",
+                        f"{'0x' + request['metadata'].hex() if 'metadata' in request else '()'}",
+                        f"{'0x' + ACS_MU_PH.hex()} () . ())",
+                    ),
+                }
+            ),
+        ]
 
 
 def verify_offer(

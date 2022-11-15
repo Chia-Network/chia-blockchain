@@ -102,6 +102,9 @@ class Solver:
                 return False
         return True
 
+    def __repr__(self) -> str:
+        return repr(self.info)
+
 
 def decode_info_value(cls: Any, value: Any) -> Any:
     if isinstance(value, cls):
