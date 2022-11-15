@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Set
 
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -207,8 +207,14 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
         print("Try using a smaller fee or amount.")
         return
     additions: List[Dict[str, Union[uint64, bytes32]]] = []
+    puzzle_hashes: Set[bytes32] = set()  # we use a set for speed.
     for i in range(number_of_coins):  # for readability.
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
+        if target_ph in puzzle_hashes:
+            target_ph = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=False))
+            if target_ph in puzzle_hashes:  # we need to resort to a new addr.
+                target_ph = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=True))
+        puzzle_hashes.add(target_ph)
         additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         str(wallet_id), additions, [removal_coin_record.coin], final_fee
