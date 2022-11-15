@@ -87,17 +87,3 @@ class OuterWallet(Protocol):
     async def get_inner_wallet(self, coin: Coin) -> InnerWallet:
         # TODO: If we ever have more inner wallets, this will need to be more complicated
         return self
-
-    async def unwrap_coin(
-        self,
-        coin: Coin,
-        additional_coin_spends: List[CoinSpend] = [],
-    ) -> Tuple[WalletProtocol, Coin, Any]:
-        return self, coin, None
-
-    async def wrap_coin_spends(
-        self,
-        spends: List[CoinSpend],
-        wrapping_info: Any,
-    ) -> List[CoinSpend]:
-        return spends

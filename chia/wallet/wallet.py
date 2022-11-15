@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 import logging
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
@@ -579,87 +580,16 @@ class Wallet:
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 
-    async def check_and_modify_actions(
-        self,
-        coin: Coin,
-        outer_actions: List[WalletAction],
-        inner_actions: List[WalletAction],
-    ) -> List[WalletAction]:
-        return outer_actions, inner_actions
+    def get_outer_wallet(self) -> OuterWallet:
+        return PlainOuterWallet(self.wallet_state_manager)
 
-    ########################
-    # InnerWallet Protocol #
-    ########################
+    def get_inner_wallet(self) -> InnerWallet:
+        return PlainInnerWallet(self.wallet_state_manager)
 
-    def get_inner_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
-        return {
-            Condition.name(): Condition.from_solver,
-            Graftroot.name(): Graftroot.from_solver,
-        }
 
-    def get_inner_aliases(self) -> Dict[str, ActionAlias]:
-        return {}
-
-    async def construct_inner_puzzle(self, constructor: Solver) -> Program:
-        return await self.puzzle_for_puzzle_hash(constructor["puzzle_hash"])
-
-    async def construct_inner_solution(self, actions: List[WalletAction]) -> Program:
-        conditions: List[Program] = [cond.condition for cond in actions if cond.name() == Condition.name()]
-        delegated_puzzle: Program = Program.to((1, conditions))
-        metadata: Program = Program.to(None)
-        for action in actions:
-            if action.name() == Graftroot.name():
-                delegated_puzzle = action.puzzle_wrapper.run([delegated_puzzle])
-                metadata = Program.to([action.puzzle_wrapper, action.solution_wrapper, action.metadata]).cons(metadata)
-        metadata = Program.to((1, conditions)).cons(metadata)
-        return solution_for_delegated_puzzle(delegated_puzzle, metadata)
-
-    async def solve_for_conditions(
-        self,
-        coin: Coin,
-        unwrapped_puzzle_hash: bytes32,
-        conditions: List[Program],
-        solver: Solver,
-    ) -> Tuple[Program, Program, SpendBundle]:
-        puzzle: Program = await self.puzzle_for_puzzle_hash(unwrapped_puzzle_hash)
-
-        delegated_puzzle: Program = Program.to((1, conditions))
-        delegated_solution: Program = Program.to([])
-
-        return puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
-
-    async def match_spend_inner(
-        self, spend: CoinSpend, puzzle_guess: Program, solution_guess: Program, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[List[WalletAction], Solver]]:
-        if mod != MOD:
-            return None
-
-        actions: List[WalletAction] = []
-        if solution_guess.at("rrf") != Program.to(None):
-            metadata = solution_guess.at("rrf").as_iter()
-            actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
-            actions.extend([Graftroot(*graftroot.as_iter()) for graftroot in metadata])
-
-        return actions, Solver({})
-
-    ########################
-    # OuterWallet Protocol #
-    ########################
-
-    async def unwrap_coin(
-        self,
-        coin: Coin,
-        additional_coin_spends: List[CoinSpend] = [],
-    ) -> Tuple[bytes32, Solver]:
-        return coin.puzzle_hash, Solver({})
-
-    async def wrap_coin_spends(
-        self,
-        spends: List[CoinSpend],
-        wrapping_info: Dict[Coin, Solver],
-        action_solver_dict: Dict[Coin, Solver],
-    ) -> List[CoinSpend]:
-        return spends
+@dataclass(frozen=True)
+class PlainOuterWallet:
+    wallet_state_manager: Any
 
     def get_outer_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         return {}
@@ -688,20 +618,92 @@ class Wallet:
             if sum(c.amount for c in selected_coins) >= cast_to_int(coin_spec["amount"]) and len(selected_coins) > 0:
                 break
         else:
-            additional_coins: Set[Coin] = await self.select_coins(
+            # Getting .main_wallet here is a bit hacky but it's better than code duplication
+            additional_coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
                 cast_to_int(coin_spec["amount"]) - sum(c.amount for c in selected_coins),
                 exclude=[*selected_coins, SpendBundle(previous_actions, G2Element()).removals()],
             )
             selected_coins.extend(additional_coins)
 
         return {
-            coin: (Solver({}), self, Solver({"puzzle_hash": "0x" + coin.puzzle_hash.hex()})) for coin in selected_coins
+            coin: (
+                Solver({}),
+                self.wallet_state_manager.main_wallet.get_inner_wallet(),
+                Solver({"puzzle_hash": "0x" + coin.puzzle_hash.hex()}),
+            )
+            for coin in selected_coins
         }
 
+    async def check_and_modify_actions(
+        self,
+        coin: Coin,
+        outer_actions: List[WalletAction],
+        inner_actions: List[WalletAction],
+    ) -> List[WalletAction]:
+        return outer_actions, inner_actions
+
+    @classmethod
     async def match_spend_outer(
-        self, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[List[WalletAction], Solver, Program, Program]]:
-        return [], Solver({}), spend.puzzle_reveal.to_program(), spend.solution.to_program()
+        cls, wallet_state_manager: Any, spend: CoinSpend, mod: Program, curried_args: Program
+    ) -> Optional[OuterWallet, Tuple[List[WalletAction], Solver, Program, Program]]:
+        return cls(wallet_state_manager), [], Solver({}), spend.puzzle_reveal.to_program(), spend.solution.to_program()
+
+    @classmethod
+    def match_asset_types(cls, wallet_state_manager: Any, asset_types: List[Solver]) -> Optional["PlainOuterWallet"]:
+        if asset_types == []:
+            return PlainOuterWallet(wallet_state_manager)
+        else:
+            return None
+
+
+@dataclass(frozen=True)
+class PlainInnerWallet:
+    wallet_state_manager: Any
+
+    def get_inner_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+        return {
+            Condition.name(): Condition.from_solver,
+            Graftroot.name(): Graftroot.from_solver,
+        }
+
+    def get_inner_aliases(self) -> Dict[str, ActionAlias]:
+        return {}
+
+    async def construct_inner_puzzle(self, constructor: Solver) -> Program:
+        # Getting .main_wallet here is a bit hacky but it's better than code duplication
+        return await self.wallet_state_manager.main_wallet.puzzle_for_puzzle_hash(constructor["puzzle_hash"])
+
+    async def construct_inner_solution(self, actions: List[WalletAction]) -> Program:
+        conditions: List[Program] = [cond.condition for cond in actions if cond.name() == Condition.name()]
+        delegated_puzzle: Program = Program.to((1, conditions))
+        metadata: Program = Program.to(None)
+        for action in actions:
+            if action.name() == Graftroot.name():
+                delegated_puzzle = action.puzzle_wrapper.run([delegated_puzzle])
+                metadata = Program.to([action.puzzle_wrapper, action.solution_wrapper, action.metadata]).cons(metadata)
+        metadata = Program.to((1, conditions)).cons(metadata)
+        return solution_for_delegated_puzzle(delegated_puzzle, metadata)
+
+    @classmethod
+    async def match_spend_inner(
+        cls,
+        wallet_state_manager: Any,
+        spend: CoinSpend,
+        puzzle_guess: Program,
+        solution_guess: Program,
+        mod: Program,
+        curried_args: Program,
+    ) -> Optional[Tuple[InnerWallet, List[WalletAction], Solver]]:
+        if mod != MOD:
+            return None
+
+        actions: List[WalletAction] = []
+        if solution_guess.at("rrf") != Program.to(None):
+            metadata = solution_guess.at("rrf").as_iter()
+            actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
+            actions.extend([Graftroot(*graftroot.as_iter()) for graftroot in metadata])
+
+        return cls(wallet_state_manager), actions, Solver({})
 
 
 if TYPE_CHECKING:

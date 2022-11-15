@@ -759,7 +759,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                         {
                             "type": "direct_payment",
                             "payment": {
-                                "puzhash": "0x" + (await inner_wallet.get_new_puzzlehash()).hex(),
+                                "puzhash": "0x" + (await wallet_state_manager.main_wallet.get_new_puzzlehash()).hex(),
                                 "amount": str(input_amount - (output_amount + fees)),
                                 "hints": [],
                                 "memos": [],
@@ -964,19 +964,19 @@ async def decontruct_spend(
         mod_hash: bytes32 = mod.get_tree_hash()
         if mod_hash in wallet_state_manager.mod_hash_to_wallet_map:
             wallet = wallet_state_manager.mod_hash_to_wallet_map[mod_hash]
-            outer_match = await wallet.match_spend_outer(spend, mod, curried_args)
+            outer_match = await wallet.match_spend_outer(wallet_state_manager, spend, mod, curried_args)
             if outer_match is not None:
-                actions, description, inner_puzzle_guess, inner_solution_guess = outer_match
-                outer_wallets.append(wallet)
+                wallet_instance, actions, description, inner_puzzle_guess, inner_solution_guess = outer_match
+                outer_wallets.append(wallet_instance)
                 outer_wallet_guesses.append((inner_puzzle_guess, inner_solution_guess))
                 outer_actions_list.append(actions)
                 outer_descriptions.append(description)
 
         for wallet in wallet_state_manager.outer_wallets:
-            outer_match = await wallet.match_spend_outer(spend, mod, curried_args)
+            outer_match = await wallet.match_spend_outer(wallet_state_manager, spend, mod, curried_args)
             if outer_match is not None:
-                actions, description, inner_puzzle_guess, inner_solution_guess = outer_match
-                outer_wallets.append(wallet)
+                wallet_instance, actions, description, inner_puzzle_guess, inner_solution_guess = outer_match
+                outer_wallets.append(wallet_instance)
                 outer_wallet_guesses.append((inner_puzzle_guess, inner_solution_guess))
                 outer_actions_list.append(actions)
                 outer_descriptions.append(description)
@@ -1002,17 +1002,20 @@ async def decontruct_spend(
                     # TODO: We should probably support this
                     raise ValueError("Puzzles with multiple outer wallets are not supported")
                 else:
-                    inner_match = await wallet_match.match_spend_inner(spend, guess[0], guess[1], mod, curried_args)
+                    inner_match = await wallet_match.match_spend_inner(
+                        wallet_state_manager, spend, guess[0], guess[1], mod, curried_args
+                    )
                     if inner_match is not None:
-                        inner_actions, inner_description = inner_match
+                        inner_wallet, inner_actions, inner_description = inner_match
                         outer_wallet = wallet
                         outer_actions = actions
                         outer_description = description
-                        inner_wallet = wallet_match
 
             for wallet_match in wallet_state_manager.inner_wallets:
-                inner_match = await wallet_match.match_spend_inner(spend, guess[0], guess[1], mod, curried_args)
-                i_actions, i_description = inner_match
+                inner_match = await wallet_match.match_spend_inner(
+                    wallet_state_manager, spend, guess[0], guess[1], mod, curried_args
+                )
+                inner_wallet, i_actions, i_description = inner_match
                 if i_actions is not None:
                     if outer_wallet is not None:
                         # QUESTION: Is this a use case? Should we have the ability to choose an interpretation?
@@ -1021,7 +1024,6 @@ async def decontruct_spend(
                         outer_wallet = wallet
                         outer_actions = actions
                         outer_description = description
-                        inner_wallet = wallet_match
                         inner_actions = i_actions
                         inner_description = i_description
 

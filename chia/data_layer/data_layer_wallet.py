@@ -1385,10 +1385,10 @@ class DataLayerWallet:
                     "mod": disassemble(SINGLETON_TOP_LAYER_MOD),
                     "solution_template": f"((1 . ({'1' if 'launcher_id' in request else '-1'} . 1)) 0 . $)",
                     "committed_args": (
-                        "(",
-                        f"({'0x' + SINGLETON_TOP_LAYER_MOD_HASH.hex()} . ",
-                        f"({'0x' + request['launcher_id'].hex() if 'launcher_id' in request else '()'} . ",
-                        f"{'0x' + SINGLETON_LAUNCHER_HASH.hex()})) () . ())",
+                        "("
+                        f"({'0x' + SINGLETON_TOP_LAYER_MOD_HASH.hex()} . "
+                        f"({'0x' + request['launcher_id'].hex() if 'launcher_id' in request else '()'} . "
+                        f"{'0x' + SINGLETON_LAUNCHER_HASH.hex()})) () . ())"
                     ),
                 }
             ),
@@ -1397,10 +1397,10 @@ class DataLayerWallet:
                     "mod": disassemble(NFT_STATE_LAYER_MOD),
                     "solution_template": f"(1 {'1' if 'metadata' in request else '-1'} 1 0 . $)",
                     "committed_args": (
-                        "(",
-                        f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()}",
-                        f"{'0x' + request['metadata'].hex() if 'metadata' in request else '()'}",
-                        f"{'0x' + ACS_MU_PH.hex()} () . ())",
+                        "("
+                        f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()}"
+                        f"{'0x' + request['metadata'].hex() if 'metadata' in request else '()'}"
+                        f"{'0x' + ACS_MU_PH.hex()} () . ())"
                     ),
                 }
             ),

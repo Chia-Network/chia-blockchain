@@ -78,7 +78,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import PlainOuterWallet, PlainInnerWallet, Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -238,8 +238,8 @@ class WalletStateManager:
             AssetType.CAT: CATWallet,
         }
         self.mod_hash_to_wallet_map = {}
-        self.outer_wallets = [self.main_wallet]
-        self.inner_wallets = [self.main_wallet]
+        self.outer_wallets = [PlainOuterWallet]
+        self.inner_wallets = [PlainInnerWallet]
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -1674,14 +1674,12 @@ class WalletStateManager:
     async def get_coin_infos_for_spec(
         self, coin_spec: Solver, previous_actions: List[CoinSpend]
     ) -> Dict[Coin, Tuple[OuterWallet, Solver, InnerWallet, Solver]]:
-        if "asset_types" in coin_spec and len(coin_spec["asset_types"]) > 0:
-            outermost_type: Solver = coin_spec["asset_types"][0]
-            if AssetType(outermost_type) == AssetType.CAT:
-                outer_wallet = await self.get_wallet_for_asset_id(outermost_type["tail"].hex())
-            elif AssetType(outermost_type) == AssetType.SINGLETON:
-                outer_wallet = await self.get_wallet_for_asset_id(outermost_type["launcher"].hex())
+        if "asset_id" in coin_spec:
+            outer_wallet = (await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex())).get_outer_wallet()
+        elif "asset_types" in coin_spec:
+            outer_wallet = await self.get_wallet_for_type_spec(coin_spec["asset_types"])
         else:
-            outer_wallet = self.main_wallet
+            outer_wallet = self.main_wallet.get_outer_wallet()
 
         coin_infos: Dict[Coin, Tuple[Solver, InnerWallet, Solver]] = await outer_wallet.get_coin_infos_for_spec(
             coin_spec, previous_actions
@@ -1696,3 +1694,18 @@ class WalletStateManager:
                 "amount": str(spend.coin.amount),
             }
         )
+
+    async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> OuterWallet:
+        matches: List[OuterWallet] = []
+        for wallet in self.outer_wallets:
+            match = wallet.match_asset_types(self, asset_types)
+            if match is not None:
+                matches.append(match)
+
+        if len(matches) > 1:
+            # QUESTION: Is there a use case for this?  Should we be returning options?
+            raise ValueError("Multiple wallets can handle the specified asset types")
+        elif len(matches) == 0:
+            raise ValueError("No matching wallet found for specified asset types")
+
+        return matches[0]
