@@ -10,6 +10,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 
 
+class TransactionQueueFull(Exception):
+    pass
+
+
 @dataclass
 class TransactionQueue:
     """
@@ -32,22 +36,22 @@ class TransactionQueue:
         self._queue_length = asyncio.Semaphore(0)  # default is 1
         self._index_to_peer_map = []
         self._queue_dict = {}
-        self._high_priority_queue = SimpleQueue()
+        self._high_priority_queue = SimpleQueue()  # we don't limit the number of high priority transactions
         self.peer_size_limit = peer_size_limit
         self.log = log
 
-    async def put(self, tx: TransactionQueueEntry, high_priority: bool = False) -> None:
-        if tx.peer is None or high_priority:  # when it's local there is no peer.
+    async def put(self, tx: TransactionQueueEntry, peer_id: Optional[bytes32], high_priority: bool = False) -> None:
+        if peer_id is None or high_priority:  # when it's local there is no peer_id.
             self._high_priority_queue.put(tx)
         else:
-            if tx.peer.peer_node_id not in self._queue_dict:
-                self._queue_dict[tx.peer.peer_node_id] = SimpleQueue()
-                self._index_to_peer_map.append(tx.peer.peer_node_id)
-            if self._queue_dict[tx.peer.peer_node_id].qsize() <= self.peer_size_limit:
-                self._queue_dict[tx.peer.peer_node_id].put(tx)
+            if peer_id not in self._queue_dict:
+                self._queue_dict[peer_id] = SimpleQueue()
+                self._index_to_peer_map.append(peer_id)
+            if self._queue_dict[peer_id].qsize() < self.peer_size_limit:
+                self._queue_dict[peer_id].put(tx)
             else:
-                self.log.warning(f"Transaction queue full for peer {tx.peer.peer_node_id}")
-                return
+                self.log.warning(f"Transaction queue full for peer {peer_id}")
+                raise TransactionQueueFull(f"Transaction queue full for peer {peer_id}")
         self._queue_length.release()  # increment semaphore to indicate that we have a new item in the queue
 
     async def pop(self) -> TransactionQueueEntry:

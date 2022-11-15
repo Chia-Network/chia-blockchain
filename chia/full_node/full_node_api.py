@@ -20,6 +20,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -247,9 +248,12 @@ class FullNodeAPI:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
-        await self.full_node.transaction_queue.put(
-            TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test)
-        )
+        try:
+            await self.full_node.transaction_queue.put(
+                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+            )
+        except TransactionQueueFull:
+            pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
         return None
 
     @api_request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
@@ -1241,7 +1245,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
         await self.full_node.transaction_queue.put(
-            TransactionQueueEntry(request.transaction, None, spend_name, None, test), high_priority=True
+            TransactionQueueEntry(request.transaction, None, spend_name, None, test), peer_id=None, high_priority=True
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
