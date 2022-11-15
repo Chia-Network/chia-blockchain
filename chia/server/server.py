@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -799,15 +799,15 @@ class ChiaServer:
             return True
         inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
-            return inbound_count < int(self.config["target_peer_count"]) - int(
-                self.config["target_outbound_peer_count"]
+            return inbound_count < cast(int, self.config["target_peer_count"]) - cast(
+                int, self.config["target_outbound_peer_count"]
             )
         if node_type == NodeType.WALLET:
-            return inbound_count < int(self.config["max_inbound_wallet"])
+            return inbound_count < cast(int, self.config["max_inbound_wallet"])
         if node_type == NodeType.FARMER:
-            return inbound_count < int(self.config["max_inbound_farmer"])
+            return inbound_count < cast(int, self.config["max_inbound_farmer"])
         if node_type == NodeType.TIMELORD:
-            return inbound_count < int(self.config["max_inbound_timelord"])
+            return inbound_count < cast(int, self.config["max_inbound_timelord"])
         return True
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
