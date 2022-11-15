@@ -378,6 +378,35 @@ class TestKeysCommands:
         # assert result.exit_code == 0
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
 
+    def test_show_fingerprint(self, keyring_with_one_key, tmp_path):
+        """
+        Test that the `chia keys show --fingerprint` command shows the correct key.
+        """
+
+        keychain = keyring_with_one_key
+
+        # add a key
+        keychain.add_private_key(generate_mnemonic())
+        assert len(keychain.get_all_private_keys()) == 2
+
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+        base_params = [
+            "--no-force-legacy-keyring-migration",
+            "--root-path",
+            os.fspath(tmp_path),
+            "--keys-root-path",
+            os.fspath(keys_root_path),
+        ]
+        runner = CliRunner()
+        cmd_params = ["keys", "show", "--fingerprint", TEST_FINGERPRINT]
+        # Generate a new config
+        assert runner.invoke(cli, [*base_params, "init"]).exit_code == 0
+        # Run the command
+        result: Result = runner.invoke(cli, [*base_params, *cmd_params])
+
+        # assert result.exit_code == 0
+        assert len([word for word in result.output.split() if word == "Fingerprint:"]) == 1
+
     def test_show_json(self, keyring_with_one_key, tmp_path):
         """
         Test that the `chia keys show --json` command shows the correct key.
