@@ -1728,6 +1728,11 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_set_bulk_nft_did(self, request):
+        """
+        Bulk set DID for NFTs across different wallets. nft_coin_list = List["nft_coin_id", "wallet_id"]
+        :param request:
+        :return:
+        """
         if len(request["nft_coin_list"]) > MAX_NFT_CHUNK_SIZE:
             return {"success": False, "error": f"You can only set {MAX_NFT_CHUNK_SIZE} NFTs at once"}
         did_id = request.get("did_id", b"")
@@ -1739,14 +1744,17 @@ class WalletRpcApi:
         nft_ids = []
         fee = uint64(request.get("fee", 0))
         for nft_coin in request["nft_coin_list"]:
+            if "nft_coin_id" not in nft_coin or "nft_coin_id" not in nft_coin:
+                log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
+                continue
             wallet_id = uint32(nft_coin["wallet_id"])
             nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
             assert isinstance(nft_wallet, NFTWallet)
-            nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin["coin_id"]))
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin["nft_coin_id"]))
             if not (
                 await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
             ).supports_did:
-                log.info(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
+                log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
                 continue
             if wallet_id in nft_dict:
                 nft_dict[wallet_id].append(nft_coin_info)
