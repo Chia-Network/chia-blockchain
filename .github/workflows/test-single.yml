@@ -132,7 +132,7 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: ${{ format('{0}.0-alpha - {0}.X', matrix.python.action) }}
+          python-version: ${{ matrix.python.action }}
 
       - name: Create keychain for CI use (macOS)
         if: matrix.os.matrix == 'macos'
