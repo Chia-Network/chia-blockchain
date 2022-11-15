@@ -17,7 +17,7 @@
   proposal_innerpuz  ; if this variable is 0 then we do the "add_money" spend case
   proposal_current_votes
   proposal_total_votes
-  announcement_messages_list  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+  announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -115,13 +115,21 @@
           (launcher_id_for_singleton_struct SINGLETON_STRUCT)
           amount_or_new_puzhash
           new_amount
-          announcement_messages_list
+          announcement_messages_list_or_payment_nonce
         )
       )
     )
     ; this is the add money spend case
     (if (> new_amount amount_or_new_puzhash)
-      (list (list ASSERT_MY_AMOUNT amount_or_new_puzhash) (list CREATE_COIN my_puzhash_or_proposal_id new_amount) (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id))
+      (list
+        (list ASSERT_MY_AMOUNT amount_or_new_puzhash)
+        (list CREATE_COIN my_puzhash_or_proposal_id new_amount)
+        (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
+        (list
+          CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken
+          (sha256tree (list (- new_amount amount_or_new_puzhash) announcement_messages_list_or_payment_nonce))
+        )
+      )
       (x)
     )
   )
