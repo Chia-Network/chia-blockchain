@@ -58,7 +58,7 @@ from tests.util.wallet_is_synced import wallet_is_synced
 async def new_transaction_not_requested(incoming, new_spend):
     await asyncio.sleep(3)
     while not incoming.empty():
-        response, peer = await incoming.get()
+        response = await incoming.get()
         if (
             response is not None
             and isinstance(response, Message)
@@ -73,7 +73,7 @@ async def new_transaction_not_requested(incoming, new_spend):
 async def new_transaction_requested(incoming, new_spend):
     await asyncio.sleep(1)
     while not incoming.empty():
-        response, peer = await incoming.get()
+        response = await incoming.get()
         if (
             response is not None
             and isinstance(response, Message)
