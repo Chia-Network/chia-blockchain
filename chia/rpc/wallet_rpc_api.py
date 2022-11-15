@@ -42,6 +42,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, program_to_metadata
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
@@ -54,7 +55,9 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -156,6 +159,8 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
+            "/did_message_spend": self.did_message_spend,
+            "/did_get_info": self.did_get_info,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -241,6 +246,44 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.convert_puzzle_hash(tx.wallet_id, tx.to_puzzle_hash)
             ),
         )
+
+    async def get_latest_coin_spend(
+        self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
+    ) -> Tuple[CoinSpend, CoinState]:
+        if peer is None:
+            raise ValueError("No peers to get info from")
+        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_id], peer=peer
+        )
+        if coin_state_list is None or len(coin_state_list) < 1:
+            raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
+        coin_state: CoinState = coin_state_list[0]
+        if latest:
+            # Find the unspent coin
+            while coin_state.spent_height is not None:
+                coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
+                    coin_state.coin.name(), peer=peer
+                )
+                odd_coin = 0
+                for coin in coin_state_list:
+                    if coin.coin.amount % 2 == 1:
+                        odd_coin += 1
+                    if odd_coin > 1:
+                        raise ValueError("This is not a singleton, multiple children coins found.")
+                if odd_coin == 0:
+                    raise ValueError("Cannot find child coin, please wait then retry.")
+                coin_state = coin_state_list[0]
+        # Get parent coin
+        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_state.coin.parent_coin_info], peer=peer
+        )
+        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
+            raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
+        parent_coin_state: CoinState = parent_coin_state_list[0]
+        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            parent_coin_state.spent_height, parent_coin_state.coin, peer
+        )
+        return coin_spend, coin_state
 
     ##########################################################################################
     # Key management
@@ -1227,6 +1270,10 @@ class WalletRpcApi:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
             pubkey, signature = await selected_wallet.sign_message(request["message"])
+            latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1))
+            latest_coin_id = None
+            if len(latest_coin) > 0:
+                latest_coin_id = latest_coin.pop().name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1242,10 +1289,17 @@ class WalletRpcApi:
 
             assert isinstance(selected_wallet, NFTWallet)
             pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+            latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
 
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+        assert latest_coin_id is not None
+        return {
+            "success": True,
+            "pubkey": str(pubkey),
+            "signature": str(signature),
+            "latest_coin_id": latest_coin_id.hex(),
+        }
 
     ##########################################################################################
     # CATs and Trading
@@ -1658,6 +1712,58 @@ class WalletRpcApi:
                     success = True
         return {"success": success}
 
+    async def did_message_spend(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.DECENTRALIZED_ID.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID wallet"}
+        assert isinstance(wallet, DIDWallet)
+        coin_announcements: Set[bytes] = set([])
+        for ca in request.get("coin_announcements", []):
+            coin_announcements.add(bytes.fromhex(ca))
+        puzzle_announcements: Set[bytes] = set([])
+        for pa in request.get("puzzle_announcements", []):
+            puzzle_announcements.add(bytes.fromhex(pa))
+        spend_bundle = await wallet.create_message_spend(coin_announcements, puzzle_announcements)
+        return {"success": True, "spend_bundle": spend_bundle}
+
+    async def did_get_info(self, request) -> EndpointResult:
+        if "coin_id" not in request:
+            return {"success": False, "error": "Coin ID is required."}
+        coin_id = request["coin_id"]
+        if coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(coin_id)
+        else:
+            coin_id = bytes32.from_hexstr(coin_id)
+        # Get coin state
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
+        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        uncurried = uncurry_puzzle(full_puzzle)
+        curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+        if curried_args is None:
+            return {"success": False, "error": "The coin is not a DID."}
+        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+        uncurried_p2 = uncurry_puzzle(p2_puzzle)
+        (public_key,) = uncurried_p2.args.as_iter()
+        memos = compute_memos(SpendBundle([coin_spend], G2Element()))
+        hints = []
+        if coin_state.coin.name() in memos:
+            for memo in memos[coin_state.coin.name()]:
+                hints.append(memo.hex())
+        return {
+            "success": True,
+            "latest_coin": coin_state.coin.name().hex(),
+            "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
+            "public_key": public_key.as_python().hex(),
+            "recovery_list_hash": recovery_list_hash.as_python().hex(),
+            "num_verification": num_verification.as_int(),
+            "metadata": program_to_metadata(metadata),
+            "launcher_id": singleton_struct.rest().first().as_python().hex(),
+            "full_puzzle": full_puzzle,
+            "hints": hints,
+        }
+
     async def did_update_metadata(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -2069,42 +2175,8 @@ class WalletRpcApi:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peers to get info from")
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_id], peer=peer
-        )
-        if coin_state_list is None or len(coin_state_list) < 1:
-            return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
-        coin_state: CoinState = coin_state_list[0]
-        if request.get("latest", True):
-            # Find the unspent coin
-            while coin_state.spent_height is not None:
-                coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
-                    coin_state.coin.name(), peer=peer
-                )
-                odd_coin = 0
-                for coin in coin_state_list:
-                    if coin.coin.amount % 2 == 1:
-                        odd_coin += 1
-                    if odd_coin > 1:
-                        return {"success": False, "error": "This is not a singleton, multiple children coins found."}
-                if odd_coin == 0:
-                    return {"success": False, "error": "Cannot find child coin, please wait then retry."}
-                coin_state = coin_state_list[0]
-        # Get parent coin
-        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info], peer=peer
-        )
-        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
-            return {
-                "success": False,
-                "error": f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found",
-            }
-        parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        assert peer is not None
+        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
