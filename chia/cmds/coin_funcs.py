@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
-from typing import Any, Dict, List, Tuple, Union, Set
+from typing import Any, Dict, List, Set, Tuple, Union
 
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
