@@ -5,11 +5,12 @@ import contextlib
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
+from typing_extensions import Protocol
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -23,6 +24,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
+from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
@@ -32,6 +34,16 @@ from chia.util.streamable import Streamable
 LENGTH_BYTES: int = 4
 
 WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
+
+
+class ConnectionClosedCallbackProtocol(Protocol):
+    def __call__(
+        self,
+        connection: WSChiaConnection,
+        ban_time: int,
+        closed_connection: bool = ...,
+    ) -> None:
+        ...
 
 
 class WSChiaConnection:
@@ -51,7 +63,7 @@ class WSChiaConnection:
         is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
         peer_host: str,
         incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]],
-        close_callback: Optional[Callable[[WSChiaConnection, int], None]],
+        close_callback: Optional[ConnectionClosedCallbackProtocol],
         peer_id: bytes32,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
@@ -101,7 +113,7 @@ class WSChiaConnection:
         self.active: bool = False  # once handshake is successful this will be changed to True
         self.close_event = close_event
         self.session = session
-        self.close_callback = close_callback
+        self.close_callback: Optional[ConnectionClosedCallbackProtocol] = close_callback
 
         self.pending_requests: Dict[uint16, asyncio.Event] = {}
         self.request_results: Dict[uint16, Message] = {}
@@ -222,8 +234,12 @@ class WSChiaConnection:
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
-
         if self.closed:
+            # always try to call the callback even for closed connections
+            with log_exceptions(self.log, consume=True):
+                self.log.debug(f"Closing already closed connection for {self.peer_host}")
+                if self.close_callback is not None:
+                    self.close_callback(self, ban_time, closed_connection=True)
             return None
         self.closed = True
 
@@ -247,19 +263,11 @@ class WSChiaConnection:
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
-            try:
-                if self.close_callback is not None:
-                    self.close_callback(self, ban_time)
-            except Exception:
-                error_stack = traceback.format_exc()
-                self.log.error(f"Error closing1: {error_stack}")
             raise
-        try:
-            if self.close_callback is not None:
-                self.close_callback(self, ban_time)
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error closing2: {error_stack}")
+        finally:
+            with log_exceptions(self.log, consume=True):
+                if self.close_callback is not None:
+                    self.close_callback(self, ban_time, closed_connection=False)
 
     async def ban_peer_bad_protocol(self, log_err_msg: str) -> None:
         """Ban peer for protocol violation"""
