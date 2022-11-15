@@ -18,8 +18,8 @@ class DaemonProxy:
         self,
         uri: str,
         ssl_context: Optional[ssl.SSLContext],
+        heartbeat: int,
         max_message_size: int = 50 * 1000 * 1000,
-        heartbeat: int = 300,
     ):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
