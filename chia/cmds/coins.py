@@ -215,6 +215,7 @@ def combine_cmd(
     type=str,
     required=True,
 )
+@click.option("-u", "--unique_addresses", is_flag=True, help="Generate a new address for each coin.")
 @click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
 def split_cmd(
     wallet_rpc_port: Optional[int],
@@ -223,6 +224,7 @@ def split_cmd(
     number_of_coins: int,
     fee: str,
     amount_per_coin: str,
+    unique_addresses: bool,
     target_coin_id: str,
 ) -> None:
     extra_params = {
@@ -230,6 +232,7 @@ def split_cmd(
         "number_of_coins": number_of_coins,
         "fee": fee,
         "amount_per_coin": amount_per_coin,
+        "unique_addresses": unique_addresses,
         "target_coin_id": target_coin_id,
     }
     from .coin_funcs import async_split

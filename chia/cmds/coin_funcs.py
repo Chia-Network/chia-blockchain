@@ -179,6 +179,7 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     fee = Decimal(args["fee"])
     # new args
     amount_per_coin = Decimal(args["amount_per_coin"])
+    unique_addresses = bool(args["unique_addresses"])
     target_coin_id: bytes32 = bytes32.from_hexstr(args["target_coin_id"])
     if number_of_coins > 500:
         print(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
@@ -206,8 +207,8 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
         print("Try using a smaller fee or amount.")
         return
     additions: List[Dict[str, Union[uint64, bytes32]]] = []
-    for i in range(number_of_coins):  # for readability, we always use new addresses to avoid reusing within this tx.
-        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), True))
+    for i in range(number_of_coins):  # for readability.
+        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
         additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         str(wallet_id), additions, [removal_coin_record.coin], final_fee
