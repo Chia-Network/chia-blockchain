@@ -714,18 +714,14 @@ class ChiaServer:
             for message in messages:
                 await connection.send_message(message)
 
-    def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
-        result = []
-        connections = self.get_connections(NodeType.FULL_NODE)
-        for connection in connections:
-            if connection.is_outbound:
-                result.append(connection)
-        return result
-
-    def get_connections(self, node_type: Optional[NodeType] = None) -> List[WSChiaConnection]:
+    def get_connections(
+        self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = None
+    ) -> List[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
-            if node_type is None or connection.connection_type == node_type:
+            node_type_match = node_type is None or connection.connection_type == node_type
+            outbound_match = outbound is None or connection.is_outbound == outbound
+            if node_type_match and outbound_match:
                 result.append(connection)
         return result
 
@@ -802,7 +798,7 @@ class ChiaServer:
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
             return True
-        inbound_count = len([conn for conn in self.get_connections(node_type) if not conn.is_outbound])
+        inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
             return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
         if node_type == NodeType.WALLET:
