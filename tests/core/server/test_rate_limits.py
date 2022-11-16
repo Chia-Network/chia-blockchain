@@ -13,8 +13,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.conftest import node_with_params
-from tests.setup_nodes import test_constants
-
+from chia.simulator.block_tools import test_constants
 
 constants = test_constants
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]

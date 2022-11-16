@@ -39,7 +39,7 @@ from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.util.errors import ConsensusError
 from chia.wallet.transaction_record import TransactionRecord
-from chia.simulator.block_tools import get_signage_point
+from chia.simulator.block_tools import get_signage_point, test_constants
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_no_error,
@@ -50,7 +50,6 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import test_constants
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.foliage import Foliage, TransactionsInfo, FoliageTransactionBlock
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace

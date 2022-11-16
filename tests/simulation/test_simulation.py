@@ -8,6 +8,7 @@ import pytest_asyncio
 from chia.cmds.units import units
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node import FullNode
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -16,15 +17,11 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsP
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets, setup_full_system
+from chia.simulator.setup_services import setup_full_node
 from chia.wallet.wallet_node import WalletNode
-from tests.setup_nodes import (
-    SimulatorsAndWallets,
-    setup_full_node,
-    setup_full_system,
-    setup_simulators_and_wallets,
-    test_constants,
-)
-from tests.util.keyring import TempKeyring
+from chia.simulator.block_tools import test_constants
+from chia.simulator.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
     **{
@@ -84,7 +81,7 @@ class TestSimulation:
         # Connect node 1 to node 2
         connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
-        assert len(server1.get_full_node_outgoing_connections()) >= 1
+        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
 
         # Connect node3 to node1 and node2 - checks come later
         node3: Service[FullNode] = extra_node
@@ -93,7 +90,7 @@ class TestSimulation:
         assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
         connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
-        assert len(server3.get_full_node_outgoing_connections()) >= 2
+        assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
         # wait up to 10 mins for node2 to sync the chain to height 7
         await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
