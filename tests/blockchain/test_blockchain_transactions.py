@@ -13,7 +13,7 @@ from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
 from chia.simulator.wallet_tools import WalletTool
-from tools.test_constants import test_constants
+from chia.simulator.block_tools import  test_constants
 
 BURN_PUZZLE_HASH = b"0" * 32
 

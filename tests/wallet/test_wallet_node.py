@@ -10,7 +10,7 @@ from blspy import PrivateKey
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, generate_mnemonic
 from chia.wallet.wallet_node import WalletNode
-from tools.test_constants import test_constants
+from chia.simulator.block_tools import  test_constants
 
 
 @pytest.mark.asyncio

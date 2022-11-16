@@ -55,7 +55,7 @@ from chia.simulator.time_out_assert import time_out_assert, time_out_assert_cust
 from chia.types.blockchain_format.foliage import Foliage, TransactionsInfo, FoliageTransactionBlock
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from tools.test_constants import test_constants
+from chia.simulator.block_tools import  test_constants
 
 
 async def new_transaction_not_requested(incoming, new_spend):

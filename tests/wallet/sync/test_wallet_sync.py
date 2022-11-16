@@ -34,7 +34,7 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
-from tools.test_constants import test_constants
+from chia.simulator.block_tools import  test_constants
 from tests.util.wallet_is_synced import wallet_is_synced
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
