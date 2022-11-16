@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import Any, List, Tuple
 
 import pytest
@@ -143,7 +142,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ]
     }
 
-    success, offer_taker, error = await trade_manager_taker.respond_to_offer(
+    success, offer_taker, tx_records, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
         peer,
         solver=Solver(
@@ -176,6 +175,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert error is None
     assert success is True
     assert offer_taker is not None
+    assert tx_records is not None
 
     assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
         "offered": [
@@ -205,9 +205,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
-    # Let's hack a way to await this offer's confirmation
-    offer_record = dataclasses.replace(dl_record, spend_bundle=Offer.from_bytes(offer_taker.offer).bundle)
-    await full_node_api.process_transaction_records(records=[offer_record])
+    await full_node_api.process_transaction_records(records=tx_records)
     maker_funds -= fee
     taker_funds -= fee
 
@@ -423,7 +421,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    success, offer_taker, error = await trade_manager_taker.respond_to_offer(
+    success, offer_taker, tx_records, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
         peer,
         solver=Solver(
@@ -469,13 +467,12 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert error is None
     assert success is True
     assert offer_taker is not None
+    assert tx_records is not None
 
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
-    # Let's hack a way to await this offer's confirmation
-    offer_record = dataclasses.replace(dl_record, spend_bundle=Offer.from_bytes(offer_taker.offer).bundle)
-    await full_node_api.process_transaction_records(records=[offer_record])
+    await full_node_api.process_transaction_records(records=tx_records)
 
     maker_funds -= fee
     taker_funds -= fee

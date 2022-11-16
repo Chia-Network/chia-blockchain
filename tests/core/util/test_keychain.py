@@ -7,7 +7,7 @@ from typing import Callable, List, Optional, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
-from tests.util.keyring import using_temp_file_keyring
+from chia.simulator.keyring import using_temp_file_keyring
 from chia.util.errors import (
     KeychainFingerprintExists,
     KeychainKeyDataMismatch,

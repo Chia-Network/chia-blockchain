@@ -112,7 +112,7 @@ class KeyringWrapper:
         self.keys_root_path = keys_root_path
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
-            if check_legacy_keyring_keys_present(legacy_keyring):
+            if legacy_keyring is not None and check_legacy_keyring_keys_present(legacy_keyring):
                 self.legacy_keyring = legacy_keyring
         else:
             self.refresh_keyrings()
@@ -172,14 +172,14 @@ class KeyringWrapper:
         KeyringWrapper.__keys_root_path = keys_root_path
 
     @staticmethod
-    def get_shared_instance(create_if_necessary=True):
+    def get_shared_instance(create_if_necessary: bool = True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 
     @staticmethod
-    def cleanup_shared_instance():
+    def cleanup_shared_instance() -> None:
         KeyringWrapper.__shared_instance = None
 
     @staticmethod

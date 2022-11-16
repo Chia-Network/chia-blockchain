@@ -29,7 +29,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from tests.util.wallet_is_synced import wallet_is_synced
-from tests.setup_nodes import setup_simulators_and_wallets
+from chia.simulator.setup_nodes import setup_simulators_and_wallets
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # TODO: Compare deducted fees in all tests against reported total_fee

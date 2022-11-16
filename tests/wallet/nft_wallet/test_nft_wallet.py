@@ -9,7 +9,6 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.mempool_manager import MempoolManager
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -28,13 +27,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced
-
-
-async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
-    tx = mempool.get_spendbundle(tx_id)
-    if tx is None:
-        return False
-    return True
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
@@ -418,7 +410,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     coins_response = await wait_rpc_state_condition(
         5,
         api_0.nft_get_nfts,
-        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True}],
+        [{"wallet_id": nft_wallet_0_id}],
         lambda x: x["success"] and len(x["nft_list"]) == 2,
     )
     coins = coins_response["nft_list"]
@@ -429,13 +421,12 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         assert coin.mint_height > 0
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
-    assert coins[1].off_chain_metadata is not None
     assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
 
     coins_response = await wait_rpc_state_condition(
         5,
         api_0.nft_get_nfts,
-        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True, "start_index": 1, "num": 1}],
+        [{"wallet_id": nft_wallet_0_id, "start_index": 1, "num": 1}],
         lambda x: x["success"] and len(x["nft_list"]) == 1,
     )
     coins = coins_response["nft_list"]

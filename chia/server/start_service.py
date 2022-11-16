@@ -96,7 +96,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
-        self._server = ChiaServer(
+        self._server = ChiaServer.create(
             advertised_port,
             node,
             peer_api,

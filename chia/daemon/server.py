@@ -150,7 +150,7 @@ class WebSocketServer:
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = shutdown_event
 
-    async def start(self):
+    async def start(self) -> None:
         self.log.info("Starting Daemon Server")
 
         # Note: the minimum_version has been already set to TLSv1_2
@@ -208,7 +208,9 @@ class WebSocketServer:
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
         service_names = list(self.services.keys())
-        stop_service_jobs = [kill_service(self.root_path, self.services, s_n) for s_n in service_names]
+        stop_service_jobs = [
+            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+        ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()

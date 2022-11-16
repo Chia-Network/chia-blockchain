@@ -67,6 +67,7 @@ def bech32_encode(hrp: str, data: List[int]) -> str:
 
 def bech32_decode(bech: str, max_length: int = 90) -> Tuple[Optional[str], Optional[List[int]]]:
     """Validate a Bech32 string, and determine HRP and data."""
+    bech = bech.strip()
     if (any(ord(x) < 33 or ord(x) > 126 for x in bech)) or (bech.lower() != bech and bech.upper() != bech):
         return (None, None)
     bech = bech.lower()
