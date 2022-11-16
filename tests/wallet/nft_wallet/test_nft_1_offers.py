@@ -1491,6 +1491,7 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
         fee=uint64(0),
     )
     assert trade_take is not None
+    assert tx_records is not None
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
