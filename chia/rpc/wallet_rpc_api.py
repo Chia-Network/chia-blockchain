@@ -1729,7 +1729,8 @@ class WalletRpcApi:
 
     async def nft_set_bulk_nft_did(self, request):
         """
-        Bulk set DID for NFTs across different wallets. nft_coin_list = List["nft_coin_id", "wallet_id"]
+        Bulk set DID for NFTs across different wallets.
+        nft_coin_list = List[{"nft_coin_id": COIN_ID/NFT_ID, "wallet_id": WALLET_ID}]
         :param request:
         :return:
         """
@@ -1750,7 +1751,14 @@ class WalletRpcApi:
             wallet_id = uint32(nft_coin["wallet_id"])
             nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
             assert isinstance(nft_wallet, NFTWallet)
-            nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin["nft_coin_id"]))
+            nft_coin_id = nft_coin["nft_coin_id"]
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+                nft_id = decode_puzzle_hash(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft(nft_id)
+            else:
+                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            assert nft_coin_info is not None
             if not (
                 await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
             ).supports_did:
