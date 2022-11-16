@@ -4,7 +4,7 @@ import datetime
 import multiprocessing
 import os
 import sysconfig
-from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
+from typing import Iterator
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
@@ -12,10 +12,6 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.wallet.wallet import Wallet
 from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 from chia.server.start_service import Service
 
@@ -25,11 +21,11 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
+from chia.simulator.setup_services import setup_daemon, setup_introducer, setup_timelord
 from chia.util.task_timing import (
     main as task_instrumentation_main,
     start_task_instrumentation,
@@ -38,14 +34,11 @@ from chia.util.task_timing import (
 from chia.wallet.wallet import Wallet
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import (
+from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
     setup_full_system,
-    setup_daemon,
     setup_n_nodes,
-    setup_introducer,
-    setup_timelord,
     setup_two_nodes,
 )
 from tests.simulation.test_simulation import test_constants_modified
@@ -58,8 +51,8 @@ multiprocessing.set_start_method("spawn")
 from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
-from tests.util.keyring import TempKeyring
-from tests.setup_nodes import setup_farmer_multi_harvester
+from chia.simulator.keyring import TempKeyring
+from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -119,7 +112,7 @@ async def empty_blockchain(request):
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
     from tests.util.blockchain import create_blockchain
-    from tests.setup_nodes import test_constants
+    from chia.simulator.setup_nodes import test_constants
 
     bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1

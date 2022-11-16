@@ -5,7 +5,7 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from multiprocessing import Pool
 from pathlib import Path
 from sys import platform
-from tests.util.keyring import TempKeyring, using_temp_file_keyring
+from chia.simulator.keyring import TempKeyring, using_temp_file_keyring
 from tests.core.util.test_lockfile import poll_directory
 from time import sleep
 

@@ -69,7 +69,7 @@ psutil = "5.9.1"
 pyyaml = "6.0"  # Used for config file format
 setproctitle = "1.2.3"  # Gives the chia processes readable names
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
-typing-extensions = "4.3.0"  # typing backports like Protocol and TypedDict
+typing-extensions = "4.4.0"  # typing backports like Protocol and TypedDict
 watchdog = "2.1.9"  # Filesystem event watching - watches keyring.yaml
 zstd = "1.5.2.6"
 

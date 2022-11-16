@@ -18,7 +18,7 @@ from chia.util.ints import uint8
 from chia.simulator.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import test_constants
+from chia.simulator.block_tools import test_constants
 from chia.simulator.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 from chia.simulator.wallet_tools import WalletTool

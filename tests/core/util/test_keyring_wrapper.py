@@ -6,7 +6,7 @@ from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_M
 from pathlib import Path
 from typing import Type
 from sys import platform
-from tests.util.keyring import using_temp_file_keyring, using_temp_file_keyring_and_cryptfilekeyring
+from chia.simulator.keyring import using_temp_file_keyring, using_temp_file_keyring_and_cryptfilekeyring
 
 log = logging.getLogger(__name__)
 
