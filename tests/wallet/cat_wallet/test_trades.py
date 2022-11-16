@@ -457,7 +457,7 @@ class TestCATTrades:
 
         peer = wallet_node_taker.get_full_node_peer()
         assert peer is not None
-        with pytest.raises(ValueError, message="This offer is no longer valid"):
+        with pytest.raises(ValueError, match="This offer is no longer valid"):
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 
         # Now we're going to create the other way around for test coverage sake
