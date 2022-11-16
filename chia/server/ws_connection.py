@@ -166,19 +166,18 @@ class WSChiaConnection:
         server_port: int,
         local_type: NodeType,
     ) -> None:
+        outbound_handshake = make_msg(
+            ProtocolMessageTypes.handshake,
+            Handshake(
+                network_id,
+                protocol_version,
+                chia_full_version_str(),
+                uint16(server_port),
+                uint8(local_type.value),
+                self.local_capabilities_for_handshake,
+            ),
+        )
         if self.is_outbound:
-            outbound_handshake = make_msg(
-                ProtocolMessageTypes.handshake,
-                Handshake(
-                    network_id,
-                    protocol_version,
-                    chia_full_version_str(),
-                    uint16(server_port),
-                    uint8(local_type.value),
-                    self.local_capabilities_for_handshake,
-                ),
-            )
-            assert outbound_handshake is not None
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
@@ -224,17 +223,6 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-            outbound_handshake = make_msg(
-                ProtocolMessageTypes.handshake,
-                Handshake(
-                    network_id,
-                    protocol_version,
-                    chia_full_version_str(),
-                    uint16(server_port),
-                    uint8(local_type.value),
-                    self.local_capabilities_for_handshake,
-                ),
-            )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
