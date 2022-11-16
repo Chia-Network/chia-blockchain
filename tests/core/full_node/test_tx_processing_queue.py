@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from random import sample
 from secrets import token_bytes
-from typing import List, cast
+from typing import List, Optional, cast
 
 import pytest
 
@@ -19,10 +19,10 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class FakeTransactionQueueEntry:
     index: int
-    peer_id: bytes32
+    peer_id: Optional[bytes32]
 
 
-def get_transaction_queue_entry(peer_id: bytes32, tx_index: int) -> TransactionQueueEntry:  # easy shortcut
+def get_transaction_queue_entry(peer_id: Optional[bytes32], tx_index: int) -> TransactionQueueEntry:  # easy shortcut
     return cast(TransactionQueueEntry, FakeTransactionQueueEntry(index=tx_index, peer_id=peer_id))
 
 
@@ -34,15 +34,13 @@ def get_peer_id() -> bytes32:
 async def test_local_txs() -> None:
     transaction_queue = TransactionQueue(1000, log)
     # test 1 tx
-    first_tx = get_transaction_queue_entry(get_peer_id(), 0)
+    first_tx = get_transaction_queue_entry(None, 0)
     await transaction_queue.put(first_tx, None)
 
     assert transaction_queue._index_to_peer_map == []
-    assert transaction_queue._queue_length._value == 1
 
     result1 = await transaction_queue.pop()
 
-    assert transaction_queue._queue_length._value == 0
     assert result1 == first_tx
 
     # test 2000 txs
@@ -51,14 +49,12 @@ async def test_local_txs() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, None)
 
-    assert transaction_queue._queue_length._value == num_txs  # check that all are included
     assert transaction_queue._index_to_peer_map == []  # sanity checking
 
     resulting_txs = []
     for _ in range(num_txs):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._queue_length._value == 0  # check that all are removed
     for i in range(num_txs):
         assert list_txs[i] == resulting_txs[i]
 
@@ -73,18 +69,24 @@ async def test_one_peer_and_await() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, peer_id)
 
-    assert transaction_queue._queue_length._value == num_txs  # check that all are included
     assert transaction_queue._index_to_peer_map == [peer_id]  # sanity checking
 
+    # test transaction priority
+    local_txs = [get_transaction_queue_entry(None, i) for i in range(int(num_txs / 5))]  # 20 txs
+    for tx in local_txs:
+        await transaction_queue.put(tx, None)
+
     resulting_txs = []
-    for _ in range(num_txs):
+    for _ in range(num_txs + len(local_txs)):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._queue_length._value == 0  # check that all are removed
-    for i in range(num_txs):
-        assert list_txs[i] == resulting_txs[i]
+    for i in range(num_txs + len(local_txs)):
+        if i < len(local_txs):
+            assert local_txs[i] == resulting_txs[i]  # first 20 should come from local
+        else:
+            assert list_txs[i - 20] == resulting_txs[i]
 
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises(asyncio.TimeoutError):  # i need to fix this so it doesn't wait a second
         await asyncio.wait_for(transaction_queue.pop(), 1)  # check that we can't pop anymore
 
 
@@ -101,14 +103,12 @@ async def test_lots_of_peers() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    assert transaction_queue._queue_length._value == total_txs  # check that all are included
     assert transaction_queue._index_to_peer_map == peer_ids  # make sure all peers are in the map
 
     resulting_txs = []
     for _ in range(total_txs):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._queue_length._value == 0  # check that all are removed
     assert transaction_queue._index_to_peer_map == []  # we should have removed all the peer ids
     # There are 1000 peers, so each peer will have one transaction processed every 1000 iterations.
     for i in range(num_txs):
@@ -128,7 +128,6 @@ async def test_full_queue() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    assert transaction_queue._queue_length._value == total_txs  # check that all are included
     assert transaction_queue._index_to_peer_map == peer_ids  # make sure all peers are in the map
 
     # test failure case.
@@ -139,7 +138,6 @@ async def test_full_queue() -> None:
     for _ in range(total_txs):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._queue_length._value == 0  # check that all are removed
     assert transaction_queue._index_to_peer_map == []  # we should have removed all the peer ids
 
 
@@ -156,7 +154,6 @@ async def test_queue_cleanup_and_fairness() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    assert transaction_queue._queue_length._value == total_txs  # check that all are included
     assert transaction_queue._index_to_peer_map == peer_ids  # check that all peers are in the map
 
     # give random peers another transaction
@@ -171,7 +168,6 @@ async def test_queue_cleanup_and_fairness() -> None:
     for _ in range(total_txs):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._queue_length._value == 10  # check that all the first txs are removed for fairness.
     assert transaction_queue._index_to_peer_map == selected_peers  # only peers with 2 tx's.
 
     resulting_extra_txs = []
@@ -180,5 +176,4 @@ async def test_queue_cleanup_and_fairness() -> None:
 
     assert extra_txs == resulting_extra_txs  # validate that the extra txs are the same as the ones we put in.
 
-    assert transaction_queue._queue_length._value == 0  # check that all tx's are removed
     assert transaction_queue._index_to_peer_map == []  # now there should be no peers in the map
