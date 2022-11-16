@@ -20,7 +20,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets, setup_full_system
 from chia.simulator.setup_services import setup_full_node
 from chia.wallet.wallet_node import WalletNode
-from chia.simulator.block_tools import  test_constants
+from chia.simulator.block_tools import test_constants
 from chia.simulator.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
