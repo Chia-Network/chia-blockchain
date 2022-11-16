@@ -529,3 +529,10 @@ class FullNodeSimulator(FullNodeAPI):
         await wait_for_coins_in_wallet(coins=coins_to_receive, wallet=wallet)
 
         return coins_to_receive
+
+    def tx_id_in_mempool(self, tx_id: bytes32) -> bool:
+        spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_hash=tx_id)
+        return spendbundle is not None
+
+    def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
+        return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)

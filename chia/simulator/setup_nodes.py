@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import AsyncIterator, Dict, List, Tuple, Optional, AsyncGenerator, Union, Any
 from pathlib import Path
+from typing import AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -32,10 +35,13 @@ from tests.setup_services import (
     setup_vdf_clients,
     setup_wallet_node,
 )
-from chia.simulator.time_out_assert import time_out_assert_custom_interval
-from tests.util.keyring import TempKeyring
 from chia.simulator.socket import find_available_listen_port
-
+from chia.simulator.time_out_assert import time_out_assert_custom_interval
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+from chia.util.hash import std_hash
+from chia.util.ints import uint16, uint32
+from chia.wallet.wallet_node import WalletNode
 
 SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
@@ -136,7 +142,7 @@ async def setup_n_nodes(
 async def setup_node_and_wallet(
     consensus_constants: ConsensusConstants,
     self_hostname: str,
-    key_seed: Optional[bytes] = None,
+    key_seed: Optional[bytes32] = None,
     db_version: int = 1,
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncGenerator[Tuple[FullNodeAPI, WalletNode, ChiaServer, ChiaServer, BlockTools], None]:
@@ -273,7 +279,7 @@ async def setup_simulators_and_wallets_inner(
     wallets: List[Service[WalletNode]] = []
     node_iters: List[AsyncGenerator[Union[Service[FullNode], Service[WalletNode]], None]] = []
     bt_tools: List[BlockTools] = []
-    consensus_constants = constants_for_dic(dic)
+    consensus_constants: ConsensusConstants = constants_for_dic(dic)
     for index in range(0, simulator_count):
         db_name = f"blockchain_test_{index}_sim_and_wallets.db"
         bt_tools.append(
@@ -477,7 +483,7 @@ async def setup_full_system_inner(
     vdf1_port = uint16(find_available_listen_port("vdf1"))
     vdf2_port = uint16(find_available_listen_port("vdf2"))
     timelord_iter = setup_timelord(full_node_0_port, False, consensus_constants, b_tools, vdf_port=vdf1_port)
-    timelord_bluebox_iter = setup_timelord(1000, True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
+    timelord_bluebox_iter = setup_timelord(uint16(1000), True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
     harvester_service = await harvester_iter.__anext__()
     harvester = harvester_service._node
 

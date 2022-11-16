@@ -33,7 +33,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.generator_tools import get_block_header
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from chia.simulator.block_tools import create_block_tools_async
+from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint64, uint32
@@ -47,7 +47,7 @@ from tests.blockchain.blockchain_test_utils import (
 )
 from chia.simulator.wallet_tools import WalletTool
 from tests.util.blockchain import create_blockchain
-from tests.util.keyring import TempKeyring
+from chia.simulator.keyring import TempKeyring
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,

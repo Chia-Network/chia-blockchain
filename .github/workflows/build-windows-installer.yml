@@ -189,6 +189,8 @@ jobs:
       run: |
         .\Install.ps1 -d
 
+    - uses: chia-network/actions/activate-venv@main
+
     - name: Prepare GUI cache
       id: gui-ref
       run: |
@@ -221,7 +223,6 @@ jobs:
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
-        .\venv\Scripts\Activate.ps1
         cd .\build_scripts
         .\build_windows-2-installer.ps1
 
@@ -263,11 +264,6 @@ jobs:
       run: |
          certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256
          ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
-
-    - name: Install py3createtorrent
-      if: env.FULL_RELEASE == 'true'
-      run: |
-        pip3 install py3createtorrent
 
     - name: Create torrent
       if: env.FULL_RELEASE == 'true'

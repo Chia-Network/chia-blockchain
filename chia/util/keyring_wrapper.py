@@ -172,14 +172,14 @@ class KeyringWrapper:
         KeyringWrapper.__keys_root_path = keys_root_path
 
     @staticmethod
-    def get_shared_instance(create_if_necessary=True):
+    def get_shared_instance(create_if_necessary: bool = True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 
     @staticmethod
-    def cleanup_shared_instance():
+    def cleanup_shared_instance() -> None:
         KeyringWrapper.__shared_instance = None
 
     @staticmethod
