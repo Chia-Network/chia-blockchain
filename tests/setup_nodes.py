@@ -184,7 +184,7 @@ async def setup_simulators_and_wallets(
     db_version: int = 1,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[Tuple[List[FullNodeAPI], List[Tuple[WalletNode, ChiaServer]], BlockTools], None,]:
+) -> AsyncGenerator[Tuple[List[FullNodeAPI], List[Tuple[WalletNode, ChiaServer]], BlockTools], None, ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
             db_version,
@@ -227,7 +227,7 @@ async def setup_simulators_and_wallets_service(
     db_version: int = 1,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools], None,]:
+) -> AsyncGenerator[Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools], None, ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
             db_version,
