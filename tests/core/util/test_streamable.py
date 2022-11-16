@@ -44,7 +44,7 @@ from chia.util.streamable import (
     streamable_from_dict,
     write_uint32,
 )
-from tests.setup_nodes import test_constants
+from tools.test_constants import test_constants
 
 
 def test_int_not_supported() -> None:

@@ -3,7 +3,7 @@ import random
 from pathlib import Path
 from typing import List, Tuple, Optional
 
-from tests.setup_nodes import test_constants
+from tools.test_constants import test_constants
 from tests.util.temp_file import TempFile
 
 from chia.types.blockchain_format.sized_bytes import bytes32

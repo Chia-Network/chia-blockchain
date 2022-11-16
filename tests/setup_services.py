@@ -4,22 +4,29 @@ import asyncio
 import logging
 import signal
 import sqlite3
+from asyncio import Task
 from pathlib import Path
 from secrets import token_bytes
-from typing import AsyncGenerator, List, Optional, Tuple
+from typing import AsyncGenerator, List, Optional, Tuple, Any
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.farmer.farmer import Farmer
+from chia.full_node.full_node import FullNode
+from chia.harvester.harvester import Harvester
+from chia.introducer.introducer import Introducer
 from chia.protocols.shared_protocol import Capability, capabilities
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
 from chia.server.start_introducer import create_introducer_service
+from chia.server.start_service import Service
 from chia.server.start_timelord import create_timelord_service
 from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import create_full_node_simulator_service
+from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
@@ -27,6 +34,7 @@ from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.wallet.wallet_node import WalletNode
 from tests.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)
@@ -75,14 +83,14 @@ async def setup_full_node(
     db_name: str,
     self_hostname: str,
     local_bt: BlockTools,
-    introducer_port=None,
-    simulator=False,
-    send_uncompact_interval=0,
-    sanitize_weight_proof_only=False,
-    connect_to_daemon=False,
-    db_version=1,
+    introducer_port: Optional[int] = None,
+    simulator: bool = False,
+    send_uncompact_interval: int = 0,
+    sanitize_weight_proof_only: bool = False,
+    connect_to_daemon: bool = False,
+    db_version: int = 1,
     disable_capabilities: Optional[List[Capability]] = None,
-):
+) -> AsyncGenerator[Service[FullNode], None]:
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
@@ -148,13 +156,13 @@ async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
-    spam_filter_after_n_txs=200,
-    xch_spam_amount=1000000,
-    full_node_port=None,
-    introducer_port=None,
-    key_seed=None,
-    initial_num_public_keys=5,
-):
+    spam_filter_after_n_txs: Optional[int] = 200,
+    xch_spam_amount: int = 1000000,
+    full_node_port: Optional[uint16] = None,
+    introducer_port: Optional[uint16] = None,
+    key_seed: Optional[bytes] = None,
+    initial_num_public_keys: int = 5,
+) -> AsyncGenerator[Service[WalletNode], None]:
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
         service_config = config["wallet"]
@@ -219,7 +227,7 @@ async def setup_harvester(
     farmer_peer: Optional[PeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
-):
+) -> AsyncGenerator[Service[Harvester], None]:
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
     with lock_and_load_config(root_path, "config.yaml") as config:
@@ -255,7 +263,7 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
-):
+) -> AsyncGenerator[Service[Farmer], None]:
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
     with lock_and_load_config(root_path, "config.yaml") as root_config:
@@ -296,7 +304,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port):
+async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[Introducer], None]:
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -312,11 +320,11 @@ async def setup_introducer(bt: BlockTools, port):
     await service.wait_closed()
 
 
-async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
+async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[Task[Any], None]:
     lock = asyncio.Lock()
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
 
-    def stop():
+    def stop() -> None:
         asyncio.create_task(kill_processes(lock))
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
@@ -326,13 +334,15 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
     await kill_processes(lock)
 
 
-async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
+async def setup_vdf_clients(
+    bt: BlockTools, self_hostname: str, port: int
+) -> AsyncGenerator[Tuple[Task[Any], Task[Any], Task[Any]], None]:
     lock = asyncio.Lock()
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
     vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, lock, bt.config.get("prefer_ipv6")))
     vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, lock, bt.config.get("prefer_ipv6")))
 
-    def stop():
+    def stop() -> None:
         asyncio.create_task(kill_processes(lock))
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
@@ -344,12 +354,12 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
 
 
 async def setup_timelord(
-    full_node_port,
-    sanitizer,
+    full_node_port: int,
+    sanitizer: bool,
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
-):
+) -> AsyncGenerator[Service[Timelord], None]:
     config = b_tools.config
     service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port

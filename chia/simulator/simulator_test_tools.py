@@ -161,7 +161,7 @@ async def get_full_chia_simulator(
         shutdown_event = asyncio.Event()
         ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
         await ws_server.setup_process_global_state()
-        await ws_server.start()  # type: ignore[no-untyped-call]
+        await ws_server.start()
 
         async for simulator in start_simulator(chia_root, automated_testing):
             yield simulator, chia_root, config, mnemonic, fingerprint, keychain

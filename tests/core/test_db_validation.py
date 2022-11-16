@@ -18,7 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint64
-from tests.setup_nodes import test_constants
+from tools.test_constants import test_constants
 from tests.util.temp_file import TempFile
 
 

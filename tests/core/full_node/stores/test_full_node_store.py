@@ -23,7 +23,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_no_error,
 )
-from tests.setup_nodes import test_constants as test_constants_original
+from tools.test_constants import test_constants as test_constants_original
 from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring
 

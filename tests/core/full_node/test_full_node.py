@@ -50,11 +50,12 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import test_constants
+
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.foliage import Foliage, TransactionsInfo, FoliageTransactionBlock
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from tools.test_constants import test_constants
 
 
 async def new_transaction_not_requested(incoming, new_spend):

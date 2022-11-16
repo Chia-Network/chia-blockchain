@@ -46,13 +46,13 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_no_error,
 )
 from chia.simulator.wallet_tools import WalletTool
-from tests.setup_nodes import test_constants
 from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from tools.test_constants import test_constants
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")

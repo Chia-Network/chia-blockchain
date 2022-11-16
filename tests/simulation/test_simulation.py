@@ -19,11 +19,11 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import (
     SimulatorsAndWallets,
-    setup_full_node,
     setup_full_system,
     setup_simulators_and_wallets,
-    test_constants,
 )
+from tests.setup_services import setup_full_node
+from tools.test_constants import test_constants
 from tests.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
