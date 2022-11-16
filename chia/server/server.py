@@ -5,14 +5,11 @@ import logging
 import ssl
 import time
 import traceback
-from collections import Counter
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable
-from typing import Counter as typing_Counter
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import (
     ClientResponseError,
@@ -569,14 +566,12 @@ class ChiaServer:
             task.cancel()
 
     async def incoming_api_task(self) -> None:
-        message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
 
             async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
-                nonlocal message_types
                 start_time = time.time()
                 message_type = ""
                 try:
@@ -587,11 +582,8 @@ class ChiaServer:
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
                     message_type = ProtocolMessageTypes(full_message.type).name
-                    message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
-                    if len(message_types) % 100 == 0:
-                        self.log.debug(f"Message types: {[(m, n) for m, n in sorted(message_types.items()) if n != 0]}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")
@@ -652,7 +644,6 @@ class ChiaServer:
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
-                    message_types[message_type] -= 1
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
