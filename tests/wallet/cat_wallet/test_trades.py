@@ -128,11 +128,9 @@ class TestCATTrades:
 
         peer = wallet_node_taker.get_full_node_peer()
         assert peer is not None
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, fee=uint64(1)
         )
-        assert error is None
-        assert success is True
         assert trade_take is not None
         assert tx_records is not None
 
@@ -178,11 +176,7 @@ class TestCATTrades:
         assert success is True
         assert trade_make is not None
 
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
-        assert error is None
-        assert success is True
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         assert trade_take is not None
         assert tx_records is not None
 
@@ -220,12 +214,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
-        assert error is None
-        assert success is True
         assert trade_take is not None
         assert tx_records is not None
 
@@ -261,12 +251,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
-        assert error is None
-        assert success is True
         assert trade_take is not None
         assert tx_records is not None
 
@@ -302,12 +288,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
-        assert error is None
-        assert success is True
         assert trade_take is not None
         assert tx_records is not None
 
@@ -343,12 +325,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
-        assert error is None
-        assert success is True
         assert trade_take is not None
         assert tx_records is not None
 
@@ -440,12 +418,10 @@ class TestCATTrades:
         # Due to current mempool rules, trying to force a take out of the mempool with a cancel will not work.
         # Uncomment this when/if it does
 
-        # success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+        # trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         #     Offer.from_bytes(trade_make.offer),
         # )
         # await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
-        # assert error is None
-        # assert success is True
         # assert trade_take is not None
         # assert tx_records is not None
         # await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, trade_take)
@@ -481,11 +457,7 @@ class TestCATTrades:
 
         peer = wallet_node_taker.get_full_node_peer()
         assert peer is not None
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
-        assert error is not None
-        assert success is False
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         assert trade_take is None
         assert tx_records is None
 
@@ -496,11 +468,7 @@ class TestCATTrades:
         assert trade_make is not None
 
         # This take should fail since we have no CATs to fulfill it with
-        success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer
-        )
-        assert error is not None
-        assert success is False
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
         assert trade_take is None
         assert tx_records is None
 

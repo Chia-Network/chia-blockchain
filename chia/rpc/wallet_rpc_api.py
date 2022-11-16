@@ -1551,12 +1551,9 @@ class WalletRpcApi:
             peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
             if peer is None:
                 raise ValueError("No peer connected")
-            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+            trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
                 offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
             )
-        if not result[0]:
-            raise ValueError(result[3])
-        success, trade_record, tx_records, error = result
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
     async def get_offer(self, request: Dict) -> EndpointResult:

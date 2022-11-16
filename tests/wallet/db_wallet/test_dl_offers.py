@@ -142,7 +142,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ]
     }
 
-    success, offer_taker, tx_records, error = await trade_manager_taker.respond_to_offer(
+    offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
         peer,
         solver=Solver(
@@ -172,8 +172,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ),
         fee=fee,
     )
-    assert error is None
-    assert success is True
     assert offer_taker is not None
     assert tx_records is not None
 
@@ -421,7 +419,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    success, offer_taker, tx_records, error = await trade_manager_taker.respond_to_offer(
+    offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
         peer,
         solver=Solver(
@@ -464,8 +462,6 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ),
         fee=fee,
     )
-    assert error is None
-    assert success is True
     assert offer_taker is not None
     assert tx_records is not None
 

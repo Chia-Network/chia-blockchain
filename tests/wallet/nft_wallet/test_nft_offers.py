@@ -128,12 +128,10 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    assert success
-    assert error is None
     assert trade_take is not None
     assert tx_records is not None
 
@@ -172,12 +170,10 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     taker_fee = uint64(1)
 
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    assert success
-    assert error is None
     assert trade_take is not None
     assert tx_records is not None
 
@@ -428,12 +424,10 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    assert success
-    assert error is None
     assert trade_take is not None
     assert tx_records is not None
 
@@ -585,12 +579,10 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    assert success
-    assert error is None
     assert trade_take is not None
     assert tx_records is not None
 
@@ -641,12 +633,10 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
     taker_fee = uint64(1)
 
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    assert success
-    assert error is None
     assert trade_take is not None
     assert tx_records is not None
 
@@ -786,12 +776,10 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    assert success
-    assert error is None
     assert trade_take is not None
     assert tx_records is not None
 
