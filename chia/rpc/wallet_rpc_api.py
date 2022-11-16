@@ -1555,8 +1555,8 @@ class WalletRpcApi:
                 offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
             )
         if not result[0]:
-            raise ValueError(result[2])
-        success, trade_record, error = result
+            raise ValueError(result[3])
+        success, trade_record, tx_records, error = result
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
     async def get_offer(self, request: Dict) -> EndpointResult:

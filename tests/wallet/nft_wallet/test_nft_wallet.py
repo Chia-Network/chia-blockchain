@@ -9,7 +9,6 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.mempool_manager import MempoolManager
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -28,13 +27,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced
-
-
-async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
-    tx = mempool.get_spendbundle(tx_id)
-    if tx is None:
-        return False
-    return True
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
