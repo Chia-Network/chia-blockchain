@@ -56,7 +56,7 @@ colorama = "0.4.5"  # Colorizes terminal output
 colorlog = "6.7.0"  # Adds color to logs
 concurrent_log_handler = "0.9.20"  # Concurrently log and rotate logs
 cryptography = "38.0.3"  # Python cryptography library for TLS - keyring conflict
-dnslib = "0.9.22"  # dns lib
+dnslib = "0.9.23"  # dns lib
 dnspython = "2.2.1"  # Query DNS seeds
 filelock = "3.8.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 keyring = "23.9.3"  # Store keys in MacOS Keychain, Windows Credential Locker
@@ -75,7 +75,7 @@ zstd = "1.5.2.6"
 
 aiohttp_cors = { version = "^0.7.0", optional = true }
 # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
-black = { version = "22.8.0", optional = true }
+black = { version = "22.10.0", optional = true }
 build = { version = "^0.9", optional = true }
 coverage = { version = "^6.5.0", optional = true }
 diff-cover = { version = "^7.0.1", optional = true }
