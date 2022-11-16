@@ -15,7 +15,7 @@ from blspy import G1Element, PrivateKey
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerWallet, DLOuterWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
@@ -238,7 +238,7 @@ class WalletStateManager:
             AssetType.CAT: CATWallet,
         }
         self.mod_hash_to_wallet_map = {}
-        self.outer_wallets = [PlainOuterWallet]
+        self.outer_wallets = [DLOuterWallet, PlainOuterWallet]
         self.inner_wallets = [PlainInnerWallet]
 
         wallet = None
@@ -1675,11 +1675,13 @@ class WalletStateManager:
         self, coin_spec: Solver, previous_actions: List[CoinSpend]
     ) -> Dict[Coin, Tuple[OuterWallet, Solver, InnerWallet, Solver]]:
         if "asset_id" in coin_spec:
-            outer_wallet = (await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex())).get_outer_wallet()
+            outer_wallet = (await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex())).get_outer_wallet()(
+                self, bytes32(coin_spec["asset_id"])
+            )
         elif "asset_types" in coin_spec:
             outer_wallet = await self.get_wallet_for_type_spec(coin_spec["asset_types"])
         else:
-            outer_wallet = self.main_wallet.get_outer_wallet()
+            outer_wallet = self.main_wallet.get_outer_wallet()(self)
 
         coin_infos: Dict[Coin, Tuple[Solver, InnerWallet, Solver]] = await outer_wallet.get_coin_infos_for_spec(
             coin_spec, previous_actions

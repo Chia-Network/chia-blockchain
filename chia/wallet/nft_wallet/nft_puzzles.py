@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
@@ -10,8 +11,10 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_off_chain import get_off_chain_metadata
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
+from chia.wallet.trading.wallet_actions import WalletAction, Condition
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -309,3 +312,53 @@ def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32
             # this is the change owner magic condition
             new_did_id = condition.at("rf").atom
     return new_did_id
+
+
+_T_UpdateMetadata = TypeVar("_T_UpdateMetadata", bound="UpdateMetadata")
+
+
+@dataclass(frozen=True)
+class UpdateMetadata:
+    metadata_solution: Program
+    metadata_updater: Program = NFT_METADATA_UPDATER
+
+    @staticmethod
+    def name() -> str:
+        return "update_metadata"
+
+    @classmethod
+    def from_solver(cls, solver: Solver) -> _T_UpdateMetadata:
+        args: List[Program] = []
+        if "new_metadata" in solver:
+            args.append(solver["new_metadata"])
+        elif "metadata_solution" in solver:
+            args.append(solver["metadata_solution"])
+        if "metadata_updater" in solver:
+            args.append(solver["metadata_updater"])
+        return cls(*args)
+
+    def to_solver(self) -> Solver:
+        return Solver(
+            {
+                "type": self.name(),
+                "new_metadata": disassemble(self.metadata_solution),
+                "metadata_updater": disassemble(self.metadata_updater),
+            }
+        )
+
+    def de_alias(self) -> WalletAction:
+        return Condition(Program.to([-24, self.metadata_updater, self.metadata_solution]))
+
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_UpdateMetadata:
+        if action.name() != Condition.name():
+            raise ValueError("Can only parse a UpdateMetadata from Condition")
+
+        if action.condition.first() != Program.to(-24):
+            raise ValueError("Tried to parse a condition that was not a metadata update")
+
+        return cls(action.condition.at("rrf"), action.condition.at("rf"))

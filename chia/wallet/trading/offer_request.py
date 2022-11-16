@@ -640,6 +640,8 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
     inner_wallets: Dict[Coin, InnerWallet] = {}
     outer_constructors: Dict[Coin, Solver] = {}
     inner_constructors: Dict[Coin, Solver] = {}
+    outer_actions: Dict[Coin, List[WalletAction]] = {}
+    inner_actions: Dict[Coin, List[WalletAction]] = {}
 
     # Keep track of all the new spends in case we want to secure them with announcements
     spend_group: List[CoinSpend] = []
@@ -660,8 +662,6 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
             inner_constructors[coin] = inner_constructor
 
         # Step 2: Figure out what coins are responsible for each action
-        outer_actions: Dict[Coin, List[WalletAction]] = {}
-        inner_actions: Dict[Coin, List[WalletAction]] = {}
         actions_left: List[Solver] = action_spec["do"]
         group_nonce: bytes32 = nonce_coin_list(coin for coin in coin_infos)
         for coin in coin_infos:
@@ -696,7 +696,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
             # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
             new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
-                coin, coin_outer_actions, coin_inner_actions
+                outer_constructors[coin], coin, coin_outer_actions, coin_inner_actions
             )
 
             # Double check that the new inner actions are still okay with the inner wallet
@@ -723,7 +723,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
             # Then feed those to the outer wallet
             outer_puzzle = await outer_wallet.construct_outer_puzzle(outer_constructors[coin], inner_puzzle)
-            outer_solution = await outer_wallet.construct_outer_solution(outer_actions[coin], inner_solution)
+            outer_solution = await outer_wallet.construct_outer_solution(
+                outer_constructors[coin], outer_actions[coin], inner_solution
+            )
 
             new_coin_spends.append(CoinSpend(coin, outer_puzzle, outer_solution))
 
@@ -778,7 +780,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
                     # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
                     new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
-                        coin_spend.coin, new_outer_actions, new_inner_actions
+                        outer_constructors[coin_spend.coin], coin_spend.coin, new_outer_actions, new_inner_actions
                     )
                     # Double check that the new inner actions are still okay with the inner wallet
                     for inner_action in new_inner_actions:
@@ -790,7 +792,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                     inner_actions[coin_spend.coin] = new_inner_actions
 
                     inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
-                    outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
+                    outer_solution = await outer_wallet.construct_outer_solution(
+                        outer_constructors[coin_spend.coin], new_outer_actions, inner_solution
+                    )
 
                     coin_spends_after_change.append(dataclasses.replace(coin_spend, solution=outer_solution))
 
@@ -850,8 +854,11 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
             new_outer_actions = [*outer_actions[coin_spend.coin], make_action]
             new_inner_actions = inner_actions[coin_spend.coin]
         elif make_action.name() in inner_action_parsers:
-            new_outer_actions = outer_actions[coin_spend.coin]
-            new_inner_actions = [*inner_actions[coin_spend.coin], make_action]
+            try:
+                new_outer_actions = outer_actions[coin_spend.coin]
+                new_inner_actions = [*inner_actions[coin_spend.coin], make_action]
+            except:
+                breakpoint()
         else:
             raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't make announcements")
 
@@ -866,7 +873,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
         # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
         new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
-            coin_spend.coin, new_outer_actions, new_inner_actions
+            outer_constructors[coin_spend.coin], coin_spend.coin, new_outer_actions, new_inner_actions
         )
         # Double check that the new inner actions are still okay with the inner wallet
         for inner_action in new_inner_actions:
@@ -878,7 +885,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         inner_actions[coin_spend.coin] = new_inner_actions
 
         inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
-        outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
+        outer_solution = await outer_wallet.construct_outer_solution(
+            outer_constructors[coin_spend.coin], new_outer_actions, inner_solution
+        )
 
         coin_spends_after_announcements.append(dataclasses.replace(coin_spend, solution=outer_solution))
 
@@ -923,7 +932,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
         # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
         new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
-            coin, coin_outer_actions, coin_inner_actions
+            outer_constructors[coin], coin, coin_outer_actions, coin_inner_actions
         )
 
         # Double check that the new inner actions are still okay with the inner wallet
@@ -935,7 +944,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         inner_actions[coin_spend.coin] = new_inner_actions
 
         inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
-        outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
+        outer_solution = await outer_wallet.construct_outer_solution(
+            outer_constructors[coin_spend.coin], new_outer_actions, inner_solution
+        )
 
         coin_spends_after_bundle_actions.append(dataclasses.replace(coin_spend, solution=outer_solution))
         bundle_actions_left = new_actions_left
@@ -1110,10 +1121,13 @@ async def decontruct_spend(
     return Solver({"actions": grouped_actions})
 
 
-async def generate_summary_complement(wallet_state_manager: Any, summary: Solver, additional_summary: Solver) -> Solver:
+async def generate_summary_complement(
+    wallet_state_manager: Any, summary: Solver, additional_summary: Solver, fee: uint64 = uint64(0)
+) -> Solver:
     comp_actions: List[Solver] = []
     comp_bundle_actions: List[Solver] = []
     bundle_actions = summary["bundle_actions"] if "bundle_actions" in summary else []
+    paid_fee: bool = fee == 0
     for total_action in [*summary["actions"], *bundle_actions]:
         actions_to_loop = [total_action] if total_action in bundle_actions else total_action["do"]
         for action in actions_to_loop:
@@ -1127,11 +1141,21 @@ async def generate_summary_complement(wallet_state_manager: Any, summary: Solver
             elif action["type"] == RequestPayment.name():
                 requested_payment = RequestPayment.from_solver(action)
                 offered_amount: int = sum(p.amount for p in requested_payment.payments)
+                if not paid_fee and requested_payment.asset_types == []:
+                    offered_amount += fee
+                    paid_fee = True
                 comp_actions.append(
                     Solver(
                         {
                             "with": {"asset_types": requested_payment.asset_types, "amount": str(offered_amount)},
-                            "do": [OfferedAmount(offered_amount).to_solver()],
+                            "do": [
+                                OfferedAmount(offered_amount).to_solver(),
+                                *(
+                                    [Fee(fee).to_solver()]
+                                    if not paid_fee and requested_payment.asset_types == []
+                                    else []
+                                ),
+                            ],
                         }
                     )
                 )
@@ -1139,6 +1163,7 @@ async def generate_summary_complement(wallet_state_manager: Any, summary: Solver
         {
             "actions": [
                 *comp_actions,
+                *([{"with": {"amount": fee}, "do": [Fee(fee).to_solver()]}] if not paid_fee else []),
                 *(additional_summary["actions"] if "actions" in additional_summary else []),
             ],
             "bundle_actions": [
@@ -1149,7 +1174,7 @@ async def generate_summary_complement(wallet_state_manager: Any, summary: Solver
     )
 
 
-async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver, fee: uint64 = uint64(0)) -> Solver:
+async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> Solver:
     actions: List[Solver] = []
     for key, solver in old_solver.info.items():
         try:

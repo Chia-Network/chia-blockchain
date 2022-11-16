@@ -6,6 +6,7 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, CURRY, OFFER_MOD_HASH
@@ -99,7 +100,10 @@ class DirectPayment:
         if action.condition.first() != Program.to(51) or puzzle_hash == OFFER_MOD_HASH:
             raise ValueError("Tried to parse a condition that was not an offer payment")
 
-        return cls(Payment(puzzle_hash, uint64(action.condition.at("rrf").as_int()), action.condition.at("rrrf"), []))
+        return cls(
+            Payment(puzzle_hash, uint64(action.condition.at("rrf").as_int()), action.condition.at("rrrf").as_python()),
+            [],
+        )
 
 
 _T_OfferedAmount = TypeVar("_T_OfferedAmount", bound="OfferedAmount")

@@ -581,10 +581,10 @@ class Wallet:
         pass
 
     def get_outer_wallet(self) -> OuterWallet:
-        return PlainOuterWallet(self.wallet_state_manager)
+        return PlainOuterWallet
 
     def get_inner_wallet(self) -> InnerWallet:
-        return PlainInnerWallet(self.wallet_state_manager)
+        return PlainInnerWallet
 
 
 @dataclass(frozen=True)
@@ -600,7 +600,9 @@ class PlainOuterWallet:
     async def construct_outer_puzzle(self, constructor: Solver, inner_puzzle: Program) -> Program:
         return inner_puzzle
 
-    async def construct_outer_solution(self, actions: List[WalletAction], inner_solution: Program) -> Program:
+    async def construct_outer_solution(
+        self, constructor: Solver, actions: List[WalletAction], inner_solution: Program
+    ) -> Program:
         return inner_solution
 
     async def get_coin_infos_for_spec(
@@ -628,7 +630,8 @@ class PlainOuterWallet:
         return {
             coin: (
                 Solver({}),
-                self.wallet_state_manager.main_wallet.get_inner_wallet(),
+                # TODO: right now there's only one inner wallet but this will have to change
+                self.wallet_state_manager.main_wallet.get_inner_wallet()(self.wallet_state_manager),
                 Solver({"puzzle_hash": "0x" + coin.puzzle_hash.hex()}),
             )
             for coin in selected_coins
@@ -636,6 +639,7 @@ class PlainOuterWallet:
 
     async def check_and_modify_actions(
         self,
+        constructor: Solver,
         coin: Coin,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
@@ -681,7 +685,7 @@ class PlainInnerWallet:
             if action.name() == Graftroot.name():
                 delegated_puzzle = action.puzzle_wrapper.run([delegated_puzzle])
                 metadata = Program.to([action.puzzle_wrapper, action.solution_wrapper, action.metadata]).cons(metadata)
-        metadata = Program.to((1, conditions)).cons(metadata)
+        metadata = Program.to((1, conditions)).cons(metadata) if metadata != Program.to(None) else metadata
         return solution_for_delegated_puzzle(delegated_puzzle, metadata)
 
     @classmethod
