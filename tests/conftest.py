@@ -40,7 +40,6 @@ from tests.core.node_height import node_height_at_least
 from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
-    setup_full_system,
     setup_n_nodes,
     setup_two_nodes,
     setup_simulators_and_wallets_service,

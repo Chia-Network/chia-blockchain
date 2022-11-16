@@ -4,7 +4,6 @@ import asyncio
 import logging
 import signal
 import sqlite3
-from asyncio import Task
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, AsyncGenerator, List, Optional, Tuple
@@ -320,7 +319,7 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
     await service.wait_closed()
 
 
-async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[Task[Any], None]:
+async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[asyncio.Task[Any], None]:
     lock = asyncio.Lock()
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
 
@@ -336,7 +335,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
 
 async def setup_vdf_clients(
     bt: BlockTools, self_hostname: str, port: int
-) -> AsyncGenerator[Tuple[Task[Any], Task[Any], Task[Any]], None]:
+) -> AsyncGenerator[Tuple[asyncio.Task[Any], asyncio.Task[Any], asyncio.Task[Any]], None]:
     lock = asyncio.Lock()
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
     vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, lock, bt.config.get("prefer_ipv6")))
