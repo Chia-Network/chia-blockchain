@@ -457,9 +457,8 @@ class TestCATTrades:
 
         peer = wallet_node_taker.get_full_node_peer()
         assert peer is not None
-        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
-        assert trade_take is None
-        assert tx_records is None
+        with pytest.raises(ValueError, message="This offer is no longer valid"):
+            await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 
         # Now we're going to create the other way around for test coverage sake
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
