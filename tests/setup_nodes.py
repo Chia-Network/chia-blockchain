@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from asyncio import Task
 from typing import AsyncIterator, Dict, List, Tuple, Optional, AsyncGenerator, Union, Any
 from pathlib import Path
 
@@ -12,7 +11,6 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
-from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
