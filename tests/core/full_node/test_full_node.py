@@ -52,7 +52,7 @@ from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.foliage import Foliage, TransactionsInfo, FoliageTransactionBlock
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_pos_challenge, calculate_plot_id_pk
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 
@@ -1270,9 +1270,9 @@ class TestFullNodeProtocol:
 
                 if committment > 5:
                     if pos.pool_public_key is None:
-                        plot_id = ProofOfSpace.calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
+                        plot_id = calculate_plot_id_pk(pos.pool_contract_puzzle_hash, public_key)
                     else:
-                        plot_id = ProofOfSpace.calculate_plot_id_pk(pos.pool_public_key, public_key)
+                        plot_id = calculate_plot_id_pk(pos.pool_public_key, public_key)
                     original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
 
                     if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -1280,7 +1280,7 @@ class TestFullNodeProtocol:
                         cc_sp_hash = original_challenge_hash
                     else:
                         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                    challenge = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, cc_sp_hash)
+                    challenge = calculate_pos_challenge(plot_id, original_challenge_hash, cc_sp_hash)
 
                 else:
                     challenge = pos.challenge
