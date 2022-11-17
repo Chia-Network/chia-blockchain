@@ -1,30 +1,31 @@
 from __future__ import annotations
-import pkg_resources
+
 import sys
 import unicodedata
-
-from bitstring import BitArray  # pyright: reportMissingImports=false
-from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import (
-    KeychainException,
-    KeychainNotSet,
-    KeychainKeyDataMismatch,
-    KeychainFingerprintExists,
-    KeychainFingerprintNotFound,
-    KeychainSecretsMissing,
-    KeychainUserNotFound,
-)
-from chia.util.hash import std_hash
-from chia.util.ints import uint32
-from chia.util.keyring_wrapper import KeyringWrapper
-from chia.util.streamable import streamable, Streamable
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
+import pkg_resources
+from bitstring import BitArray  # pyright: reportMissingImports=false
+from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
+
+from chia.util.errors import (
+    KeychainException,
+    KeychainFingerprintExists,
+    KeychainFingerprintNotFound,
+    KeychainKeyDataMismatch,
+    KeychainNotSet,
+    KeychainSecretsMissing,
+    KeychainUserNotFound,
+)
+from chia.util.hash import std_hash
+from chia.util.ints import uint32
+from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.streamable import Streamable, streamable
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
