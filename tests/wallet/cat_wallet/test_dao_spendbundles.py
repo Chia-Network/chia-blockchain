@@ -1,3 +1,5 @@
+# type: ignore
+
 from blspy import AugSchemeMPL, G1Element, PrivateKey, G2Element
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program

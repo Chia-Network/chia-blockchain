@@ -1,3 +1,5 @@
+# type: ignore
+
 import asyncio
 from typing import List
 
@@ -180,5 +182,3 @@ class TestDAOCATWallet:
             total_votes,
             proposal_innerpuz,
         )
-
-        
