@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import os
 import subprocess
 import sys
-
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, Optional
 
