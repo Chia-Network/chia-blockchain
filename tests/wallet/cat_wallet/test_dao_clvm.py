@@ -1,6 +1,8 @@
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.util.hash import std_hash
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -13,6 +15,7 @@ P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_proposal.clvm")
+DAO_REF_PROPOSAL: Program = load_clvm("dao_reference_proposal.clvm")
 
 
 def test_proposal():
@@ -100,6 +103,101 @@ def test_proposal():
     )
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 6
+
+
+def test_proposal_innerpuz():
+    current_cat_issuance: uint64 = uint64(1000)
+    proposal_pass_percentage: uint64 = uint64(15)
+    CAT_TAIL: Program = Program.to("tail").get_tree_hash()
+    treasury_id: Program = Program.to("treasury_id").get_tree_hash()
+    LOCKUP_TIME: uint64 = uint64(200)
+    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+
+    new_puzhash = Program.to("new_puzhash").get_tree_hash()
+    relative_change = 300
+
+    # Setup Proposal
+    P2_PH = Program.to("p2_ph").get_tree_hash()
+    AMOUNT = 10
+    P2_CONDS = [[51, P2_PH, AMOUNT]]
+
+    proposal_innerpuz = DAO_REF_PROPOSAL.curry(P2_CONDS, new_puzhash, relative_change)
+
+    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        singleton_id,
+        LOCKUP_TIME,
+        200,
+        350,
+        proposal_innerpuz,
+    )
+
+
+    solution: Program = Program.to(
+        [
+            [],
+            P2_SINGLETON_MOD.get_tree_hash(),
+            0
+        ]
+    )
+
+    prop_ph: bytes32 = full_proposal.get_tree_hash()
+    full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
+
+
+    # Setup the treasury
+    full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
+        singleton_struct,
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        P2_SINGLETON_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        LOCKUP_TIME,
+    )
+    full_treasury_ph = full_treasury_puz.get_tree_hash()
+    treasury_solution: Program = Program.to(
+        [
+            new_puzhash,         # amount_or_new_puzhash
+            relative_change,     # new_amount
+            singleton_id,        # my_puzhash_or_proposal_id
+            proposal_innerpuz,   # proposal_innerpuz
+            200,
+            350,
+            0,
+        ]
+    )
+
+    # Run the puzzles
+    treasury_conds: Program = full_treasury_puz.run(treasury_solution)
+    proposal_conds: Program = full_proposal.run(solution)
+
+    # Check the A_P_As from treasury match the C_P_As from the proposal
+    cpa = b">"
+    apa = b"?"
+    cpas = []
+    for cond in proposal_conds.as_python():
+        if cond[0] == cpa:
+            cpas.append(std_hash(full_prop_ph + bytes32(cond[1])))
+    for cond in treasury_conds.as_python():
+        if cond[0] == apa:
+            assert bytes32(cond[1]) in cpas
+
 
 
 def test_proposal_timer():

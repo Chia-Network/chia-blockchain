@@ -1,0 +1,13 @@
+(mod (P2_CONDS NEW_PUZHASH RELATIVE_CHANGE)
+  
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+  (include *standard-cl-21*)
+
+  
+  (c
+    (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c NEW_PUZHASH RELATIVE_CHANGE)))
+    P2_CONDS
+  )
+
+)
