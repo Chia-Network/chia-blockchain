@@ -1,7 +1,9 @@
-import pathlib
+from __future__ import annotations
+
 import os
-from multiprocessing import freeze_support
+import pathlib
 import sys
+from multiprocessing import freeze_support
 from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
@@ -11,7 +13,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config_cli, load_config
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
 from chia.util.task_timing import maybe_manage_task_instrumentation

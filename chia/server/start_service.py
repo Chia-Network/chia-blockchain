@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 import functools
-import os
 import logging
 import logging.config
+import os
 import signal
 import sys
 from typing import Any, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.daemon.server import service_launch_lock_path
-from chia.util.lock import Lockfile, LockfileError
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
+from chia.util.lock import Lockfile, LockfileError
+
 from ..protocols.shared_protocol import capabilities
 
 try:
@@ -18,16 +21,15 @@ except ImportError:
     uvloop = None
 
 from chia.cmds.init_funcs import chia_full_version_str
-from chia.rpc.rpc_server import RpcApiProtocol, RpcServiceProtocol, start_rpc_server, RpcServer
+from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
-from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
+from chia.util.setproctitle import setproctitle
 
 from .reconnect_task import start_reconnect_task
-
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
