@@ -38,7 +38,11 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
                 "Failed to call bladebit with --memory-json option",
                 capture_output=True,
                 text=True,
+                check=False,
             )
+            if proc.returncode != 0:
+                return have_enough_memory, proc.stderr.strip()
+
             memory_info: Dict[str, int] = json.loads(proc.stdout)
             total_bytes: int = memory_info.get("total", -1)
             required_bytes: int = memory_info.get("required", 0)
@@ -104,7 +108,11 @@ def get_bladebit_version(plotters_root_path: Path):
             "Failed to call bladebit with --version option",
             capture_output=True,
             text=True,
+            check=False,
         )
+        if proc.returncode != 0:
+            return None, proc.stderr.strip()
+
         # (Found, versionStr)
         version_str: str = proc.stdout.strip()
         return True, version_str.split(".")

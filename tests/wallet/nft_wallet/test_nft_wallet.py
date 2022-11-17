@@ -418,7 +418,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     coins_response = await wait_rpc_state_condition(
         5,
         api_0.nft_get_nfts,
-        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True}],
+        [{"wallet_id": nft_wallet_0_id}],
         lambda x: x["success"] and len(x["nft_list"]) == 2,
     )
     coins = coins_response["nft_list"]
@@ -429,13 +429,12 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         assert coin.mint_height > 0
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
-    assert coins[1].off_chain_metadata is not None
     assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
 
     coins_response = await wait_rpc_state_condition(
         5,
         api_0.nft_get_nfts,
-        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True, "start_index": 1, "num": 1}],
+        [{"wallet_id": nft_wallet_0_id, "start_index": 1, "num": 1}],
         lambda x: x["success"] and len(x["nft_list"]) == 1,
     )
     coins = coins_response["nft_list"]

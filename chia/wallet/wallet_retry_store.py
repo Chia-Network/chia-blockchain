@@ -22,7 +22,10 @@ class WalletRetryStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS retry_store(" " coin_state blob," " peer blob," " fork_height int)"
+                "CREATE TABLE IF NOT EXISTS retry_store("
+                " coin_state blob PRIMARY KEY,"
+                " peer blob,"
+                " fork_height int)"
             )
 
         return self

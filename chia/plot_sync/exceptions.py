@@ -4,7 +4,7 @@ from typing import Any
 
 from chia.plot_sync.util import ErrorCodes, State
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
-from chia.server.ws_connection import NodeType
+from chia.server.outbound_message import NodeType
 from chia.util.ints import uint64
 
 
