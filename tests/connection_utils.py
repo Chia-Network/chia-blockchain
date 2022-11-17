@@ -25,9 +25,10 @@ log = logging.getLogger(__name__)
 
 
 async def disconnect_all(server: ChiaServer) -> None:
-    cons = list(server.all_connections.values())[:]
-    for con in cons:
-        await con.close()
+    connections = list(server.all_connections.values())
+    await asyncio.gather(*(connection.close() for connection in connections))
+
+    await asyncio.sleep(5)  # 5 seconds to allow connections and tasks to all drain
 
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
