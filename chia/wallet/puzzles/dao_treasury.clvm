@@ -89,10 +89,10 @@
   )
 
   ; main
-  (if new_puzhash
-    ; this is the payout spend case
-    (c
-      (list ASSERT_MY_AMOUNT old_amount)
+  (c
+    (list ASSERT_MY_AMOUNT old_amount)
+    (if new_puzhash
+      ; this is the payout spend case
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs
         (c
@@ -122,19 +122,18 @@
           )
         )
       )
-    )
-    ; this is the add money spend case
-    (if (> new_amount_change -1)
-      (list
-        (list ASSERT_MY_AMOUNT old_amount)
-        (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change old_amount))
-        (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
+      ; this is the add money spend case
+      (if (> new_amount_change -1)
         (list
-          CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken
-          (sha256tree (list new_amount_change announcement_messages_list_or_payment_nonce))
+          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change old_amount))
+          (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
+          (list
+            CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken
+            (sha256tree (list new_amount_change announcement_messages_list_or_payment_nonce))
+          )
         )
+        (x)
       )
-      (x)
     )
   )
 )
