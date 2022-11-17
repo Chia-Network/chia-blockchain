@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import logging
+from logging.handlers import SysLogHandler
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
-from logging.handlers import SysLogHandler
 
 from chia.cmds.init_funcs import chia_full_version_str
-from chia.util.path import path_from_root
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.path import path_from_root
 
 default_log_level = "WARNING"
 
