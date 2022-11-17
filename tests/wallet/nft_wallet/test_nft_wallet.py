@@ -1277,8 +1277,8 @@ async def test_nft_bulk_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     assert len(coins) == 1
     assert coins[0].owner_did is None
     nft_coin_list = [
-        {"wallet_id": nft_wallet_0_id, "coin_id": nft1.nft_coin_id.hex()},
-        {"wallet_id": nft_wallet_1_id, "coin_id": nft2.nft_coin_id.hex()},
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft1.nft_coin_id.hex()},
+        {"wallet_id": nft_wallet_1_id, "nft_coin_id": nft2.nft_coin_id.hex()},
     ]
     resp = await api_0.nft_set_bulk_nft_did(dict(did_id=hmr_did_id, nft_coin_list=nft_coin_list))
     coins_response = await wait_rpc_state_condition(
