@@ -1,7 +1,7 @@
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
@@ -69,19 +69,13 @@ def test_proposal() -> None:
             1,
             Program.to("vote_coin").get_tree_hash(),
             [0xFADEDDAB],
-            0xcafef00d,
+            0xCAFEF00D,
         ]
     )
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
     # Test exit
-    solution = Program.to(
-        [
-            [[51, 0xCAFEF00D, 200]],
-            P2_SINGLETON_MOD.get_tree_hash(),
-            0
-        ]
-    )
+    solution = Program.to([[[51, 0xCAFEF00D, 200]], P2_SINGLETON_MOD.get_tree_hash(), 0])
     full_proposal = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -165,8 +159,10 @@ def test_treasury() -> None:
     # PROPOSAL_TIMELOCK
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         singleton_struct,
+        DAO_TREASURY_MOD.get_tree_hash(),
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
         P2_SINGLETON_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
@@ -178,20 +174,25 @@ def test_treasury() -> None:
     # old_amount
     # new_amount_change
     # my_puzhash_or_proposal_id
-    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the
+    # treasury will parrot - assert from the proposal and also create
     # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
     # proposal_innerpuz
     # proposal_current_votes
     # proposal_total_votes
 
     # Add money solution
-    solution: Program = Program.to([
-        200,
-        100,
-        full_treasury_puz.get_tree_hash(),
-        Program.to("payment_nonce").get_tree_hash(),
-        0,
-    ])
+    solution: Program = Program.to(
+        [
+            200,
+            100,
+            full_treasury_puz.get_tree_hash(),
+            Program.to("payment_nonce").get_tree_hash(),
+            0,
+            0,
+            0,
+        ]
+    )
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 4
 
@@ -268,23 +269,27 @@ def test_lockup() -> None:
     # new_proposal_vote_id
     # vote_info
     # proposal_curry_vals
-    solution: Program = Program.to([
-        my_id,
-        generated_conditions,
-        20,
-        new_proposal,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
-        1,
-    ])
+    solution: Program = Program.to(
+        [
+            my_id,
+            generated_conditions,
+            20,
+            new_proposal,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+            1,
+        ]
+    )
     conds: Program = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 5
 
-    solution = Program.to([
-        0,
-        generated_conditions,
-        20,
-        0xFADEDDAB,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
-    ])
+    solution = Program.to(
+        [
+            0,
+            generated_conditions,
+            20,
+            0xFADEDDAB,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+        ]
+    )
     conds = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 3
