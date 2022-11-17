@@ -17,7 +17,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -846,6 +846,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
         }
     )
     assert resp.get("success")
+    nft_id: str = str(resp.get("nft_id"))
     sb = resp["spend_bundle"]
 
     # ensure hints are generated
@@ -871,6 +872,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     assert did_nft.edition_total == st
     assert did_nft.edition_number == sn
     assert did_nft.royalty_percentage == royalty_percentage
+    assert decode_puzzle_hash(nft_id) == did_nft.launcher_id
 
 
 @pytest.mark.parametrize(
