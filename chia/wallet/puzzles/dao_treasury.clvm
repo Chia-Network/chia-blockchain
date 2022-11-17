@@ -92,31 +92,34 @@
   (if proposal_innerpuz
     ; this is the payout spend case
     (c
-      (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs
+      (list ASSERT_MY_AMOUNT old_amount)
       (c
-        (list CREATE_COIN new_puzhash (+ old_amount new_amount_change))
-        (create_puzzle_asserts
-          (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
-              (calculate_proposal_puzzle
-                (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))
-                PROPOSAL_MOD_HASH
-                PROPOSAL_TIMER_MOD_HASH
-                CAT_MOD_HASH
-                EPHEMERAL_VOTE_PUZHASH
-                CAT_TAIL
-                CURRENT_CAT_ISSUANCE
-                PROPOSAL_PASS_PERCENTAGE
-                (f SINGLETON_STRUCT)
-                PROPOSAL_TIMELOCK
-                proposal_current_votes
-                proposal_total_votes
-                proposal_innerpuz
-              )
+        (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs
+        (c
+          (list CREATE_COIN new_puzhash (+ old_amount new_amount_change))
+          (create_puzzle_asserts
+            (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
+                (calculate_proposal_puzzle
+                  (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))
+                  PROPOSAL_MOD_HASH
+                  PROPOSAL_TIMER_MOD_HASH
+                  CAT_MOD_HASH
+                  EPHEMERAL_VOTE_PUZHASH
+                  CAT_TAIL
+                  CURRENT_CAT_ISSUANCE
+                  PROPOSAL_PASS_PERCENTAGE
+                  (f SINGLETON_STRUCT)
+                  PROPOSAL_TIMELOCK
+                  proposal_current_votes
+                  proposal_total_votes
+                  proposal_innerpuz
+                )
+            )
+            (launcher_id_for_singleton_struct SINGLETON_STRUCT)
+            new_puzhash
+            new_amount_change
+            announcement_messages_list_or_payment_nonce
           )
-          (launcher_id_for_singleton_struct SINGLETON_STRUCT)
-          new_puzhash
-          new_amount_change
-          announcement_messages_list_or_payment_nonce
         )
       )
     )
