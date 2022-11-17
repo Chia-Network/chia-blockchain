@@ -175,25 +175,38 @@ def test_treasury() -> None:
         LOCKUP_TIME,
     )
 
-    # amount_or_new_puzhash
-    # new_amount
+    # old_amount
+    # new_puzhash
+    # new_amount_change
     # my_puzhash_or_proposal_id
     # proposal_innerpuz  ; if this variable is 0 then we do the "add_money" spend case
     # proposal_current_votes
     # proposal_total_votes
+    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
 
-    solution: Program = Program.to([200, 300, full_treasury_puz.get_tree_hash(), 0, 0])
+    solution: Program = Program.to([
+        200,
+        0,
+        100,
+        full_treasury_puz.get_tree_hash(),
+        0,
+        0,
+        0,
+        0,
+    ])
     conds: Program = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 3
+    assert len(conds.as_python()) == 4
 
     solution = Program.to(
         [
-            0xFADEDDAB,
-            300,
+            200,
+            full_treasury_puz.get_tree_hash(),
+            100,
             Program.to("proposal_id").get_tree_hash(),
             Program.to("proposal_inner").get_tree_hash(),
             100,
             150,
+            0,
             0,
         ]
     )
