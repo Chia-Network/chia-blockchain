@@ -201,7 +201,7 @@ def test_treasury() -> None:
         [
             200,
             full_treasury_puz.get_tree_hash(),
-            100,
+            -100,
             Program.to("proposal_id").get_tree_hash(),
             Program.to("proposal_inner").get_tree_hash(),
             100,
@@ -211,7 +211,7 @@ def test_treasury() -> None:
         ]
     )
     conds = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 4
+    assert len(conds.as_python()) == 5
 
 
 def test_lockup() -> None:
