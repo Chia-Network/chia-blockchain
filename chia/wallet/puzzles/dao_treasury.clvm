@@ -12,13 +12,13 @@
   PROPOSAL_PASS_PERCENTAGE
   PROPOSAL_TIMELOCK
   old_amount
-  new_puzhash
   new_amount_change
   my_puzhash_or_proposal_id
-  proposal_innerpuz  ; if this variable is 0 then we do the "add_money" spend case
+  announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+  new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
+  proposal_innerpuz
   proposal_current_votes
   proposal_total_votes
-  announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -89,7 +89,7 @@
   )
 
   ; main
-  (if proposal_innerpuz
+  (if new_puzhash
     ; this is the payout spend case
     (c
       (list ASSERT_MY_AMOUNT old_amount)
