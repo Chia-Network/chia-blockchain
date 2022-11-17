@@ -15,7 +15,7 @@ DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_proposal.clvm")
 
 
-def test_proposal():
+def test_proposal() -> None:
     # SINGLETON_STRUCT
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
@@ -75,14 +75,14 @@ def test_proposal():
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
     # Test exit
-    solution: Program = Program.to(
+    solution = Program.to(
         [
             [[51, 0xCAFEF00D, 200]],
             P2_SINGLETON_MOD.get_tree_hash(),
             0
         ]
     )
-    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
+    full_proposal = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
@@ -98,11 +98,11 @@ def test_proposal():
         350,
         Program.to(1),
     )
-    conds: Program = full_proposal.run(solution)
+    conds = full_proposal.run(solution)
     assert len(conds.as_python()) == 6
 
 
-def test_proposal_timer():
+def test_proposal_timer() -> None:
     current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
@@ -144,7 +144,7 @@ def test_proposal_timer():
     assert len(conds.as_python()) == 4
 
 
-def test_treasury():
+def test_treasury() -> None:
     current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
@@ -186,7 +186,7 @@ def test_treasury():
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
 
-    solution: Program = Program.to(
+    solution = Program.to(
         [
             0xFADEDDAB,
             300,
@@ -197,11 +197,11 @@ def test_treasury():
             0,
         ]
     )
-    conds: Program = full_treasury_puz.run(solution)
+    conds = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 4
 
 
-def test_lockup():
+def test_lockup() -> None:
     # PROPOSAL_MOD_HASH
     # SINGLETON_MOD_HASH
     # SINGLETON_LAUNCHER_PUZHASH
@@ -269,12 +269,12 @@ def test_lockup():
     conds: Program = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 5
 
-    solution: Program = Program.to([
+    solution = Program.to([
         0,
         generated_conditions,
         20,
         0xFADEDDAB,
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
     ])
-    conds: Program = full_lockup_puz.run(solution)
+    conds = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 3
