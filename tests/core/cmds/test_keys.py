@@ -404,8 +404,10 @@ class TestKeysCommands:
         # Run the command
         result: Result = runner.invoke(cli, [*base_params, *cmd_params])
 
-        # assert result.exit_code == 0
-        assert len([word for word in result.output.split() if word == "Fingerprint:"]) == 1
+        assert result.exit_code == 0
+        fingerprints = [line for line in result.output.splitlines() if "Fingerprint:" in line]
+        assert len(fingerprints) == 1
+        assert str(TEST_FINGERPRINT) in fingerprints[0]
 
     def test_show_json(self, keyring_with_one_key, tmp_path):
         """
