@@ -56,8 +56,9 @@ jobs:
 
     - name: Get npm cache directory
       id: npm-cache
+      shell: bash
       run: |
-        echo "dir=$(npm config get cache)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
 
     - name: Cache npm
       uses: actions/cache@v3
@@ -69,8 +70,9 @@ jobs:
 
     - name: Get pip cache dir
       id: pip-cache
+      shell: bash
       run: |
-        echo "dir=$(pip cache dir)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
     - name: Cache pip
       uses: actions/cache@v3
