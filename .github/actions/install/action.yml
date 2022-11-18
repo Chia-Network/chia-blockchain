@@ -11,6 +11,10 @@ inputs:
     description: "Install development dependencies."
     required: false
     default: ""
+  legacy_keyring:
+    description: "Install legacy keyring dependencies."
+    required: false
+    default: ""
   automated:
     description: "Automated install, no questions."
     required: false
@@ -29,7 +33,7 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
+        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
 
     - name: Run install script (Windows)
       if: runner.os == 'windows'

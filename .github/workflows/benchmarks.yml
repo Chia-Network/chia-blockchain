@@ -71,6 +71,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           development: true
+          legacy_keyring: true
 
       - uses: chia-network/actions/activate-venv@main
 
