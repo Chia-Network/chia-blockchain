@@ -279,7 +279,10 @@ class FullNode:
             peak_store = None
         for con in connections:
             if peak_store is not None and con.peer_node_id in peak_store:
-                peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
+                peak = peak_store[con.peer_node_id]
+                peak_height = peak.height
+                peak_hash = peak.header_hash
+                peak_weight = peak.weight
             else:
                 peak_height = None
                 peak_hash = None
@@ -705,21 +708,20 @@ class FullNode:
 
         if self.sync_store.get_sync_mode():
             # If peer connects while we are syncing, check if they have the block we are syncing towards
-            peak_sync_hash = self.sync_store.get_sync_target_hash()
-            peak_sync_height = self.sync_store.get_sync_target_height()
-            if peak_sync_hash is not None and request.header_hash != peak_sync_hash and peak_sync_height is not None:
-                peak_peers: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_sync_hash])
+            target_peak = self.sync_store.target_peak
+            if target_peak is not None and request.header_hash != target_peak.header_hash:
+                peak_peers: Set[bytes32] = self.sync_store.get_peers_that_have_peak([target_peak.header_hash])
                 # Don't ask if we already know this peer has the peak
                 if peer.peer_node_id not in peak_peers:
                     target_peak_response: Optional[RespondBlock] = await peer.request_block(
-                        full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
+                        full_node_protocol.RequestBlock(target_peak.height, False), timeout=10
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
                         self.sync_store.peer_has_block(
-                            peak_sync_hash,
+                            target_peak.header_hash,
                             peer.peer_node_id,
                             target_peak_response.block.weight,
-                            peak_sync_height,
+                            target_peak.height,
                             False,
                         )
         else:
@@ -968,7 +970,7 @@ class FullNode:
             # Wait until we have 3 peaks or up to a max of 30 seconds
             peaks = []
             for i in range(300):
-                peaks = [tup[0] for tup in self.sync_store.get_peak_of_each_peer().values()]
+                peaks = [peak.header_hash for peak in self.sync_store.get_peak_of_each_peer().values()]
                 if len(self.sync_store.get_peers_that_have_peak(peaks)) < 3:
                     if self._shut_down:
                         return None
@@ -984,10 +986,10 @@ class FullNode:
 
             if target_peak is None:
                 raise RuntimeError("Not performing sync, no peaks collected")
-            heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight = target_peak
-            self.sync_store.set_peak_target(heaviest_peak_hash, heaviest_peak_height)
 
-            self.log.info(f"Selected peak {heaviest_peak_height}, {heaviest_peak_hash}")
+            self.sync_store.target_peak = target_peak
+
+            self.log.info(f"Selected peak {target_peak}")
             # Check which peers are updated to this height
 
             peers: List[bytes32] = []
@@ -996,48 +998,45 @@ class FullNode:
                 if peer.connection_type == NodeType.FULL_NODE:
                     peers.append(peer.peer_node_id)
                     coroutines.append(
-                        peer.request_block(
-                            full_node_protocol.RequestBlock(uint32(heaviest_peak_height), True), timeout=10
-                        )
+                        peer.request_block(full_node_protocol.RequestBlock(target_peak.height, True), timeout=10)
                     )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
                 if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
                     self.sync_store.peer_has_block(
-                        heaviest_peak_hash, peers[i], heaviest_peak_weight, heaviest_peak_height, False
+                        target_peak.header_hash, peers[i], target_peak.weight, target_peak.height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
 
-            peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([heaviest_peak_hash])
+            peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([target_peak.header_hash])
             peers_with_peak: List[WSChiaConnection] = [
                 c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids
             ]
 
             # Request weight proof from a random peer
-            self.log.info(f"Total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
+            self.log.info(f"Total of {len(peers_with_peak)} peers with peak {target_peak.height}")
             weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
             self.log.info(
-                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height"
-                f" {heaviest_peak_height}"
+                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height" f" {target_peak.height}"
             )
             cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
-            if cur_peak is not None and heaviest_peak_weight <= cur_peak.weight:
+            if cur_peak is not None and target_peak.weight <= cur_peak.weight:
                 raise ValueError("Not performing sync, already caught up.")
 
             wp_timeout = 360
             if "weight_proof_timeout" in self.config:
                 wp_timeout = self.config["weight_proof_timeout"]
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-            request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
+            request = full_node_protocol.RequestProofOfWeight(target_peak.height, target_peak.header_hash)
             response = await weight_proof_peer.request_proof_of_weight(request, timeout=wp_timeout)
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
-            if response.wp.recent_chain_data[-1].reward_chain_block.height != heaviest_peak_height:
+            if response.wp.recent_chain_data[-1].reward_chain_block.height != target_peak.height:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_host}")
-            if response.wp.recent_chain_data[-1].reward_chain_block.weight != heaviest_peak_weight:
+            if response.wp.recent_chain_data[-1].reward_chain_block.weight != target_peak.weight:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
@@ -1058,13 +1057,13 @@ class FullNode:
                 await weight_proof_peer.close(600)
                 raise ValueError("Weight proof validation failed")
 
-            self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
+            self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {target_peak.height}")
             self.sync_store.set_sync_mode(True)
             self._state_changed("sync_mode")
             # Ensures that the fork point does not change
             async with self._blockchain_lock_high_priority:
                 await self.blockchain.warmup(fork_point)
-                await self.sync_from_fork_point(fork_point, heaviest_peak_height, heaviest_peak_hash, summaries)
+                await self.sync_from_fork_point(fork_point, target_peak.height, target_peak.header_hash, summaries)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
