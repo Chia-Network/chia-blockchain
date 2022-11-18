@@ -41,8 +41,15 @@ from chia.wallet.derive_keys import (
     master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
+from chia.wallet.did_wallet import did_wallet_puzzles
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, program_to_metadata, DID_INNERPUZ_MOD
+from chia.wallet.did_wallet.did_wallet_puzzles import (
+    match_did_puzzle,
+    program_to_metadata,
+    DID_INNERPUZ_MOD,
+    create_fullpuz,
+)
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
@@ -1820,7 +1827,7 @@ class WalletRpcApi:
             )
         launcher_id = singleton_struct.rest().first().as_python()
         if derivation_record is None:
-            return {"success": False, "error": f"This DID {launcher_id} is not belong to the connected wallet"}
+            return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
         else:
             our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
@@ -1828,6 +1835,19 @@ class WalletRpcApi:
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
             )
+            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+            did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
+            )
+            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
+            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = did_puzzle_empty_recovery
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Cannot recover DID {launcher_id.hex()} because the last spend is metadata update.",
+                    }
             # Check if we have the DID wallet
             did_wallet: Optional[DIDWallet] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1836,6 +1856,7 @@ class WalletRpcApi:
                     if wallet.did_info.origin_coin.name() == launcher_id:
                         did_wallet = wallet
                         break
+
             if did_wallet is None:
                 # Create DID wallet
                 response: List[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
@@ -1850,6 +1871,35 @@ class WalletRpcApi:
                     coin_spend,
                     f"DID {encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config))}",
                 )
+            else:
+                assert did_wallet.did_info.current_inner is not None
+                if did_wallet.did_info.current_inner.get_tree_hash() != did_puzzle.get_tree_hash():
+                    # Inner DID puzzle doesn't match, we need to update the DID info
+                    full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
+                    inner_solution: Program = full_solution.rest().rest().first()
+                    recovery_list: List[bytes32] = []
+                    backup_required: int = num_verification.as_int()
+                    if recovery_list_hash != Program.to([]).get_tree_hash():
+                        try:
+                            for did in inner_solution.rest().rest().rest().rest().rest().as_python():
+                                recovery_list.append(did[0])
+                        except Exception:
+                            # We cannot recover the recovery list, but it's okay to leave it blank
+                            pass
+                    did_info: DIDInfo = DIDInfo(
+                        did_wallet.did_info.origin_coin,
+                        recovery_list,
+                        uint64(backup_required),
+                        [],
+                        did_puzzle,
+                        None,
+                        None,
+                        None,
+                        False,
+                        json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+                    )
+                    await did_wallet.save_info(did_info)
+                    await self.service.wallet_state_manager.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)
 
             try:
                 coins = await did_wallet.select_coins(uint64(1))
