@@ -1,17 +1,20 @@
-import asyncio
-import random
-from time import time
-from pathlib import Path
-from chia.full_node.coin_store import CoinStore
-from typing import List, Tuple
-import os
-import sys
+from __future__ import annotations
 
-from chia.util.db_wrapper import DBWrapper
-from chia.types.blockchain_format.sized_bytes import bytes32
+import asyncio
+import os
+import random
+import sys
+from pathlib import Path
+from time import monotonic
+from typing import List, Tuple
+
+from utils import rand_hash, rewards, setup_db
+
+from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.util.ints import uint64, uint32
-from utils import rewards, rand_hash, setup_db
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint32, uint64
 
 NUM_ITERS = 200
 
@@ -29,7 +32,7 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     for i in range(num):
         c = make_coin()
         additions.append(c)
-        hashes.append(c.get_hash())
+        hashes.append(c.name())
 
     return additions, hashes
 
@@ -37,7 +40,7 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
 async def run_new_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("coin-store-benchmark.db", version)
+    db_wrapper: DBWrapper2 = await setup_db("coin-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
@@ -69,13 +72,12 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[100:]
 
             await coin_store.new_block(
-                height,
-                timestamp,
-                set([pool_coin, farmer_coin]),
+                uint32(height),
+                uint64(timestamp),
+                {pool_coin, farmer_coin},
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
 
             # 19 seconds per block
             timestamp += 19
@@ -109,16 +111,15 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[100:]
             total_remove += 100
 
-            start = time()
+            start = monotonic()
             await coin_store.new_block(
-                height,
-                timestamp,
-                set([pool_coin, farmer_coin]),
+                uint32(height),
+                uint64(timestamp),
+                {pool_coin, farmer_coin},
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
-            stop = time()
+            stop = monotonic()
 
             # 19 seconds per block
             timestamp += 19
@@ -149,8 +150,8 @@ async def run_new_block_benchmark(version: int):
             total_add += 1
 
             farmer_coin, pool_coin = rewards(uint32(height))
-            all_coins += [c.get_hash()]
-            all_unspent += [c.get_hash()]
+            all_coins += [c.name()]
+            all_unspent += [c.name()]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
             total_add += 2
 
@@ -160,17 +161,16 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[700:]
             total_remove += 700
 
-            start = time()
+            start = monotonic()
             await coin_store.new_block(
-                height,
-                timestamp,
-                set([pool_coin, farmer_coin]),
+                uint32(height),
+                uint64(timestamp),
+                {pool_coin, farmer_coin},
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
 
-            stop = time()
+            stop = monotonic()
 
             # 19 seconds per block
             timestamp += 19
@@ -210,16 +210,15 @@ async def run_new_block_benchmark(version: int):
             all_unspent = all_unspent[2000:]
             total_remove += 2000
 
-            start = time()
+            start = monotonic()
             await coin_store.new_block(
-                height,
-                timestamp,
-                set([pool_coin, farmer_coin]),
+                uint32(height),
+                uint64(timestamp),
+                {pool_coin, farmer_coin},
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
-            stop = time()
+            stop = monotonic()
 
             # 19 seconds per block
             timestamp += 19
@@ -242,9 +241,9 @@ async def run_new_block_benchmark(version: int):
         found_coins = 0
         for i in range(NUM_ITERS):
             lookup = random.sample(all_coins, 200)
-            start = time()
+            start = monotonic()
             records = await coin_store.get_coin_records_by_names(True, lookup)
-            total_time += time() - start
+            total_time += monotonic() - start
             assert len(records) == 200
             found_coins += len(records)
             if verbose:
@@ -265,9 +264,9 @@ async def run_new_block_benchmark(version: int):
         found_coins = 0
         for i in range(NUM_ITERS):
             lookup = random.sample(all_coins, 200)
-            start = time()
+            start = monotonic()
             records = await coin_store.get_coin_records_by_names(False, lookup)
-            total_time += time() - start
+            total_time += monotonic() - start
             assert len(records) <= 200
             found_coins += len(records)
             if verbose:
@@ -287,9 +286,9 @@ async def run_new_block_benchmark(version: int):
         total_time = 0
         found_coins = 0
         for i in range(1, block_height):
-            start = time()
-            records = await coin_store.get_coins_removed_at_height(i)
-            total_time += time() - start
+            start = monotonic()
+            records = await coin_store.get_coins_removed_at_height(uint32(i))
+            total_time += monotonic() - start
             found_coins += len(records)
             if verbose:
                 print(".", end="")
@@ -305,7 +304,7 @@ async def run_new_block_benchmark(version: int):
         print(f"all tests completed in {all_test_time:0.4f}s")
 
     finally:
-        await db_wrapper.db.close()
+        await db_wrapper.close()
 
     db_size = os.path.getsize(Path("coin-store-benchmark.db"))
     print(f"database size: {db_size/1000000:.3f} MB")

@@ -3,20 +3,23 @@ import logging
 import time
 import traceback
 import ipaddress
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 
-import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
+from chia.rpc.rpc_server import default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -27,13 +30,24 @@ class Crawler:
     coin_store: CoinStore
     connection: aiosqlite.Connection
     config: Dict
-    server: Any
+    _server: Optional[ChiaServer]
+    crawl_store: Optional[CrawlStore]
     log: logging.Logger
     constants: ConsensusConstants
     _shut_down: bool
     root_path: Path
     peer_count: int
     with_peak: set
+    minimum_version_count: int
+
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
 
     def __init__(
         self,
@@ -45,7 +59,7 @@ class Crawler:
         self.initialized = False
         self.root_path = root_path
         self.config = config
-        self.server = None
+        self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.state_changed_callback: Optional[Callable] = None
@@ -58,25 +72,32 @@ class Crawler:
         self.version_cache: List[Tuple[str, str]] = []
         self.handshake_time: Dict[str, int] = {}
         self.best_timestamp_per_peer: Dict[str, int] = {}
-        if "crawler_db_path" in config and config["crawler_db_path"] != "":
-            path = Path(config["crawler_db_path"])
-            self.db_path = path.resolve()
-        else:
-            db_path_replaced: str = "crawler.db"
-            self.db_path = path_from_root(root_path, db_path_replaced)
-        mkdir(self.db_path.parent)
+        crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
+        self.db_path = path_from_root(root_path, crawler_db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
+        self.versions: Dict[str, int] = defaultdict(lambda: 0)
+        self.minimum_version_count = self.config.get("minimum_version_count", 100)
+        if self.minimum_version_count < 1:
+            self.log.warning(
+                f"Crawler configuration minimum_version_count expected to be greater than zero: "
+                f"{self.minimum_version_count!r}"
+            )
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def create_client(self, peer_info, on_connect):
         return await self.server.start_client(peer_info, on_connect)
 
     async def connect_task(self, peer):
-        async def peer_action(peer: ws.WSChiaConnection):
+        async def peer_action(peer: WSChiaConnection):
+
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:
@@ -110,15 +131,24 @@ class Crawler:
             await self.crawl_store.peer_failed_to_connect(peer)
 
     async def _start(self):
+        # We override the default peer_connect_timeout when running from the crawler
+        crawler_peer_timeout = self.config.get("peer_connect_timeout", 2)
+        self.server.config["peer_connect_timeout"] = crawler_peer_timeout
+
         self.task = asyncio.create_task(self.crawl())
 
     async def crawl(self):
+        # Ensure the state_changed callback is set up before moving on
+        # Sometimes, the daemon connection + state changed callback isn't up and ready
+        # by the time we get to the first _state_changed call, so this just ensures it's there before moving on
+        while self.state_changed_callback is None:
+            self.log.info("Waiting for state changed callback...")
+            await asyncio.sleep(0.1)
+
         try:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
-            await self.crawl_store.load_to_db()
-            await self.crawl_store.load_reliable_peers_to_db()
             t_start = time.time()
             total_nodes = 0
             self.seen_nodes = set()
@@ -136,12 +166,19 @@ class Crawler:
                     uint64(0),
                     "undefined",
                     uint64(0),
+                    tls_version="unknown",
                 )
                 new_peer_reliability = PeerReliability(peer)
                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
 
             self.host_to_version, self.handshake_time = self.crawl_store.load_host_to_version()
             self.best_timestamp_per_peer = self.crawl_store.load_best_peer_reliability()
+            self.versions = defaultdict(lambda: 0)
+            for host, version in self.host_to_version.items():
+                self.versions[version] += 1
+
+            self._state_changed("loaded_initial_peers")
+
             while True:
                 self.with_peak = set()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
@@ -184,14 +221,15 @@ class Crawler:
                                 uint64(response_peer.timestamp),
                                 "undefined",
                                 uint64(0),
+                                tls_version="unknown",
                             )
                             new_peer_reliability = PeerReliability(response_peer.host)
                             if self.crawl_store is not None:
                                 self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
-                            await self.crawl_store.update_best_timestamp(
-                                response_peer.host,
-                                self.best_timestamp_per_peer[response_peer.host],
-                            )
+                        await self.crawl_store.update_best_timestamp(
+                            response_peer.host,
+                            self.best_timestamp_per_peer[response_peer.host],
+                        )
                 for host, version in self.version_cache:
                     self.handshake_time[host] = int(time.time())
                     self.host_to_version[host] = version
@@ -216,19 +254,27 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                versions = {}
+                self.versions = defaultdict(lambda: 0)
                 for host, version in self.host_to_version.items():
-                    if version not in versions:
-                        versions[version] = 0
-                    versions[version] += 1
+                    self.versions[version] += 1
                 self.version_cache = []
                 self.peers_retrieved = []
 
                 self.server.banned_peers = {}
                 if len(peers_to_crawl) == 0:
                     continue
-                await self.crawl_store.load_to_db()
-                await self.crawl_store.load_reliable_peers_to_db()
+
+                # Try up to 5 times to write to the DB in case there is a lock that causes a timeout
+                for i in range(1, 5):
+                    try:
+                        await self.crawl_store.load_to_db()
+                        await self.crawl_store.load_reliable_peers_to_db()
+                    except Exception as e:
+                        self.log.error(f"Exception while saving to DB: {e}.")
+                        self.log.error("Waiting 5 seconds before retry...")
+                        await asyncio.sleep(5)
+                        continue
+                    break
                 total_records = self.crawl_store.get_total_records()
                 ipv6_count = self.crawl_store.get_ipv6_peers()
                 self.log.error("***")
@@ -252,9 +298,9 @@ class Crawler:
                 ipv6_addresses_count = 0
                 for host in self.best_timestamp_per_peer.keys():
                     try:
-                        _ = ipaddress.IPv6Address(host)
+                        ipaddress.IPv6Address(host)
                         ipv6_addresses_count += 1
-                    except ValueError:
+                    except ipaddress.AddressValueError:
                         continue
                 self.log.error(
                     "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
@@ -267,21 +313,17 @@ class Crawler:
                 ipv6_available_peers = 0
                 for host in self.host_to_version.keys():
                     try:
-                        _ = ipaddress.IPv6Address(host)
+                        ipaddress.IPv6Address(host)
                         ipv6_available_peers += 1
-                    except ValueError:
+                    except ipaddress.AddressValueError:
                         continue
                 self.log.error(
                     f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}."
                 )
                 self.log.error(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
                 self.log.error("Version distribution among reachable in the last 5 days (at least 100 nodes):")
-                if "minimum_version_count" in self.config and self.config["minimum_version_count"] > 0:
-                    minimum_version_count = self.config["minimum_version_count"]
-                else:
-                    minimum_version_count = 100
-                for version, count in sorted(versions.items(), key=lambda kv: kv[1], reverse=True):
-                    if count >= minimum_version_count:
+                for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
+                    if count >= self.minimum_version_count:
                         self.log.error(f"Version: {version} - Count: {count}")
                 self.log.error(f"Banned addresses in the DB: {banned_peers}")
                 self.log.error(f"Temporary ignored addresses in the DB: {ignored_peers}")
@@ -290,29 +332,34 @@ class Crawler:
                     f"{total_records - banned_peers - ignored_peers}"
                 )
                 self.log.error("***")
+
+                self._state_changed("crawl_batch_completed")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
     def set_server(self, server: ChiaServer):
-        self.server = server
+        self._server = server
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection):
         try:
             peer_info = peer.get_peer_info()
+            tls_version = peer.get_tls_version()
+            if tls_version is None:
+                tls_version = "unknown"
             if peer_info is None:
                 return
             if request.height >= self.minimum_height:
                 if self.crawl_store is not None:
-                    await self.crawl_store.peer_connected_hostname(peer_info.host, True)
+                    await self.crawl_store.peer_connected_hostname(peer_info.host, True, tls_version)
             self.with_peak.add(peer_info)
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: WSChiaConnection):
         pass
 
     def _close(self):

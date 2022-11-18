@@ -1,0 +1,62 @@
+name: 🚨 Snyk Python Scan
+
+on:
+  push:
+    branches:
+    - long_lived/**
+    - main
+    - release/**
+    tags:
+    - '**'
+  pull_request:
+    branches:
+    - '**'
+  workflow_dispatch: null
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  snyk_python:
+    name: Setup runner
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python environment
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Chia Blockchain
+      uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
+
+    - name: Activate Chia venv
+      uses: chia-network/actions/activate-venv@main
+
+    - name: Generate requirements.txt file
+      run: |
+        pip freeze > requirements.txt
+
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/python@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: monitor
+        args: --skip-unresolved

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import time
 from dataclasses import dataclass
@@ -6,8 +8,8 @@ from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PeerRecord(Streamable):
     peer_id: str
     ip_address: str
@@ -20,6 +22,7 @@ class PeerRecord(Streamable):
     best_timestamp: uint64
     version: str
     handshake_time: uint64
+    tls_version: str
 
     def update_version(self, version, now):
         if version != "undefined":

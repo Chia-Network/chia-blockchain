@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
 import shutil
-
-from aiofiles import tempfile  # type: ignore
 from pathlib import Path
 from typing import Union
 
+from aiofiles import tempfile
+from typing_extensions import Literal
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +68,7 @@ async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mod
     # Create the parent directory if necessary
     os.makedirs(file_path.parent, mode=dir_mode, exist_ok=True)
 
-    mode: str = "w+" if type(data) == str else "w+b"
+    mode: Literal["w+", "w+b"] = "w+" if type(data) == str else "w+b"
     temp_file_path: Path
     async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
         temp_file_path = f.name

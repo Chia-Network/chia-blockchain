@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class BackupInitialized(Streamable):
     """
     Stores user decision regarding import of backup info
