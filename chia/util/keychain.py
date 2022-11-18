@@ -258,16 +258,14 @@ class Keychain:
     list of all keys.
     """
 
-    def __init__(self, user: Optional[str] = None, service: Optional[str] = None, force_legacy: bool = False):
+    def __init__(self, user: Optional[str] = None, service: Optional[str] = None):
         self.user = user if user is not None else default_keychain_user()
         self.service = service if service is not None else default_keychain_service()
 
-        keyring_wrapper: Optional[KeyringWrapper] = (
-            KeyringWrapper.get_legacy_instance() if force_legacy else KeyringWrapper.get_shared_instance()
-        )
+        keyring_wrapper: Optional[KeyringWrapper] = KeyringWrapper.get_shared_instance()
 
         if keyring_wrapper is None:
-            raise KeychainNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
+            raise KeychainNotSet("KeyringWrapper not set")
 
         self.keyring_wrapper = keyring_wrapper
 
@@ -492,44 +490,6 @@ class Keychain:
 
         # Locked: Everything else
         return True
-
-    @staticmethod
-    def needs_migration() -> bool:
-        """
-        Returns a bool indicating whether the underlying keyring needs to be migrated to the new
-        format for passphrase support.
-        """
-        return KeyringWrapper.get_shared_instance().using_legacy_keyring()
-
-    @staticmethod
-    def handle_migration_completed():
-        """
-        When migration completes outside of the current process, we rely on a notification to inform
-        the current process that it needs to reset/refresh its keyring. This allows us to stop using
-        the legacy keyring in an already-running daemon if migration is completed using the CLI.
-        """
-        KeyringWrapper.get_shared_instance().refresh_keyrings()
-
-    @staticmethod
-    def migrate_legacy_keyring(
-        passphrase: Optional[str] = None,
-        passphrase_hint: Optional[str] = None,
-        save_passphrase: bool = False,
-        cleanup_legacy_keyring: bool = False,
-    ) -> None:
-        """
-        Begins legacy keyring migration in a non-interactive manner
-        """
-        if passphrase is not None and passphrase != "":
-            KeyringWrapper.get_shared_instance().set_master_passphrase(
-                current_passphrase=None,
-                new_passphrase=passphrase,
-                write_to_keyring=False,
-                passphrase_hint=passphrase_hint,
-                save_passphrase=save_passphrase,
-            )
-
-        KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
 
     @staticmethod
     def passphrase_is_optional() -> bool:
