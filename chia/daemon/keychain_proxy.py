@@ -168,15 +168,17 @@ class KeychainProxy(DaemonProxy):
                     raise Exception(f"{err}")
                 raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str) -> PrivateKey:
+    async def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
         """
         Forwards to Keychain.add_private_key()
         """
         key: PrivateKey
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic)
+            key = self.keychain.add_private_key(mnemonic, label)
         else:
-            response, success = await self.get_response_for_request("add_private_key", {"mnemonic": mnemonic})
+            response, success = await self.get_response_for_request(
+                "add_private_key", {"mnemonic": mnemonic, "label": label}
+            )
             if success:
                 seed = mnemonic_to_seed(mnemonic)
                 key = AugSchemeMPL.key_gen(seed)
@@ -357,7 +359,7 @@ class KeychainProxy(DaemonProxy):
                 "get_key", {"fingerprint": fingerprint, "include_secrets": include_secrets}
             )
             if success:
-                key_data = KeyData.from_json_dict(response["data"]["key_data"])
+                key_data = KeyData.from_json_dict(response["data"]["key"])
             else:
                 self.handle_error(response)
         return key_data
