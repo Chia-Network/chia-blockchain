@@ -129,27 +129,36 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
 
     if selected_fingerprint is None and len(all_keys) > 0:
         logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
-        current_sync_status: str = ""
+        logged_in_key: Optional[KeyData] = None
         if logged_in_fingerprint is not None:
+            logged_in_key = next((key for key in all_keys if key.fingerprint == logged_in_fingerprint), None)
+        current_sync_status: str = ""
+        indent = "   "
+        if logged_in_key is not None:
             if await wallet_client.get_synced():
                 current_sync_status = "Synced"
             elif await wallet_client.get_sync_status():
                 current_sync_status = "Syncing"
             else:
                 current_sync_status = "Not Synced"
+
+            print()
+            print("Active Wallet Key (*):")
+            print(f"{indent}{'-Fingerprint:'.ljust(23)} {logged_in_key.fingerprint}")
+            if logged_in_key.label is not None:
+                print(f"{indent}{'-Label:'.ljust(23)} {logged_in_key.label}")
+            print(f"{indent}{'-Sync Status:'.ljust(23)} {current_sync_status}")
         max_key_index_width = 5  # e.g. "12) *", "1)  *", or "2)   "
         max_fingerprint_width = 10  # fingerprint is a 32-bit number
-        max_sync_status_width = len("(Not Synced)")  # length of the sync status string
-        print("Wallet keys:")
+        print()
+        print("Wallet Keys:")
         for i, key in enumerate(all_keys):
             key_index_str = f"{(str(i + 1) + ')'):<4}"
             key_index_str += "*" if key.fingerprint == logged_in_fingerprint else " "
-            sync_status = f"({current_sync_status})" if key.fingerprint == logged_in_fingerprint else ""
             print(
                 f"{key_index_str:<{max_key_index_width}} "
-                f"{key.fingerprint:<{max_fingerprint_width}} "
-                f"{sync_status:^{max_sync_status_width}} "
-                f"{key.label if key.label else ''}"
+                f"{key.fingerprint:<{max_fingerprint_width}}"
+                f"{(indent + key.label) if key.label else ''}"
             )
         val = None
         prompt: str = (
