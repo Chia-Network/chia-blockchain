@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import functools
 import json
@@ -16,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
+from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
@@ -27,13 +29,9 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
-from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
+from chia.util.errors import KeychainCurrentPassphraseIsInvalid, KeychainRequiresMigration
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import (
-    Keychain,
-    passphrase_requirements,
-    supports_os_passphrase_storage,
-)
+from chia.util.keychain import Keychain, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
