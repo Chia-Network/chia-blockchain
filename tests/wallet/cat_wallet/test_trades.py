@@ -467,9 +467,11 @@ class TestCATTrades:
         assert trade_make is not None
 
         # This take should fail since we have no CATs to fulfill it with
-        trade_take, tx_records = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
-        assert trade_take is None
-        assert tx_records is None
+        with pytest.raises(
+            ValueError,
+            match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
+        ):
+            await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 
         txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
