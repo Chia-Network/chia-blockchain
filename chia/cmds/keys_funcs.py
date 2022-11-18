@@ -124,13 +124,18 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
-def show_all_keys(root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool):
+def show_keys(
+    root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool, fingerprint: Optional[int]
+):
     """
     Prints all keys and mnemonics (if available).
     """
     unlock_keyring()
     config = load_config(root_path, "config.yaml")
-    all_keys = Keychain().get_keys(True)
+    if fingerprint is None:
+        all_keys = Keychain().get_keys(True)
+    else:
+        all_keys = [Keychain().get_key(fingerprint, True)]
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
