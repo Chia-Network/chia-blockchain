@@ -17,16 +17,20 @@ from chia.util.service_groups import services_for_groups
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIA_ROOT"] = str(root_path)
-    if 'nt' == os.name:
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.DETACHED_PROCESS    
-        startupinfo.dwFlags |= subprocess.CREATE_NEW_PROCESS_GROUP   
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW           
-        startupinfo.wShowWindow = subprocess.SW_HIDE    
-        return subprocess.Popen([sys.argv[0], "run_daemon", "--wait-for-unlock"],encoding="utf-8", shell=True,startupinfo=startupinfo,stdout=subprocess.PIPE)
-        
-    process = subprocess.Popen([sys.argv[0], "run_daemon", "--wait-for-unlock"],encoding="utf-8",stdout=subprocess.PIPE)
-    
+    if sys.platform == "win32":
+        return subprocess.Popen(
+            [sys.argv[0], "run_daemon", "--wait-for-unlock"],
+            encoding="utf-8",
+            creationflags=subprocess.DETACHED_PROCESS
+            | subprocess.CREATE_NEW_PROCESS_GROUP
+            | subprocess.CREATE_NO_WINDOW,
+            stdout=subprocess.PIPE,
+        )
+
+    process = subprocess.Popen(
+        [sys.argv[0], "run_daemon", "--wait-for-unlock"], encoding="utf-8", stdout=subprocess.PIPE
+    )
+
     return process
 
 
