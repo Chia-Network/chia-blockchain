@@ -1,0 +1,29 @@
+[tool.towncrier]
+directory = "changes"
+filename = "CHANGELOG.md"
+package = "chia"
+start_string = "<!-- towncrier start string -->"
+template = "changes/template.md"
+#title_format = "{version} {name} {project_date}"
+#underlines = " "
+
+[tool.towncrier.fragment.added]
+name ="Added"
+
+[tool.towncrier.fragment.changed]
+name = "Changed"
+
+[tool.towncrier.fragment.deprecated]
+name = "Deprecated"
+
+[tool.towncrier.fragment.removed]
+name = "Removed"
+
+[tool.towncrier.fragment.fixed]
+name = "Fixed"
+
+[tool.towncrier.fragment.security]
+name = "Security"
+
+[tool.towncrier.fragment.misc]
+showcontent = false
