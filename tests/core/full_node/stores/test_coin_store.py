@@ -18,7 +18,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia.simulator.wallet_tools import WalletTool
-from tests.setup_nodes import test_constants
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
 

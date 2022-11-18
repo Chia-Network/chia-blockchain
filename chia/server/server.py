@@ -5,14 +5,11 @@ import logging
 import ssl
 import time
 import traceback
-from collections import Counter
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable
-from typing import Counter as typing_Counter
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import (
     ClientResponseError,
@@ -318,7 +315,7 @@ class ChiaServer:
             return ws
         connection: Optional[WSChiaConnection] = None
         try:
-            connection = WSChiaConnection(
+            connection = WSChiaConnection.create(
                 self._local_type,
                 ws,
                 self._port,
@@ -470,7 +467,7 @@ class ChiaServer:
             if peer_id == self.node_id:
                 raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
-            connection = WSChiaConnection(
+            connection = WSChiaConnection.create(
                 self._local_type,
                 ws,
                 self._port,
@@ -569,14 +566,12 @@ class ChiaServer:
             task.cancel()
 
     async def incoming_api_task(self) -> None:
-        message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
 
             async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
-                nonlocal message_types
                 start_time = time.time()
                 message_type = ""
                 try:
@@ -587,11 +582,8 @@ class ChiaServer:
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
                     message_type = ProtocolMessageTypes(full_message.type).name
-                    message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
-                    if len(message_types) % 100 == 0:
-                        self.log.debug(f"Message types: {[(m, n) for m, n in sorted(message_types.items()) if n != 0]}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")
@@ -652,7 +644,6 @@ class ChiaServer:
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
-                    message_types[message_type] -= 1
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
@@ -714,28 +705,21 @@ class ChiaServer:
             for message in messages:
                 await connection.send_message(message)
 
-    def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
-        result = []
-        connections = self.get_connections(NodeType.FULL_NODE)
-        for connection in connections:
-            if connection.is_outbound:
-                result.append(connection)
-        return result
-
-    def get_connections(self, node_type: Optional[NodeType] = None) -> List[WSChiaConnection]:
+    def get_connections(
+        self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = None
+    ) -> List[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
-            if node_type is None or connection.connection_type == node_type:
+            node_type_match = node_type is None or connection.connection_type == node_type
+            outbound_match = outbound is None or connection.is_outbound == outbound
+            if node_type_match and outbound_match:
                 result.append(connection)
         return result
 
     async def close_all_connections(self) -> None:
-        keys = [a for a, b in self.all_connections.items()]
-        for node_id in keys:
+        for connection in self.all_connections.copy().values():
             try:
-                if node_id in self.all_connections:
-                    connection = self.all_connections[node_id]
-                    await connection.close()
+                await connection.close()
             except Exception as e:
                 self.log.error(f"Exception while closing connection {e}")
 
@@ -802,7 +786,7 @@ class ChiaServer:
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
             return True
-        inbound_count = len([conn for conn in self.get_connections(node_type) if not conn.is_outbound])
+        inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
             return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
         if node_type == NodeType.WALLET:

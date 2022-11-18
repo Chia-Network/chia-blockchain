@@ -15,10 +15,18 @@ jobs:
           repository: chia-network/chia-blockchain
           submodules: recursive
           token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Set up commit signing
+        uses: Chia-Network/actions/commit-sign/gpg@main
+        with:
+          gpg_private_key: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_KEY }}
+          passphrase: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_PASSPHRASE }}
+
       - name: "Add changes to new branch"
         run: |
           cd ./mozilla-ca
           git pull origin main
+
       - name: "Create Pull Request"
         uses: peter-evans/create-pull-request@v4
         with:
@@ -31,3 +39,5 @@ jobs:
           assignees: "wallentx"
           title: "CA Cert updates"
           token: "${{ secrets.GITHUB_TOKEN }}"
+          committer: "ChiaAutomation <automation@chia.net>"
+          author: "ChiaAutomation <automation@chia.net>"

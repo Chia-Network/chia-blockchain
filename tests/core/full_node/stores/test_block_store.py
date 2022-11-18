@@ -19,7 +19,7 @@ from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.blockchain_format.program import SerializedProgram
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
-from tests.setup_nodes import test_constants
+from chia.simulator.block_tools import test_constants
 
 
 log = logging.getLogger(__name__)

@@ -26,7 +26,6 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.util.wallet_is_synced import wallet_is_synced
-from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
 class TestWalletSimulator:
@@ -525,11 +524,7 @@ class TestWalletSimulator:
         assert tx_split_coins.spend_bundle is not None
 
         await wallet.push_transaction(tx_split_coins)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_1.full_node.mempool_manager, tx_split_coins.spend_bundle.name()
-        )
-        for i in range(0, num_blocks):
-            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
+        await full_node_1.process_transaction_records(records=[tx_split_coins])
 
         funds = sum(
             [

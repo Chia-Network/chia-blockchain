@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import os
 import shutil
 import tempfile
+from functools import wraps
+from pathlib import Path
+from typing import Any, Optional
+from unittest.mock import patch
+
+from keyring.util import platform_
+from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
 
 from chia.util.file_keyring import FileKeyring, keyring_path_from_root
 from chia.util.keychain import Keychain, default_keychain_service, default_keychain_user, get_private_key_user
 from chia.util.keyring_wrapper import KeyringWrapper
-from functools import wraps
-from keyring.util import platform_
-from keyrings.cryptfile.cryptfile import CryptFileKeyring  # pyright: reportMissingImports=false
-from pathlib import Path
-from typing import Any, Optional
-from unittest.mock import patch
 
 
 def create_empty_cryptfilekeyring() -> CryptFileKeyring:
@@ -24,7 +27,7 @@ def create_empty_cryptfilekeyring() -> CryptFileKeyring:
     return crypt_file_keyring
 
 
-def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
+def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring) -> None:
     """
     Add a fake key to the CryptFileKeyring
     """
@@ -33,7 +36,7 @@ def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
     crypt_file_keyring.set_password(default_keychain_service(), user, "abc123")
 
 
-def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
+def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False) -> None:
     if populate:
         # Populate the file keyring with an empty (but encrypted) data set
         file_keyring_path = keyring_path_from_root(Path(temp_file_keyring_dir))
@@ -58,7 +61,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
     mock_configure_backend.return_value = FileKeyring.create(keys_root_path=Path(temp_file_keyring_dir))
 
 
-def using_temp_file_keyring(populate=False):
+def using_temp_file_keyring(populate: bool = False):
     """
     Decorator that will create a temporary directory with a temporary keyring that is
     automatically cleaned-up after invoking the decorated function. If `populate` is
@@ -77,7 +80,7 @@ def using_temp_file_keyring(populate=False):
     return outer
 
 
-def using_temp_file_keyring_and_cryptfilekeyring(populate=False):
+def using_temp_file_keyring_and_cryptfilekeyring(populate: bool = False):
     """
     Like the `using_temp_file_keyring` decorator, this decorator will create a temp
     dir and temp keyring. Additionally, an empty legacy Cryptfile keyring will be
@@ -103,7 +106,7 @@ class TempKeyring:
         service: str = "testing-chia-1.8.0",
         populate: bool = False,
         setup_cryptfilekeyring: bool = False,
-        existing_keyring_path: str = None,
+        existing_keyring_path: Optional[str] = None,
         delete_on_cleanup: bool = True,
         use_os_credential_store: bool = False,
     ):
@@ -188,7 +191,7 @@ class TempKeyring:
     def get_keychain(self):
         return self.keychain
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         assert not self.cleaned_up
 
         keys_root_path = self.keychain.keyring_wrapper.keys_root_path

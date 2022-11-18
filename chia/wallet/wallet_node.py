@@ -274,13 +274,6 @@ class WalletNode:
             self,
         )
 
-        assert self._wallet_state_manager is not None
-        if self._wallet_state_manager.blockchain.synced_weight_proof is not None:
-            weight_proof = self._wallet_state_manager.blockchain.synced_weight_proof
-            success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
-            assert success is True and records is not None and len(records) > 1
-            await self._wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, records)
-
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
 

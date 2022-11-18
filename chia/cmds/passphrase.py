@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import asyncio
-import click
 import sys
 from io import TextIOWrapper
 from typing import Optional
+
+import click
 
 from chia.util.config import load_config
 

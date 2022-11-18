@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import asyncio
+import sys
+from typing import Optional, Tuple
 
 import click
-import sys
-
-from typing import Optional, Tuple
 
 
 @click.group("keys", short_help="Manage your keys")
@@ -11,6 +12,7 @@ from typing import Optional, Tuple
 def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
     from pathlib import Path
+
     from .keys_funcs import migrate_keys
 
     root_path: Path = ctx.obj["root_path"]
@@ -305,8 +307,10 @@ def search_cmd(
     prefix: Optional[str],
 ):
     import sys
-    from .keys_funcs import search_derive, resolve_derivation_master_key
+
     from blspy import PrivateKey
+
+    from .keys_funcs import resolve_derivation_master_key, search_derive
 
     private_key: Optional[PrivateKey] = None
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)

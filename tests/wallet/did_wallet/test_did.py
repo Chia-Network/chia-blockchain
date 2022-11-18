@@ -788,7 +788,6 @@ class TestDIDWallet:
             )
         )
         did_wallet_2: Optional[DIDWallet] = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
-
         assert len(wallet_node.wallet_state_manager.wallets) == 1
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
         if with_recovery:
