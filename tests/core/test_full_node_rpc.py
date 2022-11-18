@@ -15,7 +15,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.clvm import int_to_bytes
+from clvm.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
 from chia.simulator.block_tools import get_signage_point
