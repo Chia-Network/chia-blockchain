@@ -273,15 +273,15 @@ class WalletRpcApi:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
                     coin_state.coin.name(), peer=peer
                 )
-                odd_coin = 0
+                odd_coin = None
                 for coin in coin_state_list:
                     if coin.coin.amount % 2 == 1:
-                        odd_coin += 1
-                    if odd_coin > 1:
-                        raise ValueError("This is not a singleton, multiple children coins found.")
-                if odd_coin == 0:
+                        if odd_coin is not None:
+                            raise ValueError("This is not a singleton, multiple children coins found.")
+                        odd_coin = coin
+                if odd_coin is None:
                     raise ValueError("Cannot find child coin, please wait then retry.")
-                coin_state = coin_state_list[0]
+                coin_state = odd_coin
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
@@ -1775,8 +1775,9 @@ class WalletRpcApi:
 
     async def did_find_lost_did(self, request) -> EndpointResult:
         """
-        Recover a bugged DID wallet by a coin id of the DID
-        :param request:
+        Recover a missing or unspendable DID wallet by a coin id of the DID
+        :param coin_id: It can be DID ID, launcher coin ID or any coin ID of the DID you want to find.
+        The latest coin ID will take less time.
         :return:
         """
         if "coin_id" not in request:
@@ -1797,15 +1798,14 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-        uncurried_p2 = uncurry_puzzle(p2_puzzle)
-        (public_key,) = uncurried_p2.args.as_iter()
+
         hint_list = compute_coin_hints(coin_spend)
         old_inner_puzhash = DID_INNERPUZ_MOD.curry(
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
         ).get_tree_hash()
         derivation_record = None
-        # Hint is required, if it doesn't have any hint then it should a bugged DID
-        is_bugged = len(hint_list) == 0
+        # Hint is required, if it doesn't have any hint then it should be invalid
+        is_invalid = len(hint_list) == 0
         for hint in hint_list:
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -1816,13 +1816,13 @@ class WalletRpcApi:
                 break
             # Check if the mismatch is because of the memo bug
             if hint == old_inner_puzhash:
-                is_bugged = True
+                is_invalid = True
                 break
-        if is_bugged:
-            # This is a bugged DID, check if we are owner
+        if is_invalid:
+            # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    bytes32(p2_puzzle)
+                    p2_puzzle.get_tree_hash()
                 )
             )
         launcher_id = singleton_struct.rest().first().as_python()

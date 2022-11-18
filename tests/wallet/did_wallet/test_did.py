@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from typing import Optional
 
@@ -487,6 +488,7 @@ class TestDIDWallet:
         coins = await did_wallet.select_coins(uint64(1))
         coin = coins.pop()
         await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await wallet_node.wallet_state_manager.user_store.delete_wallet(did_wallet.wallet_info.id)
         wallet_node.wallet_state_manager.wallets.pop(did_wallet.wallet_info.id)
         assert len(wallet_node.wallet_state_manager.wallets) == 1
@@ -503,7 +505,6 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         # Spend DID
-
         recovery_list = [bytes32.fromhex(did_wallet.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
@@ -516,6 +517,18 @@ class TestDIDWallet:
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
+        # Delete the coin and change inner puzzle
+        coins = await did_wallet.select_coins(uint64(1))
+        coin = coins.pop()
+        await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
+        new_inner_puzzle = await did_wallet.get_new_did_innerpuz()
+        did_wallet.did_info = dataclasses.replace(did_wallet.did_info, current_inner=new_inner_puzzle)
+        # Recovery the coin
+        resp = await api_0.did_find_lost_did({"coin_id": did_wallet.did_info.origin_coin.name().hex()})
+        assert resp["success"]
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
+        assert did_wallet.did_info.current_inner != new_inner_puzzle
 
     @pytest.mark.parametrize(
         "trusted",
