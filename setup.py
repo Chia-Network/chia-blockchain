@@ -23,9 +23,6 @@ dependencies = [
     "cryptography==38.0.3",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.8.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.9.3",  # Store keys in MacOS Keychain, Windows Credential Locker
-    "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
-    #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
-    #  See https://github.com/frispete/keyrings.cryptfile/issues/15
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.2.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools

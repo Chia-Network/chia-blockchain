@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.cmds.keys_funcs import migrate_keys
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from chia.util.errors import KeychainMaxUnlockAttempts
@@ -51,9 +50,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
     return None
 
 
-async def async_start(
-    root_path: Path, config: Dict[str, Any], group: str, restart: bool, force_keyring_migration: bool
-) -> None:
+async def async_start(root_path: Path, config: Dict[str, Any], group: str, restart: bool) -> None:
     try:
         daemon = await create_start_daemon_connection(root_path, config)
     except KeychainMaxUnlockAttempts:
@@ -63,11 +60,6 @@ async def async_start(
     if daemon is None:
         print("Failed to create the chia daemon")
         return None
-
-    if force_keyring_migration:
-        if not await migrate_keys(root_path, True):
-            await daemon.close()
-            sys.exit(1)
 
     for service in services_for_groups(group):
         if await daemon.is_running(service_name=service):
