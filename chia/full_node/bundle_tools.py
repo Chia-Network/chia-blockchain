@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import re
-from typing import Optional, Tuple, List, Union
+from typing import List, Optional, Tuple, Union
+
+from clvm.casts import int_to_bytes
 
 from chia.full_node.generator import create_compressed_generator
-from chia.types.blockchain_format.program import SerializedProgram, Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from clvm.casts import int_to_bytes
 
 
 def _serialize_amount(val: int) -> bytes:
