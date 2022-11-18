@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import click
 
 from chia.util.config import load_config
@@ -10,7 +12,9 @@ from chia.util.service_groups import all_groups
 @click.pass_context
 def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
     import asyncio
+
     from chia.cmds.beta_funcs import warn_if_beta_enabled
+
     from .start_funcs import async_start
 
     root_path = ctx.obj["root_path"]

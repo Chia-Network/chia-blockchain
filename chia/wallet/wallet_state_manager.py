@@ -787,7 +787,7 @@ class WalletStateManager:
 
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
-            if new_p2_puzhash == old_inner_puzhash or p2_puzzle == new_p2_puzhash:
+            if new_p2_puzhash != old_inner_puzhash and p2_puzzle != new_p2_puzhash:
                 # We only delete DID when the p2 puzzle doesn't change
                 self.log.info(f"Not sure if the DID belong to us, {coin_state}. Waiting for next spend ...")
                 return wallet_id, wallet_type

@@ -315,7 +315,7 @@ class ChiaServer:
             return ws
         connection: Optional[WSChiaConnection] = None
         try:
-            connection = WSChiaConnection(
+            connection = WSChiaConnection.create(
                 self._local_type,
                 ws,
                 self._port,
@@ -467,7 +467,7 @@ class ChiaServer:
             if peer_id == self.node_id:
                 raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
-            connection = WSChiaConnection(
+            connection = WSChiaConnection.create(
                 self._local_type,
                 ws,
                 self._port,
@@ -717,12 +717,9 @@ class ChiaServer:
         return result
 
     async def close_all_connections(self) -> None:
-        keys = [a for a, b in self.all_connections.items()]
-        for node_id in keys:
+        for connection in self.all_connections.copy().values():
             try:
-                if node_id in self.all_connections:
-                    connection = self.all_connections[node_id]
-                    await connection.close()
+                await connection.close()
             except Exception as e:
                 self.log.error(f"Exception while closing connection {e}")
 

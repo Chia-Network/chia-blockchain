@@ -58,6 +58,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 
 
 class FullNodeAPI:
@@ -720,8 +721,8 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Checks that the proof of space is valid
-            quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-                self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
+            quality_string: Optional[bytes32] = verify_and_get_quality_string(
+                request.proof_of_space, self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
             )
             assert quality_string is not None and len(quality_string) == 32
 
