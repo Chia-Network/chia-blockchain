@@ -1,0 +1,302 @@
+name: 📦🚀 Build Installers - MacOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
+  release:
+    types: [published]
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: MacOS ${{ matrix.os.name }} Installer
+    runs-on: ${{ matrix.os.runs-on }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [3.9]
+        os:
+          - runs-on: macos-10.14
+            name: intel
+            file-suffix: ""
+            mac-package-name: "Chia-darwin-x64"
+            glue-name: "build-macos"
+            bladebit-suffix: macos-x86-64.tar.gz
+          - runs-on: [MacOS, ARM64]
+            name: m1
+            file-suffix: "-arm64"
+            mac-package-name: "Chia-darwin-arm64"
+            glue-name: "build-mac-m1"
+            bladebit-suffix: macos-arm64.tar.gz
+
+    steps:
+      - uses: Chia-Network/actions/clean-workspace@main
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: Chia-Network/actions/git-ssh-to-https@main
+
+      - name: Cleanup any leftovers that exist from previous runs
+        run: bash build_scripts/clean-runner.sh || true
+
+      - name: Set Env
+        if: github.event_name == 'release' && github.event.action == 'published'
+        run: |
+          PRE_RELEASE=$(jq -r '.release.prerelease' "$GITHUB_EVENT_PATH")
+          RELEASE_TAG=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
+          echo "RELEASE=true" >>$GITHUB_ENV
+          echo "PRE_RELEASE=$PRE_RELEASE" >>$GITHUB_ENV
+          echo "RELEASE_TAG=$RELEASE_TAG" >>$GITHUB_ENV
+          if [ $PRE_RELEASE = false ]; then
+            echo "FULL_RELEASE=true" >>$GITHUB_ENV
+          else
+            echo "FULL_RELEASE=false" >>$GITHUB_ENV
+          fi
+
+      - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_APPLE_SECRET
+          unset HAS_AWS_SECRET
+          unset HAS_GLUE_SECRET
+
+          if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
+          echo HAS_APPLE_SECRET=${HAS_APPLE_SECRET} >> $GITHUB_OUTPUT
+
+          if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+          echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> GITHUB_OUTPUT
+
+          if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+          echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> GITHUB_OUTPUT
+        env:
+          APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+          AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+          GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
+
+      - name: Create installer version number
+        id: version_number
+        run: |
+          python3 -m venv ../venv
+          . ../venv/bin/activate
+          pip install setuptools_scm
+          echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> $GITHUB_OUTPUT
+          deactivate
+
+      - name: Setup Python environment
+        uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+          force-pyenv: 'true'
+
+      # This will be recreated in the next step
+      # Done now and at the end of the workflow in case the last workflow fails, and this is still around
+      - name: Delete keychain if it already exists
+        run:
+          security delete-keychain signing_temp.keychain || true
+
+      - name: Import Apple app signing certificate
+        if: steps.check_secrets.outputs.HAS_APPLE_SECRET
+        uses: Apple-Actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
+          p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
+
+      # Get the most recent release from chia-plotter-madmax
+      - uses: actions/github-script@v6
+        id: 'latest-madmax'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const release = await github.rest.repos.getLatestRelease({
+              owner: 'Chia-Network',
+              repo: 'chia-plotter-madmax',
+            });
+            return release.data.tag_name;
+
+      - name: Get latest madmax plotter
+        run: |
+          mkdir "$GITHUB_WORKSPACE/madmax"
+          wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-macos-${{ matrix.os.name }}
+          wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-macos-${{ matrix.os.name }}
+          chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
+          chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+
+      - name: Get latest prerelease bladebit plotter
+        if: env.PRE_RELEASE == 'true'
+        run: |
+          PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          mkdir "$GITHUB_WORKSPACE/bladebit"
+          wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
+          tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+
+      - name: Get latest full release bladebit plotter
+        if: env.FULL_RELEASE == 'true'
+        run: |
+          FULLRELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease | not)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          mkdir "$GITHUB_WORKSPACE/bladebit"
+          wget -O /tmp/bladebit.tar.gz $FULLRELEASE_URL
+          tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python-version }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Setup Node 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+
+      - name: Prepare GUI cache
+        id: gui-ref
+        run: |
+          gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+          echo "${gui_ref}"
+          echo "GUI_REF=${gui_ref}" >> $GITHUB_OUTPUT
+          echo "rm -rf ./chia-blockchain-gui"
+          rm -rf ./chia-blockchain-gui
+
+      - name: Cache GUI
+        uses: actions/cache@v3
+        id: cache-gui
+        with:
+          path: ./chia-blockchain-gui
+          key: ${{ runner.os }}-${{ matrix.os.name }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+      - if: steps.cache-gui.outputs.cache-hit != 'true'
+        name: Build GUI
+        continue-on-error: false
+        run: |
+          cd ./build_scripts
+          sh build_macos-1-gui.sh
+
+      - name: Build MacOS DMG
+        env:
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+          NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
+          APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
+          APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
+          APPLE_DEV_ID_APP: "${{ secrets.APPLE_DEV_ID_APP }}"
+          APPLE_DEV_ID_APP_PASS: "${{ secrets.APPLE_DEV_ID_APP_PASS }}"
+        run: |
+          cd ./build_scripts
+          sh build_macos-2-installer.sh
+
+      - name: Upload MacOS artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: chia-installers-macos-dmg-${{ matrix.os.name }}
+          path: ${{ github.workspace }}/build_scripts/final_installer/
+
+      - name: Install AWS CLI
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
+        run: |
+          command -v aws || brew install awscli
+
+      - name: Install GH CLI
+        run: |
+          command -v gh || brew install gh
+
+      - name: Create Checksums
+        run: |
+          ls
+          shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
+
+      - name: Upload to s3
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+          AWS_REGION: us-west-2
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        run: |
+          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+          CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
+          echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >>$GITHUB_ENV
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
+
+      - name: Create torrent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: env.FULL_RELEASE == 'true'
+        run: |
+          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
+          ls ${{ github.workspace }}/build_scripts/final_installer/
+          gh release upload $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+
+      - name: Upload Dev Installer
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
+        env:
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+          AWS_REGION: us-west-2
+        run: |
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
+
+      - name: Upload Release Files
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+          AWS_REGION: us-west-2
+        run: |
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
+
+      - name: Get tag name
+        if: startsWith(github.ref, 'refs/tags/')
+        id: tag-name
+        run: |
+          echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >> $GITHUB_OUTPUT
+          echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >> $GITHUB_OUTPUT
+
+      - name: Upload release artifacts
+        if: env.RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        run: |
+          gh release upload \
+            $RELEASE_TAG \
+            build_scripts/final_installer/*.dmg
+
+      - name: Mark installer complete
+        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/${{ matrix.os.glue-name }}
+
+      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
+      - name: Delete signing keychain
+        if: always()
+        run:
+          security delete-keychain signing_temp.keychain || true
+
+      - name: Remove working files to exclude from cache
+        run: |
+          rm -rf ./chia-blockchain-gui/packages/gui/daemon

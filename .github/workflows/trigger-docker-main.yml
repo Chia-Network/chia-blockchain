@@ -1,0 +1,21 @@
+name: 📦🚀 Trigger Main Docker Build
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  trigger:
+    name: Trigger building a new `main` tag for the chia-docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docker main workflow via github-glue
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/start
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/success/build-main

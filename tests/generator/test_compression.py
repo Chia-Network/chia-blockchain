@@ -14,7 +14,7 @@ from chia.full_node.bundle_tools import (
 from chia.full_node.generator import run_generator_unsafe, create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
-from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
+from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -74,11 +74,15 @@ def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: Spe
     )
 
     # TODO aqk: Improve ergonomics of CompressorArg -> GeneratorArg conversion
-    generator_args = [
-        GeneratorArg(FAKE_BLOCK_HEIGHT1, args.arg[0].generator),
-        GeneratorArg(FAKE_BLOCK_HEIGHT2, args.arg[1].generator),
+    generator_list = [
+        args.arg[0].generator,
+        args.arg[1].generator,
     ]
-    return BlockGenerator(program, generator_args)
+    generator_heights = [
+        FAKE_BLOCK_HEIGHT1,
+        FAKE_BLOCK_HEIGHT2,
+    ]
+    return BlockGenerator(program, generator_list, generator_heights)
 
 
 def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
@@ -142,14 +146,14 @@ class TestCompression(TestCase):
         start, end = match_standard_transaction_at_any_index(original_generator)
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
-        removal = sb.coin_spends[0].coin.name()
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(c, removal, INFINITE_COST)
+        removal = sb.coin_spends[0].coin
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(c, removal)
         assert error is None
         assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(solution) == bytes(sb.coin_spends[0].solution)
         # Test non compressed generator as well
         s = simple_solution_generator(sb)
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal, INFINITE_COST)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal)
         assert error is None
         assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(solution) == bytes(sb.coin_spends[0].solution)
@@ -157,7 +161,7 @@ class TestCompression(TestCase):
     def test_spend_byndle_coin_spend(self):
         for i in range(0, 10):
             sb: SpendBundle = make_spend_bundle(i)
-            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()
+            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()  # pylint: disable=E1101
             cs2 = spend_bundle_to_serialized_coin_spend_entry_list(sb)
             assert cs1 == cs2
 

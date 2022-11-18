@@ -2,28 +2,33 @@
 
 import sqlite3
 import sys
-from typing import List
+import zstd
+import click
+from functools import partial
+from pathlib import Path
+from blspy import AugSchemeMPL, G1Element
+
+from typing import Callable, Optional, Union, List
 from time import time
 
-from clvm_rs import run_generator
-from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM
-from clvm.casts import int_from_bytes
-from clvm.operators import OP_REWRITE
+from chia_rs import run_generator, MEMPOOL_MODE
 
-from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.full_block_utils import block_info_from_block, generator_from_block
+from chia.util.condition_tools import pkm_pairs
+from chia.types.full_block import FullBlock
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.block_protocol import BlockInfo
 
 GENERATOR_ROM = bytes(get_generator())
 
-native_opcode_names_by_opcode = dict(
-    ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."
-)
 
-
-def run_gen(env_data: bytes, block_program_args: bytes):
+# returns an optional error code and an optional PySpendBundleConditions (from chia_rs)
+# exactly one of those will hold a value and the number of seconds it took to
+# run
+def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
     max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
     cost_per_byte = DEFAULT_CONSTANTS.COST_PER_BYTE
 
@@ -34,106 +39,135 @@ def run_gen(env_data: bytes, block_program_args: bytes):
     env_data = b"\xff" + env_data + b"\xff" + block_program_args + b"\x80"
 
     try:
-        return run_generator(
+        start_time = time()
+        err, result = run_generator(
             GENERATOR_ROM,
             env_data,
-            KEYWORD_TO_ATOM["q"][0],
-            KEYWORD_TO_ATOM["a"][0],
-            native_opcode_names_by_opcode,
             max_cost,
-            0,
+            flags,
         )
+        run_time = time() - start_time
+        return err, result, run_time
     except Exception as e:
         # GENERATOR_RUNTIME_ERROR
-        print(f"Exception: {e}")
-        return (117, [], None)
+        sys.stderr.write(f"Exception: {e}\n")
+        return 117, None, 0
 
 
-cond_map = {
-    ConditionOpcode.AGG_SIG_UNSAFE[0]: 0,
-    ConditionOpcode.AGG_SIG_ME[0]: 1,
-    ConditionOpcode.CREATE_COIN[0]: 2,
-    ConditionOpcode.RESERVE_FEE[0]: 3,
-    ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]: 4,
-    ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]: 5,
-    ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]: 6,
-    ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]: 7,
-    ConditionOpcode.ASSERT_MY_COIN_ID[0]: 8,
-    ConditionOpcode.ASSERT_MY_PARENT_ID[0]: 9,
-    ConditionOpcode.ASSERT_MY_PUZZLEHASH[0]: 10,
-    ConditionOpcode.ASSERT_MY_AMOUNT[0]: 11,
-    ConditionOpcode.ASSERT_SECONDS_RELATIVE[0]: 12,
-    ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]: 13,
-    ConditionOpcode.ASSERT_HEIGHT_RELATIVE[0]: 14,
-    ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE[0]: 15,
-}
+def callable_for_module_function_path(call: str) -> Callable:
+    module_name, function_name = call.split(":", 1)
+    module = __import__(module_name, fromlist=[function_name])
+    return getattr(module, function_name)
 
-c = sqlite3.connect(sys.argv[1])
 
-rows = c.execute("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+@click.command()
+@click.argument("file", type=click.Path(), required=True)
+@click.option(
+    "--mempool-mode", default=False, is_flag=True, help="execute all block generators in the strict mempool mode"
+)
+@click.option("--verify-signatures", default=False, is_flag=True, help="Verify block signatures (slow)")
+@click.option("--start", default=225000, help="first block to examine")
+@click.option("--end", default=None, help="last block to examine")
+@click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
+def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
 
-height_to_hash: List[bytes] = []
-
-for r in rows:
-    hh = bytes.fromhex(r[0])
-    height = r[1]
-    block = FullBlock.from_bytes(r[2])
-
-    if len(height_to_hash) <= height:
-        assert len(height_to_hash) == height
-        height_to_hash.append(hh)
+    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, List[bytes], float, int], None]
+    if call is None:
+        call_f = partial(default_call, verify_signatures)
     else:
-        height_to_hash[height] = hh
+        call_f = callable_for_module_function_path(call)
 
-    if height > 0:
-        prev_hh = block.prev_header_hash
-        h = height - 1
-        while height_to_hash[h] != prev_hh:
-            height_to_hash[h] = prev_hh
-            ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (prev_hh.hex(),))
-            ref_block = FullBlock.from_bytes(ref.fetchone()[0])
-            prev_hh = ref_block.prev_header_hash
-            h -= 1
-            if h < 0:
-                break
+    c = sqlite3.connect(file)
 
-    if block.transactions_generator is None:
-        continue
+    end_limit_sql = "" if end is None else f"and height <= {end} "
+
+    rows = c.execute(
+        f"SELECT header_hash, height, block FROM full_blocks "
+        f"WHERE height >= {start} {end_limit_sql} and in_main_chain=1 ORDER BY height"
+    )
+
+    for r in rows:
+        hh: bytes32 = r[0]
+        height: int = r[1]
+        block: Union[BlockInfo, FullBlock]
+        if verify_signatures:
+            block = FullBlock.from_bytes(zstd.decompress(r[2]))
+        else:
+            block = block_info_from_block(zstd.decompress(r[2]))
+
+        if block.transactions_generator is None:
+            sys.stderr.write(f" no-generator. block {height}\r")
+            continue
+
+        start_time = time()
+        generator_blobs = []
+        for h in block.transactions_generator_ref_list:
+            ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (h,))
+            generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
+            assert generator is not None
+            generator_blobs.append(bytes(generator))
+            ref.close()
+
+        ref_lookup_time = time() - start_time
+
+        flags: int
+        if mempool_mode:
+            flags = MEMPOOL_MODE
+        else:
+            flags = 0
+
+        call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
+
+
+def default_call(
+    verify_signatures: bool,
+    block: Union[BlockInfo, FullBlock],
+    hh: bytes32,
+    height: int,
+    generator_blobs: List[bytes],
+    ref_lookup_time: float,
+    flags: int,
+) -> None:
+    num_refs = len(generator_blobs)
 
     # add the block program arguments
     block_program_args = bytearray(b"\xff")
-
-    num_refs = 0
-    for h in block.transactions_generator_ref_list:
-        ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (height_to_hash[h].hex(),))
-        ref_block = FullBlock.from_bytes(ref.fetchone()[0])
+    for ref_block_blob in generator_blobs:
         block_program_args += b"\xff"
-        block_program_args += Program.to(bytes(ref_block.transactions_generator)).as_bin()
-        num_refs += 1
-        ref.close()
-
+        block_program_args += Program.to(ref_block_blob).as_bin()
     block_program_args += b"\x80\x80"
 
-    start_time = time()
-    err, result, cost = run_gen(bytes(block.transactions_generator), bytes(block_program_args))
-    run_time = time() - start_time
+    assert block.transactions_generator is not None
+    err, result, run_time = run_gen(bytes(block.transactions_generator), bytes(block_program_args), flags)
     if err is not None:
-        print(f"ERROR: {hh.hex()} {height} {err}")
-        break
+        sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
+        return
 
-    num_removals = 0
-    fees = 0
-    conditions = [0] * 16
-    for res in result:
-        num_removals += 1
-        for cond in res.conditions:
-            for cwa in cond[1]:
-                if cwa.opcode == ConditionOpcode.RESERVE_FEE[0]:
-                    fees += int_from_bytes(cwa.vars[0])
-                conditions[cond_map[cwa.opcode]] += 1
+    num_removals = len(result.spends)
+    fees = result.reserve_fee
+    cost = result.cost
+    num_additions = 0
+    for spends in result.spends:
+        num_additions += len(spends.create_coin)
+
+    if verify_signatures:
+        assert isinstance(block, FullBlock)
+        # create hash_key list for aggsig check
+        pairs_pks: List[bytes48] = []
+        pairs_msgs: List[bytes] = []
+        pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        pairs_g1s = [G1Element.from_bytes(x) for x in pairs_pks]
+        assert block.transactions_info is not None
+        assert block.transactions_info.aggregated_signature is not None
+        assert AugSchemeMPL.aggregate_verify(pairs_g1s, pairs_msgs, block.transactions_info.aggregated_signature)
 
     print(
-        f"{hh.hex()}\t{height}\t{cost}\t{run_time:0.3f}\t{num_refs}\t{fees}\t"
-        f"{len(bytes(block.transactions_generator))}\t"
-        f"{num_removals}\t" + "\t".join([f"{cond}" for cond in conditions])
+        f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"
+        f"{len(bytes(block.transactions_generator)):6d}\t"
+        f"{num_removals:4d}\t{num_additions:4d}"
     )
+
+
+if __name__ == "__main__":
+    # pylint: disable = no-value-for-parameter
+    main()

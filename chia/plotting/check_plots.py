@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 from collections import Counter
 from pathlib import Path
-from time import time, sleep
+from time import sleep, time
 from typing import List
 
 from blspy import G1Element
@@ -9,11 +11,11 @@ from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    PlotRefreshEvents,
-    get_plot_filenames,
     find_duplicate_plot_IDs,
+    get_plot_filenames,
     parse_plot_info,
 )
 from chia.util.bech32m import encode_puzzle_hash
@@ -36,7 +38,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,
-        show_memo=debug_show_memo,
         open_no_key_filenames=True,
         refresh_parameter=plot_refresh_parameter,
         refresh_callback=plot_refresh_callback,
@@ -197,3 +198,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             f"is not on this machine. The farmer private key must be in the keychain in order to "
             f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
         )
+
+    if debug_show_memo:
+        plot_memo_str: str = "Plot Memos:\n"
+        with plot_manager:
+            for path, plot in plot_manager.plots.items():
+                plot_memo_str += f"{path}: {plot.prover.get_memo().hex()}\n"
+        log.info(plot_memo_str)

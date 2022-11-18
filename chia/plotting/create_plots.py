@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -8,14 +10,15 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.util import add_plot_directory
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_plot_id_ph,
+    calculate_plot_id_pk,
+    generate_plot_public_key,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config
 from chia.util.keychain import Keychain
-from chia.util.path import mkdir
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
 
 log = logging.getLogger(__name__)
@@ -63,9 +66,8 @@ class PlotKeysResolver:
         if self.resolved_keys is not None:
             return self.resolved_keys
 
-        keychain_proxy: Optional[KeychainProxy] = None
         if self.connect_to_daemon:
-            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            keychain_proxy: Optional[KeychainProxy] = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:
             keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
@@ -86,6 +88,8 @@ class PlotKeysResolver:
                 pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
         self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
+        if keychain_proxy is not None:
+            await keychain_proxy.close()
         return self.resolved_keys
 
     async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:
@@ -142,23 +146,15 @@ async def resolve_plot_keys(
 
 
 async def create_plots(
-    args, keys: PlotKeys, root_path, use_datetime=True, test_private_keys: Optional[List] = None
+    args,
+    keys: PlotKeys,
+    use_datetime: bool = True,
+    test_private_keys: Optional[List] = None,
 ) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
-
-    config_filename = config_path_for_filename(root_path, "config.yaml")
-    config = load_config(root_path, config_filename)
-
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
-
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
     num = args.num
-
-    if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
-        log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
-    if args.size < 22:
-        log.warning("k under 22 is not supported. Increasing k to 22")
-        args.size = 22
 
     if keys.pool_public_key is not None:
         log.info(
@@ -174,15 +170,15 @@ async def create_plots(
 
     tmp_dir_created = False
     if not args.tmp_dir.exists():
-        mkdir(args.tmp_dir)
+        args.tmp_dir.mkdir(parents=True, exist_ok=True)
         tmp_dir_created = True
 
     tmp2_dir_created = False
     if not args.tmp2_dir.exists():
-        mkdir(args.tmp2_dir)
+        args.tmp2_dir.mkdir(parents=True, exist_ok=True)
         tmp2_dir_created = True
 
-    mkdir(args.final_dir)
+    args.final_dir.mkdir(parents=True, exist_ok=True)
 
     created_plots: Dict[bytes32, Path] = {}
     existing_plots: Dict[bytes32, Path] = {}
@@ -197,17 +193,17 @@ async def create_plots(
         # The plot public key is the combination of the harvester and farmer keys
         # New plots will also include a taproot of the keys, for extensibility
         include_taproot: bool = keys.pool_contract_puzzle_hash is not None
-        plot_public_key = ProofOfSpace.generate_plot_public_key(
+        plot_public_key = generate_plot_public_key(
             master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, include_taproot
         )
 
         # The plot id is based on the harvester, farmer, and pool keys
         if keys.pool_public_key is not None:
-            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
+            plot_id: bytes32 = calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
             plot_memo: bytes32 = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
         else:
             assert keys.pool_contract_puzzle_hash is not None
-            plot_id = ProofOfSpace.calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
+            plot_id = calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
             plot_memo = stream_plot_info_ph(keys.pool_contract_puzzle_hash, keys.farmer_public_key, sk)
 
         if args.plotid is not None:
@@ -218,10 +214,6 @@ async def create_plots(
             log.info(f"Debug memo: {args.memo}")
             plot_memo = bytes32.fromhex(args.memo)
 
-        # Uncomment next two lines if memo is needed for dev debug
-        plot_memo_str: str = plot_memo.hex()
-        log.info(f"Memo: {plot_memo_str}")
-
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
         if use_datetime:
@@ -229,19 +221,6 @@ async def create_plots(
         else:
             filename = f"plot-k{args.size}-{plot_id}.plot"
         full_path: Path = args.final_dir / filename
-
-        resolved_final_dir: str = str(Path(args.final_dir).resolve())
-        plot_directories_list: str = config["harvester"]["plot_directories"]
-
-        if args.exclude_final_dir:
-            log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
-            if resolved_final_dir in plot_directories_list:
-                log.warning(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
-        else:
-            if resolved_final_dir not in plot_directories_list:
-                # Adds the directory to the plot directories if it is not present
-                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                config = add_plot_directory(root_path, resolved_final_dir)
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")
