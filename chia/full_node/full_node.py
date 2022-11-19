@@ -2170,6 +2170,8 @@ class FullNode:
                     f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
                     f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
                 )
+                # Reset farmer response timer for sub slot (SP 0)
+                self.signage_point_times[0] = time.time()
                 # Notify full nodes of the new sub-slot
                 broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                     request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
