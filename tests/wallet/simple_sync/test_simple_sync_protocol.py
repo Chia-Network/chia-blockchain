@@ -25,7 +25,6 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced
 from tests.connection_utils import add_dummy_connection
 from chia.simulator.time_out_assert import time_out_assert
-from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 from chia.simulator.wallet_tools import WalletTool
 
 
@@ -188,12 +187,7 @@ class TestSimpleSyncProtocol:
 
         await wallet.push_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         # Let's make sure the wallet can handle a non ephemeral launcher
         from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
@@ -202,12 +196,7 @@ class TestSimpleSyncProtocol:
         tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
         await wallet.push_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(SINGLETON_LAUNCHER_HASH))
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
@@ -215,12 +204,7 @@ class TestSimpleSyncProtocol:
         tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
         await wallet.push_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
@@ -280,13 +264,7 @@ class TestSimpleSyncProtocol:
         tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0), coins=coins)
         await standard_wallet.push_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        # Farm transaction
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
@@ -322,12 +300,7 @@ class TestSimpleSyncProtocol:
 
         await standard_wallet.push_transaction(tx_record)
 
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
@@ -532,10 +505,7 @@ class TestSimpleSyncProtocol:
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await time_out_assert(20, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
-
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.process_spend_bundles(bundles=[tx])
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
@@ -615,7 +585,7 @@ class TestSimpleSyncProtocol:
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await time_out_assert(20, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
+        await full_node_api.process_spend_bundles(bundles=[tx])
 
         # Create more blocks than recent "short_sync_blocks_behind_threshold" so that node enters batch
         for i in range(0, 100):

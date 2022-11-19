@@ -23,9 +23,6 @@ dependencies = [
     "cryptography==38.0.3",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.8.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.9.3",  # Store keys in MacOS Keychain, Windows Credential Locker
-    "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
-    #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
-    #  See https://github.com/frispete/keyrings.cryptfile/issues/15
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.2.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
@@ -33,7 +30,7 @@ dependencies = [
     "dnspython==2.2.1",  # Query DNS seeds
     "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.3.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.4.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.2.6",
     "packaging==21.3",
     "psutil==5.9.4",
@@ -62,7 +59,7 @@ dev_dependencies = [
     "black==22.10.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.5",
+    "pyinstaller==5.6.2",
     "types-aiofiles",
     "types-cryptography",
     "types-pkg_resources",

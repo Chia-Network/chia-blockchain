@@ -1,6 +1,8 @@
-from contextlib import contextmanager
+from __future__ import annotations
+
 import logging
 import traceback
+from contextlib import contextmanager
 
 
 @contextmanager

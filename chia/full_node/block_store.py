@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Tuple, Any, Union, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import typing_extensions
 import zstd
@@ -15,10 +15,9 @@ from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import block_info_from_block, generator_from_block
+from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
-from chia.util.full_block_utils import GeneratorBlockInfo
 
 log = logging.getLogger(__name__)
 
