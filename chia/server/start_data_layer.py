@@ -5,7 +5,6 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional, cast
 
-from chia.cmds.init_funcs import create_all_ssl
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -13,6 +12,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.server.start_wallet import WalletNode
+from chia.ssl.create_ssl import create_all_ssl
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH

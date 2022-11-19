@@ -21,7 +21,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"
         ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
-        wsc = WSChiaConnection(
+        wsc = WSChiaConnection.create(
             NodeType.FULL_NODE,
             ws,
             server._port,
