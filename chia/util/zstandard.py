@@ -75,7 +75,7 @@ def get_decompressed_size(data: bytes) -> int:
         singleSegment = (fhdByte >> 5) & 1
         fcsID = fhdByte >> 6
 
-        windowSize = 0
+        # windowSize = 0
         # dictID = 0
         frameContentSize = ZSTD_CONTENTSIZE_UNKNOWN
 
@@ -91,8 +91,8 @@ def get_decompressed_size(data: bytes) -> int:
             windowLog = (wlByte >> 3) + ZSTD_WINDOWLOG_ABSOLUTEMIN
             if windowLog > ZSTD_WINDOWLOG_MAX:
                 return ZSTD_ERR_WINDOW_TOO_LARGE
-            windowSize = 1 << windowLog
-            windowSize += (windowSize >> 3) * (wlByte & 7)
+            # windowSize = 1 << windowLog
+            # windowSize += (windowSize >> 3) * (wlByte & 7)
 
         if dictIDSizeCode == 0:
             pos += 0
@@ -117,8 +117,8 @@ def get_decompressed_size(data: bytes) -> int:
         elif fcsID == 3:
             frameContentSize = _readLE64(data[pos:])
 
-        if singleSegment:
-            windowSize = frameContentSize
+        # if singleSegment:
+        #     windowSize = frameContentSize
 
         return frameContentSize
 
