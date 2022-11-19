@@ -83,9 +83,11 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
 fi
 PRODUCT_NAME="chia"
 echo electron-builder build --linux rpm "${OPT_ARCH}" \
+  --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain"
 electron-builder build --linux rpm "${OPT_ARCH}" \
+  --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain"
 LAST_EXIT_CODE=$?

@@ -18,6 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64, uint32, uint8, uint128
+from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
 from chia.wallet.util.transaction_type import TransactionType
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -374,6 +375,10 @@ class DIDWallet:
                 return
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
+        # Check inner puzzle consistency
+        assert self.did_info.origin_coin is not None
+        full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
+        assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
         new_info = DIDInfo(
@@ -466,7 +471,7 @@ class DIDWallet:
                     child_coin,
                     new_did_inner_puzhash,
                     bytes(new_pubkey),
-                    False,
+                    did_info.sent_recovery_transaction,
                     did_info.metadata,
                 )
 
@@ -556,10 +561,19 @@ class DIDWallet:
         coins = await self.select_coins(uint64(1))
         assert coins is not None
         coin = coins.pop()
-        new_puzhash = await self.get_new_did_inner_hash()
+        new_inner_puzzle = await self.get_new_did_innerpuz()
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(new_inner_puzzle)
+        assert uncurried is not None
+        p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_puzhash, "amount": uint64(coin.amount), "memos": [new_puzhash]}],
+            primaries=[
+                {
+                    "puzzlehash": new_inner_puzzle.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [p2_puzzle.get_tree_hash()],
+                }
+            ],
             coin_announcements={coin.name()},
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -583,7 +597,24 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        # Create an additional spend to confirm the change on-chain
+        new_full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+            new_inner_puzzle,
+            self.did_info.origin_coin.name(),
+        )
+        new_full_sol = Program.to(
+            [
+                [
+                    coin.parent_coin_info,
+                    innerpuz.get_tree_hash(),
+                    coin.amount,
+                ],
+                coin.amount,
+                innersol,
+            ]
+        )
+        new_coin = Coin(coin.name(), new_full_puzzle.get_tree_hash(), coin.amount)
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol), CoinSpend(new_coin, new_full_puzzle, new_full_sol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
@@ -716,7 +747,7 @@ class DIDWallet:
         self,
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
-        new_innerpuzhash: Optional[bytes32] = None,
+        new_innerpuzzle: Optional[Program] = None,
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -725,11 +756,19 @@ class DIDWallet:
         coin = coins.pop()
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
-        if new_innerpuzhash is None:
-            new_innerpuzhash = innerpuz.get_tree_hash()
-
+        if new_innerpuzzle is None:
+            new_innerpuzzle = innerpuz
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(new_innerpuzzle)
+        assert uncurried is not None
+        p2_puzzle = uncurried[0]
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": [new_innerpuzhash]}],
+            primaries=[
+                {
+                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [p2_puzzle.get_tree_hash()],
+                }
+            ],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
         )
@@ -834,10 +873,17 @@ class DIDWallet:
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
         innermessage = message.get_tree_hash()
         innerpuz: Program = self.did_info.current_inner
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
+        assert uncurried is not None
+        p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                {"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": []},
+                {
+                    "puzzlehash": innerpuz.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [p2_puzzle.get_tree_hash()],
+                },
                 {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
             ],
         )
@@ -1393,7 +1439,7 @@ class DIDWallet:
             None,
             None,
             None,
-            False,
+            True,
             metadata,
         )
         return did_info

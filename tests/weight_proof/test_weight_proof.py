@@ -23,6 +23,7 @@ from chia.full_node.weight_proof import (
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 
 
 def count_sub_epochs(blockchain, last_hash) -> int:
@@ -75,7 +76,8 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
+        quality_string: Optional[bytes32] = verify_and_get_quality_string(
+            block.reward_chain_block.proof_of_space,
             test_constants,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,

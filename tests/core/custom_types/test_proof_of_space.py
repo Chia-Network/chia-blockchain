@@ -3,7 +3,7 @@ from __future__ import annotations
 from secrets import token_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
+from chia.types.blockchain_format.proof_of_space import passes_plot_filter
 
 
 class TestProofOfSpace:
@@ -19,7 +19,7 @@ class TestProofOfSpace:
             plot_id = token_bytes(32)
             sp_output = token_bytes(32)
 
-            if ProofOfSpace.passes_plot_filter(DEFAULT_CONSTANTS, plot_id, challenge_hash, sp_output):
+            if passes_plot_filter(DEFAULT_CONSTANTS, plot_id, challenge_hash, sp_output):
                 success_count += 1
 
         assert abs((success_count * target_filter / num_trials) - 1) < 0.35

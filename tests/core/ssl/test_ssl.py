@@ -9,6 +9,7 @@ from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 
@@ -20,7 +21,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"
         ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
-        wsc = WSChiaConnection(
+        wsc = WSChiaConnection.create(
             NodeType.FULL_NODE,
             ws,
             server._port,
@@ -29,8 +30,8 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             False,
             self_hostname,
             incoming_queue,
-            lambda x, y: x,
             None,
+            bytes32(b"\x00" * 32),
             100,
             30,
             local_capabilities_for_handshake=capabilities,
