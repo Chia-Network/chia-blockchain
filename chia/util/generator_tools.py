@@ -1,12 +1,15 @@
-from typing import Any, Iterator, List, Tuple, Optional
+from __future__ import annotations
+
+from typing import Any, Iterator, List, Optional, Tuple
+
 from chiabip158 import PyBIP158
 
+from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.consensus.cost_calculator import NPCResult
 from chia.util.ints import uint64
 
 
@@ -45,7 +48,7 @@ def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
         return []
     for spend in npc_result.conds.spends:
         for puzzle_hash, amount, _ in spend.create_coin:
-            coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
+            coin = Coin(spend.coin_id, puzzle_hash, amount)
             additions.append(coin)
 
     return additions

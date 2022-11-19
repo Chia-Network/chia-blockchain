@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 import sys
@@ -11,7 +13,7 @@ from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
-from chia.util.chia_logging import initialize_logging
+from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -29,7 +31,7 @@ def create_timelord_service(
     config: Dict,
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Timelord]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = [PeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])]
@@ -54,7 +56,6 @@ def create_timelord_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
@@ -66,11 +67,7 @@ async def async_main() -> int:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=DEFAULT_ROOT_PATH,
-    )
+    initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_timelord_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     await service.setup_process_global_state()
     await service.run()

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import asyncio
 import cProfile
 import logging
@@ -15,18 +17,18 @@ import aiosqlite
 import click
 import zstd
 
-import chia.server.ws_connection as ws
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.protocols import full_node_protocol
 from chia.server.outbound_message import Message, NodeType
+from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import make_unfinished_block
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
-from tests.block_tools import make_unfinished_block
 from tools.test_constants import test_constants as TEST_CONSTANTS
 
 
@@ -66,6 +68,26 @@ class FakeServer:
     def set_received_message_callback(self, callback: Callable):
         pass
 
+    async def get_peer_info(self) -> Optional[PeerInfo]:
+        return None
+
+    def get_connections(
+        self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = False
+    ) -> List[WSChiaConnection]:
+        return []
+
+    def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
+        return False
+
+    async def start_client(
+        self,
+        target_node: PeerInfo,
+        on_connect: Callable = None,
+        auth: bool = False,
+        is_feeler: bool = False,
+    ) -> bool:
+        return False
+
 
 class FakePeer:
     def get_peer_logging(self) -> PeerInfo:
@@ -73,6 +95,9 @@ class FakePeer:
 
     def __init__(self):
         self.peer_node_id = bytes([0] * 32)
+
+    async def get_peer_info(self) -> Optional[PeerInfo]:
+        return None
 
 
 async def run_sync_test(
@@ -134,7 +159,7 @@ async def run_sync_test(
             else:
                 height = 0
 
-            peer: ws.WSChiaConnection = FakePeer()  # type: ignore[assignment]
+            peer: WSChiaConnection = FakePeer()  # type: ignore[assignment]
 
             print()
             counter = 0
@@ -332,7 +357,7 @@ async def run_sync_checkpoint(
         full_node.set_server(FakeServer())  # type: ignore[arg-type]
         await full_node._start()
 
-        peer: ws.WSChiaConnection = FakePeer()  # type: ignore[assignment]
+        peer: WSChiaConnection = FakePeer()  # type: ignore[assignment]
 
         print()
         height = 0

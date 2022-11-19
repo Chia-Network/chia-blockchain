@@ -11,7 +11,7 @@ from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.block_cache import BlockCache
-from tests.block_tools import test_constants
+from chia.simulator.block_tools import test_constants
 from chia.util.generator_tools import get_block_header
 
 from chia.consensus.pot_iterations import calculate_iterations_quality
@@ -23,6 +23,7 @@ from chia.full_node.weight_proof import (
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 
 
 def count_sub_epochs(blockchain, last_hash) -> int:
@@ -75,7 +76,8 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
+        quality_string: Optional[bytes32] = verify_and_get_quality_string(
+            block.reward_chain_block.proof_of_space,
             test_constants,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,

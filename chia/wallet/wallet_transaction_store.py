@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import time
 from typing import Dict, List, Optional, Tuple
@@ -35,7 +37,7 @@ class WalletTransactionStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
                     "CREATE TABLE IF NOT EXISTS transaction_record("
@@ -83,7 +85,7 @@ class WalletTransactionStore:
         """
         Store TransactionRecord in DB and Cache.
         """
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -103,7 +105,7 @@ class WalletTransactionStore:
             )
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))).close()
 
     async def set_confirmed(self, tx_id: bytes32, height: uint32):
@@ -166,25 +168,42 @@ class WalletTransactionStore:
         """
         Checks DB and cache for TransactionRecord with id: id and returns it.
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             # NOTE: bundle_id is being stored as bytes, not hex
-            rows = list(await conn.execute_fetchall("SELECT * from transaction_record WHERE bundle_id=?", (tx_id,)))
+            rows = list(
+                await conn.execute_fetchall(
+                    "SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)
+                )
+            )
         if len(rows) > 0:
             return TransactionRecord.from_bytes(rows[0][0])
         return None
 
+    async def get_transactions_by_height(self, height: uint32) -> List[TransactionRecord]:
+        """
+        Checks DB and cache for TransactionRecord with id: id and returns it.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            # NOTE: bundle_id is being stored as bytes, not hex
+            rows = list(
+                await conn.execute_fetchall(
+                    "SELECT transaction_record from transaction_record WHERE confirmed_at_height=?", (height,)
+                )
+            )
+        return [TransactionRecord.from_bytes(row[0]) for row in rows]
+
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.
-    # also, the current time should be passed in as a paramter
+    # also, the current time should be passed in as a parameter
     async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.
         """
         current_time = int(time.time())
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * from transaction_record WHERE confirmed=0",
+                "SELECT transaction_record from transaction_record WHERE confirmed=0",
             )
         records = []
 
@@ -215,11 +234,12 @@ class WalletTransactionStore:
         """
         Returns the list of all farming rewards.
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             fee_int = TransactionType.FEE_REWARD.value
             pool_int = TransactionType.COINBASE_REWARD.value
             rows = await conn.execute_fetchall(
-                "SELECT * from transaction_record WHERE confirmed=1 and (type=? or type=?)", (fee_int, pool_int)
+                "SELECT transaction_record from transaction_record WHERE confirmed=1 and (type=? or type=?)",
+                (fee_int, pool_int),
             )
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
@@ -227,15 +247,15 @@ class WalletTransactionStore:
         """
         Returns the list of all transaction that have not yet been confirmed.
         """
-        async with self.db_wrapper.read_db() as conn:
-            rows = await conn.execute_fetchall("SELECT * from transaction_record WHERE confirmed=0")
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE confirmed=0")
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
         """
         Returns the list of transaction that have not yet been confirmed.
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT transaction_record from transaction_record WHERE confirmed=0 AND wallet_id=?", (wallet_id,)
             )
@@ -264,9 +284,9 @@ class WalletTransactionStore:
         else:
             query_str = SortKey[sort_key].ascending()
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * FROM transaction_record WHERE wallet_id=?{puzz_hash_where}"
+                f"SELECT transaction_record FROM transaction_record WHERE wallet_id=?{puzz_hash_where}"
                 f" {query_str}, rowid"
                 f" LIMIT {start}, {limit}",
                 (wallet_id,),
@@ -275,7 +295,7 @@ class WalletTransactionStore:
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_transaction_count_for_wallet(self, wallet_id) -> int:
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
                 await conn.execute_fetchall("SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,))
             )
@@ -285,12 +305,14 @@ class WalletTransactionStore:
         """
         Returns all stored transactions.
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             if type is None:
-                rows = await conn.execute_fetchall("SELECT * FROM transaction_record WHERE wallet_id=?", (wallet_id,))
+                rows = await conn.execute_fetchall(
+                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=?", (wallet_id,)
+                )
             else:
                 rows = await conn.execute_fetchall(
-                    "SELECT * FROM transaction_record WHERE wallet_id=? AND type=?",
+                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=? AND type=?",
                     (
                         wallet_id,
                         type,
@@ -302,32 +324,34 @@ class WalletTransactionStore:
         """
         Returns all stored transactions.
         """
-        async with self.db_wrapper.read_db() as conn:
-            rows = await conn.execute_fetchall("SELECT * from transaction_record")
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record")
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_transaction_above(self, height: int) -> List[TransactionRecord]:
         # Can be -1 (get all tx)
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
+                "SELECT transaction_record from transaction_record WHERE confirmed_at_height>?", (height,)
             )
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
-        async with self.db_wrapper.read_db() as conn:
-            rows = await conn.execute_fetchall("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,)
+            )
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def rollback_to_block(self, height: int):
         # Delete from storage
         self.tx_submitted = {}
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))).close()
 
     async def delete_unconfirmed_transactions(self, wallet_id: int):
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
                 await conn.execute("DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=?", (wallet_id,))
             ).close()

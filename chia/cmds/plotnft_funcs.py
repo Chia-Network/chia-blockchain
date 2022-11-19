@@ -1,31 +1,32 @@
-from decimal import Decimal
-from dataclasses import replace
+from __future__ import annotations
 
-import aiohttp
 import asyncio
 import functools
 import json
 import time
-
+from dataclasses import replace
+from decimal import Decimal
 from pprint import pprint
-from typing import Any, List, Dict, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
+import aiohttp
+
+from chia.cmds.cmds_util import get_any_service_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
-from chia.pools.pool_config import load_pool_config, PoolWalletConfig, update_pool_config
-from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32, uint64
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
+from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -172,89 +173,65 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    self_hostname = config["self_hostname"]
-    farmer_rpc_port = config["farmer"]["rpc_port"]
-    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-    summaries_response = await wallet_client.get_wallets()
-    wallet_id_passed_in = args.get("id", None)
-    try:
-        pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
-    except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(
-                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
-                f" You can run the farmer by:\n    chia start farmer-only"
-            )
-        else:
-            print(f"Exception from 'wallet' {e}")
-        farmer_client.close()
-        await farmer_client.await_closed()
-        return
-    pool_state_dict: Dict[bytes32, Dict] = {
-        bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
-        for pool_state_item in pool_state_list
-    }
-    if wallet_id_passed_in is not None:
-        for summary in summaries_response:
-            typ = WalletType(int(summary["type"]))
-            if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
-                print(f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet. Please provide a different id.")
-                return
-        pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
-        await pprint_pool_wallet_state(
-            wallet_client,
-            wallet_id_passed_in,
-            pool_wallet_info,
-            address_prefix,
-            pool_state_dict.get(pool_wallet_info.launcher_id),
-        )
-    else:
-        print(f"Wallet height: {await wallet_client.get_height_info()}")
-        print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-        for summary in summaries_response:
-            wallet_id = summary["id"]
-            typ = WalletType(int(summary["type"]))
-            if typ == WalletType.POOLING_WALLET:
-                print(f"Wallet id {wallet_id}: ")
-                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+    farmer_client: Optional[FarmerRpcClient]
+    async with get_any_service_client("farmer") as node_config_fp:
+        farmer_client, config, _ = node_config_fp
+        if farmer_client is not None:
+            address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+            summaries_response = await wallet_client.get_wallets()
+            wallet_id_passed_in = args.get("id", None)
+            pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
+            pool_state_dict: Dict[bytes32, Dict] = {
+                bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
+                for pool_state_item in pool_state_list
+            }
+            if wallet_id_passed_in is not None:
+                for summary in summaries_response:
+                    typ = WalletType(int(summary["type"]))
+                    if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
+                        print(
+                            f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
+                            " Please provide a different id."
+                        )
+                        return
+                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
                 await pprint_pool_wallet_state(
                     wallet_client,
-                    wallet_id,
+                    wallet_id_passed_in,
                     pool_wallet_info,
                     address_prefix,
                     pool_state_dict.get(pool_wallet_info.launcher_id),
                 )
-                print("")
-    farmer_client.close()
-    await farmer_client.await_closed()
+            else:
+                print(f"Wallet height: {await wallet_client.get_height_info()}")
+                print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
+                for summary in summaries_response:
+                    wallet_id = summary["id"]
+                    typ = WalletType(int(summary["type"]))
+                    if typ == WalletType.POOLING_WALLET:
+                        print(f"Wallet id {wallet_id}: ")
+                        pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+                        await pprint_pool_wallet_state(
+                            wallet_client,
+                            wallet_id,
+                            pool_wallet_info,
+                            address_prefix,
+                            pool_state_dict.get(pool_wallet_info.launcher_id),
+                        )
+                        print("")
 
 
 async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    self_hostname = config["self_hostname"]
-    farmer_rpc_port = config["farmer"]["rpc_port"]
-    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
-    try:
-        login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
-        if login_link is None:
-            print("Was not able to get login link.")
-        else:
-            print(login_link)
-    except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(
-                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
-                f" You can run the farmer by:\n    chia start farmer-only"
-            )
-        else:
-            print(f"Exception from 'farmer' {e}")
-    finally:
-        farmer_client.close()
-        await farmer_client.await_closed()
+    farmer_client: Optional[FarmerRpcClient]
+    async with get_any_service_client("farmer") as node_config_fp:
+        farmer_client, _, _ = node_config_fp
+        if farmer_client is not None:
+            login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
+            if login_link is None:
+                print("Was not able to get login link.")
+            else:
+                print(login_link)
 
 
 async def submit_tx_with_confirmation(

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections
 import logging
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
@@ -316,7 +318,6 @@ async def validate_block_body(
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
                     cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
-                    height=curr.height,
                 )
                 removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.conds)
             else:

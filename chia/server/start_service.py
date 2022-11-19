@@ -4,10 +4,11 @@ import logging
 import logging.config
 import os
 import signal
-from sys import platform
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
+import sys
+from typing import Any, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
-from chia.daemon.server import service_launch_lock_path, singleton
+from chia.daemon.server import service_launch_lock_path
+from chia.util.lock import Lockfile, LockfileError
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from ..protocols.shared_protocol import capabilities
 
@@ -16,7 +17,8 @@ try:
 except ImportError:
     uvloop = None
 
-from chia.rpc.rpc_server import start_rpc_server
+from chia.cmds.init_funcs import chia_full_version_str
+from chia.rpc.rpc_server import RpcApiProtocol, RpcServiceProtocol, start_rpc_server, RpcServer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
@@ -31,15 +33,20 @@ from .reconnect_task import start_reconnect_task
 main_pid: Optional[int] = None
 
 T = TypeVar("T")
+_T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 
-RpcInfo = Tuple[type, uint16]
+RpcInfo = Tuple[Type[RpcApiProtocol], uint16]
 
 
-class Service:
+class ServiceException(Exception):
+    pass
+
+
+class Service(Generic[_T_RpcServiceProtocol]):
     def __init__(
         self,
         root_path,
-        node: Any,
+        node: _T_RpcServiceProtocol,
         peer_api: Any,
         node_type: NodeType,
         advertised_port: uint16,
@@ -50,7 +57,6 @@ class Service:
         upnp_ports: List[uint16] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
-        auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
         rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon=True,
@@ -66,12 +72,13 @@ class Service:
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self._rpc_task: Optional[asyncio.Task] = None
+        self.rpc_server: Optional[RpcServer] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
 
         self._log = logging.getLogger(service_name)
+        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
         self.service_config = self.config[service_name]
 
@@ -88,7 +95,7 @@ class Service:
             capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
-        self._server = ChiaServer(
+        self._server = ChiaServer.create(
             advertised_port,
             node,
             peer_api,
@@ -110,8 +117,6 @@ class Service:
         else:
             self._log.warning(f"No set_server method for {service_name}")
 
-        self._connect_peers = connect_peers
-        self._auth_connect_peers = auth_connect_peers
         self._upnp_ports = upnp_ports
         self._server_listen_ports = server_listen_ports
 
@@ -123,13 +128,10 @@ class Service:
 
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
-        self._reconnect_tasks: List[asyncio.Task] = []
-        self.upnp: Optional[UPnP] = None
+        self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task]] = {peer: None for peer in connect_peers}
+        self.upnp: UPnP = UPnP()
 
-    async def start(self, **kwargs) -> None:
-        # we include `kwargs` as a hack for the wallet, which for some
-        # reason allows parameters to `_start`. This is serious BRAIN DAMAGE,
-        # and should be fixed at some point.
+    async def start(self) -> None:
         # TODO: move those parameters to `__init__`
         if self._did_start:
             return None
@@ -139,49 +141,54 @@ class Service:
 
         self._did_start = True
 
-        await self._node._start(**kwargs)
+        await self._node._start()
         self._node._shut_down = False
 
-        for port in self._upnp_ports:
-            if self.upnp is None:
-                self.upnp = UPnP()
+        if len(self._upnp_ports) > 0:
+            self.upnp.setup()
 
-            self.upnp.remap(port)
+            for port in self._upnp_ports:
+                self.upnp.remap(port)
 
-        await self._server.start_server(self._on_connect_callback)
+        await self._server.start_server(self.config.get("prefer_ipv6", False), self._on_connect_callback)
         self._advertised_port = self._server.get_port()
 
-        self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
-            for _ in self._connect_peers
-        ]
+        for peer in self._reconnect_tasks.keys():
+            self.add_peer(peer)
+
         self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
 
         self._rpc_close_task = None
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info
-            self._rpc_task = asyncio.create_task(
-                start_rpc_server(
-                    rpc_api(self._node),
-                    self.self_hostname,
-                    self.daemon_port,
-                    uint16(rpc_port),
-                    self.stop,
-                    self.root_path,
-                    self.config,
-                    self._connect_to_daemon,
-                    max_request_body_size=self.max_request_body_size,
-                    name=self._service_name + "_rpc",
-                )
+            self.rpc_server = await start_rpc_server(
+                rpc_api(self._node),
+                self.self_hostname,
+                self.daemon_port,
+                uint16(rpc_port),
+                self.stop,
+                self.root_path,
+                self.config,
+                self._connect_to_daemon,
+                max_request_body_size=self.max_request_body_size,
             )
 
     async def run(self) -> None:
-        lockfile = singleton(service_launch_lock_path(self.root_path, self._service_name))
-        if lockfile is None:
+        try:
+            with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
+                await self.start()
+                await self.wait_closed()
+        except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
-            raise ValueError(f"{self._service_name}: already running")
-        await self.start()
-        await self.wait_closed()
+            raise ValueError(f"{self._service_name}: already running") from e
+
+    def add_peer(self, peer: PeerInfo) -> None:
+        if self._reconnect_tasks.get(peer) is not None:
+            raise ServiceException(f"Peer {peer} already added")
+
+        self._reconnect_tasks[peer] = start_reconnect_task(
+            self._server, peer, self._log, self.config.get("prefer_ipv6")
+        )
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
@@ -191,9 +198,9 @@ class Service:
 
         global main_pid
         main_pid = os.getpid()
-        if platform == "win32" or platform == "cygwin":
+        if sys.platform == "win32" or sys.platform == "cygwin":
             # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
+            signal.signal(signal.SIGBREAK, self._accept_signal)
             signal.signal(signal.SIGINT, self._accept_signal)
             signal.signal(signal.SIGTERM, self._accept_signal)
         else:
@@ -225,12 +232,13 @@ class Service:
             # start with UPnP, since this can take a while, we want it to happen
             # in the background while shutting down everything else
             for port in self._upnp_ports:
-                if self.upnp is not None:
-                    self.upnp.release(port)
+                self.upnp.release(port)
 
             self._log.info("Cancelling reconnect task")
-            for _ in self._reconnect_tasks:
-                _.cancel()
+            for task in self._reconnect_tasks.values():
+                if task is not None:
+                    task.cancel()
+            self._reconnect_tasks.clear()
             self._log.info("Closing connections")
             self._server.close_all()
             self._node._close()
@@ -238,14 +246,9 @@ class Service:
 
             self._log.info("Calling service stop callback")
 
-            if self._rpc_task is not None:
+            if self.rpc_server is not None:
                 self._log.info("Closing RPC server")
-
-                async def close_rpc_server() -> None:
-                    if self._rpc_task:
-                        await (await self._rpc_task)[0]()
-
-                self._rpc_close_task = asyncio.create_task(close_rpc_server())
+                self.rpc_server.close()
 
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()
@@ -255,17 +258,16 @@ class Service:
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
 
-        if self._rpc_close_task:
+        if self.rpc_server:
             self._log.info("Waiting for RPC server")
-            await self._rpc_close_task
+            await self.rpc_server.await_closed()
             self._log.info("Closed RPC server")
 
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
 
-        if self.upnp is not None:
-            # this is a blocking call, waiting for the UPnP thread to exit
-            self.upnp.shutdown()
+        # this is a blocking call, waiting for the UPnP thread to exit
+        self.upnp.shutdown()
 
         self._did_start = False
         self._is_stopping.clear()

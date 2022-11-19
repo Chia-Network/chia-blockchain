@@ -6,19 +6,367 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## [Unreleased]
+## 1.6.1 Chia blockchain 2022-11-03
 
-### What's Changed
+### Added
+
+- New node RPC for fee estimates `/get_fee_estimate`
+- Added support for labeling (naming) wallets (keys)
+- Added CLI option `chia keys label`
+- Added REMARK to `ConditionOpcodes`
+- Prevent creation of offers with 100% royalties
+- Added `chia peer` command to replace `chia show -c`
+- New wallet RPC `/nft_mint_bulk` and preliminary support for bulk minting
+- New wallet RPC `/nft_calculate_royalties`
+- New wallet signing RPCs `/sign_message_by_address`, `/sign_message_by_id`
+- New wallet CLI option `chia wallet sign_message`
+- New wallet RPC `/push_transactions` (thanks @stmharry)
+- New daemon command `running_services` to list all running services
+- Code coverage is now generated
+- Added on-chain wallet notification mechanism with CLI
+- Added log warning when inserting into the mempool takes longer than 2 seconds
+
+### Changed
+
+- RPC incompatibility: `/get_routes` and `/healthz` now return a boolean for success (previously was a string)
+- New Windows installer created with `electron-builder`
+- Blsspy updated to 1.0.16
+- Chiavdf updated to 1.0.7
+- Chiapos updated to 1.0.11
+- Clvm_tools updated to 0.4.5
+- Chia_rs updated to 0.1.14
+- Clvm-tools-rs updated to 0.1.24
+- Aiohttp updated to 3.8.3
+- Colorlog updated to 6.7.0
+- Concurrent-log-handler updated to 0.9.20
+- Cryptography updated to 36.0.2
+- Filelock updated to 3.8.0
+- Keyring updated to 23.6.0
+- Click updated to 8.1.3
+- Dnspython updated to 2.2.1
+- Dnslib updated to 0.9.22
+- Zstd updated to 1.5.2.6
+- Updated various DataLayer CLI commands to accept root hash parameter
+- Pool config is updated after the wallet is fully synced (#12631)
+- Prior to adding DID coins, ensure coin is valid
+- Adding submodule branch override to Install-gui.ps1
+- Reverted `change` to `change OR REPLACE -> OR FAIL` in `wallet_coin_store`
+- Changed log level to `INFO` in `Receiver.reset` for plot sync
+- Modified `/nft_get_info` to include `p2_address`
+- Simplified `WalletStateManager.coin_added()`
+- Minor change to DataLayer mirror sync
+- Removed unnecessary split when starting daemon
+- Removed mostly unused wallet action store (wallet_action_store.py) and rearrange code as needed
+- Removed unused `all_puzzle_hashes` from `wallet_puzzle_store`
+- Removed "Total iterations since start" from `chia show -s`
+- Removed rate-limited wallet
+- Removed the beta program link from the warning in the CLI
+- Removed `--enable-data-server` from `chia configure` CLI
+- Improved RPC server start/stop
+- Drop partially implemented BIP39 passphrase support
+- Simplify key deletion in `Keychain`
+- Simplify public key getters in `Keychain`
+- Cleanup and reuse of wallet code
+- Return before fetching weight proof if a secondary sync task is running (Thanks @olivernyc!)
+- Dropped unused `chia_minor_release_number`
+- Just `raise`, not `raise e` when reraising
+- Optimized `simple_solution_generator()`
+- Allow developers to easily use standard Chia `clvm` puzzles and libraries
+- Skipped validating `GTElement` in mempool
+- Improved logging for `chia plotters version` errors
+- Performance improvements in `subscribe_to_phs` using CoinState from chia_rs
+- Performance improvements in wallet syncing by doing bulk coin record lookups
+- Performance improvements in wallet syncing by caching the last derivation path
+- Performance improvements in offer parsing by implementing a more efficient Program.uncurry()
+- Performance improvements in puzzle parsing by using rust parser (`chia_rs`) for Program.from_bytes()
+- Performance improvements in wallet by caching the uncurried puzzle in UncurriedPuzzle class
+- Implement generator_for_single_coin() in python instead of `clvm`
+- Optimize get_block_store by not parsing the full block
+- Avoid creating a list and enable short circuit behavior in `bundle_suitable_for_compression()`
+- Performance improvements when dealing with lots of trades (offers) by using a lookup table and not loading all trades from disk upfront
+- Minimized a chance where `sudo` prompts users for password in `install.sh`
+- Full_node: Dropped unused ultra priority lock
+- Full_node: Set defaults in `SyncStore`
+- Various performance and code cleanup in mempool handling
+- Significant scalability improvements in NFT handling
+- Minter DID now shown in output of `chia wallet nft get_info` and in GUI
+- Treehash optimization for DID wallet
+- Performance improvements by using `get_puzzle_and_solution_for_coin()` from `chia_rs`
+- Adds handling for daemon not sending `initial_target_state` (thanks @bolshoytoster) (#10058)
+- Reduced log noise during wallet syncing
+- Run `get_puzzle_and_solution_for_coin` and `get_block_header` expensive API requests in separate thread
+- Do not trigger the pending tx handler in some cases. Eliminates multiple ALREADY_INCLUDING_TRANSACTION errors for some operations, notably claiming self-pooling rewards
+- Defined a shared API for all wallet via a WalletProtocol class
+- Recompress CLVM generators
+- Removed unnecessary logging during plot creation
+- Made `IP` section in connections table 1 character wider to handle IPV6
+- Deprecated `chia plotters install` command
+- Improved handling of unfinished block messages
+- Stripped leading and trailing whitespace before `bech32` decoding in various places
+- Fixed issues in the GUI with sending CAT transactions with a fee
+- Changed `ctx.exit` -> `raise click.ClickException` in CLI
+- Improved harvester logging
+
+### Fixed
+
+- Fixed a few instances of coin name logging
+- Fixed chia farm summary if using a remote full node (thanks @yan74)
+- Fixed comments in initial config where puzzle hash should be receive address (thanks @hugepants)
+- Fixed locking of main thread in `validate_weight_proof_inner`
+- Fixed several bugs with untrusted sync, and correct sync status
+- Fixed performance issue in wallet with offers
+- Minor fixes for related to running serialized programs
+- Fixed bug in remove_plot_directory when removing a directory not currently in the plot directory list (thanks @joshpainter)
+- Fixed the run_block utility to use chialisp_deserialization
+- Minor comment typo, hinting, and fixture cleanup
+- Fixed a crash that happens when plot directory config is empty
+- Set log levels per handler / Fix the log level in beta mode
+- Minimal fixup for daemon signal handling regression
+- Fixed CAT offer aggregation edge case (#13464)
+- Fixed memos & minter DID
+- Fixed logo URL in readme.md (thanks @SametBasturkk)
+- Fixed typo in wallet code `puzlle` -> `puzzle` (thanks @wizicer)
+- Fixed `chia show -s` with other options as well
+- Fixed issue with the wallet not syncing in untrusted mode, if connected to a trusted peer that is not synced
+- Improve handling of not synced peers
+- Sped up creation of puzzle hashes in the wallet
+- Replaced several handled tracebacks with standard log messages
+- Show Usage when running `chia plotters` (#13690)
+- Fixed marking the successfully added spend bundles to the reinitialized mempool when a new peak is available
+- Fixed errors output when stopping the daemon on CLI
+- Fixed incompatibility with Python 3.10.8 around accessing the `_waiters` private attribute of asyncio Semaphore class (#13636)
+- Fixed DataLayer issues with subscribing after unsubscribing to the same store/singleton (#13589)
+- Report to GUI when DID wallet is created
+- Check if offer file is present before trying to take offer
+- Properly catch and handle errors during shutdown while syncing
+- Fixed proof lookup and plot caching with bladebit plots that have dropped entries (#13084)
+- Fixed issues with accepting Datalayer offers where the offer inclusions has matching key/value data for both maker and taker inclusions
+- Fixed issues where ChiaLisp was compiled during import requiring write access to the directory (#11257) (thanks @lourkeur). To force compilation, developers can set environment variable `CHIA_DEV_COMPILE_CLVM_ON_IMPORT`
+- Removed tracking of dropped transactions `dropped_tx` (thanks @roseiliend)
+- Fixed a breaking change in `get_puzzle_and_solution` RPC
+
+## 1.6.0 Chia blockchain 2022-9-20
+
+### Added
+
+- DataLayer
+- XCH Spam Filter
+- GUI Settings `Auto-Login` toggle (GUI only)
+- GUI Settings section for `DataLayer`
+  - `Enable DataLayer` toggle
+  - `Enable File Propagation Server` toggle
+
+### Changed
+
+- Delayed pool config update until after sync
+- Minor change to handling sync height to avoid race condition with blockchain DB
+- Ignore `FileNotFoundError` when checking SSL file permissions if the file doesn’t exist
+
+### Fixed
+
+- Fixed missing wallet `state_changed` events for GUI
+- Fixed several bugs related to wallet sync status
+- Fixed GUI issue for CAT offers where the CAT Tail would not show in the tooltip for `Unknown CAT`s (https://github.com/Chia-Network/chia-blockchain-gui/issues/950)
+
+### Known Issues
+
+- The CLI command `chia configure --enable-data-server`, and the `config.yaml` parameter at `data_layer.run_server` have no effect, and will be removed in the future
+- DataLayer offers cannot be accepted (`take_offer`) if the offer has inclusions for the exact same key/value data for both maker and taker inclusions.
+
+## 1.5.1 Chia blockchain 2022-8-23
+
+### Added
+
+- Add Source and Changelog to project_urls (Thanks @strayer!)
+- Add condition code constant for REMARK, an always true Chialisp condition
+- Add several wallet optimizations
+- Add `chia db backup --backup-file <backup_file_destination>` (Thanks @neurosis69!)
+- Add debug option to log all SQL commands for wallet db (Thanks @neurosis69!)
+- Additional data for `get_wallet_balance` and `get_wallets` endpoints
+- Add `change_data` to `_state_changed` since the later calls expect it
+- Add `Program.replace`
+- Add `new_transaction()` to `DBWrapper2`
+- Add RPCs for getting/extending the current derivation path index
+- Add symlinks to the UI RPM to mirror the .deb UI and the CLI installers
+- Add support for excluding coins in `create_signed_transaction` wallet RPC (Thanks @felixbrucker!)
+- Add small coin selection improvements
+- Add bulk cancel API
+- Introduce `streamable.Field`
+- Introduce `Streamable.__post_init__` processing cache
+- Added minimum coin amount to various RPC calls
+- Added new full_node RPC called `get_block_spends` - Get spends for block using transaction generator
+- Support for remembering the last used wallet key
+- Documented deserialization length limitations (8191 bytes) in CLVM ROM. We recommend using a local version of the chialisp code when necessary
+
+### Changed
+
+- Huge speedup in trusted wallet sync
+  - Previous time to sync 1000 tx: 90 seconds
+  - New time: 2 seconds
+- Force keyring migration / Deprecate legacy keyring support
+- Renaming series -> editions (full deprecation) (Thanks @DrakoPensulo!)
+- Made various additions to the cache, and changes to validation to reduce CPU usage significantly
+- Log full errors when `run_as_generator()` throws error
+- Sort `plot_paths` before splitting it into batches
+- Skip `plot_sync_callback` if `delta` is `None`
+- Validate the path in `add_plot_directory`
+- Cache convert functions from `dataclass_from_dict`
+- Big thanks to @neurosis69 for the following:
+  - Allow bigger chunks of bind variables per SQL statement
+  - Execute SQL updates as chunks in `_set_spent function` for `tx_removals`
+  - Optimized column selection in various tables to use specific columns rather than all columns
+  - Write blockchain DB full node startup progress to debug.log
+- Clean up and Refactor `chia show` command
+- Increment the dirty counter when setting `height-to-hash` map entries
+- `plotting.cache.DiskCache` -> `util.misc.VersionedBlob`
+- Improve `chia farm summary`
+- Optimize `std_hash` in `coin.py`
+- Improved many tests
+- Remove `big_ints` list
+- Improved UX for `plotnft claim`
+- Upgrade `chia-rs` to streamable support
+- Allow switching keys during sync
+- Optimize `get_hash` by not double converting
+- Don't re-hash the same objects
+- Drop redundant `PlotPathRequestData` conversion
+- Make `PlotsRefreshParameter` streamable + use `from_json_dict`
+- Make `Plot{Info|Path}RequestData` streamable + use `from_json_dict`
+- Optimize request additions
+- Stop and join watchdog observer
+- Remove chia.util.path.mkdir()
+- Remove the constants_json field
+- Don't convert `ConsensusConstants` to/from JSON
+- Move some class methods out of `Streamable`
+- Request header blocks, and new rate limits
+- Replaced the python implementation of `Coin` with the Rust native `Coin` from `chia_rs`
+- Watchdog==2.1.9 for bad file descriptor avoidance
+- Be specific about `*args` in `RpcServer` state changed methods
+- Make WalletUserStore.create_wallet() raise on failure, and return non-optional
+- Switch back to official dnspython for v2.2.0
+- Not optional - `WalletNode.wallet_state_manager`, `.server`, `.keychain_proxy`
+- More `uint64()` for NFT coin amount
+- Delay `WalletNode._new_peak_queue` instantiation to avoid errors
+- Remove unused `WalletCoinStore.get_unspent_coins_at_height`
+- `NFTInfo.royalty_puzzle_hash` is `Optional` but not `None` here
+- Handle `KeychainProxyConnectionFailure` in `Farmer.setup_keys`
+- Made simplifications to the `WalletCoinStore` class
+- Removed wallet transaction store cache
+- Removed double `bytes32` conversion
+- Turn `dataclass_from_dict` into `streamable_from_dict`
+- Replace service `running_new_process=` parameter by `.setup_process_global_state()` method
+- Changed wallet peer selection to prefer nodes in the following order
+  1. trusted & synced
+  2. untrusted & synced
+  3. trusted & unsynced
+  4. untrusted & unsynced
+- Simplified pool cache
+- Remove unused finished_sync_up_to (Thanks @olivernyc!)
+- Expand `Field` and introduce `Streamable._streamable_fields`
+- Removing `logging.basicConfig()` from `ChiaServer.__init__()`
+- Use coin selection algorithm for DID wallets
+- Simplify service start configuration loading
+- Wallet network messages now have higher priority than Node network messages
+- Wallet now checks the mempool before adding new transactions to the queue
+- Implemented new context manager for DB access (DBWrapper2) that supports nested transactions, improved support for concurrency, and simplified exception handling
+- Upgraded `clvm-tools-rs` to `0.1.19`
+- Upgraded `clvm_tools` to `0.4.5`
+- Simplify wallet transaction store
+- Remove unused `_clear_database()` functions
+- Optimized wallet DB queries using `execute_fetchall`
+- Optimize wallet `set_spent()`
+- Added support for minimum coin amount and excluding coins in `select_coin` RPC
+- Log `chia_full_version_str` in daemon and all services
+- On failure to get keys, log and return exception
+- Update certificate store as of July 19, 2022
+- Optimize puzzlehash generation (~65% faster)
+- Deprecated the ability to disable the keyring passphrase feature
+- Minor simplifications to derivation records
+- Update protocol message checks
+- Changed `initial_num_public_keys` default to 425
+- Minor optimizations for block store
+- Optimize get_coins_to_check()
+- Minor wallet optimizations when determining coin type
+- Avoid redundant printing of puzzle program in NFT uncurry attempt
+- Substantially reduced overall size of Chia packages
+- Log the plot refresh parameter on start
+- Log blockchain database file used along with schema version on startup
+- Removed redundant request for SubEpochData
+
+### Fixed
+
+- Log error for failed service start
+- Improve logging in `plot_sync.{receiver|delta}`
+- Fix default value assignments for `dataclass_from_dict` for streamable
+- Fix `change_payout_instructions` for invalid addresses
+- Fix SQL error when only config file is deleted
+- Fix issue with wallet not handling rejection from unsynced local node properly
+- Fix for transfer NFT with DID
+- Fix misleading argument name (Thanks @olivernyc!)
+- Fix knapsack coin selection
+  - Old performance with 200k coins: 60 seconds
+  - New: 0.78 seconds.
+- Fix trusted_peer example in initial-config.yaml by (Thanks @ojura!)
+- Replace existing simulator config & Fix simulator
+- Fix attribute error on `FullNode.simulator_transaction_callback`
+- Fix passphrase hint
+- Bump clvm_tools_rs for bug fix
+- Fix NFT > CAT Royalty splitting bug
+- Fixed `mint_nft`
+- Fix no keys loaded error by making KeychainProxy automatically reconnect when a connection is lost
+- Fix a migration bug of NFT table change
+- NFT wallet reorg fix
+- Fix NFT wallet naming issue
+- Can't shadow `info` which is `NFTInfo` in the first place
+- Initialize logging before Service instantiation
+- Make sure chia commands output help when no args are given (#11013) (Thanks @noneus!)
+- Fixed bugs in fork point calculation, and reduced number of times weight-proofs are validated
+- Fixed bug in starting the crawler (set service name to `full_node`)
+- NFT transfer/minting commands now validate the specified addresses
+- Block summaries of CAT1 offers in the RPC and CLI
+
+## 1.5.0 Chia blockchain 2022-7-26
+
+### Added
+
+- Added derivation index information to the Wallet UI to show the current derivation index height
+- Added section in Settings to allow the user to manually update the derivation index height in order to ensure the wallet finds all the coins
+- Added a tooltip for users to understand why their CAT balance has changed as new CAT2 tokens get re-issued
+- There is now a `blockchain_wallet_v2_r1_*.sqlite` DB that will be created, which will sync from 0 to look for CAT2 tokens. This preserves a copy of your previous wallet DB so that you are able to look up previous transactions by using an older wallet client
+- Extended `min_coin` to RPC calls, and CLI for coin selection
+- Show DID in the offer preview for NFTs
+- Added wallet RPCs (`get_derivation_index`, `update_derivation_index`) to enable the GUI, and CLI to report what the current derivation index is for scanning wallet addresses, and also allows a user to move that index forward to broaden the set of addresses to scan for coins
+
+### Changed
+
+- Changed the DID Wallet to use the new coin selection algorithm that the Standard Wallet, and the CAT Wallet already use
+- Changed returning the result of send_transaction to happen after the transaction has been added to the queue, rather than it just being added to the mempool.
+- Increased the priority of wallet transactions vs full node broadcasted transactions, so we don't have to wait in line as a wallet user
+- Deprecated the `-st, --series-total` and `-sn, --series-number` RPC and CLI NFT minting options in favor of `-ec, --edition-count` and `-en, --edition-number` to align with NFT industry terms
+- When creating a DID profile, a DID-linked NFT wallet is automatically created
+- Update `chia wallet take_offer` to show NFT royalties that will be paid out when an offer is taken
+- Added a parameter to indicate how many additional puzzle hashes `create_more_puzzle_hashes` should create
+
+### Fixed
+
+- Fixed [CVE-2022-36447] where in tokens previously minted on the Chia blockchain using the `CAT1` standard can be inflated in arbitrary amounts by any holder of the token. Total amount of the token can be increased as high as the malicious actor pleases. This is true for every `CAT1` on the Chia blockchain, regardless of issuance rules. This attack is auditable on-chain, so maliciously altered coins can potentially be "marked" by off-chain observers as malicious.
+- Fixed issue that prevented websockets from being attempted if an earlier websocket failed
+- Fixed issue where `test_smallest_coin_over_amount` did not work properly when all coins were smaller than the amount
+- Fixed a performance issue with knapsack that caused it to keep searching for more coins than could actually be selected. Performance with 200k coins:
+  - Old: 60 seconds
+  - New: 0.78 seconds
+- Fixed offer compression backwards compatibility
+- Fixed royalty percentage check for NFT0 NFTs, and made the check for an offer containing an NFT more generalized
+- Fixed timing with asyncio context switching that could prevent networking layer from responding to ping
 
 ## 1.4.0 Chia blockchain 2022-6-29
 
 ### Added
 
 - Added support for NFTs!!! :party:
-- Added `chia wallet nft` command (see https://docs.chia.net/docs/13cli/did_cli)
-- Added `chia wallet did` command (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
-- Added RPCs for DID (see https://docs.chia.net/docs/12rpcs/did_rpcs)
-- Added RPCs for NFT (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
+- Added `chia wallet nft` command (see <https://docs.chia.net/docs/13cli/did_cli>)
+- Added `chia wallet did` command (see <https://docs.chia.net/docs/12rpcs/nft_rpcs>)
+- Added RPCs for DID (see <https://docs.chia.net/docs/12rpcs/did_rpcs>)
+- Added RPCs for NFT (see <https://docs.chia.net/docs/12rpcs/nft_rpcs>)
 - Enable stricter mempool rule when dealing with multiple extra arguments
 - Added a retry when loading pool info from a pool at 2 minute intervals
 - Added CLI options `--sort-by-height` and –sort-by-relevance` to `chia wallet get_transactions`
@@ -228,7 +576,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 
 ## 1.3.0 Chia blockchain 2022-3-07
 
-### Added:
+### Added
 
 - CAT wallet support - add wallets for your favorite CATs.
 - Offers - make, take, and share your offers.
@@ -248,7 +596,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 - Added *multiprocessing_start_method:* entry in config.yaml that allows setting the python *start method* for multiprocessing (default is *spawn* on Windows & MacOS, *fork* on Unix).
 - Added option to "Cancel transaction" accepted offers that are stuck in "pending".
 
-### Changed:
+### Changed
 
 - Lite wallet client sync updated to only require 3 peers instead of 5.
 - Only CATs from the default CAT list will be automatically added, all other unknown CATs will need to be manually added (thanks to @ojura, this behavior can be toggled in config.yaml).
@@ -277,7 +625,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
   - It should not be expected that wallet info, such as payout address, should not reflect what their desired values until everything has completed syncing.
   - The payout instructions may not be editable via the GUI until syncing has completed.
 
-### Fixed:
+### Fixed
 
 - Offer history limit has been fixed to show all offers now instead of limiting to just 49 offers.
 - Fixed issues with using madmax CLI options -w, -G, -2, -t and -d (Issue 9163) (thanks @randomisresistance and @lasers8oclockday1).
@@ -302,7 +650,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 - Memory leak in the full node sync store where peak hashes were stored without being pruned.
 - Fixed a timelord issue which could cause a few blocks to not be infused on chain if a certain proof of space signs conflicting blocks.
 
-### Known Issues:
+### Known Issues
 
 - When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created.
   - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
@@ -317,11 +665,10 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 
 ## 1.2.11 Chia blockchain 2021-11-4
 
-Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
-This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for _every_ possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
-
 ### Added
 
+- Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
+- This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for *every* possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
 - Performance improvements for nodes to support higher transaction volumes, especially for low powered devices like RaspBerry Pi. Full details at [#9050](https://github.com/Chia-Network/chia-blockchain/pull/9050).
   - Improved multi-core usage through process pools.
   - Prioritized block validation.
@@ -348,7 +695,6 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
-
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
@@ -1991,7 +2337,7 @@ relic. We will make a patch available for these systems shortly.
 ### Added
 
 - There is now full transaction support on the Chia blockchain. In this initial Beta 1.0 release, all transaction types are supported though the wallets and UIs currently only directly support basic transactions like coinbase rewards and sending coins while paying fees. UI support for our [smart transactions](https://github.com/Chia-Network/wallets/blob/main/README.md) will be available in the UIs shortly.
-- Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and _much_ easier. Windows native node/farmer/plotting functionality are coming soon.
+- Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and *much* easier. Windows native node/farmer/plotting functionality are coming soon.
 - Install is significantly easier with less dependencies on all supported platforms.
 - If you’re a farmer you can use the Wallet to keep track of your earnings. Either use the same keys.yaml on the same machine or copy the keys.yaml to another machine where you want to track of and spend your coins.
 - We have continued to make improvements to the speed of VDF squaring, creating a VDF proof, and verifying a VDF proof.

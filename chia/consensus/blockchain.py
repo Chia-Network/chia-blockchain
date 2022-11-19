@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import logging
@@ -27,7 +29,6 @@ from chia.consensus.multiprocess_validation import (
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -45,6 +46,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
+from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
@@ -102,14 +104,12 @@ class Blockchain(BlockchainInterface):
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
     compact_proof_lock: asyncio.Lock
-    hint_store: HintStore
 
     @staticmethod
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
         consensus_constants: ConsensusConstants,
-        hint_store: HintStore,
         blockchain_dir: Path,
         reserved_cores: int,
         multiprocessing_context: Optional[BaseContext] = None,
@@ -145,7 +145,6 @@ class Blockchain(BlockchainInterface):
         self._shut_down = False
         await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
-        self.hint_store = hint_store
         return self
 
     def shut_down(self) -> None:
@@ -263,7 +262,7 @@ class Blockchain(BlockchainInterface):
             None,
         )
         # Always add the block to the database
-        async with self.block_store.db_wrapper.write_db():
+        async with self.block_store.db_wrapper.writer():
             try:
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
@@ -283,8 +282,6 @@ class Blockchain(BlockchainInterface):
                         fetched_block_record.header_hash,
                         fetched_block_record.sub_epoch_summary_included,
                     )
-                if state_change_summary is not None:
-                    self._peak_height = block_record.height
             except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 log.error(
@@ -292,6 +289,11 @@ class Blockchain(BlockchainInterface):
                     f" rolling back: {traceback.format_exc()} {e}"
                 )
                 raise
+
+        # make sure to update _peak_height after the transaction is committed,
+        # otherwise other tasks may go look for this block before it's available
+        if state_change_summary is not None:
+            self._peak_height = block_record.height
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()
@@ -441,7 +443,6 @@ class Blockchain(BlockchainInterface):
                 self.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.constants.COST_PER_BYTE,
                 mempool_mode=False,
-                height=block.height,
             )
         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
         return tx_removals, tx_additions, npc_result
@@ -535,14 +536,34 @@ class Blockchain(BlockchainInterface):
             curr = self.try_block_record(curr.prev_hash)
         return list(reversed(recent_rc))
 
-    async def validate_unfinished_block(
-        self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation: bool = True
-    ) -> PreValidationResult:
+    async def validate_unfinished_block_header(
+        self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
+    ) -> Tuple[Optional[uint64], Optional[Err]]:
         if (
             not self.contains_block(block.prev_header_hash)
-            and not block.prev_header_hash == self.constants.GENESIS_CHALLENGE
+            and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
-            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)
+            return None, Err.INVALID_PREV_BLOCK_HASH
+
+        if block.transactions_info is not None:
+            if block.transactions_generator is not None:
+                if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+                    return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+            else:
+                if block.transactions_info.generator_root != bytes([0] * 32):
+                    return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+            if (
+                block.foliage_transaction_block is None
+                or block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash()
+            ):
+                return None, Err.INVALID_TRANSACTIONS_INFO_HASH
+        else:
+            # make sure non-tx blocks don't have these fields
+            if block.transactions_generator is not None:
+                return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+            if block.foliage_transaction_block is not None:
+                return None, Err.INVALID_TRANSACTIONS_INFO_HASH
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
@@ -566,9 +587,18 @@ class Blockchain(BlockchainInterface):
             sub_slot_iters,
             skip_overflow_ss_validation,
         )
+        if error is not None:
+            return required_iters, error.code
+        return required_iters, None
+
+    async def validate_unfinished_block(
+        self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation: bool = True
+    ) -> PreValidationResult:
+        required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.code.value), None, None, False)
+            return PreValidationResult(uint16(error.value), None, None, False)
+
         prev_height = (
             -1
             if block.prev_header_hash == self.constants.GENESIS_CHALLENGE
@@ -616,14 +646,13 @@ class Blockchain(BlockchainInterface):
             validate_signatures=validate_signatures,
         )
 
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
             self.constants,
             unfinished_block,
             bytes(generator),
-            height,
         )
         npc_result_bytes = await task
         if npc_result_bytes is None:

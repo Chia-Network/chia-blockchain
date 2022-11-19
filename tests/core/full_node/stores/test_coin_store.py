@@ -8,7 +8,6 @@ from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
@@ -18,8 +17,8 @@ from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.wallet_tools import WalletTool
-from tests.setup_nodes import test_constants
+from chia.simulator.wallet_tools import WalletTool
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
 
@@ -50,7 +49,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
-    async def test_basic_coin_store(self, db_version, softfork_height, bt):
+    async def test_basic_coin_store(self, db_version, bt):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -99,7 +98,6 @@ class TestCoinStoreWithBlocks:
                             bt.constants.MAX_BLOCK_COST_CLVM,
                             cost_per_byte=bt.constants.COST_PER_BYTE,
                             mempool_mode=False,
-                            height=softfork_height,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
@@ -170,7 +168,7 @@ class TestCoinStoreWithBlocks:
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
-                    async with db_wrapper.write_db():
+                    async with db_wrapper.writer():
                         if block.is_transaction_block():
                             assert block.foliage_transaction_block is not None
                             await coin_store.new_block(
@@ -324,8 +322,7 @@ class TestCoinStoreWithBlocks:
             blocks = bt.get_consecutive_blocks(initial_block_count)
             coin_store = await CoinStore.create(db_wrapper)
             store = await BlockStore.create(db_wrapper)
-            hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
             try:
 
                 records: List[Optional[CoinRecord]] = []
@@ -389,8 +386,7 @@ class TestCoinStoreWithBlocks:
             )
             coin_store = await CoinStore.create(db_wrapper)
             store = await BlockStore.create(db_wrapper)
-            hint_store = await HintStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, hint_store, tmp_dir, 2)
+            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
             for block in blocks:
                 await _validate_and_add_block(b, block)
             peak = b.get_peak()

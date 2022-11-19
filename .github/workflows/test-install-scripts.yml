@@ -6,8 +6,8 @@ on:
       - 'long_lived/**'
       - main
       - 'release/**'
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
@@ -35,7 +35,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Python environment
-      uses: actions/setup-python@v3
+      uses: Chia-Network/actions/setup-python@main
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -108,14 +108,6 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
           url: "docker://ubuntu:focal"
-        - name: ubuntu:hirsute (21.04)
-          type: ubuntu
-          # https://packages.ubuntu.com/hirsute/python3 (21.04, 3.9)
-          url: "docker://ubuntu:hirsute"
-        - name: ubuntu:impish (21.10)
-          type: ubuntu
-          # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
-          url: "docker://ubuntu:impish"
         - name: ubuntu:jammy (22.04)
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
@@ -165,7 +157,8 @@ jobs:
     - name: Prepare Arch
       if: ${{ matrix.distribution.type == 'arch' }}
       run: |
-        pacman --noconfirm --refresh base --sync git sudo
+        pacman --noconfirm -Syu
+        pacman --noconfirm -S base git sudo openssl-1.1
         # The behavior we follow in install.sh is unique with Arch in that
         # we leave it to the user to install the appropriate version of python,
         # so we need to install python here in order for the test to succeed.

@@ -4,7 +4,8 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-from chia.server.server import NodeType, ssl_context_for_client
+from chia.server.outbound_message import NodeType
+from chia.server.server import ssl_context_for_client
 from chia.server.ssl_context import private_ssl_ca_paths
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -70,9 +71,9 @@ class RpcClient:
     async def healthz(self) -> Dict:
         return await self.fetch("healthz", {})
 
-    def close(self):
+    def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())
 
-    async def await_closed(self):
+    async def await_closed(self) -> None:
         if self.closing_task is not None:
             await self.closing_task

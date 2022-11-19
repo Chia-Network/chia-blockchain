@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import pathlib
 import platform
@@ -6,7 +8,6 @@ import sys
 import tempfile
 
 excepted_packages = {
-    "keyrings.cryptfile",  # pure python
     "dnslib",  # pure python
 }
 

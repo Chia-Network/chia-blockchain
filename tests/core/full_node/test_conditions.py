@@ -23,8 +23,8 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint32
-from tests.block_tools import BlockTools
-from tests.util.keyring import TempKeyring
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.keyring import TempKeyring
 
 from .ram_db import create_ram_blockchain
 from ...blockchain.blockchain_test_utils import _validate_and_add_block

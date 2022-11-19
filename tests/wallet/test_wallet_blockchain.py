@@ -8,7 +8,7 @@ from chia.types.weight_proof import WeightProof
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from tests.setup_nodes import test_constants
+from chia.simulator.block_tools import test_constants
 from tests.util.db_connection import DBConnection
 
 
@@ -37,28 +37,33 @@ class TestWalletBlockchain:
             )
         )
         weight_proof: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
+        success, _, records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
+        success, _, records_short = await wallet_node._weight_proof_handler.validate_weight_proof(
+            weight_proof_short, True
+        )
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
+        success, _, records_long = await wallet_node._weight_proof_handler.validate_weight_proof(
+            weight_proof_long, True
+        )
 
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
-            chain = await WalletBlockchain.create(
-                store, test_constants, wallet_node.wallet_state_manager.weight_proof_handler
-            )
+            chain = await WalletBlockchain.create(store, test_constants)
+
             assert (await chain.get_peak_block()) is None
-            assert chain.get_peak_height() == 0
             assert chain.get_latest_timestamp() == 0
 
-            await chain.new_weight_proof(weight_proof)
+            await chain.new_valid_weight_proof(weight_proof, records)
             assert (await chain.get_peak_block()) is not None
-            assert chain.get_peak_height() == 499
+            assert (await chain.get_peak_block()).height == 499
             assert chain.get_latest_timestamp() > 0
 
-            await chain.new_weight_proof(weight_proof_short)
-            assert chain.get_peak_height() == 499
+            await chain.new_valid_weight_proof(weight_proof_short, records_short)
+            assert (await chain.get_peak_block()).height == 499
 
-            await chain.new_weight_proof(weight_proof_long)
-            assert chain.get_peak_height() == 505
+            await chain.new_valid_weight_proof(weight_proof_long, records_long)
+            assert (await chain.get_peak_block()).height == 505
 
             header_blocks = []
             for block in default_1000_blocks:
@@ -82,11 +87,11 @@ class TestWalletBlockchain:
             )
             assert res == ReceiveBlockResult.INVALID_BLOCK
 
-            assert chain.get_peak_height() == 505
+            assert (await chain.get_peak_block()).height == 505
 
             for block in header_blocks[506:]:
                 res, err = await chain.receive_block(block)
                 assert res == ReceiveBlockResult.NEW_PEAK
-                assert chain.get_peak_height() == block.height
+                assert (await chain.get_peak_block()).height == block.height
 
-            assert chain.get_peak_height() == 999
+            assert (await chain.get_peak_block()).height == 999

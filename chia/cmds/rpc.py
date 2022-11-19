@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import sys
@@ -10,7 +12,7 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
-services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet"]
+services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
 
 async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
@@ -33,7 +35,7 @@ async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], co
     except ClientResponseError as e:
         if e.code == 404:
             raise Exception(f"Invalid endpoint for {service}: {endpoint}")
-        raise e
+        raise
     except Exception as e:
         raise Exception(f"Request failed: {e}")
     finally:
@@ -134,7 +136,7 @@ def create_commands() -> None:
                     endpoint = endpoint[1:]
                 print_result(asyncio.run(call_endpoint(service, endpoint, request_json, config)))
             except Exception as e:
-                sys.exit(e)
+                sys.exit(str(e))
 
 
 create_commands()
