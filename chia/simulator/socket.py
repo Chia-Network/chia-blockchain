@@ -9,7 +9,7 @@ from chia.util.ints import uint16
 recent_ports: Set[int] = set()
 
 
-def find_available_listen_port(name: str = "free") -> uint16:
+def find_available_listen_port(name: str = "free") -> int:
     global recent_ports
 
     while True:
@@ -26,4 +26,4 @@ def find_available_listen_port(name: str = "free") -> uint16:
 
         recent_ports.add(port)
         print(f"{name} port: {port}")
-        return port
+        return int(port)
