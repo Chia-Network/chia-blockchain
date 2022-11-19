@@ -1,19 +1,17 @@
+from __future__ import annotations
+
 import json
-import logging
 import os
 import sys
-
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from chia.consensus.coinbase import create_puzzlehash_for_pk
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
-from chia.daemon.client import connect_to_daemon_and_validate
-from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.errors import KeychainNotSet
 from chia.util.config import load_config
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
@@ -126,13 +124,18 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
-def show_all_keys(root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool):
+def show_keys(
+    root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool, fingerprint: Optional[int]
+):
     """
     Prints all keys and mnemonics (if available).
     """
     unlock_keyring()
     config = load_config(root_path, "config.yaml")
-    all_keys = Keychain().get_keys(True)
+    if fingerprint is None:
+        all_keys = Keychain().get_keys(True)
+    else:
+        all_keys = [Keychain().get_key(fingerprint, True)]
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
@@ -265,92 +268,6 @@ def verify(message: str, public_key: str, signature: str):
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
-
-
-async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
-    from chia.util.keyring_wrapper import KeyringWrapper
-    from chia.util.misc import prompt_yes_no
-
-    deprecation_message = (
-        "\nLegacy keyring support is deprecated and will be removed in an upcoming version. "
-        "You need to migrate your keyring to continue using Chia.\n"
-    )
-
-    # Check if the keyring needs a full migration (i.e. if it's using the old keyring)
-    if Keychain.needs_migration():
-        print(deprecation_message)
-        return await KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
-    else:
-        already_checked_marker = KeyringWrapper.get_shared_instance().keys_root_path / ".checked_legacy_migration"
-        if forced and already_checked_marker.exists():
-            return True
-
-        log = logging.getLogger("migrate_keys")
-        config = load_config(root_path, "config.yaml")
-        # Connect to the daemon here first to see if ts running since `connect_to_keychain_and_validate` just tries to
-        # connect forever if it's not up.
-        keychain_proxy: Optional[KeychainProxy] = None
-        daemon = await connect_to_daemon_and_validate(root_path, config, quiet=True)
-        if daemon is not None:
-            await daemon.close()
-            keychain_proxy = await connect_to_keychain_and_validate(root_path, log)
-        if keychain_proxy is None:
-            keychain_proxy = wrap_local_keychain(Keychain(), log=log)
-
-        try:
-            legacy_keyring = Keychain(force_legacy=True)
-            all_sks = await keychain_proxy.get_all_private_keys()
-            all_legacy_sks = legacy_keyring.get_all_private_keys()
-            set_legacy_sks = {str(x[0]) for x in all_legacy_sks}
-            set_sks = {str(x[0]) for x in all_sks}
-            missing_legacy_keys = set_legacy_sks - set_sks
-            keys_to_migrate = [x for x in all_legacy_sks if str(x[0]) in missing_legacy_keys]
-        except KeychainNotSet:
-            keys_to_migrate = []
-
-        if len(keys_to_migrate) > 0:
-            print(deprecation_message)
-            print(f"Found {len(keys_to_migrate)} key(s) that need migration:")
-            for key, _ in keys_to_migrate:
-                print(f"Fingerprint: {key.get_g1().get_fingerprint()}")
-
-            print()
-            if not prompt_yes_no("Migrate these keys?"):
-                await keychain_proxy.close()
-                print("Migration aborted, can't run any chia commands.")
-                return False
-
-            for sk, seed_bytes in keys_to_migrate:
-                mnemonic = bytes_to_mnemonic(seed_bytes)
-                await keychain_proxy.add_private_key(mnemonic)
-                fingerprint = sk.get_g1().get_fingerprint()
-                print(f"Added private key with public key fingerprint {fingerprint}")
-
-            print(f"Migrated {len(keys_to_migrate)} key(s)")
-
-            print("Verifying migration results...", end="")
-            all_sks = await keychain_proxy.get_all_private_keys()
-            await keychain_proxy.close()
-            set_sks = {str(x[0]) for x in all_sks}
-            keys_present = set_sks.issuperset(set(map(lambda x: str(x[0]), keys_to_migrate)))
-            if keys_present:
-                print(" Verified")
-                print()
-                response = prompt_yes_no("Remove key(s) from old keyring (recommended)?")
-                if response:
-                    legacy_keyring.delete_keys(keys_to_migrate)
-                    print(f"Removed {len(keys_to_migrate)} key(s) from old keyring")
-                print("Migration complete")
-            else:
-                print(" Failed")
-                return False
-            return True
-        elif not forced:
-            print("No keys need migration")
-        if already_checked_marker.parent.exists():
-            already_checked_marker.touch()
-        await keychain_proxy.close()
-    return True
 
 
 def _clear_line_part(n: int):

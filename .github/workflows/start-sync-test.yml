@@ -1,0 +1,19 @@
+# Starts a sync test for every new release (pre-releases included)
+name: Start Sync Test
+on:
+  release:
+    types: [published]
+
+jobs:
+  start_release:
+    name: Starts Sync Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get tag name
+        id: tag-name
+        run: |
+          echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >> $GITHUB_OUTPUT
+      - name: Trigger Workflow
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"test_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/${{ steps.tag-name.outputs.TAG_NAME }}/start
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"test_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/sync-test/${{ steps.tag-name.outputs.TAG_NAME }}/success/deploy

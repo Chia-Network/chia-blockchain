@@ -156,9 +156,9 @@ class FullNodeRpcApi:
 
         sync_tip_height: Optional[uint32] = uint32(0)
         if sync_mode:
-            if self.service.sync_store.get_sync_target_height() is not None:
-                sync_tip_height = self.service.sync_store.get_sync_target_height()
-                assert sync_tip_height is not None
+            target_peak = self.service.sync_store.target_peak
+            if target_peak is not None:
+                sync_tip_height = target_peak.height
             if peak is not None:
                 sync_progress_height: uint32 = peak.height
                 # Don't display we're syncing towards 0, instead show 'Syncing height/height'
