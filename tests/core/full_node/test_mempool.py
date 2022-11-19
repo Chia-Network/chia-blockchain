@@ -2405,7 +2405,7 @@ class TestPkmPairs:
 
     def test_no_agg_sigs(self):
         # one create coin: h1 amount: 1 and not hint
-        spends = [Spend(self.h3, self.h4, None, 0, [(self.h1, 1, b"")], [])]
+        spends = [Spend(self.h3, self.h4, None, 0, [(self.h1, 1, b"")], [], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
@@ -2413,7 +2413,7 @@ class TestPkmPairs:
 
     def test_agg_sig_me(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")])]
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
@@ -2427,7 +2427,7 @@ class TestPkmPairs:
 
     def test_agg_sig_mixed(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")])]
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, [(bytes48(self.pk2), b"msg2")], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
