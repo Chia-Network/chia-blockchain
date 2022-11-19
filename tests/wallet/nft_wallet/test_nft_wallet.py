@@ -925,6 +925,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     )
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
+    # Create DID
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
@@ -939,6 +940,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
     await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
+    # Create NFT wallet
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
     assert res.get("success")
@@ -970,6 +972,15 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     assert coins[0].owner_did.hex() == hex_did_id
 
     assert len(wallet_1.wallet_state_manager.wallets) == 1, "NFT wallet shouldn't exist yet"
+    assert len(wallet_0.wallet_state_manager.wallets) == 3
+    # transfer DID to the other wallet
+    tx = await did_wallet.transfer_did(ph1, uint64(0), True)
+    assert tx
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+    await time_out_assert(5, len, 2, wallet_0.wallet_state_manager.wallets)
+    # Transfer NFT, wallet will be deleted
     resp = await api_0.nft_transfer_nft(
         dict(
             wallet_id=nft_wallet_0_id,
@@ -978,23 +989,18 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
             fee=fee,
         )
     )
-    # transfer DID to the other wallet
-    tx = await did_wallet.transfer_did(ph1, uint64(0), True)
-    assert tx
     assert resp.get("success")
     sb = resp["spend_bundle"]
     assert compute_memos(sb)
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
-    await time_out_assert(5, len, 2, wallet_0.wallet_state_manager.wallets)
+    await make_new_block_with(resp, full_node_api, ph1)
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, 5999999999798)
     await time_out_assert(30, wallet_0.get_confirmed_balance, 5999999999798)
+    await time_out_assert(30, len, 1, wallet_0.wallet_state_manager.wallets)
+
     # wait for all wallets to be created
     await time_out_assert(30, len, 3, wallet_1.wallet_state_manager.wallets)
-    did_wallet_1 = wallet_1.wallet_state_manager.wallets[3]
+    did_wallet_1 = wallet_1.wallet_state_manager.wallets[2]
     assert nft_wallet_0_id not in wallet_node_0.wallet_state_manager.wallets.keys()
     # Check if the NFT owner DID is reset
     resp = await api_1.nft_get_by_did({})
@@ -1019,8 +1025,8 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     coins_response = await wait_rpc_state_condition(
         5, api_1.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
     )
-    await time_out_assert(30, wallet_1.get_unconfirmed_balance, 10000000000100)
-    await time_out_assert(30, wallet_1.get_confirmed_balance, 10000000000100)
+    await time_out_assert(30, wallet_1.get_unconfirmed_balance, 12000000000100)
+    await time_out_assert(30, wallet_1.get_confirmed_balance, 12000000000100)
     nft_wallet_1_id = coins_response.get("wallet_id")
     assert nft_wallet_1_id
     # Check NFT DID is set now
@@ -1366,7 +1372,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     await time_out_assert(30, did_wallet.get_confirmed_balance, 1)
 
-    # Create a NFT with DID
+    # Create a NFT without DID
     resp = await api_0.nft_mint_nft(
         {
             "wallet_id": nft_wallet_0_id,
@@ -1441,7 +1447,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     nft_wallet_2_id = coins_response.get("wallet_id")
     assert nft_wallet_2_id
-    await time_out_assert(30, wallet_node_0.wallet_state_manager.wallets.get, 0, nft_wallet_1_id, 0)
+    await time_out_assert(30, len, 6, wallet_node_0.wallet_state_manager.wallets)
 
     # Check NFT DID
     resp = await wait_rpc_state_condition(
@@ -1466,7 +1472,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     coins = resp["nft_list"]
     assert len(coins) == 1
     assert coins[0].owner_did is None
-    assert nft_wallet_2_id not in wallet_node_0.wallet_state_manager.wallets.keys()
+    assert nft_wallet_2_id in wallet_node_0.wallet_state_manager.wallets.keys()
     nft_coin_id = coins[0].nft_coin_id
     resp = await api_0.nft_get_info(dict(coin_id=nft_coin_id.hex(), latest=True))
     assert resp["success"]

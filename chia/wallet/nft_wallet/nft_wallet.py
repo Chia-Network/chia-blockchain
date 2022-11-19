@@ -23,6 +23,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
@@ -278,6 +279,19 @@ class NFTWallet:
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
+            num = await self.get_current_nfts()
+            if len(num) == 0 and self.did_id is not None:
+                # Check if the wallet owns the DID
+                for did_wallet in await self.wallet_state_manager.get_all_wallet_info_entries(
+                    wallet_type=WalletType.DECENTRALIZED_ID
+                ):
+                    did_wallet_info: DIDInfo = DIDInfo.from_json_dict(json.loads(did_wallet.data))
+                    assert did_wallet_info.origin_coin is not None
+                    if did_wallet_info.origin_coin.name() == self.did_id:
+                        return
+                self.log.info(f"No NFT, deleting wallet {self.wallet_info.name} ...")
+                await self.wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
+                self.wallet_state_manager.wallets.pop(self.wallet_info.id)
         else:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 

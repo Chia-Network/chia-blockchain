@@ -640,7 +640,7 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None:
-            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state)
+            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state)
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -893,13 +893,14 @@ class WalletStateManager:
         return minter_did
 
     async def handle_nft(
-        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState
+        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState, coin_state: CoinState
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a NFT
         :param coin_spend: New coin spend
         :param uncurried_nft: Uncurried NFT
         :param parent_coin_state: Parent coin state
+        :param coin_state: Current coin state
         :return: Wallet ID & Wallet Type
         """
         wallet_id = None
@@ -948,15 +949,6 @@ class WalletStateManager:
                     uncurried_nft.singleton_launcher_id.hex(),
                     old_did_id,
                 )
-                nft_wallet: WalletProtocol = self.wallets[wallet_info.id]
-                assert isinstance(nft_wallet, NFTWallet)
-                if parent_coin_state.spent_height is not None:
-                    await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
-                    num = await nft_wallet.get_current_nfts()
-                    if len(num) == 0 and nft_wallet.did_id is not None and new_did_id != old_did_id:
-                        self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
-                        await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
-                        self.wallets.pop(nft_wallet.wallet_info.id)
             if nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
