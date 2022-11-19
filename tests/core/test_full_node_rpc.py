@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 from typing import List
 
 import pytest
@@ -9,19 +11,18 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.outbound_message import NodeType
+from chia.simulator.block_tools import get_signage_point, test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
-from chia.simulator.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
-from chia.simulator.block_tools import test_constants
-from chia.simulator.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
-from chia.simulator.wallet_tools import WalletTool
 
 
 class TestRpc:
