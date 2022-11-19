@@ -325,7 +325,6 @@ class TestKeysCommands:
 
         keys_root_path = keychain.keyring_wrapper.keys_root_path
         base_params = [
-            "--no-force-legacy-keyring-migration",
             "--root-path",
             os.fspath(tmp_path),
             "--keys-root-path",
