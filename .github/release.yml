@@ -1,0 +1,24 @@
+# .github/release.yml
+
+changelog:
+  exclude:
+    labels:
+      - CI
+      - Tests
+      - Cleanup
+      - dependencies
+    authors:
+      - octocat
+      - dependabot
+      - snyk-bot
+      - github-actions
+  categories:
+    - title: Added
+      labels:
+        - Added
+    - title: Changed
+      labels:
+        - Changed
+    - title: Fixed
+      labels:
+        - Fixed

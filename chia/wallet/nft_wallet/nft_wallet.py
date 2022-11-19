@@ -796,7 +796,7 @@ class NFTWallet:
 
         trade_prices: List[List[Union[uint64, bytes32]]] = []
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
-            if amount > 0:
+            if amount > 0 and offer_side_royalty_split > 0:
                 settlement_ph: bytes32 = (
                     OFFER_MOD_HASH if asset is None else construct_puzzle(driver_dict[asset], OFFER_MOD).get_tree_hash()
                 )
@@ -817,7 +817,7 @@ class NFTWallet:
 
         royalty_payments: Dict[Optional[bytes32], List[Tuple[bytes32, Payment]]] = {}
         for asset, amount in fungible_asset_dict.items():  # offered fungible items
-            if amount < 0:
+            if amount < 0 and request_side_royalty_split > 0:
                 payment_list: List[Tuple[bytes32, Payment]] = []
                 for launcher_id, address, percentage in required_royalty_info:
                     extra_royalty_amount = uint64(
@@ -893,13 +893,18 @@ class NFTWallet:
 
                 # First, sending all the coins to the OFFER_MOD
                 if wallet.type() == WalletType.STANDARD_WALLET:
-                    payments = royalty_payments[asset]
+                    payments = royalty_payments[asset] if asset in royalty_payments else []
                     tx = await wallet.generate_signed_transaction(
                         abs(amount),
                         Offer.ph(),
                         primaries=[
-                            AmountWithPuzzlehash({"amount": p.amount, "puzzlehash": Offer.ph(), "memos": []})
-                            for _, p in payments
+                            AmountWithPuzzlehash(
+                                {
+                                    "amount": uint64(sum(p.amount for _, p in payments)),
+                                    "puzzlehash": Offer.ph(),
+                                    "memos": [],
+                                }
+                            )
                         ],
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
@@ -916,10 +921,10 @@ class NFTWallet:
                         trade_prices_list=trade_prices,
                     )
                 else:
-                    payments = royalty_payments[asset]
+                    payments = royalty_payments[asset] if asset in royalty_payments else []
                     txs = await wallet.generate_signed_transaction(
-                        [abs(amount), *(p.amount for _, p in payments)],
-                        [Offer.ph()] * (len(payments) + 1),
+                        [abs(amount), sum(p.amount for _, p in payments)],
+                        [Offer.ph(), Offer.ph()],
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
@@ -929,29 +934,65 @@ class NFTWallet:
 
                 # Then, adding in the spends for the royalty offer mod
                 if asset in fungible_asset_dict:
-                    coin_spends: List[CoinSpend] = []
-                    for launcher_id, payment in payments:
-                        # Create a coin_spend for the royalty payout from OFFER MOD
-                        # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, memos))))
-                        inner_royalty_sol = Program.to([(launcher_id, [payment.as_condition_args()])])
+                    # Create a coin_spend for the royalty payout from OFFER MOD
+
+                    # We cannot create coins with the same puzzle hash and amount
+                    # So if there's multiple NFTs with the same royalty puzhash/percentage, we must create multiple
+                    # generations of offer coins
+                    royalty_coin: Optional[Coin] = None
+                    parent_spend: Optional[CoinSpend] = None
+                    while True:
+                        duplicate_payments: List[Tuple[bytes32, Payment]] = []
+                        deduped_payment_list: List[Tuple[bytes32, Payment]] = []
+                        for launcher_id, payment in payments:
+                            if payment in [p for _, p in deduped_payment_list]:
+                                duplicate_payments.append((launcher_id, payment))
+                            else:
+                                deduped_payment_list.append((launcher_id, payment))
+
+                        # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, memos) ...)))
+                        inner_royalty_sol = Program.to(
+                            [
+                                (launcher_id, [payment.as_condition_args()])
+                                for launcher_id, payment in deduped_payment_list
+                            ]
+                        )
+                        if duplicate_payments != []:
+                            inner_royalty_sol = Program.to(
+                                (
+                                    None,
+                                    [
+                                        Payment(
+                                            Offer.ph(), uint64(sum(p.amount for _, p in duplicate_payments)), []
+                                        ).as_condition_args()
+                                    ],
+                                )
+                            ).cons(inner_royalty_sol)
+
                         if asset is None:  # xch offer
                             offer_puzzle = OFFER_MOD
                             royalty_ph = OFFER_MOD_HASH
                         else:
                             offer_puzzle = construct_puzzle(driver_dict[asset], OFFER_MOD)
                             royalty_ph = offer_puzzle.get_tree_hash()
-                        royalty_coin: Coin
-                        for tx in txs:
-                            if tx.spend_bundle is not None:
-                                for coin in tx.spend_bundle.additions():
-                                    if coin.amount == payment.amount and coin.puzzle_hash == royalty_ph:
-                                        royalty_coin = coin
-                                        parent_spend = next(
-                                            cs
-                                            for cs in tx.spend_bundle.coin_spends
-                                            if cs.coin.name() == royalty_coin.parent_coin_info
-                                        )
-                                        break
+                        if royalty_coin is None:
+                            for tx in txs:
+                                if tx.spend_bundle is not None:
+                                    for coin in tx.spend_bundle.additions():
+                                        royalty_payment_amount: int = sum(p.amount for _, p in payments)
+                                        if coin.amount == royalty_payment_amount and coin.puzzle_hash == royalty_ph:
+                                            royalty_coin = coin
+                                            parent_spend = next(
+                                                cs
+                                                for cs in tx.spend_bundle.coin_spends
+                                                if cs.coin.name() == royalty_coin.parent_coin_info
+                                            )
+                                            break
+                                    else:
+                                        continue
+                                    break
+                        assert royalty_coin is not None
+                        assert parent_spend is not None
                         if asset is None:  # If XCH
                             royalty_sol = inner_royalty_sol
                         else:
@@ -974,8 +1015,17 @@ class NFTWallet:
                                 }
                             )
                             royalty_sol = solve_puzzle(driver_dict[asset], solver, OFFER_MOD, inner_royalty_sol)
-                        coin_spends.append(CoinSpend(royalty_coin, offer_puzzle, royalty_sol))
-                    additional_bundles.append(SpendBundle(coin_spends, G2Element()))
+
+                        new_coin_spend = CoinSpend(royalty_coin, offer_puzzle, royalty_sol)
+                        additional_bundles.append(SpendBundle([new_coin_spend], G2Element()))
+
+                        if duplicate_payments != []:
+                            payments = duplicate_payments
+                            royalty_coin = next(c for c in new_coin_spend.additions() if c.puzzle_hash == royalty_ph)
+                            parent_spend = new_coin_spend
+                            continue
+                        else:
+                            break
 
         # Finally, assemble the tx records properly
         txs_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None])

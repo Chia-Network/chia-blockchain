@@ -4,11 +4,12 @@ import sqlite3
 import sys
 import zstd
 import click
+from functools import partial
 from pathlib import Path
+from blspy import AugSchemeMPL, G1Element
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Union, List
 from time import time
-
 
 from chia_rs import run_generator, MEMPOOL_MODE
 
@@ -16,6 +17,10 @@ from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
+from chia.util.condition_tools import pkm_pairs
+from chia.types.full_block import FullBlock
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.block_protocol import BlockInfo
 
 GENERATOR_ROM = bytes(get_generator())
 
@@ -60,13 +65,15 @@ def callable_for_module_function_path(call: str) -> Callable:
 @click.option(
     "--mempool-mode", default=False, is_flag=True, help="execute all block generators in the strict mempool mode"
 )
+@click.option("--verify-signatures", default=False, is_flag=True, help="Verify block signatures (slow)")
 @click.option("--start", default=225000, help="first block to examine")
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
-def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str]):
+def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
 
+    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, List[bytes], float, int], None]
     if call is None:
-        call_f = default_call
+        call_f = partial(default_call, verify_signatures)
     else:
         call_f = callable_for_module_function_path(call)
 
@@ -80,9 +87,13 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
     )
 
     for r in rows:
-        hh: bytes = r[0]
+        hh: bytes32 = r[0]
         height: int = r[1]
-        block = block_info_from_block(zstd.decompress(r[2]))
+        block: Union[BlockInfo, FullBlock]
+        if verify_signatures:
+            block = FullBlock.from_bytes(zstd.decompress(r[2]))
+        else:
+            block = block_info_from_block(zstd.decompress(r[2]))
 
         if block.transactions_generator is None:
             sys.stderr.write(f" no-generator. block {height}\r")
@@ -99,6 +110,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
 
         ref_lookup_time = time() - start_time
 
+        flags: int
         if mempool_mode:
             flags = MEMPOOL_MODE
         else:
@@ -107,7 +119,15 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
         call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
 
 
-def default_call(block, hh, height, generator_blobs, ref_lookup_time, flags):
+def default_call(
+    verify_signatures: bool,
+    block: Union[BlockInfo, FullBlock],
+    hh: bytes32,
+    height: int,
+    generator_blobs: List[bytes],
+    ref_lookup_time: float,
+    flags: int,
+) -> None:
     num_refs = len(generator_blobs)
 
     # add the block program arguments
@@ -117,6 +137,7 @@ def default_call(block, hh, height, generator_blobs, ref_lookup_time, flags):
         block_program_args += Program.to(ref_block_blob).as_bin()
     block_program_args += b"\x80\x80"
 
+    assert block.transactions_generator is not None
     err, result, run_time = run_gen(bytes(block.transactions_generator), bytes(block_program_args), flags)
     if err is not None:
         sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
@@ -128,6 +149,17 @@ def default_call(block, hh, height, generator_blobs, ref_lookup_time, flags):
     num_additions = 0
     for spends in result.spends:
         num_additions += len(spends.create_coin)
+
+    if verify_signatures:
+        assert isinstance(block, FullBlock)
+        # create hash_key list for aggsig check
+        pairs_pks: List[bytes48] = []
+        pairs_msgs: List[bytes] = []
+        pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        pairs_g1s = [G1Element.from_bytes(x) for x in pairs_pks]
+        assert block.transactions_info is not None
+        assert block.transactions_info.aggregated_signature is not None
+        assert AugSchemeMPL.aggregate_verify(pairs_g1s, pairs_msgs, block.transactions_info.aggregated_signature)
 
     print(
         f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"

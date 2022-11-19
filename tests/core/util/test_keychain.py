@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import unittest
 from dataclasses import replace
@@ -7,14 +9,14 @@ from typing import Callable, List, Optional, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
-from tests.util.keyring import using_temp_file_keyring
+from chia.simulator.keyring import using_temp_file_keyring
 from chia.util.errors import (
     KeychainFingerprintExists,
-    KeychainKeyDataMismatch,
-    KeychainSecretsMissing,
     KeychainFingerprintNotFound,
+    KeychainKeyDataMismatch,
     KeychainLabelExists,
     KeychainLabelInvalid,
+    KeychainSecretsMissing,
 )
 from chia.util.ints import uint32
 from chia.util.keychain import (

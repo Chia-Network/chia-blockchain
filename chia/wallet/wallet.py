@@ -331,10 +331,13 @@ class Wallet:
                 primaries_amount += prim["amount"]
             total_amount = amount + fee + primaries_amount
 
+        total_balance = await self.get_spendable_balance()
+        if total_amount > total_balance:
+            raise ValueError(f"Can't spend more than wallet balance: {total_balance} mojos")
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             exclude_coins_list: Optional[List[Coin]] = None

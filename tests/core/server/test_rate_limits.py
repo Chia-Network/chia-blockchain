@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from typing import List
 
@@ -6,15 +8,15 @@ import pytest
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import make_msg
-from chia.server.rate_limit_numbers import get_rate_limits_to_use, rate_limits as rl_numbers, compose_rate_limits
+from chia.server.rate_limit_numbers import compose_rate_limits, get_rate_limits_to_use
+from chia.server.rate_limit_numbers import rate_limits as rl_numbers
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import test_constants
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.conftest import node_with_params
-from tests.setup_nodes import test_constants
-
 
 constants = test_constants
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
