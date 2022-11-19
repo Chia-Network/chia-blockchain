@@ -86,8 +86,13 @@ async def test_one_peer_and_await() -> None:
         else:
             assert list_txs[i - 20] == resulting_txs[i]
 
-    with pytest.raises(asyncio.TimeoutError):  # i need to fix this so it doesn't wait a second
-        await asyncio.wait_for(transaction_queue.pop(), 1)  # check that we can't pop anymore
+    # now we validate that the pop command is blocking
+    task = asyncio.create_task(transaction_queue.pop())
+    with pytest.raises(asyncio.InvalidStateError):  # task is not done, so we expect an error when getting result
+        task.result()
+    # add a tx to test task completion
+    await transaction_queue.put(get_transaction_queue_entry(None, 0), None)
+    await asyncio.wait_for(task, 1)  # we should never time out here
 
 
 @pytest.mark.asyncio
