@@ -28,7 +28,7 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import protocol_version, Capability
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -639,6 +639,11 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.send_message(response_message)
+                    elif metadata.reply_types:
+                        if Capability.NONE_RESPONSE in connection.peer_capabilities:
+                            # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
+                            response_message = Message(ProtocolMessageTypes.none_response.value, full_message.id, b"")
+                            await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
@@ -816,3 +821,6 @@ class ChiaServer:
             return False
 
         return True
+
+    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]) -> None:
+        self._local_capabilities_for_handshake = capabilities

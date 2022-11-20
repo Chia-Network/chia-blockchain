@@ -359,7 +359,7 @@ class WSChiaConnection:
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
                 f"None? {response is None}"
             )
-            if response is None:
+            if response is None or response.data == b"":
                 return None
             sent_message_type = ProtocolMessageTypes(request.type)
             recv_message_type = ProtocolMessageTypes(response.type)
