@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -459,7 +459,6 @@ async def setup_full_system_inner(
         for i in range(2)
     ]
     nodes = [await fni.__anext__() for fni in full_node_iters]
-        node_apis = [fni._api for fni in nodes]
     node_apis = [fni._api for fni in nodes]
     full_node_0_port = node_apis[0].full_node.server.get_port()
     farmer_iter = setup_farmer(
@@ -504,8 +503,6 @@ async def setup_full_system_inner(
     timelord = await timelord_iter.__anext__()
     vdf_clients = await node_iters[3].__anext__()
     timelord_bluebox_service = await timelord_bluebox_iter.__anext__()
-        timelord_bluebox = timelord_bluebox_service._api
-        timelord_bluebox_server = timelord_bluebox_service._node.server
     timelord_bluebox = timelord_bluebox_service._api
     timelord_bluebox_server = timelord_bluebox_service._node.server
     vdf_bluebox_clients = await node_iters[7].__anext__()
