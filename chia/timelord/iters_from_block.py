@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Tuple, Union
 
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -20,7 +21,8 @@ def iters_from_block(
     else:
         cc_sp = reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    quality_string: Optional[bytes32] = reward_chain_block.proof_of_space.verify_and_get_quality_string(
+    quality_string: Optional[bytes32] = verify_and_get_quality_string(
+        reward_chain_block.proof_of_space,
         constants,
         reward_chain_block.pos_ss_cc_challenge_hash,
         cc_sp,

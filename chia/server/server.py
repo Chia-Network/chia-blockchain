@@ -5,14 +5,11 @@ import logging
 import ssl
 import time
 import traceback
-from collections import Counter
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable
-from typing import Counter as typing_Counter
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -45,6 +42,8 @@ from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
+
+ConnectionCallback = Callable[[WSChiaConnection], Awaitable[None]]
 
 
 def ssl_context_for_server(
@@ -137,16 +136,16 @@ class ChiaServer:
     node_id: bytes32
     exempt_peer_networks: List[Union[IPv4Network, IPv6Network]]
     all_connections: Dict[bytes32, WSChiaConnection] = field(default_factory=dict)
-    on_connect: Optional[Callable] = None
-    incoming_messages: asyncio.Queue = field(default_factory=asyncio.Queue)
+    on_connect: Optional[ConnectionCallback] = None
+    incoming_messages: asyncio.Queue[Tuple[Message, WSChiaConnection]] = field(default_factory=asyncio.Queue)
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
     introducer_peers: Optional[IntroducerPeers] = None
-    incoming_task: Optional[asyncio.Task] = None
-    gc_task: Optional[asyncio.Task] = None
+    incoming_task: Optional[asyncio.Task[None]] = None
+    gc_task: Optional[asyncio.Task[None]] = None
     webserver: Optional[WebServer] = None
-    connection_close_task: Optional[asyncio.Task] = None
-    received_message_callback: Optional[Callable] = None
-    api_tasks: Dict[bytes32, asyncio.Task] = field(default_factory=dict)
+    connection_close_task: Optional[asyncio.Task[None]] = None
+    received_message_callback: Optional[ConnectionCallback] = None
+    api_tasks: Dict[bytes32, asyncio.Task[None]] = field(default_factory=dict)
     execute_tasks: Set[bytes32] = field(default_factory=set)
     tasks_from_peer: Dict[bytes32, Set[bytes32]] = field(default_factory=dict)
     banned_peers: Dict[str, float] = field(default_factory=dict)
@@ -166,13 +165,13 @@ class ChiaServer:
         outbound_rate_limit_percent: int,
         capabilities: List[Tuple[uint16, str]],
         root_path: Path,
-        config: Dict,
+        config: Dict[str, Any],
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
-        name: str = None,
+        name: str = __name__,
     ) -> ChiaServer:
 
-        log = logging.getLogger(name if name else __name__)
+        log = logging.getLogger(name)
         log.info("Service capabilities: %s", capabilities)
 
         ca_private_crt_path, ca_private_key_path = private_ca_crt_key
@@ -234,7 +233,7 @@ class ChiaServer:
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
         )
 
-    def set_received_message_callback(self, callback: Callable):
+    def set_received_message_callback(self, callback: ConnectionCallback) -> None:
         self.received_message_callback = callback
 
     async def garbage_collect_connections_task(self) -> None:
@@ -273,7 +272,7 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start_server(self, prefer_ipv6: bool, on_connect: Callable = None):
+    async def start_server(self, prefer_ipv6: bool, on_connect: Optional[ConnectionCallback] = None) -> None:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
         if self.incoming_task is None:
@@ -296,13 +295,15 @@ class ChiaServer:
         self._port = int(self.webserver.listen_port)
         self.log.info(f"Started listening on port: {self._port}")
 
-    async def incoming_connection(self, request):
+    async def incoming_connection(self, request: web.Request) -> web.StreamResponse:
         if getattr(self.node, "crawl", None) is not None:
-            return
-
+            raise web.HTTPForbidden(reason="incoming connections not allowed for crawler")
+        if request.remote is None:
+            raise web.HTTPInternalServerError(reason=f"remote is None for request {request}")
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
-            self.log.warning(f"Peer {request.remote} is banned, refusing connection")
-            return None
+            reason = f"Peer {request.remote} is banned, refusing connection"
+            self.log.warning(reason)
+            raise web.HTTPForbidden(reason=reason)
         ws = web.WebSocketResponse(max_msg_size=max_message_size)
         await ws.prepare(request)
         close_event = asyncio.Event()
@@ -318,7 +319,7 @@ class ChiaServer:
             return ws
         connection: Optional[WSChiaConnection] = None
         try:
-            connection = WSChiaConnection(
+            connection = WSChiaConnection.create(
                 self._local_type,
                 ws,
                 self._port,
@@ -335,6 +336,7 @@ class ChiaServer:
                 close_event,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
+            assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
@@ -347,7 +349,7 @@ class ChiaServer:
                 close_event.set()
             else:
                 await self.connection_added(connection, self.on_connect)
-                if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
+                if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
             if connection is not None:
@@ -379,7 +381,9 @@ class ChiaServer:
         await close_event.wait()
         return ws
 
-    async def connection_added(self, connection: WSChiaConnection, on_connect=None):
+    async def connection_added(
+        self, connection: WSChiaConnection, on_connect: Optional[ConnectionCallback] = None
+    ) -> None:
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
         if connection.closed:
@@ -410,7 +414,7 @@ class ChiaServer:
     async def start_client(
         self,
         target_node: PeerInfo,
-        on_connect: Callable = None,
+        on_connect: Optional[ConnectionCallback] = None,
         is_feeler: bool = False,
     ) -> bool:
         """
@@ -470,7 +474,7 @@ class ChiaServer:
             if peer_id == self.node_id:
                 raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
-            connection = WSChiaConnection(
+            connection = WSChiaConnection.create(
                 self._local_type,
                 ws,
                 self._port,
@@ -523,7 +527,7 @@ class ChiaServer:
 
         return False
 
-    def connection_closed(self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False):
+    def connection_closed(self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False) -> None:
         # closed_connection is true if the callback is being called with a connection that was previously closed
         # in this case we still want to do the banning logic and remove the conection from the list
         # but the other cleanup should already have been done so we skip that
@@ -557,7 +561,7 @@ class ChiaServer:
             if on_disconnect is not None:
                 on_disconnect(connection)
 
-    def cancel_tasks_from_peer(self, peer_id: bytes32):
+    def cancel_tasks_from_peer(self, peer_id: bytes32) -> None:
         if peer_id not in self.tasks_from_peer:
             return None
 
@@ -569,14 +573,12 @@ class ChiaServer:
             task.cancel()
 
     async def incoming_api_task(self) -> None:
-        message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
 
-            async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
-                nonlocal message_types
+            async def api_call(full_message: Message, connection: WSChiaConnection, task_id: bytes32) -> None:
                 start_time = time.time()
                 message_type = ""
                 try:
@@ -587,11 +589,8 @@ class ChiaServer:
                         f"{connection.peer_node_id} {connection.peer_host}"
                     )
                     message_type = ProtocolMessageTypes(full_message.type).name
-                    message_types[message_type] += 1
 
                     f = getattr(self.api, message_type, None)
-                    if len(message_types) % 100 == 0:
-                        self.log.debug(f"Message types: {[(m, n) for m, n in sorted(message_types.items()) if n != 0]}")
 
                     if f is None:
                         self.log.error(f"Non existing function: {message_type}")
@@ -620,7 +619,8 @@ class ChiaServer:
 
                     async def wrapped_coroutine() -> Optional[Message]:
                         try:
-                            result = await coroutine
+                            # hinting Message here is compensating for difficulty around hinting of the callbacks
+                            result: Message = await coroutine
                             return result
                         except asyncio.CancelledError:
                             pass
@@ -652,7 +652,6 @@ class ChiaServer:
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
-                    message_types[message_type] -= 1
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
@@ -672,7 +671,7 @@ class ChiaServer:
         messages: List[Message],
         node_type: NodeType,
         origin_peer: WSChiaConnection,
-    ):
+    ) -> None:
         for node_id, connection in self.all_connections.items():
             if node_id == origin_peer.peer_node_id:
                 continue
@@ -680,7 +679,7 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType):
+    async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
         for message in messages:
             if message_requires_reply(ProtocolMessageTypes(message.type)):
                 # Internal protocol logic error - we will raise, blocking messages to all peers
@@ -694,21 +693,21 @@ class ChiaServer:
                         )
                 raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
 
-    async def send_to_all(self, messages: List[Message], node_type: NodeType):
+    async def send_to_all(self, messages: List[Message], node_type: NodeType) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
+    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def send_to_specific(self, messages: List[Message], node_id: bytes32):
+    async def send_to_specific(self, messages: List[Message], node_id: bytes32) -> None:
         if node_id in self.all_connections:
             connection = self.all_connections[node_id]
             for message in messages:
@@ -726,12 +725,9 @@ class ChiaServer:
         return result
 
     async def close_all_connections(self) -> None:
-        keys = [a for a, b in self.all_connections.items()]
-        for node_id in keys:
+        for connection in self.all_connections.copy().values():
             try:
-                if node_id in self.all_connections:
-                    connection = self.all_connections[node_id]
-                    await connection.close()
+                await connection.close()
             except Exception as e:
                 self.log.error(f"Exception while closing connection {e}")
 
@@ -800,16 +796,18 @@ class ChiaServer:
             return True
         inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
-            return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
+            return inbound_count < cast(int, self.config["target_peer_count"]) - cast(
+                int, self.config["target_outbound_peer_count"]
+            )
         if node_type == NodeType.WALLET:
-            return inbound_count < self.config["max_inbound_wallet"]
+            return inbound_count < cast(int, self.config["max_inbound_wallet"])
         if node_type == NodeType.FARMER:
-            return inbound_count < self.config["max_inbound_farmer"]
+            return inbound_count < cast(int, self.config["max_inbound_farmer"])
         if node_type == NodeType.TIMELORD:
-            return inbound_count < self.config["max_inbound_timelord"]
+            return inbound_count < cast(int, self.config["max_inbound_timelord"])
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
+    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
         if trusted_peers is None:
             return False
         if not self.config["testing"] and peer.peer_host == "127.0.0.1":

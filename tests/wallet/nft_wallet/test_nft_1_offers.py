@@ -1497,7 +1497,7 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert success
     assert trade_make is not None
 
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         wallet_node_taker.get_full_node_peer(),
         fee=uint64(0),
@@ -1505,6 +1505,7 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert error is None
     assert success
     assert trade_take is not None
+    assert tx_records is not None
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))

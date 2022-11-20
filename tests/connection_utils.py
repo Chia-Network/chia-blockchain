@@ -55,7 +55,7 @@ async def add_dummy_connection(
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
     url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
-    wsc = WSChiaConnection(
+    wsc = WSChiaConnection.create(
         type,
         ws,
         server._port,

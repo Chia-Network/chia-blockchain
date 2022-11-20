@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 
 import aiohttp
 import pytest
 
-from chia.protocols.shared_protocol import protocol_version, capabilities
+from chia.protocols.shared_protocol import capabilities, protocol_version
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -21,7 +23,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"
         ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
-        wsc = WSChiaConnection(
+        wsc = WSChiaConnection.create(
             NodeType.FULL_NODE,
             ws,
             server._port,
