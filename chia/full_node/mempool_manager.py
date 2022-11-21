@@ -361,7 +361,9 @@ class MempoolManager:
             new_spend: spend bundle to validate
             npc_result: result of running the clvm transaction in a fake block
             spend_name: hash of the spend bundle data, passed in as an optimization
-            first_added_height: The block height when this SpendBundle was first added
+            first_added_height: The block height that `new_spend`  first entered this node's mempool.
+                Used to estimate how long a spend has taken to be included on the chain.
+                This value could differ node to node. Not preserved across full_node restarts.
 
         Returns:
             Optional[Err]: Err is set if we cannot add to the mempool, None if we will immediately add to mempool
@@ -599,8 +601,6 @@ class MempoolManager:
                 )
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if result == MempoolInclusionStatus.SUCCESS:
-                    new_item = self.get_mempool_item(item.spend_bundle_name)
-                    assert item == new_item
                     self.add_and_maybe_pop_seen(item.spend_bundle_name)
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool.
