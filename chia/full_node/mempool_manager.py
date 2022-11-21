@@ -534,6 +534,7 @@ class MempoolManager:
                 return Err.DOUBLE_SPEND, []
             coin_id = removal.name()
             # Only consider conflicts if the coin is not eligible for deduplication
+            assert npc_result.conds is not None
             if len([s for s in npc_result.conds.spends if s.coin_id == coin_id and s.eligible_for_dedup]) == 0:
                 removals_ids.append(coin_id)
         # 2. Checks if there are mempool conflicts
