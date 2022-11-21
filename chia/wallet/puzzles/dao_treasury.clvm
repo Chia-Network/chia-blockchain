@@ -41,7 +41,6 @@
     CAT_MOD_HASH
     EPHEMERAL_VOTE_PUZHASH
     CAT_TAIL
-    CURRENT_CAT_ISSUANCE
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
     PROPOSAL_TIMELOCK
@@ -56,7 +55,6 @@
                                      (sha256 ONE PROPOSAL_TIMELOCK)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
-                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE EPHEMERAL_VOTE_PUZHASH)
                                      (sha256 ONE CAT_MOD_HASH)
@@ -94,7 +92,7 @@
     (if new_puzhash
       ; this is the payout spend case
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs
+        (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list my_puzhash_or_proposal_id CURRENT_CAT_ISSUANCE)))  ; announce the proposal we're approving, and the current amount of CATs in the world
         (c
           (list CREATE_COIN new_puzhash (+ old_amount new_amount_change))
           (create_puzzle_asserts
@@ -106,7 +104,6 @@
                   CAT_MOD_HASH
                   EPHEMERAL_VOTE_PUZHASH
                   CAT_TAIL
-                  CURRENT_CAT_ISSUANCE
                   PROPOSAL_PASS_PERCENTAGE
                   (f SINGLETON_STRUCT)
                   PROPOSAL_TIMELOCK
