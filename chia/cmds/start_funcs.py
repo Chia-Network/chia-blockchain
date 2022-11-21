@@ -21,9 +21,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
         return subprocess.Popen(
             [sys.argv[0], "run_daemon", "--wait-for-unlock"],
             encoding="utf-8",
-            creationflags=subprocess.DETACHED_PROCESS
-            | subprocess.CREATE_NEW_PROCESS_GROUP
-            | subprocess.CREATE_NO_WINDOW,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW,
             stdout=subprocess.PIPE,
         )
 
