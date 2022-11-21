@@ -64,7 +64,6 @@ def message_response_ok(sent: ProtocolMessageTypes, received: ProtocolMessageTyp
     Check to see that peers respect protocol message types in reply.
     Call with received == None to indicate that we do not expect a specific reply message type.
     """
-
     # Errors below are runtime protocol message mismatches from peers
     if sent in VALID_REPLY_MESSAGE_MAP:
         return received in VALID_REPLY_MESSAGE_MAP[sent]
