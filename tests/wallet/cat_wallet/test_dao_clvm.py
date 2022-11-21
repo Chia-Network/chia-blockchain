@@ -48,7 +48,6 @@ def test_proposal() -> None:
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_TAIL,
-        current_cat_issuance,
         proposal_pass_percentage,
         treasury_id,
         LOCKUP_TIME,
@@ -58,7 +57,7 @@ def test_proposal() -> None:
     )
     # vote_amount_or_solution
     # vote_info_or_p2_singleton_mod_hash
-    # vote_coin_id  ; set this to 0 if we have passed
+    # vote_coin_id_or_current_cat_issuance
     # previous_votes
     # pubkey
 
@@ -79,7 +78,8 @@ def test_proposal() -> None:
         [
             [[51, 0xCAFEF00D, 200]],
             P2_SINGLETON_MOD.get_tree_hash(),
-            0
+            current_cat_issuance,
+            0,
         ]
     )
     full_proposal = DAO_PROPOSAL_MOD.curry(
@@ -90,7 +90,6 @@ def test_proposal() -> None:
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_TAIL,
-        current_cat_issuance,
         proposal_pass_percentage,
         treasury_id,
         LOCKUP_TIME,
@@ -103,7 +102,6 @@ def test_proposal() -> None:
 
 
 def test_proposal_timer() -> None:
-    current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
@@ -127,7 +125,6 @@ def test_proposal_timer() -> None:
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
-        current_cat_issuance,
         LOCKUP_TIME,
         proposal_pass_percentage,
         singleton_struct,

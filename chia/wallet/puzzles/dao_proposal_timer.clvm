@@ -7,7 +7,6 @@
   PROPOSAL_TIMER_MOD_HASH
   CAT_MOD_HASH
   CAT_TAIL
-  CURRENT_CAT_ISSUANCE
   PROPOSAL_TIMELOCK
   PROPOSAL_PASS_PERCENTAGE
   MY_PARENT_SINGLETON_STRUCT
@@ -36,7 +35,6 @@
     CAT_MOD_HASH
     EPHEMERAL_VOTE_PUZZLE_HASH
     CAT_TAIL
-    CURRENT_CAT_ISSUANCE
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
     PROPOSAL_TIMELOCK
@@ -51,7 +49,6 @@
                                      (sha256 ONE PROPOSAL_TIMELOCK)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
-                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE EPHEMERAL_VOTE_PUZZLE_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
@@ -85,7 +82,6 @@
                 CAT_MOD_HASH
                 EPHEMERAL_VOTE_PUZZLE_HASH
                 CAT_TAIL
-                CURRENT_CAT_ISSUANCE
                 PROPOSAL_PASS_PERCENTAGE
                 TREASURY_ID
                 PROPOSAL_TIMELOCK

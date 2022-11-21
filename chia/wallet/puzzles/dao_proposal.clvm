@@ -2,14 +2,13 @@
 ; If the proposal passes the INNERPUZ inside it will run, and the DAO Treasury will accept a spend to change itself or spend money
 
 (mod (
-  SINGLETON_STRUCT
+  SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
   CAT_MOD_HASH
   TREASURY_MOD_HASH
-  LOCKUP_MOD_HASH  ; this is the mod already curried with what it needs - should still be a constant
+  LOCKUP_MOD_HASH
   CAT_TAIL
-  CURRENT_CAT_ISSUANCE
   PROPOSAL_PASS_PERCENTAGE
   TREASURY_ID
   PROPOSAL_TIMELOCK
@@ -18,8 +17,8 @@
   INNERPUZ  ; this is what runs if this proposal is successful
   vote_amount_or_solution
   vote_info_or_p2_singleton_mod_hash
-  vote_coin_id  ; set this to 0 if we have passed
-  previous_votes
+  vote_coin_id_or_current_cat_issuance
+  previous_votes  ; set this to 0 if we have passed
   lockup_innerpuzhash
 )
   (include condition_codes.clvm)
@@ -37,7 +36,6 @@
     PROPOSAL_TIMER_MOD_HASH
     PROPOSAL_MOD_HASH
     CAT_TAIL
-    CURRENT_CAT_ISSUANCE
     PROPOSAL_TIMELOCK
     PROPOSAL_PASS_PERCENTAGE
     MY_SINGLETON_STRUCT
@@ -48,7 +46,6 @@
                                      (sha256tree MY_SINGLETON_STRUCT)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE PROPOSAL_TIMELOCK)
-                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -85,7 +82,6 @@
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL
-    CURRENT_CAT_ISSUANCE
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
     TIMELOCK
@@ -100,7 +96,6 @@
                                      (sha256 ONE TIMELOCK)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
-                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
@@ -131,7 +126,6 @@
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL
-    CURRENT_CAT_ISSUANCE
     PROPOSAL_PASS_PERCENTAGE
     PROPOSAL_TIMELOCK
     p2_singleton_mod_hash
@@ -144,7 +138,6 @@
         (sha256 ONE p2_singleton_mod_hash)
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE CAT_TAIL)
-        (sha256 ONE CURRENT_CAT_ISSUANCE)
         (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
         (sha256 ONE PROPOSAL_TIMELOCK)
         (sha256tree treasury_singleton_struct)
@@ -153,11 +146,11 @@
   )
 
   ; main
-  (if vote_coin_id
+  (if previous_votes
 
     ; if we're taking votes
     (c
-      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id)  ; announce which coin we're taking a vote from, so nobody else gets spent
+      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id_or_current_cat_issuance)  ; announce which coin we're taking a vote from, so nobody else gets spent
       (c
         (list
           ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
@@ -176,8 +169,7 @@
                 lockup_innerpuzhash
               )
             )
-            (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id)
-            )
+            (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id_or_current_cat_issuance))
           )
         )
         (c
@@ -189,7 +181,6 @@
               PROPOSAL_TIMER_MOD_HASH
               CAT_MOD_HASH
               CAT_TAIL
-              CURRENT_CAT_ISSUANCE
               PROPOSAL_PASS_PERCENTAGE
               TREASURY_ID
               PROPOSAL_TIMELOCK
@@ -208,7 +199,6 @@
                 PROPOSAL_TIMER_MOD_HASH
                 PROPOSAL_MOD_HASH
                 CAT_TAIL
-                CURRENT_CAT_ISSUANCE
                 PROPOSAL_TIMELOCK
                 PROPOSAL_PASS_PERCENTAGE
                 SINGLETON_STRUCT
@@ -237,12 +227,12 @@
                 PROPOSAL_TIMER_MOD_HASH
                 CAT_MOD_HASH
                 CAT_TAIL
-                CURRENT_CAT_ISSUANCE
+                vote_coin_id_or_current_cat_issuance
                 PROPOSAL_PASS_PERCENTAGE
                 PROPOSAL_TIMELOCK
                 vote_info_or_p2_singleton_mod_hash
               )
-              (f (r SINGLETON_STRUCT))
+              (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_id_or_current_cat_issuance))
             )
           )
           (c
@@ -253,7 +243,6 @@
                   PROPOSAL_TIMER_MOD_HASH
                   PROPOSAL_MOD_HASH
                   CAT_TAIL
-                  CURRENT_CAT_ISSUANCE
                   PROPOSAL_TIMELOCK
                   PROPOSAL_PASS_PERCENTAGE
                   SINGLETON_STRUCT
@@ -262,7 +251,7 @@
                 (f (r SINGLETON_STRUCT))
                 )
               )
-              (if (all (> TOTAL_VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
+              (if (all (> TOTAL_VOTES (calculate_win_percentage vote_coin_id_or_current_cat_issuance PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
                 (a INNERPUZ vote_amount_or_solution)  ; run proposed chialisp
                 ()  ; we don't run the chialisp, and instead move to the finished state
               )
