@@ -28,7 +28,7 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version, Capability
+from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -37,7 +37,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16, uint8
+from chia.util.ints import uint8, uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
