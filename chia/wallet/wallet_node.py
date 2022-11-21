@@ -433,9 +433,9 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.debug("Pulled from queue: %s", item)
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data)
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
                     # state updates until we are sure that we subscribed to everything that we need to. Otherwise,
                     # we might not be able to process some state.
@@ -446,6 +446,7 @@ class WalletNode:
                             async with self.wallet_state_manager.lock:
                                 await self.receive_state_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION:
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data)
                     puzzle_hashes: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         # Puzzle hash subscription
@@ -456,11 +457,13 @@ class WalletNode:
                 elif item.item_type == NewPeakQueueTypes.FULL_NODE_STATE_UPDATED:
                     # Note: this can take a while when we have a lot of transactions. We want to process these
                     # before new_peaks, since new_peak_wallet requires that we first obtain the state for that peak.
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
                     request: wallet_protocol.CoinStateUpdate = item.data[0]
                     peer = item.data[1]
                     assert peer is not None
                     await self.state_update_received(request, peer)
                 elif item.item_type == NewPeakQueueTypes.NEW_PEAK_WALLET:
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
                     # This can take a VERY long time, because it might trigger a long sync. It is OK if we miss some
                     # subscriptions or state updates, since all subscriptions and state updates will be handled by
                     # long_sync (up to the target height).
@@ -469,6 +472,7 @@ class WalletNode:
                     assert peer is not None
                     await self.new_peak_wallet(request, peer)
                 else:
+                    self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)
                     assert False
             except asyncio.CancelledError:
                 self.log.info("Queue task cancelled, exiting.")
