@@ -27,6 +27,7 @@ jobs:
       matrix:
         python-version: [3.9]
 
+    steps:
     - name: Test for secrets access
       id: check_secrets
       shell: bash
@@ -37,7 +38,6 @@ jobs:
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-    steps:
     - name: Checkout Code
       if: steps.check_secrets.outputs.HAS_SNYK_SECRET
       uses: actions/checkout@v3
@@ -65,6 +65,7 @@ jobs:
       if: steps.check_secrets.outputs.HAS_SNYK_SECRET
       run: |
         pip freeze > requirements.txt
+
     - name: Run Snyk to check for vulnerabilities
       if: steps.check_secrets.outputs.HAS_SNYK_SECRET
       uses: snyk/actions/python@master
