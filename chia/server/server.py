@@ -37,7 +37,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint8
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
@@ -642,7 +642,9 @@ class ChiaServer:
                     elif metadata.reply_types:
                         if Capability.NONE_RESPONSE in connection.peer_capabilities:
                             # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
-                            response_message = Message(ProtocolMessageTypes.none_response.value, full_message.id, b"")
+                            response_message = Message(
+                                uint8(ProtocolMessageTypes.none_response.value), full_message.id, b""
+                            )
                             await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
