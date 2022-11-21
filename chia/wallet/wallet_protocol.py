@@ -72,18 +72,9 @@ class WalletProtocol(Protocol):
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
 
 
-class InnerWallet(Protocol):
-    async def solve_for_dependencies(
-        self,
-        coin: Coin,
-        unwrapped_puzzle_hash: bytes32,
-        dependencies: List[SpendDependency],
-        solver: Solver,
-    ) -> Tuple[Program, Program, G2Element]:
-        ...
+class OuterDriver(Protocol):
+    ...
 
 
-class OuterWallet(Protocol):
-    async def get_inner_wallet(self, coin: Coin) -> InnerWallet:
-        # TODO: If we ever have more inner wallets, this will need to be more complicated
-        return self
+class InnerDriver(Protocol):
+    ...

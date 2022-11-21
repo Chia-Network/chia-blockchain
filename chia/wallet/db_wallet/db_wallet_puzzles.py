@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 from typing import Iterator, List, Tuple, TypeVar, Union
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.trading.wallet_actions import Graftroot, WalletAction
+from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 
 # from chia.types.condition_opcodes import ConditionOpcode
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
@@ -125,6 +128,10 @@ class RequireDLInclusion:
             [[bytes32(value) for value in values] for values in solver["values_to_prove"]],
         )
 
+    def __post_init__(self) -> None:
+        if len(self.launcher_ids) != len(self.values_to_prove):
+            raise ValueError("Length mismatch between launcher ids and values to prove")
+
     def to_solver(self) -> Solver:
         return Solver(
             {
@@ -137,14 +144,17 @@ class RequireDLInclusion:
     def de_alias(self) -> WalletAction:
         NIL_LIST = Program.to([None] * len(self.launcher_ids))
         return Graftroot(
-            CURRY_DL_GRAFTROOT.curry(
-                GRAFTROOT_DL_OFFERS,
-                [launcher_to_struct(launcher) for launcher in self.launcher_ids],
-                [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(self.launcher_ids),
-                self.values_to_prove,
-            ),
-            Program.to([4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, 2, None]]]]]),
+            self.construct_puzzle_wrapper(),
             Program.to(None),
+            Program.to(None),
+        )
+
+    def construct_puzzle_wrapper(self) -> Program:
+        return CURRY_DL_GRAFTROOT.curry(
+            GRAFTROOT_DL_OFFERS,
+            [launcher_to_struct(launcher) for launcher in self.launcher_ids],
+            [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(self.launcher_ids),
+            self.values_to_prove,
         )
 
     @staticmethod
@@ -167,3 +177,89 @@ class RequireDLInclusion:
                 for values in curried_args.at("rrrf").as_iter()
             ],
         )
+
+    def augment(self, environment: Solver) -> WalletAction:
+        if "dl_inclusion_proofs" in environment:
+            all_spends: List[CoinSpend] = [
+                CoinSpend(
+                    Coin(
+                        spend["coin"]["parent_coin_info"],
+                        spend["coin"]["puzzle_hash"],
+                        cast_to_int(spend["coin"]["amount"]),
+                    ),
+                    spend["puzzle_reveal"],
+                    spend["solution"],
+                )
+                for spend in environment["spends"]
+            ]
+            # Build a mapping of launcher IDs to their spend information
+            singleton_to_innerpuzhashs_and_roots: Dict[bytes32, List[Tuple[bytes32, bytes32]]] = {}
+            for spend in all_spends:
+                matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+                if matched:
+                    innerpuz, root, launcher_id = curried_args
+                    singleton_to_innerpuzhashs_and_roots.setdefault(bytes32(launcher_id.as_python()), [])
+                    singleton_to_innerpuzhashs_and_roots[bytes32(launcher_id.as_python())].append(
+                        (
+                            innerpuz.get_tree_hash(),
+                            bytes32(root.as_python()),
+                        )
+                    )
+            # Now find all of the info that we need for the solution
+            all_proofs = []
+            all_roots = []
+            for launcher_id, values in zip(self.launcher_ids, self.values_to_prove):
+                acceptable_roots: List[bytes32] = [root for _, r in singleton_to_innerpuzhashs_and_roots[launcher_id]]
+                proved_root: Optional[bytes32] = None
+                proofs_of_inclusion: List[Program] = []
+                while proved_root is None:
+                    for value in values:
+                        for proof in environment["dl_inclusion_proofs"]:
+                            _proof = (proof.first().as_int(), proof.rest().as_python())
+                            root = _simplify_merkle_proof(value, _proof)
+                            if root in acceptable_roots:
+                                if proved_root is None:
+                                    proved_root = root
+                                elif root != proved_root:
+                                    continue
+                                proofs_of_inclusion.append(proof)
+                                break
+                        else:
+                            if proved_root is None:
+                                return self  # The proofs of inclusion were not good enough so don't do anything
+                            else:
+                                acceptable_roots.remove(proved_root)
+                                proved_root = None
+                                proof_of_inclusion = []
+                                break
+
+                all_proofs.append(proofs_of_inclusion)
+                all_roots.append(proved_root)
+
+            return Graftroot(
+                self.construct_puzzle_wrapper(),
+                # (list proofs_of_inclusion new_metadatas new_metadata_updaters new_inner_puzs inner_solution)
+                Program.to(
+                    [
+                        4,
+                        all_proofs,
+                        [
+                            4,
+                            [Program.to([root]) for root in all_roots],
+                            [
+                                4,
+                                [ACS_MU_PH] * len(self.launcher_ids),
+                                [
+                                    4,
+                                    [
+                                        singleton_to_innerpuzhashs_and_roots[launcher_id][0]
+                                        for launcher_id in self.launcher_ids
+                                    ],
+                                    [4, 2, None],
+                                ],
+                            ],
+                        ],
+                    ]
+                ),
+                Program.to(None),
+            )

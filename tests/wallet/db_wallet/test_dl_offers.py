@@ -243,8 +243,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                 "": {
                     "dependencies": [
                         {
-                            "launcher_id": "0x" + launcher_id_maker.hex(),
-                            "values_to_prove": ["0x" + maker_branch.hex()],
+                            "launcher_id": "0x" + launcher_id_taker.hex(),
+                            "values_to_prove": ["0x" + taker_branch.hex()],
                         },
                     ],
                 },
@@ -269,6 +269,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
+    temp = await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer))
     # assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
     #     "offered": [
     #         {

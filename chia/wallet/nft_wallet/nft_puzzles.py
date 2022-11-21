@@ -362,3 +362,6 @@ class UpdateMetadata:
             raise ValueError("Tried to parse a condition that was not a metadata update")
 
         return cls(action.condition.at("rrf"), action.condition.at("rf"))
+
+    def augment(self, environment: Solver) -> WalletAction:
+        return self

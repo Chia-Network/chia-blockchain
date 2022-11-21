@@ -514,7 +514,10 @@ class Offer:
             if coin_spend.coin.parent_coin_info == ZERO_32:
                 notarized_payments: List[NotarizedPayment] = []
                 for payment_group in coin_spend.solution.to_program().as_iter():
-                    nonce = bytes32(payment_group.first().as_python())
+                    try:
+                        nonce = bytes32(payment_group.first().as_python())
+                    except:
+                        breakpoint()
                     payment_args_list: List[Program] = payment_group.rest().as_iter()
                     notarized_payments.extend(
                         [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]

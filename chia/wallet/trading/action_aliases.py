@@ -98,12 +98,19 @@ class DirectPayment:
 
         puzzle_hash: bytes32 = bytes32(action.condition.at("rf").as_python())
         if action.condition.first() != Program.to(51) or puzzle_hash == OFFER_MOD_HASH:
-            raise ValueError("Tried to parse a condition that was not an offer payment")
+            raise ValueError("Tried to parse a condition that was not a direct payment")
+
+        memos: List[bytes] = (
+            action.condition.at("rrrf").as_python() if action.condition.at("rrr") != Program.to(None) else []
+        )
 
         return cls(
-            Payment(puzzle_hash, uint64(action.condition.at("rrf").as_int()), action.condition.at("rrrf").as_python()),
+            Payment(puzzle_hash, uint64(action.condition.at("rrf").as_int()), memos),
             [],
         )
+
+    def augment(self, environment: Solver) -> _T_DirectPayment:
+        return self
 
 
 _T_OfferedAmount = TypeVar("_T_OfferedAmount", bound="OfferedAmount")
@@ -147,6 +154,9 @@ class OfferedAmount:
 
         return cls(action.condition.at("rrf").as_int())
 
+    def augment(self, environment: Solver) -> _T_OfferedAmount:
+        return self
+
 
 _T_Fee = TypeVar("_T_Fee", bound="Fee")
 
@@ -186,7 +196,10 @@ class Fee:
         if action.condition.first() != Program.to(52):
             raise ValueError("Tried to parse a condition that was not a RESERVE_FEE")
 
-        return cls(action.condition.at("rrf").as_int())
+        return cls(action.condition.at("rf").as_int())
+
+    def augment(self, environment: Solver) -> _T_Fee:
+        return self
 
 
 _T_MakeAnnouncement = TypeVar("_T_MakeAnnouncement", bound="MakeAnnouncement")
@@ -240,6 +253,9 @@ class MakeAnnouncement:
 
         return cls("coin" if action.condition.first() == Program.to(60) else "puzzle", action.condition.at("rf"))
 
+    def augment(self, environment: Solver) -> _T_MakeAnnouncement:
+        return self
+
 
 _T_AssertAnnouncement = TypeVar("_T_AssertAnnouncement", bound="AssertAnnouncement")
 
@@ -287,7 +303,7 @@ class AssertAnnouncement:
         )
 
     def de_alias(self) -> List[Program]:
-        data: bytes32 = bytes32(data) if self.origin is None else std_hash(self.origin + self.data)
+        data: bytes32 = bytes32(self.data) if self.origin is None else std_hash(self.origin + self.data)
         if self.type == "puzzle":
             return Condition(Program.to(make_assert_puzzle_announcement(data)))
         elif self.type == "coin":
@@ -310,6 +326,9 @@ class AssertAnnouncement:
         return cls(
             "coin" if action.condition.first() == Program.to(61) else "puzzle", action.condition.at("rf").as_python()
         )
+
+    def augment(self, environment: Solver) -> _T_AssertAnnouncement:
+        return self
 
 
 _T_RequestPayment = TypeVar("_T_RequestPayment", bound="RequestPayment")
@@ -362,19 +381,8 @@ class RequestPayment:
                 return tree
 
         return Graftroot(
-            CURRY.curry(
-                ADD_WRAPPED_ANNOUNCEMENT.curry(
-                    [bytes32(Program.to(typ["mod"]).get_tree_hash()) for typ in self.asset_types],
-                    [typ["solution_template"] for typ in self.asset_types],
-                    [
-                        walk_tree_and_hash_curried(typ["committed_args"], typ["solution_template"])
-                        for typ in self.asset_types
-                    ],
-                    OFFER_MOD_HASH,
-                    Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
-                )
-            ),
-            Program.to([4, 5, 2]),  # (mod (this_solution inner_solution) (c inner_solution this_solution))
+            self.construct_puzzle_wrapper(),
+            Program.to(None),
             self.construct_metadata(),
         )
 
@@ -386,6 +394,20 @@ class RequestPayment:
                     [typ["mod"] for typ in self.asset_types],
                     [typ["committed_args"] for typ in self.asset_types],
                 ),
+            )
+        )
+
+    def construct_puzzle_wrapper(self) -> Program:
+        return CURRY.curry(
+            ADD_WRAPPED_ANNOUNCEMENT.curry(
+                [bytes32(Program.to(typ["mod"]).get_tree_hash()) for typ in self.asset_types],
+                [typ["solution_template"] for typ in self.asset_types],
+                [
+                    walk_tree_and_hash_curried(typ["committed_args"], typ["solution_template"])
+                    for typ in self.asset_types
+                ],
+                OFFER_MOD_HASH,
+                Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
             )
         )
 
@@ -425,3 +447,37 @@ class RequestPayment:
         ]
 
         return cls(asset_types, nonce, payments)
+
+    def augment(self, environment: Solver) -> WalletAction:
+        if "payment_types" in environment:
+            for payment_type in environment["payment_types"]:
+                nonce: Optional[bytes32] = (
+                    None
+                    if "nonce" not in payment_type or payment_type["nonce"] == Program.to(None)
+                    else bytes32(payment_type["nonce"])
+                )
+                payments: List[Payment] = [
+                    Payment(bytes32(p["puzhash"]), cast_to_int(p["amount"]), p["memos"])
+                    for p in payment_type["payments"]
+                ]
+                asset_types: List[Solver] = payment_type["asset_types"] if "asset_types" in payment else []
+                if (
+                    nonce == self.nonce
+                    and set(payments) == set(self.payments)
+                    and len(asset_types) == len(self.asset_types)
+                ):
+                    solved_args: List[Program] = []
+                    for new_type, static_type in enumerate(asset_types, self.asset_types):
+                        if new_type["mod"] == static_type["mod"]:
+                            solved_args.append(new_type["solved_args"])
+                        else:
+                            break
+                    else:
+                        return Graftroot(
+                            self.construct_puzzle_wrapper(),
+                            Program.to([4, 2, [1, solved_args]]),  # (c 2 (q solved_args))
+                            self.construct_metadata(),
+                        )
+                    continue
+
+        return self

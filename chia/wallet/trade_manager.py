@@ -31,9 +31,10 @@ from chia.wallet.trading.offer_request import (
     old_request_to_new,
     old_solver_to_new,
     build_spend,
-    decontruct_spend,
+    deconstruct_spend,
     generate_summary_complement,
     offer_to_spend,
+    solve_spend,
     spend_to_offer_bytes,
 )
 from chia.wallet.trading.trade_status import TradeStatus
@@ -715,13 +716,21 @@ class TradeManager:
 
         deconstructed_spend: Optional[Solver] = await self.check_for_new_offer_type(offer)
         if deconstructed_spend is not None:
+            modified_solver = await old_solver_to_new(self.wallet_state_manager, solver)
             complement_summary: Solver = await generate_summary_complement(
                 self.wallet_state_manager,
                 deconstructed_spend,
-                await old_solver_to_new(self.wallet_state_manager, solver),
+                modified_solver,
             )
-            complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
-            take_offer: Offer = Offer.from_bytes(spend_to_offer_bytes(complement_spend))
+            full_spend: SpendBundle = SpendBundle.aggregate(
+                [
+                    await self.create_spend_for_actions(complement_summary),
+                    offer_to_spend(offer),
+                ]
+            )
+            final_spend_bundle: SpendBundle = await solve_spend(self.wallet_state_manager, full_spend, modified_solver)
+            complete_offer: Offer = Offer.from_bytes(spend_to_offer_bytes(final_spend_bundle))
+            tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, False)
         else:
             take_offer_dict: Dict[Union[bytes32, int], int] = {}
             arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
@@ -753,13 +762,14 @@ class TradeManager:
 
             success, take_offer, error = result
 
-        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
-        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
-        assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
-        await self.maybe_create_wallets_for_offer(complete_offer)
+            complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
 
-        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
+            self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
+            assert complete_offer.is_valid()
+            final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
+            tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
+
+        await self.maybe_create_wallets_for_offer(complete_offer)
 
         trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
@@ -893,7 +903,7 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return await decontruct_spend(  # Advanced offer summary
+                        return await deconstruct_spend(  # Advanced offer summary
                             self.wallet_state_manager, offer_to_spend(offer)
                         )
                 return await DataLayerWallet.get_offer_summary(offer)
@@ -937,7 +947,7 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return await decontruct_spend(  # Advanced offer summary
+                        return await deconstruct_spend(  # Advanced offer summary
                             self.wallet_state_manager, offer_to_spend(offer)
                         )
         return None
