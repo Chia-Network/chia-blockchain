@@ -5,7 +5,7 @@ import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -29,10 +29,10 @@ log = logging.getLogger(__name__)
 
 def create_full_node_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-    override_capabilities: List[Tuple[uint16, str]] = None,
+    override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
 ) -> Service[FullNode]:
     service_config = config[SERVICE_NAME]
 
