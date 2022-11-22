@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
@@ -20,7 +20,7 @@ SERVICE_NAME = "introducer"
 
 def create_introducer_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
 ) -> Service[Introducer]:
