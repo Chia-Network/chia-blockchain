@@ -19,4 +19,4 @@ Please report security concerns to https://bugcrowd.com/chia-network-bb.
 
 If your security issue is established to be valid, we will reach out immediately to establish
 communication channels and compensate the issue reporter for responsibly reporting security bugs via
-our bug bounty program. 
+our bug bounty program.
