@@ -213,6 +213,9 @@ class ChiaServer:
                 chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path, log=log
             )
 
+        node_id_cert_path = private_cert_path if public_cert_path is None else public_cert_path
+        assert node_id_cert_path is not None
+
         return cls(
             _port=port,
             _local_type=local_type,
@@ -228,7 +231,7 @@ class ChiaServer:
             config=config,
             ssl_context=ssl_context,
             ssl_client_context=ssl_client_context,
-            node_id=calculate_node_id(private_cert_path if public_cert_path is None else public_cert_path),
+            node_id=calculate_node_id(node_id_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
         )
