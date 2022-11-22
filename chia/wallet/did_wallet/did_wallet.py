@@ -1,12 +1,14 @@
-import dataclasses
-import logging
-import time
-import json
-import re
+from __future__ import annotations
 
-from typing import Dict, Optional, List, Any, Set, Tuple, TYPE_CHECKING
-from blspy import AugSchemeMPL, G1Element, G2Element
+import dataclasses
+import json
+import logging
+import re
+import time
 from secrets import token_bytes
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
@@ -17,28 +19,28 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64, uint32, uint8, uint128
-from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
-from chia.wallet.util.transaction_type import TransactionType
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.coin_selection import select_coins
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
+from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+    puzzle_for_pk,
+    puzzle_hash_for_pk,
+)
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
-from chia.wallet.coin_selection import select_coins
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    puzzle_for_pk,
-    puzzle_hash_for_pk,
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-)
 
 
 class DIDWallet:

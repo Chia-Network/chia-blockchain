@@ -1,38 +1,39 @@
-import asyncio
+from __future__ import annotations
 
-from chia.protocols.shared_protocol import Capability
+import asyncio
 import logging
 import random
-from typing import List, Optional, Tuple, Union, Dict
+from typing import Dict, List, Optional, Tuple, Union
 
 from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
+    CoinState,
+    RejectAdditionsRequest,
+    RejectBlockHeaders,
+    RejectHeaderBlocks,
+    RejectRemovalsRequest,
     RequestAdditions,
     RequestBlockHeaders,
-    RespondAdditions,
-    RejectAdditionsRequest,
-    RejectRemovalsRequest,
-    RespondBlockHeaders,
-    RespondRemovals,
-    RequestRemovals,
-    CoinState,
-    RespondToPhUpdates,
-    RespondToCoinUpdates,
-    RespondHeaderBlocks,
     RequestHeaderBlocks,
-    RejectHeaderBlocks,
-    RejectBlockHeaders,
+    RequestRemovals,
+    RespondAdditions,
+    RespondBlockHeaders,
+    RespondHeaderBlocks,
+    RespondRemovals,
+    RespondToCoinUpdates,
+    RespondToPhUpdates,
 )
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import hash_coin_ids, Coin
+from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
-from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
+from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
 log = logging.getLogger(__name__)
