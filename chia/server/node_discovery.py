@@ -10,7 +10,8 @@ from typing import Dict, List, Optional, Set
 
 import dns.asyncresolver
 
-from chia.protocols import full_node_protocol, introducer_protocol
+from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
+from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_sqlite_store import create_address_manager_from_db
@@ -159,7 +160,7 @@ class FullNodeDiscovery:
             and (self.server._local_type is NodeType.FULL_NODE or self.server._local_type is NodeType.WALLET)
             and self.address_manager is not None
         ):
-            msg = make_msg(ProtocolMessageTypes.request_peers, full_node_protocol.RequestPeers())
+            msg = make_msg(ProtocolMessageTypes.request_peers, RequestPeers())
             await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
@@ -202,7 +203,7 @@ class FullNodeDiscovery:
             return None
 
         async def on_connect(peer: WSChiaConnection):
-            msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
+            msg = make_msg(ProtocolMessageTypes.request_peers_introducer, RequestPeersIntroducer())
             await peer.send_message(msg)
 
         await self.server.start_client(self.introducer_info, on_connect)
@@ -230,7 +231,7 @@ class FullNodeDiscovery:
                     )
                 self.log.info(f"Received {len(peers)} peers from DNS seeder, using rdtype = {rdtype}.")
                 if len(peers) > 0:
-                    await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
+                    await self._respond_peers_common(RespondPeers(peers), None, False)
         except Exception as e:
             self.log.warning(f"querying DNS introducer failed: {e}")
 
@@ -571,7 +572,7 @@ class FullNodePeers(FullNodeDiscovery):
                 ]
                 msg = make_msg(
                     ProtocolMessageTypes.respond_peers,
-                    full_node_protocol.RespondPeers(timestamped_peer),
+                    RespondPeers(timestamped_peer),
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
@@ -607,7 +608,7 @@ class FullNodePeers(FullNodeDiscovery):
 
             msg = make_msg(
                 ProtocolMessageTypes.respond_peers,
-                full_node_protocol.RespondPeers(peers),
+                RespondPeers(peers),
             )
 
             return msg
@@ -673,7 +674,7 @@ class FullNodePeers(FullNodeDiscovery):
                         continue
                     msg = make_msg(
                         ProtocolMessageTypes.respond_peers,
-                        full_node_protocol.RespondPeers([relay_peer]),
+                        RespondPeers([relay_peer]),
                     )
                     await connection.send_message(msg)
             except Exception as e:
