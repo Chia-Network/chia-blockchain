@@ -511,7 +511,6 @@ class FullNodePeers(FullNodeDiscovery):
     def __init__(
         self,
         server,
-        max_inbound_count,
         target_outbound_count,
         peer_store_resolver: PeerStoreResolver,
         introducer_info,
