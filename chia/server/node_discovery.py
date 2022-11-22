@@ -48,7 +48,6 @@ class FullNodeDiscovery:
         log,
     ):
         self.server: ChiaServer = server
-        self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.legacy_peer_db_path = peer_store_resolver.legacy_peer_db_path
@@ -135,9 +134,6 @@ class FullNodeDiscovery:
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
-    def add_message(self, message, data):
-        self.message_queue.put_nowait((message, data))
-
     async def on_connect(self, peer: WSChiaConnection):
         if (
             peer.is_outbound is False
@@ -184,7 +180,7 @@ class FullNodeDiscovery:
 
     def _num_needed_peers(self) -> int:
         target = self.target_outbound_count
-        outgoing = len(self.server.get_full_node_outgoing_connections())
+        outgoing = len(self.server.get_connections(NodeType.FULL_NODE, outbound=True))
         return max(0, target - outgoing)
 
     """
@@ -320,7 +316,7 @@ class FullNodeDiscovery:
 
                 # Only connect out to one peer per network group (/16 for IPv4).
                 groups = set()
-                full_node_connected = self.server.get_full_node_outgoing_connections()
+                full_node_connected = self.server.get_connections(NodeType.FULL_NODE, outbound=True)
                 connected = [c.get_peer_info() for c in full_node_connected]
                 connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:

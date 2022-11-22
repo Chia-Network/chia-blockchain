@@ -1553,12 +1553,9 @@ class WalletRpcApi:
             peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
             if peer is None:
                 raise ValueError("No peer connected")
-            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+            trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
                 offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
             )
-        if not result[0]:
-            raise ValueError(result[2])
-        success, trade_record, error = result
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
     async def get_offer(self, request: Dict) -> EndpointResult:
@@ -2021,7 +2018,12 @@ class WalletRpcApi:
             did_id,
             fee,
         )
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        nft_id = None
+        assert spend_bundle is not None
+        for cs in spend_bundle.coin_spends:
+            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
+                nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle, "nft_id": nft_id}
 
     async def nft_get_nfts(self, request) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)
@@ -2217,10 +2219,12 @@ class WalletRpcApi:
         try:
             nft_coin_id = request["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-                nft_coin_id = decode_puzzle_hash(nft_coin_id)
+                nft_id = decode_puzzle_hash(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft(nft_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            assert nft_coin_info is not None
             fee = uint64(request.get("fee", 0))
             txs = await nft_wallet.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
@@ -2439,10 +2443,14 @@ class WalletRpcApi:
                 xch_change_ph=xch_change_ph,
                 fee=fee,
             )
-
+        nft_id_list = []
+        for cs in sb.coin_spends:
+            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
+                nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
         return {
             "success": True,
             "spend_bundle": sb,
+            "nft_id_list": nft_id_list,
         }
 
     async def get_farmed_amount(self, request) -> EndpointResult:

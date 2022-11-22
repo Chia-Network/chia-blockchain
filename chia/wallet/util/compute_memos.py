@@ -1,4 +1,6 @@
-from typing import List, Dict
+from __future__ import annotations
+
+from typing import Dict, List
 
 from clvm.casts import int_from_bytes
 

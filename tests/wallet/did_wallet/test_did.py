@@ -1,25 +1,26 @@
+from __future__ import annotations
+
 import json
 from typing import Optional
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
 from chia.wallet.util.address_type import AddressType
-
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 

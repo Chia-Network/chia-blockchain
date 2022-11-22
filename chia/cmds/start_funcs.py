@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import os
 import subprocess
 import sys
-
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.cmds.keys_funcs import migrate_keys
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from chia.util.errors import KeychainMaxUnlockAttempts
@@ -17,8 +17,17 @@ from chia.util.service_groups import services_for_groups
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIA_ROOT"] = str(root_path)
-    # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
-    process = subprocess.Popen([sys.argv[0], "run_daemon", "--wait-for-unlock"], stdout=subprocess.PIPE)
+    creationflags = 0
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+
+    process = subprocess.Popen(
+        [sys.argv[0], "run_daemon", "--wait-for-unlock"],
+        encoding="utf-8",
+        stdout=subprocess.PIPE,
+        creationflags=creationflags,
+    )
+
     return process
 
 
@@ -50,9 +59,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
     return None
 
 
-async def async_start(
-    root_path: Path, config: Dict[str, Any], group: str, restart: bool, force_keyring_migration: bool
-) -> None:
+async def async_start(root_path: Path, config: Dict[str, Any], group: str, restart: bool) -> None:
     try:
         daemon = await create_start_daemon_connection(root_path, config)
     except KeychainMaxUnlockAttempts:
@@ -62,11 +69,6 @@ async def async_start(
     if daemon is None:
         print("Failed to create the chia daemon")
         return None
-
-    if force_keyring_migration:
-        if not await migrate_keys(root_path, True):
-            await daemon.close()
-            sys.exit(1)
 
     for service in services_for_groups(group):
         if await daemon.is_running(service_name=service):

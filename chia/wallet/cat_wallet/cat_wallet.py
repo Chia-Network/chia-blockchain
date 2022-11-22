@@ -5,9 +5,9 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -33,20 +33,21 @@ from chia.wallet.cat_wallet.cat_utils import (
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
+from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
@@ -54,7 +55,6 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
