@@ -1,15 +1,15 @@
 from __future__ import annotations
-import warnings
 
+import warnings
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from blspy import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.streamable import Streamable, streamable_from_dict, recurse_jsonify, streamable
+from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_spend import CoinSpend

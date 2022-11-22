@@ -2,7 +2,7 @@ import random
 from pathlib import Path
 
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar
+from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar, Callable
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
@@ -174,7 +174,11 @@ class SpendSim:
             return None
         return simple_solution_generator(bundle)
 
-    async def farm_block(self, puzzle_hash: bytes32 = bytes32(b"0" * 32)) -> Tuple[List[Coin], List[Coin]]:
+    async def farm_block(
+        self,
+        puzzle_hash: bytes32 = bytes32(b"0" * 32),
+        item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
+    ) -> Tuple[List[Coin], List[Coin]]:
         # Fees get calculated
         fees = uint64(0)
         if self.mempool_manager.mempool.spends:
@@ -206,7 +210,7 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
 
                 if result is not None:
                     bundle, additions, removals = result
@@ -214,12 +218,12 @@ class SpendSim:
                     return_additions = additions
                     return_removals = removals
 
-                await self.mempool_manager.coin_store._add_coin_records(
-                    [self.new_coin_record(addition) for addition in additions]
-                )
-                await self.mempool_manager.coin_store._set_spent(
-                    [r.name() for r in removals], uint32(self.block_height + 1)
-                )
+                    await self.mempool_manager.coin_store._add_coin_records(
+                        [self.new_coin_record(addition) for addition in additions]
+                    )
+                    await self.mempool_manager.coin_store._set_spent(
+                        [r.name() for r in removals], uint32(self.block_height + 1)
+                    )
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
@@ -275,8 +279,9 @@ class SimClient:
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
+        assert self.service.mempool_manager.peak
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
-            spend_bundle, cost_result, spend_bundle.name()
+            spend_bundle, cost_result, spend_bundle.name(), self.service.mempool_manager.peak.height
         )
         return status, error
 

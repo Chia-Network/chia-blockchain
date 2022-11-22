@@ -2170,6 +2170,8 @@ class FullNode:
                     f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
                     f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
                 )
+                # Reset farmer response timer for sub slot (SP 0)
+                self.signage_point_times[0] = time.time()
                 # Notify full nodes of the new sub-slot
                 broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                     request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
@@ -2240,7 +2242,10 @@ class FullNode:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
-                cost, status, error = await self.mempool_manager.add_spend_bundle(transaction, cost_result, spend_name)
+                assert self.mempool_manager.peak
+                cost, status, error = await self.mempool_manager.add_spend_bundle(
+                    transaction, cost_result, spend_name, self.mempool_manager.peak.height
+                )
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(
                     f"Added transaction to mempool: {spend_name} mempool size: "
