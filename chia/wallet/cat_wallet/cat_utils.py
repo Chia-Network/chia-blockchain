@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import dataclasses
-from typing import List, Iterator, Optional
+from typing import Iterator, List, Optional
 
 from blspy import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
