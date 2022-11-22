@@ -4,7 +4,7 @@ import asyncio
 import logging
 from collections import OrderedDict as orderedDict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, OrderedDict, Set, Tuple
+from typing import Dict, List, Optional, OrderedDict, Set
 
 import typing_extensions
 
@@ -12,6 +12,13 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint128
 
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class Peak:
+    header_hash: bytes32
+    height: uint32
+    weight: uint128
 
 
 @typing_extensions.final
@@ -22,27 +29,15 @@ class SyncStore:
     long_sync: bool = False
     # Header hash : peer node id
     peak_to_peer: OrderedDict[bytes32, Set[bytes32]] = field(default_factory=orderedDict)
-    # peer node id : [header_hash, height, weight]
-    peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]] = field(default_factory=dict)
-    # Peak hash we are syncing towards
-    sync_target_header_hash: Optional[bytes32] = None
-    # Peak height we are syncing towards
-    sync_target_height: Optional[uint32] = None
+    # peer node id : Peak
+    peer_to_peak: Dict[bytes32, Peak] = field(default_factory=dict)
+    # Peak we are syncing towards
+    target_peak: Optional[Peak] = None
     peers_changed: asyncio.Event = field(default_factory=asyncio.Event)
     # Set of nodes which we are batch syncing from
     batch_syncing: Set[bytes32] = field(default_factory=set)
     # Set of nodes which we are backtrack syncing from, and how many threads
     backtrack_syncing: Dict[bytes32, int] = field(default_factory=dict)
-
-    def set_peak_target(self, peak_hash: bytes32, target_height: uint32) -> None:
-        self.sync_target_header_hash = peak_hash
-        self.sync_target_height = target_height
-
-    def get_sync_target_hash(self) -> Optional[bytes32]:
-        return self.sync_target_header_hash
-
-    def get_sync_target_height(self) -> Optional[uint32]:
-        return self.sync_target_height
 
     def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
@@ -66,7 +61,7 @@ class SyncStore:
         Adds a record that a certain peer has a block.
         """
 
-        if header_hash == self.sync_target_header_hash:
+        if self.target_peak is not None and header_hash == self.target_peak.header_hash:
             self.peers_changed.set()
         if header_hash in self.peak_to_peer:
             self.peak_to_peer[header_hash].add(peer_id)
@@ -75,11 +70,11 @@ class SyncStore:
             if len(self.peak_to_peer) > 256:  # nice power of two
                 item = self.peak_to_peer.popitem(last=False)  # Remove the oldest entry
                 # sync target hash is used throughout the sync process and should not be deleted.
-                if item[0] == self.sync_target_header_hash:
+                if self.target_peak is not None and item[0] == self.target_peak.header_hash:
                     self.peak_to_peer[item[0]] = item[1]  # Put it back in if it was the sync target
                     self.peak_to_peer.popitem(last=False)  # Remove the oldest entry again
         if new_peak:
-            self.peer_to_peak[peer_id] = (header_hash, height, weight)
+            self.peer_to_peak[peer_id] = Peak(header_hash, height, weight)
 
     def get_peers_that_have_peak(self, header_hashes: List[bytes32]) -> Set[bytes32]:
         """
@@ -93,19 +88,19 @@ class SyncStore:
                     node_ids.add(node_id)
         return node_ids
 
-    def get_peak_of_each_peer(self) -> Dict[bytes32, Tuple[bytes32, uint32, uint128]]:
+    def get_peak_of_each_peer(self) -> Dict[bytes32, Peak]:
         """
         Returns: dictionary of peer id to peak information.
         """
 
         ret = {}
-        for peer_id, v in self.peer_to_peak.items():
-            if v[0] not in self.peak_to_peer:
+        for peer_id, peak in self.peer_to_peak.items():
+            if peak.header_hash not in self.peak_to_peer:
                 continue
-            ret[peer_id] = v
+            ret[peer_id] = peak
         return ret
 
-    def get_heaviest_peak(self) -> Optional[Tuple[bytes32, uint32, uint128]]:
+    def get_heaviest_peak(self) -> Optional[Peak]:
         """
         Returns: the header_hash, height, and weight of the heaviest block that one of our peers has notified
         us of.
@@ -113,18 +108,14 @@ class SyncStore:
 
         if len(self.peer_to_peak) == 0:
             return None
-        heaviest_peak_hash: Optional[bytes32] = None
-        heaviest_peak_weight: uint128 = uint128(0)
-        heaviest_peak_height: Optional[uint32] = None
-        for peer_id, (peak_hash, height, weight) in self.peer_to_peak.items():
-            if peak_hash not in self.peak_to_peer:
+        heaviest_peak: Optional[Peak] = None
+        for peak in self.peer_to_peak.values():
+            if peak.header_hash not in self.peak_to_peer:
                 continue
-            if heaviest_peak_hash is None or weight > heaviest_peak_weight:
-                heaviest_peak_hash = peak_hash
-                heaviest_peak_weight = weight
-                heaviest_peak_height = height
-        assert heaviest_peak_hash is not None and heaviest_peak_weight is not None and heaviest_peak_height is not None
-        return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
+            if heaviest_peak is None or peak.weight > heaviest_peak.weight:
+                heaviest_peak = peak
+        assert heaviest_peak is not None
+        return heaviest_peak
 
     async def clear_sync_info(self) -> None:
         """

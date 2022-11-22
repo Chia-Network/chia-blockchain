@@ -1,4 +1,5 @@
-import aiosqlite
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -9,6 +10,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
+import aiosqlite
 from blspy import G1Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -43,15 +45,14 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
-    master_sk_to_wallet_sk,
-    master_sk_to_wallet_sk_unhardened,
-    master_sk_to_wallet_sk_intermediate,
     _derive_path,
-    master_sk_to_wallet_sk_unhardened_intermediate,
     _derive_path_unhardened,
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_intermediate,
+    master_sk_to_wallet_sk_unhardened,
+    master_sk_to_wallet_sk_unhardened_intermediate,
 )
 from chia.wallet.did_wallet.did_info import DIDInfo
-from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -66,10 +67,11 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import last_change_height_cs, PeerRequestException
+from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
@@ -79,11 +81,11 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
+from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 class WalletStateManager:

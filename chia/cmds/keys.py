@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-import sys
 from typing import Optional, Tuple
 
 import click
@@ -13,14 +11,9 @@ def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
     from pathlib import Path
 
-    from .keys_funcs import migrate_keys
-
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
-
-    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(root_path, True)):
-        sys.exit(1)
 
 
 @keys_cmd.command("generate", short_help="Generates and adds a key to keychain")
@@ -41,7 +34,7 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("show", short_help="Displays all the keys in keychain")
+@keys_cmd.command("show", short_help="Displays all the keys in keychain or the key with the given fingerprint")
 @click.option(
     "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
 )
@@ -64,11 +57,19 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--fingerprint",
+    "-f",
+    help="Enter the fingerprint of the key you want to view",
+    type=int,
+    required=False,
+    default=None,
+)
 @click.pass_context
-def show_cmd(ctx: click.Context, show_mnemonic_seed, non_observer_derivation, json):
-    from .keys_funcs import show_all_keys
+def show_cmd(ctx: click.Context, show_mnemonic_seed, non_observer_derivation, json, fingerprint):
+    from .keys_funcs import show_keys
 
-    show_all_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json)
+    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
@@ -224,14 +225,6 @@ def verify_cmd(message: str, public_key: str, signature: str):
     from .keys_funcs import verify
 
     verify(message, public_key, signature)
-
-
-@keys_cmd.command("migrate", short_help="Attempt to migrate keys to the Chia keyring")
-@click.pass_context
-def migrate_cmd(ctx: click.Context):
-    from .keys_funcs import migrate_keys
-
-    asyncio.run(migrate_keys(ctx.obj["root_path"]))
 
 
 @keys_cmd.group("derive", short_help="Derive child keys or wallet addresses")

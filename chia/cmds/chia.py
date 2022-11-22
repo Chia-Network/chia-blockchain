@@ -42,24 +42,17 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the keyring passphrase from")
-@click.option(
-    "--force-legacy-keyring-migration/--no-force-legacy-keyring-migration",
-    default=True,
-    help="Force legacy keyring migration. Legacy keyring support will be removed in an upcoming version!",
-)
 @click.pass_context
 def cli(
     ctx: click.Context,
     root_path: str,
     keys_root_path: Optional[str] = None,
     passphrase_file: Optional[TextIOWrapper] = None,
-    force_legacy_keyring_migration: bool = True,
 ) -> None:
     from pathlib import Path
 
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
-    ctx.obj["force_legacy_keyring_migration"] = force_legacy_keyring_migration
 
     # keys_root_path and passphrase_file will be None if the passphrase options have been
     # scrubbed from the CLI options
