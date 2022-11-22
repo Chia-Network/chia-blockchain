@@ -5,6 +5,7 @@ from typing import List
 
 import pytest
 from blspy import AugSchemeMPL
+from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
@@ -15,6 +16,8 @@ from chia.simulator.block_tools import get_signage_point, test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
@@ -137,6 +140,7 @@ class TestRpc:
             assert len(await client.get_all_mempool_items()) == 0
             assert len(await client.get_all_mempool_tx_ids()) == 0
             assert (await client.get_mempool_item_by_tx_id(spend_bundle.name())) is None
+            assert (await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)) is None
 
             await client.push_tx(spend_bundle)
             coin = spend_bundle.additions()[0]
@@ -155,6 +159,27 @@ class TestRpc:
                 == spend_bundle
             )
             assert (await client.get_coin_record_by_name(coin.name())) is None
+
+            # Verify that the include_pending arg to get_mempool_item_by_tx_id works
+            coin_to_spend_pending = list(blocks[-1].get_included_reward_coins())[1]
+            ahr = ConditionOpcode.ASSERT_HEIGHT_RELATIVE  # to force pending/potential
+            condition_dic = {ahr: [ConditionWithArgs(ahr, [int_to_bytes(100)])]}
+            spend_bundle_pending = wallet.generate_signed_transaction(
+                coin_to_spend_pending.amount,
+                ph_receiver,
+                coin_to_spend_pending,
+                condition_dic=condition_dic,
+            )
+            await client.push_tx(spend_bundle_pending)
+            assert (
+                await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)
+            ) is None  # not strictly in the mempool
+            assert (
+                SpendBundle.from_json_dict(
+                    (await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True))["spend_bundle"]
+                )
+                == spend_bundle_pending  # pending entry into mempool, so include_pending fetches
+            )
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
