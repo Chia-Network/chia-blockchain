@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import dataclasses
+
 import pytest
 
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.weight_proof import WeightProof
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from chia.simulator.block_tools import test_constants
 from tests.util.db_connection import DBConnection
 
 

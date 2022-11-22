@@ -1,4 +1,6 @@
-from typing import Any, Dict, Optional, List
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
 
 import pytest
 from blspy import G2Element
@@ -12,15 +14,15 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
-    construct_cat_puzzle,
     SpendableCAT,
+    construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
-from chia.wallet.trading.offer import Offer, NotarizedPayment
+from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.trading.offer import NotarizedPayment, Offer
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
