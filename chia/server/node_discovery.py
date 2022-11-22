@@ -48,7 +48,6 @@ class FullNodeDiscovery:
         log,
     ):
         self.server: ChiaServer = server
-        self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.legacy_peer_db_path = peer_store_resolver.legacy_peer_db_path
@@ -134,9 +133,6 @@ class FullNodeDiscovery:
                 task.cancel()
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
-
-    def add_message(self, message, data):
-        self.message_queue.put_nowait((message, data))
 
     async def on_connect(self, peer: WSChiaConnection):
         if (
