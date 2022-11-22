@@ -553,11 +553,17 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash].spend_bundle
         return None
 
-    def get_mempool_item(self, bundle_hash: bytes32) -> Optional[MempoolItem]:
-        """Returns a MempoolItem if it's inside one the mempools"""
-        if bundle_hash in self.mempool.spends:
-            return self.mempool.spends[bundle_hash]
-        return None
+    def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
+        """
+        Returns a MempoolItem if it's inside one the mempools.
+
+        If include_pending is specified, also check the PENDING cache.
+        """
+        item = self.mempool.spends.get(bundle_hash, None)
+        if not item and include_pending:
+            # no async lock needed since we're not mutating the potential_cache
+            item = self.potential_cache._txs.get(bundle_hash, None)
+        return item
 
     async def new_peak(
         self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]

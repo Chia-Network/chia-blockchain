@@ -231,9 +231,11 @@ class FullNodeRpcClient(RpcClient):
             converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
         return converted
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32, include_pending: bool = False) -> Optional[Dict]:
         try:
-            response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
+            response = await self.fetch(
+                "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
+            )
             return response["mempool_item"]
         except Exception:
             return None
