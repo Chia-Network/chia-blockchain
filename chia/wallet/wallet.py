@@ -607,9 +607,12 @@ class Wallet:
                         OuterDriver(),
                         # TODO: this is hacky, but works because we only have one inner wallet
                         InnerDriver(
-                            calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                                coin.puzzle_hash
-                            ), DEFAULT_HIDDEN_PUZZLE_HASH)
+                            calculate_synthetic_public_key(
+                                await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                                    coin.puzzle_hash
+                                ),
+                                DEFAULT_HIDDEN_PUZZLE_HASH,
+                            )
                         ),
                     )
                 )
@@ -634,7 +637,12 @@ class Wallet:
                 Solver({}),
                 OuterDriver(),
                 InnerDriver(
-                    calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash), DEFAULT_HIDDEN_PUZZLE_HASH)
+                    calculate_synthetic_public_key(
+                        await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                            coin.puzzle_hash
+                        ),
+                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                    )
                 ),
             )
             for coin in additional_coins
@@ -672,9 +680,7 @@ class Wallet:
             actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
             actions.extend([Graftroot(*graftroot.as_iter()) for graftroot in metadata])
         else:
-            actions.extend(
-                [Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()]
-            )
+            actions.extend([Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()])
 
         return InnerDriver(G1Element.from_bytes(curried_args.first().as_python())), actions, Solver({})
 

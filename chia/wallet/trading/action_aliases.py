@@ -412,15 +412,15 @@ class RequestPayment:
                         ),
                     ]
                 )
-            assertion: Program = Program.to([
-                63,
-                Announcement(
-                    puzzle_reveal.get_tree_hash(),
-                    Program.to(
-                        (self.nonce, [p.as_condition_args() for p in self.payments])
-                    ).get_tree_hash(),
-                ).name(),
-            ])
+            assertion: Program = Program.to(
+                [
+                    63,
+                    Announcement(
+                        puzzle_reveal.get_tree_hash(),
+                        Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
+                    ).name(),
+                ]
+            )
             # (mod (inner_puz) (qq (c (q . assertion) (a (q . (unquote inner_puz)) 1))))
             # (c (q . 4) (c (q 1 . "assertion") (c (c (q . 2) (c (c (q . 1) 2) (q 1))) ())))
             return Program.to([4, (1, 4), [4, (1, (1, assertion)), [4, [4, (1, 2), [4, [4, (1, 1), 2], [1, 1]]], []]]])

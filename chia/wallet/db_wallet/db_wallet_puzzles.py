@@ -253,6 +253,16 @@ class RequireDLInclusion:
                 all_proofs.append(proofs_of_inclusion)
                 all_roots.append(proved_root)
 
+            potential_inner_puzzles: List[bytes32] = [
+                innerpuz
+                for launcher_id, expected_root in zip(self.launcher_ids, all_roots)
+                for innerpuz, root in singleton_to_innerpuzhashs_and_roots[launcher_id]
+                if root == expected_root
+            ]
+            # This is a hack to fix an edge case where you do a metadata update to the same root then announce it
+            # If it causes issues, we should probably inspect the conditions
+            if len(potential_inner_puzzles) > len(self.launcher_ids):
+                potential_inner_puzzles = [potential_inner_puzzles[-1]]
             return Graftroot(
                 self.construct_puzzle_wrapper(),
                 # (list proofs_of_inclusion new_metadatas new_metadata_updaters new_inner_puzs inner_solution)
@@ -268,15 +278,7 @@ class RequireDLInclusion:
                                 (1, [ACS_MU_PH] * len(self.launcher_ids)),
                                 [
                                     4,
-                                    (
-                                        1,
-                                        [
-                                            innerpuz
-                                            for launcher_id, expected_root in zip(self.launcher_ids, all_roots)
-                                            for innerpuz, root in singleton_to_innerpuzhashs_and_roots[launcher_id]
-                                            if root == expected_root
-                                        ],
-                                    ),
+                                    (1, potential_inner_puzzles),
                                     [4, 2, None],
                                 ],
                             ],

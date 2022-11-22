@@ -359,6 +359,37 @@ def uncurry_to_mod(program: Program, target_mod: Program) -> List[Program]:
     return curried_args
 
 
+def request_payment_to_legacy_encoding(action: RequestPayment, add_nonce: Optional[bytes32] = None) -> CoinSpend:
+    puzzle_reveal: Program = OFFER_MOD
+    for typ in action.asset_types:
+        puzzle_reveal = Program.to(
+            [
+                2,
+                (1, typ["mod"]),
+                RequestPayment.build_environment(
+                    typ["solution_template"],
+                    typ["committed_args"],
+                    typ["committed_args"],
+                    puzzle_reveal,
+                ),
+            ]
+        )
+
+    dummy_solution: Program = Program.to(
+        [
+            (
+                action.nonce if add_nonce is None or action.nonce is not None else add_nonce,
+                [p.as_condition_args() for p in action.payments],
+            )
+        ]
+    )
+    return CoinSpend(
+        Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)),
+        puzzle_reveal,
+        dummy_solution,
+    )
+
+
 async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
     new_spends: List[CoinSpend] = []
     for spend in bundle.coin_spends:
@@ -400,31 +431,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             else:
                 if action.name() == RequestPayment.name():
                     # Step 5: Add the dummy spend that used to encode the requested payment
-                    puzzle_reveal: Program = OFFER_MOD
-                    for typ in action.asset_types:
-                        puzzle_reveal = Program.to(
-                            [
-                                2,
-                                (1, typ["mod"]),
-                                RequestPayment.build_environment(
-                                    typ["solution_template"],
-                                    typ["committed_args"],
-                                    typ["committed_args"],
-                                    puzzle_reveal,
-                                ),
-                            ]
-                        )
-
-                    dummy_solution: Program = Program.to(
-                        [(action.nonce, [p.as_condition_args() for p in action.payments])]
-                    )
-                    new_spends.append(
-                        CoinSpend(
-                            Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)),
-                            puzzle_reveal,
-                            dummy_solution,
-                        )
-                    )
+                    new_spends.append(request_payment_to_legacy_encoding(action))
                 all_other_actions.append(action.to_solver())
 
         if len(dl_graftroot_actions) > 1:
@@ -635,7 +642,9 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                 ).name()
                 new_index = solution_bytes.find(announcement_hash)
                 if new_index != -1:
-                    announcement_hash_index = new_index if announcement_hash_index == -1 else min(announcement_hash_index, new_index)
+                    announcement_hash_index = (
+                        new_index if announcement_hash_index == -1 else min(announcement_hash_index, new_index)
+                    )
                     asset_types: List[Solver] = legacy_rp_puzzle_to_asset_types(
                         requested_spend.puzzle_reveal.to_program()
                     )
@@ -659,7 +668,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                 )
             )
         elif announcement_hash_index != -1:
-            delegated_puzzle = Program.from_bytes(solution_bytes[announcement_hash_index - 8:])
+            delegated_puzzle = Program.from_bytes(solution_bytes[announcement_hash_index - 8 :])
         else:
             new_spends.append(spend)
             continue
@@ -745,6 +754,7 @@ async def spends_from_actions_and_infos(
 
     return actions_left, coin_spends
 
+
 # Using a place holder nonce to replace with the correct nonce at the end of spend construction (sha256 "bundle nonce")
 BUNDLE_NONCE: bytes32 = bytes.fromhex("bba981ec36ebb2a0df2052893646b01ffb483128626b68e70f767f48fc5fbdbb")
 
@@ -754,6 +764,7 @@ def nonce_payments(action: Solver) -> WalletAction:
         return potentially_add_nonce(RequestPayment.from_solver(action), BUNDLE_NONCE).to_solver()
     else:
         return action
+
 
 async def build_spend(wallet_state_manager: Any, solver: Solver, previous_actions: List[CoinSpend]) -> List[CoinSpend]:
     bundle_actions_left: List[Solver] = solver["bundle_actions"]
@@ -816,8 +827,8 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
         previous_actions.extend(coin_spends)
 
-    replacement_nonce: bytes32 = nonce_coin_list([cs.coin for cs in previous_actions])
     spent_coins: List[Coin] = [cs.coin for cs in previous_actions]
+    replacement_nonce: bytes32 = nonce_coin_list(spent_coins)
     nonced_previous_actions: List[CoinSpend] = []
     for i, spend in enumerate(previous_actions):
         next_coin: Coin = spent_coins[0 if i == len(spent_coins) - 1 else i + 1]
@@ -877,7 +888,7 @@ async def deconstruct_spend(
     for typs, amount, do in zip(asset_types, amounts, action_lists):
         grouped_actions.append(Solver({"with": {"asset_types": typs, "amount": amount}, "do": do}))
 
-    return Solver({"actions": grouped_actions})
+    return Solver({"actions": grouped_actions, "bundle_actions": []})
 
 
 async def generate_summary_complement(
@@ -1023,7 +1034,6 @@ async def solve_spend(wallet_state_manager: Any, bundle: SpendBundle, environmen
         # Step 3: Attempt to find matching aliases for the actions
         info, actions = matches[0]
         actions = info.alias_actions(actions, wallet_state_manager.action_aliases)
-
         # Step 4: Augment each action with the environment
         augmented_actions: List[Solver] = [action.augment(environment).to_solver() for action in actions]
         remaining_actions, spend = await info.create_spend_for_actions(

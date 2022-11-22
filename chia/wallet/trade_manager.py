@@ -26,6 +26,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.action_aliases import RequestPayment
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.offer_request import (
     old_request_to_new,
@@ -33,7 +34,9 @@ from chia.wallet.trading.offer_request import (
     build_spend,
     deconstruct_spend,
     generate_summary_complement,
+    nonce_coin_list,
     offer_to_spend,
+    request_payment_to_legacy_encoding,
     solve_spend,
     spend_to_offer_bytes,
 )
@@ -722,18 +725,35 @@ class TradeManager:
                 deconstructed_spend,
                 modified_solver,
             )
+            complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
             full_spend: SpendBundle = SpendBundle.aggregate(
                 [
-                    await self.create_spend_for_actions(complement_summary),
+                    complement_spend,
                     offer_to_spend(offer),
                 ]
             )
             final_spend_bundle: SpendBundle = await solve_spend(self.wallet_state_manager, full_spend, modified_solver)
-            complete_offer: Offer = Offer.from_bytes(
-                await spend_to_offer_bytes(self.wallet_state_manager, final_spend_bundle)
+            offer_no_payments: Offer = Offer.from_spend_bundle(final_spend_bundle)
+            payment_spends: List[CoinSpend] = [
+                request_payment_to_legacy_encoding(
+                    RequestPayment.from_solver(action),
+                    add_nonce=nonce_coin_list([cs.coin for cs in complement_spend.coin_spends]),
+                )
+                for total_action in [
+                    *deconstructed_spend["actions"],
+                    *complement_summary["actions"],
+                    *deconstructed_spend["bundle_actions"],
+                    *complement_summary["bundle_actions"],
+                ]
+                for action in (total_action["do"] if "do" in total_action else [total_action])
+                if action["type"] == RequestPayment.name()
+            ]
+            complete_offer = Offer.from_spend_bundle(
+                SpendBundle(
+                    [*offer_no_payments.bundle.coin_spends, *payment_spends],
+                    offer_no_payments.bundle.aggregated_signature,
+                )
             )
-            breakpoint()
-            tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, False)
         else:
             take_offer_dict: Dict[Union[bytes32, int], int] = {}
             arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
@@ -767,10 +787,10 @@ class TradeManager:
 
             complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
 
-            self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
-            assert complete_offer.is_valid()
-            final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
-            tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
+        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
+        assert complete_offer.is_valid()
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
+        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
 
         await self.maybe_create_wallets_for_offer(complete_offer)
 

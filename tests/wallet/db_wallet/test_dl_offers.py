@@ -269,6 +269,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
+    temp_2 = Offer.from_bytes(offer_maker.offer).bundle
     temp = await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer))
     # assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
     #     "offered": [

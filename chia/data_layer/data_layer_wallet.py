@@ -48,7 +48,10 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_puzzles import UpdateMetadata
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE_HASH, calculate_synthetic_public_key
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_public_key,
+)
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
@@ -1381,7 +1384,9 @@ class DataLayerWallet:
                 if launcher_id.as_python() == expected_launcher_id:
                     metadata = Program.to([root])
                     parent_lineage = LineageProof(
-                        parent_spend.coin.parent_coin_info, create_host_layer_puzzle(innerpuz, root).get_tree_hash(), parent_spend.coin.amount
+                        parent_spend.coin.parent_coin_info,
+                        create_host_layer_puzzle(innerpuz, root).get_tree_hash(),
+                        parent_spend.coin.amount,
                     )
                     inner_solution: Program = parent_spend.solution.to_program().at("rrff")
                     for condition in innerpuz.run(inner_solution).as_iter():
@@ -1406,9 +1411,12 @@ class DataLayerWallet:
                             ),
                             # TODO: this is hacky, but works because we only have one inner wallet
                             StdInnerDriver(
-                                calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                                    inner_puzzle_hash
-                                ), DEFAULT_HIDDEN_PUZZLE_HASH)
+                                calculate_synthetic_public_key(
+                                    await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                                        inner_puzzle_hash
+                                    ),
+                                    DEFAULT_HIDDEN_PUZZLE_HASH,
+                                )
                             ),
                         )
                     ], Solver({})
@@ -1462,9 +1470,12 @@ class DataLayerWallet:
                 ),
                 # TODO: this is hacky, but works because we only have one inner wallet
                 StdInnerDriver(
-                    calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                        singleton_record.inner_puzzle_hash
-                    ), DEFAULT_HIDDEN_PUZZLE_HASH)
+                    calculate_synthetic_public_key(
+                        await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                            singleton_record.inner_puzzle_hash
+                        ),
+                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                    )
                 ),
             )
         ]
