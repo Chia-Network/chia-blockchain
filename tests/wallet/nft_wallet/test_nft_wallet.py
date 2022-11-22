@@ -979,7 +979,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-    await time_out_assert(15, len, 2, wallet_0.wallet_state_manager.wallets)
+    await time_out_assert(15, len, 3, wallet_0.wallet_state_manager.wallets)
     # Transfer NFT, wallet will be deleted
     resp = await api_0.nft_transfer_nft(
         dict(
