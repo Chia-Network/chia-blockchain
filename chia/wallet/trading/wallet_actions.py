@@ -44,6 +44,9 @@ class Condition:
             }
         )
 
+    def augment(self, environment: Solver) -> WalletAction:
+        return self
+
 
 @dataclass(frozen=True)
 class Graftroot:
@@ -74,3 +77,11 @@ class Graftroot:
                 "metadata": disassemble(self.metadata),
             }
         )
+
+    def augment(self, environment: Solver) -> WalletAction:
+        if "graftroot_edits" in environment:
+            for edit in environment["graftroot_edits"]:
+                if edit["puzzle_wrapper"] == self.puzzle_wrapper:
+                    return Graftroot.from_solver(edit)
+
+        return self

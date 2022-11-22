@@ -142,10 +142,27 @@ class RequireDLInclusion:
         )
 
     def de_alias(self) -> WalletAction:
-        NIL_LIST = Program.to([None] * len(self.launcher_ids))
         return Graftroot(
             self.construct_puzzle_wrapper(),
-            Program.to(None),
+            Program.to(
+                [
+                    4,
+                    Program.to(None),
+                    [
+                        4,
+                        Program.to(None),
+                        [
+                            4,
+                            Program.to(None),
+                            [
+                                4,
+                                Program.to(None),
+                                [4, 2, None],
+                            ],
+                        ],
+                    ],
+                ]
+            ),
             Program.to(None),
         )
 
@@ -242,19 +259,24 @@ class RequireDLInclusion:
                 Program.to(
                     [
                         4,
-                        all_proofs,
+                        (1, all_proofs),
                         [
                             4,
-                            [Program.to([root]) for root in all_roots],
+                            (1, [Program.to([root]) for root in all_roots]),
                             [
                                 4,
-                                [ACS_MU_PH] * len(self.launcher_ids),
+                                (1, [ACS_MU_PH] * len(self.launcher_ids)),
                                 [
                                     4,
-                                    [
-                                        singleton_to_innerpuzhashs_and_roots[launcher_id][0]
-                                        for launcher_id in self.launcher_ids
-                                    ],
+                                    (
+                                        1,
+                                        [
+                                            innerpuz
+                                            for launcher_id, expected_root in zip(self.launcher_ids, all_roots)
+                                            for innerpuz, root in singleton_to_innerpuzhashs_and_roots[launcher_id]
+                                            if root == expected_root
+                                        ],
+                                    ),
                                     [4, 2, None],
                                 ],
                             ],

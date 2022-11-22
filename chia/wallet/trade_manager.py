@@ -729,7 +729,10 @@ class TradeManager:
                 ]
             )
             final_spend_bundle: SpendBundle = await solve_spend(self.wallet_state_manager, full_spend, modified_solver)
-            complete_offer: Offer = Offer.from_bytes(spend_to_offer_bytes(final_spend_bundle))
+            complete_offer: Offer = Offer.from_bytes(
+                await spend_to_offer_bytes(self.wallet_state_manager, final_spend_bundle)
+            )
+            breakpoint()
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, False)
         else:
             take_offer_dict: Dict[Union[bytes32, int], int] = {}
@@ -855,7 +858,7 @@ class TradeManager:
                         unsigned_spend = await self.create_spend_for_actions(
                             await old_request_to_new(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
                         )
-                        return Offer.from_bytes(spend_to_offer_bytes(unsigned_spend))
+                        return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, unsigned_spend))
 
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee, min_coin_amount

@@ -3,13 +3,14 @@ from typing import List, Optional, Protocol, TypeVar
 
 from clvm_tools.binutils import disassemble
 
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, Solver
-from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, CURRY, OFFER_MOD_HASH
+from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, CURRY, OFFER_MOD, OFFER_MOD_HASH
 from chia.wallet.trading.wallet_actions import Condition, Graftroot, WalletAction
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_coin_announcement,
@@ -390,26 +391,90 @@ class RequestPayment:
         return Program.to(
             (
                 (self.nonce, [p.as_condition_args() for p in self.payments]),
-                (
+                [
                     [typ["mod"] for typ in self.asset_types],
+                    [typ["solution_template"] for typ in self.asset_types],
                     [typ["committed_args"] for typ in self.asset_types],
-                ),
+                ],
             )
         )
 
     def construct_puzzle_wrapper(self) -> Program:
-        return CURRY.curry(
-            ADD_WRAPPED_ANNOUNCEMENT.curry(
-                [bytes32(Program.to(typ["mod"]).get_tree_hash()) for typ in self.asset_types],
-                [typ["solution_template"] for typ in self.asset_types],
-                [
-                    walk_tree_and_hash_curried(typ["committed_args"], typ["solution_template"])
-                    for typ in self.asset_types
-                ],
-                OFFER_MOD_HASH,
-                Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
+        if self.check_for_optimization():
+            puzzle_reveal: Program = OFFER_MOD
+            for typ in self.asset_types:
+                puzzle_reveal = Program.to(
+                    [
+                        2,
+                        (1, typ["mod"]),
+                        RequestPayment.build_environment(
+                            typ["solution_template"], typ["committed_args"], typ["committed_args"], puzzle_reveal
+                        ),
+                    ]
+                )
+            assertion: Program = Program.to([
+                63,
+                Announcement(
+                    puzzle_reveal.get_tree_hash(),
+                    Program.to(
+                        (self.nonce, [p.as_condition_args() for p in self.payments])
+                    ).get_tree_hash(),
+                ).name(),
+            ])
+            # (mod (inner_puz) (qq (c (q . assertion) (a (q . (unquote inner_puz)) 1))))
+            # (c (q . 4) (c (q 1 . "assertion") (c (c (q . 2) (c (c (q . 1) 2) (q 1))) ())))
+            return Program.to([4, (1, 4), [4, (1, (1, assertion)), [4, [4, (1, 2), [4, [4, (1, 1), 2], [1, 1]]], []]]])
+        else:
+            return CURRY.curry(
+                ADD_WRAPPED_ANNOUNCEMENT.curry(
+                    [bytes32(Program.to(typ["mod"]).get_tree_hash()) for typ in self.asset_types],
+                    [typ["solution_template"] for typ in self.asset_types],
+                    [
+                        walk_tree_and_hash_curried(typ["committed_args"], typ["solution_template"])
+                        for typ in self.asset_types
+                    ],
+                    OFFER_MOD_HASH,
+                    Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
+                )
             )
-        )
+
+    def construct_solution_wrapper(self, solved_args: List[Program]) -> Program:
+        if self.check_for_optimization():
+            return Program.to(2)
+        else:
+            return Graftroot(
+                self.construct_puzzle_wrapper(),
+                Program.to([4, 2, [1, solved_args]]),  # (c 2 (q solved_args))
+                self.construct_metadata(),
+            )
+
+    def check_for_optimization(self) -> bool:
+        """
+        If we're specifically requesting asset types that are fully complete, we can simplify this graftroot down to the
+        condition it will invariably produce
+        """
+        return not any(["-1" in typ["solution_template"] for typ in self.asset_types])
+
+    @classmethod
+    def build_environment(
+        template: Program, committed_values: Program, solved_values: Program, puzzle_reveal: Program
+    ) -> Program:
+        if template.atom is None:
+            return Program.to(
+                [
+                    4,
+                    RequestPayment.build_environment(committed_values.first(), template.first(), solved_values.first()),
+                    RequestPayment.build_environment(committed_values.rest(), template.rest(), solved_values.rest()),
+                ]
+            )
+        elif template == Program.to(1):
+            return Program.to((1, committed_values)).get_tree_hash()
+        elif template == Program.to(-1):
+            return Program.to((1, solved_values)).get_tree_hash()
+        elif template == Program.to(0):
+            return Program.to((1, puzzle_reveal))
+        elif template == Program.to("$"):
+            return Program.to(1)
 
     @staticmethod
     def action_name() -> str:
@@ -420,12 +485,6 @@ class RequestPayment:
         if action.name() != Graftroot.name():
             raise ValueError("Can only parse a RequestPayment from Graftroot")
 
-        curry_mod, function_to_curry = action.puzzle_wrapper.uncurry()
-        add_announcment_mod, curried_args = function_to_curry.first().uncurry()
-        if curry_mod != CURRY or add_announcment_mod != ADD_WRAPPED_ANNOUNCEMENT:
-            raise ValueError("The parsed graftroot is not a requested payment")
-
-        _, solution_templates, _, _, _ = curried_args.as_iter()
         nonce_and_payments = action.metadata.first()
         nonce: Optional[bytes32] = (
             None if nonce_and_payments.first() == Program.to(None) else bytes32(nonce_and_payments.first().as_python())
@@ -434,7 +493,8 @@ class RequestPayment:
             Payment.from_condition(Program.to((51, condition))) for condition in nonce_and_payments.rest().as_iter()
         ]
         mods: Program = action.metadata.at("rf")
-        committed_args: Program = action.metadata.at("rr")
+        solution_templates: Program = action.metadata.at("rrf")
+        committed_args: Program = action.metadata.at("rrrf")
         asset_types: List[Solver] = [
             Solver(
                 {
@@ -475,9 +535,15 @@ class RequestPayment:
                     else:
                         return Graftroot(
                             self.construct_puzzle_wrapper(),
-                            Program.to([4, 2, [1, solved_args]]),  # (c 2 (q solved_args))
+                            # nothing specified means it will get optimized so it doesn't matter what we pass here
+                            self.construct_solution_wrapper(solved_args),
                             self.construct_metadata(),
                         )
                     continue
 
-        return self
+        return Graftroot(
+            self.construct_puzzle_wrapper(),
+            # nothing specified means it will get optimized so it doesn't matter what we pass here
+            self.construct_solution_wrapper([]),
+            self.construct_metadata(),
+        )

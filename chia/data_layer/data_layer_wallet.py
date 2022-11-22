@@ -48,6 +48,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_puzzles import UpdateMetadata
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import DEFAULT_HIDDEN_PUZZLE_HASH, calculate_synthetic_public_key
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
@@ -1367,8 +1368,10 @@ class DataLayerWallet:
             expected_launcher_id = bytes32(coin_spec["asset_id"])
         elif "asset_description" in coin_spec:
             expected_launcher_id = bytes32(coin_spec["asset_description"]["launcher_id"])
-        else:
+        elif "asset_types" in coin_spec:
             expected_launcher_id = bytes32(coin_spec["asset_types"][0]["committed_args"].at("frf").as_python())
+        else:
+            return [], coin_spec
 
         for coin in SpendBundle(previous_actions, G2Element()).not_ephemeral_additions():
             parent_spend: CoinSpend = next(cs for cs in previous_actions if cs.coin.name() == coin.parent_coin_info)
@@ -1378,7 +1381,7 @@ class DataLayerWallet:
                 if launcher_id.as_python() == expected_launcher_id:
                     metadata = Program.to([root])
                     parent_lineage = LineageProof(
-                        parent_spend.coin.parent_coin_info, innerpuz.get_tree_hash(), parent_spend.coin.amount
+                        parent_spend.coin.parent_coin_info, create_host_layer_puzzle(innerpuz, root).get_tree_hash(), parent_spend.coin.amount
                     )
                     inner_solution: Program = parent_spend.solution.to_program().at("rrff")
                     for condition in innerpuz.run(inner_solution).as_iter():
@@ -1389,24 +1392,26 @@ class DataLayerWallet:
                             new_metadata_info = condition.at("rf").run([None, None, condition.at("rrf")])
                             metadata = new_metadata_info.at("ff")
 
+                    new_root: bytes32 = bytes32(metadata.first().as_python())
+
                     return [
                         CoinInfo(
                             coin,
-                            Solver({"launcher_id": "0x" + expected_launcher_id.hex(), "root": "0x" + root.hex()}),
+                            Solver({"launcher_id": "0x" + expected_launcher_id.hex(), "root": "0x" + new_root.hex()}),
                             OuterDriver(
                                 expected_launcher_id,
-                                bytes32(metadata.first().as_python()),
+                                new_root,
                                 inner_puzzle_hash,
                                 parent_lineage,
                             ),
                             # TODO: this is hacky, but works because we only have one inner wallet
                             StdInnerDriver(
-                                await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                                calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
                                     inner_puzzle_hash
-                                )
+                                ), DEFAULT_HIDDEN_PUZZLE_HASH)
                             ),
                         )
-                    ]
+                    ], Solver({})
 
         # We didn't find the specified singleton in the previous spends so we just return nothing and the original spec
         return [], coin_spec
@@ -1420,8 +1425,10 @@ class DataLayerWallet:
             expected_launcher_id = bytes32(coin_spec["asset_id"])
         elif "asset_description" in coin_spec:
             expected_launcher_id = bytes32(coin_spec["asset_description"]["launcher_id"])
-        else:
+        elif "asset_types" in coin_spec:
             expected_launcher_id = bytes32(coin_spec["asset_types"][0]["committed_args"].at("frf").as_python())
+        else:
+            return []
 
         # Calling .get_dl_wallet here is a bit hacky but it's better than code duplication
         (
@@ -1455,9 +1462,9 @@ class DataLayerWallet:
                 ),
                 # TODO: this is hacky, but works because we only have one inner wallet
                 StdInnerDriver(
-                    await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                    calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
                         singleton_record.inner_puzzle_hash
-                    )
+                    ), DEFAULT_HIDDEN_PUZZLE_HASH)
                 ),
             )
         ]
@@ -1526,7 +1533,9 @@ class OuterDriver:
     async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
         return create_host_fullpuz(inner_puzzle, self.root, self.launcher_id)
 
-    async def construct_outer_solution(self, actions: List[WalletAction], inner_solution: Program) -> Program:
+    async def construct_outer_solution(
+        self, actions: List[WalletAction], inner_solution: Program, optimize: bool = False
+    ) -> Program:
         db_layer_sol = Program.to([inner_solution])
         full_sol = Program.to(
             [

@@ -23,8 +23,10 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
+    calculate_synthetic_public_key,
     MOD,
     puzzle_for_pk,
+    puzzle_for_synthetic_public_key,
     puzzle_hash_for_pk,
     solution_for_conditions,
     solution_for_delegated_puzzle,
@@ -605,9 +607,9 @@ class Wallet:
                         OuterDriver(),
                         # TODO: this is hacky, but works because we only have one inner wallet
                         InnerDriver(
-                            await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                            calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
                                 coin.puzzle_hash
-                            )
+                            ), DEFAULT_HIDDEN_PUZZLE_HASH)
                         ),
                     )
                 )
@@ -632,7 +634,7 @@ class Wallet:
                 Solver({}),
                 OuterDriver(),
                 InnerDriver(
-                    await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
+                    calculate_synthetic_public_key(await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash), DEFAULT_HIDDEN_PUZZLE_HASH)
                 ),
             )
             for coin in additional_coins
@@ -670,7 +672,9 @@ class Wallet:
             actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
             actions.extend([Graftroot(*graftroot.as_iter()) for graftroot in metadata])
         else:
-            actions.extend([Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()])
+            actions.extend(
+                [Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()]
+            )
 
         return InnerDriver(G1Element.from_bytes(curried_args.first().as_python())), actions, Solver({})
 
@@ -686,7 +690,9 @@ class OuterDriver:
     async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
         return inner_puzzle
 
-    async def construct_outer_solution(self, actions: List[WalletAction], inner_solution: Program) -> Program:
+    async def construct_outer_solution(
+        self, actions: List[WalletAction], inner_solution: Program, optimize: bool = False
+    ) -> Program:
         return inner_solution
 
     async def check_and_modify_actions(
@@ -712,8 +718,7 @@ class InnerDriver:
         return {}
 
     async def construct_inner_puzzle(self) -> Program:
-        # Getting .main_wallet here is a bit hacky but it's better than code duplication
-        return puzzle_for_pk(self.pubkey)
+        return puzzle_for_synthetic_public_key(self.pubkey)
 
     async def construct_inner_solution(self, actions: List[WalletAction], optimize: bool = False) -> Program:
         conditions: List[Program] = [cond.condition for cond in actions if cond.name() == Condition.name()]

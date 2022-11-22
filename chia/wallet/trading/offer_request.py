@@ -359,7 +359,104 @@ def uncurry_to_mod(program: Program, target_mod: Program) -> List[Program]:
     return curried_args
 
 
-def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
+async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
+    new_spends: List[CoinSpend] = []
+    for spend in bundle.coin_spends:
+        # Step 2: Get any wallets that claim to identify the puzzle
+        matches: List[Tuple[CoinInfo, List[WalletAction]]] = []
+        mod, curried_args = spend.puzzle_reveal.uncurry()
+        for wallet in wallet_state_manager.outer_wallets:
+            match = await wallet.match_spend(wallet_state_manager, spend, mod, curried_args)
+            if match is not None:
+                matches.append(match)
+
+        if matches == []:
+            continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
+        elif len(matches) > 1:
+            # QUESTION: Should we support this? Giving multiple interpretations?
+            raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
+
+        # Step 3: Attempt to find matching aliases for the actions
+        info, actions = matches[0]
+        actions = info.alias_actions(actions, wallet_state_manager.action_aliases)
+
+        # Step 4: Re-order the actions so that DL graftroots are the last applied (need to be outermost)
+        dl_graftroot_actions: List[Solver] = []
+        all_other_actions: List[Solver] = []
+        for action in actions:
+            if action.name() == RequireDLInclusion.name():
+                dl_graftroot_actions.append(action.to_solver())
+                # Step 5: Add the dummy spend that used to encode the requested payment
+                for launcher_id in action.launcher_ids:
+                    puzzle_reveal = create_host_fullpuz(OFFER_MOD, bytes32([0] * 32), launcher_id)
+                    dummy_solution = Program.to([(bytes32([0] * 32), [[bytes32([0] * 32), uint64(1), []]])])
+                    new_spends.append(
+                        CoinSpend(
+                            Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)),
+                            puzzle_reveal,
+                            dummy_solution,
+                        )
+                    )
+            else:
+                if action.name() == RequestPayment.name():
+                    # Step 5: Add the dummy spend that used to encode the requested payment
+                    puzzle_reveal: Program = OFFER_MOD
+                    for typ in action.asset_types:
+                        puzzle_reveal = Program.to(
+                            [
+                                2,
+                                (1, typ["mod"]),
+                                RequestPayment.build_environment(
+                                    typ["solution_template"],
+                                    typ["committed_args"],
+                                    typ["committed_args"],
+                                    puzzle_reveal,
+                                ),
+                            ]
+                        )
+
+                    dummy_solution: Program = Program.to(
+                        [(action.nonce, [p.as_condition_args() for p in action.payments])]
+                    )
+                    new_spends.append(
+                        CoinSpend(
+                            Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)),
+                            puzzle_reveal,
+                            dummy_solution,
+                        )
+                    )
+                all_other_actions.append(action.to_solver())
+
+        if len(dl_graftroot_actions) > 1:
+            raise ValueError("Legacy offers only support one graftroot for dl inclusions")
+
+        sorted_actions: List[WalletAction] = [*all_other_actions, *dl_graftroot_actions]
+
+        remaining_actions, spend = await info.create_spend_for_actions(
+            sorted_actions, wallet_state_manager.action_aliases
+        )
+
+        spend_solution: Program = spend.solution.to_program().at("rrf")
+        if spend_solution.atom is None and spend_solution.first() == Program.to("graftroot"):
+            if dl_graftroot_actions == []:
+                new_delegated_solution = Program.to(None)
+            else:
+                new_delegated_solution = Program.to([None, None, None, None, None])
+            spend = dataclasses.replace(
+                spend,
+                solution=Program.to(
+                    [spend.solution.to_program().first(), spend.solution.to_program().at("rf"), new_delegated_solution]
+                ),
+            )
+
+        if len(remaining_actions) > 0:
+            raise ValueError("Attempting to convert the spends to an offer resulted in being unable to spend a coin")
+        new_spends.append(spend)
+
+    return bytes(SpendBundle(new_spends, bundle.aggregated_signature))
+
+
+async def _spend_to_offer_bytes(_, bundle: SpendBundle) -> bytes:
     """
     This is a function to convert an unsigned spendbundle into a legacy offer so that old clients can parse it
     correctly. It only supports exactly what was supported at the time of its creation and will raise if there is
@@ -417,30 +514,16 @@ def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
                     delegated_puzzle,
                 ) = uncurry_to_mod(delegated_puzzle, delegated_puzzle_mod)
 
-                def build_environment(template: Program, values: Program, puzzle_reveal: Program) -> Program:
-                    if template.atom is None:
-                        return Program.to(
-                            [
-                                4,
-                                build_environment(values.first(), template.first()),
-                                build_environment(values.rest(), template.rest()),
-                            ]
-                        )
-                    elif template == Program.to(1):
-                        return Program.to((1, values)).get_tree_hash()
-                    elif template == Program.to(-1):
-                        raise ValueError("Offers do not support requested payments with partial information")
-                    elif template == Program.to(0):
-                        return Program.to((1, puzzle_reveal))
-                    elif template == Program.to("$"):
-                        return Program.to(1)
-
                 puzzle_reveal: Program = OFFER_MOD
                 for template, metadata in zip(templates.as_iter(), remaining_metadatas.at("frrfr").as_iter()):
                     mod: Program = metadata.first()
                     value_preimages: Program = metadata.rest()
                     puzzle_reveal = Program.to(
-                        [2, (1, mod), build_environment(template, value_preimages, puzzle_reveal)]
+                        [
+                            2,
+                            (1, mod),
+                            RequestPayment.build_environment(template, value_preimages, value_preimages, puzzle_reveal),
+                        ]
                     )
 
                 dummy_solution: Program = Program.to([remaining_metadatas.at("frrff")])
@@ -552,7 +635,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                 ).name()
                 new_index = solution_bytes.find(announcement_hash)
                 if new_index != -1:
-                    announcement_hash_index = min(announcement_hash_index, new_index)
+                    announcement_hash_index = new_index if announcement_hash_index == -1 else min(announcement_hash_index, new_index)
                     asset_types: List[Solver] = legacy_rp_puzzle_to_asset_types(
                         requested_spend.puzzle_reveal.to_program()
                     )
@@ -576,10 +659,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                 )
             )
         elif announcement_hash_index != -1:
-            condition_start_index = announcement_hash_index - 4
-            while solution_bytes[condition_start_index - 3 : condition_start_index] != b"ff01ff":
-                condition_start_index -= 37
-            delegated_puzzle = Program.from_bytes(solution_bytes[condition_start_index - 3 :])
+            delegated_puzzle = Program.from_bytes(solution_bytes[announcement_hash_index - 8:])
         else:
             new_spends.append(spend)
             continue
@@ -591,7 +671,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
         delegated_solution = graftroot_solution.at("rrf")
 
         metadata: Program = Program.to(None)
-        for alias in [*dl_inclusions, *requested_payments]:
+        for alias in [*requested_payments, *dl_inclusions]:
             graftroot = alias.de_alias()
             metadata = Program.to([graftroot.puzzle_wrapper, graftroot.solution_wrapper, graftroot.metadata]).cons(
                 metadata
@@ -602,7 +682,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
             inner_delegated_puzzle = inner_puzzle
         if announcement_hash_index != -1:
             for _ in requested_payments:
-                inner_delegated_puzzle = Program.to((1, inner_delegated_puzzle.rest().rest()))  # pop an announce off
+                inner_delegated_puzzle = inner_delegated_puzzle.at("rrfrfr")
 
         metadata = Program.to("graftroot").cons(Program.to(inner_delegated_puzzle).cons(metadata))
 
@@ -665,52 +745,51 @@ async def spends_from_actions_and_infos(
 
     return actions_left, coin_spends
 
+# Using a place holder nonce to replace with the correct nonce at the end of spend construction (sha256 "bundle nonce")
+BUNDLE_NONCE: bytes32 = bytes.fromhex("bba981ec36ebb2a0df2052893646b01ffb483128626b68e70f767f48fc5fbdbb")
+
+
+def nonce_payments(action: Solver) -> WalletAction:
+    if action["type"] == RequestPayment.name():
+        return potentially_add_nonce(RequestPayment.from_solver(action), BUNDLE_NONCE).to_solver()
+    else:
+        return action
 
 async def build_spend(wallet_state_manager: Any, solver: Solver, previous_actions: List[CoinSpend]) -> List[CoinSpend]:
-    coin_actions: Dict[Coin, List[WalletAction]] = {}
-
+    bundle_actions_left: List[Solver] = solver["bundle_actions"]
+    if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
+        bundle_actions_left = map(nonce_payments, bundle_actions_left)
     # Step 1: Determine which coins we need to complete the action
-    coin_groups: List[List[CoinInfo]] = []
     for action_spec in solver["actions"]:
         coin_spec: Solver = action_spec["with"]
         coin_infos: List[CoinInfo] = await wallet_state_manager.get_coin_infos_for_spec(coin_spec, previous_actions)
-        coin_groups.append(coin_infos)
 
-    # Step 2: Calculate what announcement each coin will have to make/assert for bundle coherence
-    flattened_coin_list: List[Coin] = [ci.coin for g in coin_groups for ci in g]
-    bundle_nonce: bytes32 = nonce_coin_list(flattened_coin_list)
-    coin_announcements: Dict[Coin, List[Solver]] = {}
-    for i, coin in enumerate(flattened_coin_list):
-        next_coin: Coin = flattened_coin_list[0 if i == len(flattened_coin_list) - 1 else i + 1]
-        coin_announcements[coin] = [
-            Solver(
-                {
-                    "type": "make_announcement",
-                    "announcement_type": "coin",
-                    "announcement_data": "0x" + bundle_nonce.hex(),
-                }
-            ),
-            Solver(
-                {
-                    "type": "assert_announcement",
-                    "announcement_type": "coin",
-                    "announcement_data": "0x" + bundle_nonce.hex(),
-                    "origin": "0x" + next_coin.name().hex(),
-                }
-            ),
-        ]
+        # Step 2: Calculate what announcement each coin will have to make/assert for bundle coherence
+        coin_announcements: Dict[Coin, List[Solver]] = {}
+        flattened_coin_list: List[Coin] = [ci.coin for ci in coin_infos]
+        for i, coin in enumerate(flattened_coin_list):
+            coin_announcements[coin] = [
+                Solver(
+                    {
+                        "type": "make_announcement",
+                        "announcement_type": "coin",
+                        "announcement_data": "0x" + BUNDLE_NONCE.hex(),
+                    }
+                ),
+                Solver(
+                    {
+                        "type": "assert_announcement",
+                        "announcement_type": "coin",
+                        "announcement_data": "0x" + BUNDLE_NONCE.hex(),
+                        # Using a placeholder to replace with the correct origin at the very end
+                        # (sha256tree (coin_id . "next coin"))
+                        "origin": "0x" + Program.to((coin.name(), "next coin")).get_tree_hash().hex(),
+                    }
+                ),
+            ]
 
-    # Step 3: Construct all of the spends based on the actions specified
-    def nonce_payments(action: Solver) -> WalletAction:
-        if action["type"] == RequestPayment.name():
-            return potentially_add_nonce(RequestPayment.from_solver(action), bundle_nonce).to_solver()
-        else:
-            return action
-
-    bundle_actions_left: List[Solver] = map(nonce_payments, solver["bundle_actions"])
-    for coin_infos, action_spec in zip(coin_groups, solver["actions"]):
+        # Step 3: Construct all of the spends based on the actions specified
         actions: List[Solver] = action_spec["do"]
-
         if "change" not in solver or solver["change"] != Program.to(None):
             selected_amount: int = sum(ci.coin.amount for ci in coin_infos)
             specified_amount: int = (
@@ -737,7 +816,20 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
         previous_actions.extend(coin_spends)
 
-    return previous_actions
+    replacement_nonce: bytes32 = nonce_coin_list([cs.coin for cs in previous_actions])
+    spent_coins: List[Coin] = [cs.coin for cs in previous_actions]
+    nonced_previous_actions: List[CoinSpend] = []
+    for i, spend in enumerate(previous_actions):
+        next_coin: Coin = spent_coins[0 if i == len(spent_coins) - 1 else i + 1]
+        fake_origin_info: bytes32 = Program.to((spend.coin.name(), "next coin")).get_tree_hash()
+        assertion_to_replace: bytes32 = Announcement(fake_origin_info, BUNDLE_NONCE).name()
+        replacement_assertion: bytes32 = Announcement(next_coin.name(), replacement_nonce).name()
+        new_spend = CoinSpend.from_bytes(
+            bytes(spend).replace(BUNDLE_NONCE, replacement_nonce).replace(assertion_to_replace, replacement_assertion)
+        )
+        nonced_previous_actions.append(new_spend)
+
+    return nonced_previous_actions
 
 
 async def deconstruct_spend(
@@ -934,7 +1026,9 @@ async def solve_spend(wallet_state_manager: Any, bundle: SpendBundle, environmen
 
         # Step 4: Augment each action with the environment
         augmented_actions: List[Solver] = [action.augment(environment).to_solver() for action in actions]
-        remaining_actions, spend = await info.create_spend_for_actions(augmented_actions, wallet_state_manager.action_aliases)
+        remaining_actions, spend = await info.create_spend_for_actions(
+            augmented_actions, wallet_state_manager.action_aliases, optimize=True
+        )
         if len(remaining_actions) > 0:
             raise ValueError(
                 "Attempting to solve the spends with specified environment resulted in being unable to spend a coin"

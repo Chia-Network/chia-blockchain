@@ -94,7 +94,7 @@ class CoinInfo:
         return map(alias_action, actions)
 
     async def create_spend_for_actions(
-        self, actions: List[Solver], default_aliases: Dict[str, ActionAlias] = {}
+        self, actions: List[Solver], default_aliases: Dict[str, ActionAlias] = {}, optimize: bool = False
     ) -> Tuple[List[Solver], CoinSpend]:
         # Get a list of the actions that each wallet supports
         supported_outer_actions = self.outer_driver.get_actions()
@@ -137,10 +137,12 @@ class CoinInfo:
 
         # Create the inner puzzle and solution first
         inner_puzzle: Program = await self.inner_driver.construct_inner_puzzle()
-        inner_solution: Program = await self.inner_driver.construct_inner_solution(new_inner_actions)
+        inner_solution: Program = await self.inner_driver.construct_inner_solution(new_inner_actions, optimize=optimize)
 
         # Then feed those to the outer wallet
         outer_puzzle: Program = await self.outer_driver.construct_outer_puzzle(inner_puzzle)
-        outer_solution: Program = await self.outer_driver.construct_outer_solution(new_outer_actions, inner_solution)
+        outer_solution: Program = await self.outer_driver.construct_outer_solution(
+            new_outer_actions, inner_solution, optimize=optimize
+        )
 
         return actions_left, CoinSpend(self.coin, outer_puzzle, outer_solution)
