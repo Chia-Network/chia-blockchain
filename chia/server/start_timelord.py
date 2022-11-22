@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 def create_timelord_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
 ) -> Service[Timelord]:
