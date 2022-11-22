@@ -94,7 +94,7 @@ async def one_wallet_node_and_rpc(
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
         await farm_blocks(full_node_api, our_ph, PREFARMED_BLOCKS)
-
+        assert wallet_service.rpc_server is not None
         client = await WalletRpcClient.create(
             self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
         )
