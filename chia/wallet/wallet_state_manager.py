@@ -1248,7 +1248,7 @@ class WalletStateManager:
                                     if existing is None:
                                         await self.coin_added(
                                             new_singleton_coin,
-                                            uint32(coin_state.spent_height),
+                                            uint32(curr_coin_state.spent_height),
                                             [],
                                             uint32(record.wallet_id),
                                             record.wallet_type,
