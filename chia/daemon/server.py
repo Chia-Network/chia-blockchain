@@ -619,8 +619,6 @@ class WebSocketServer:
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
-        elif plotter == "bladebit2":
-            final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
@@ -706,22 +704,26 @@ class WebSocketServer:
         return command_args
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
-        w = request.get("w", False)  # Warm start
-        m = request.get("m", False)  # Disable NUMA
-        no_cpu_affinity = request.get("no_cpu_affinity", False)
+        plot_type = request["plot_type"]
+        assert plot_type == "ramplot" or plot_type == "diskplot"
 
-        command_args: List[str] = []
+        if plot_type == "ramplot":
+            w = request.get("w", False)  # Warm start
+            m = request.get("m", False)  # Disable NUMA
+            no_cpu_affinity = request.get("no_cpu_affinity", False)
 
-        if w is True:
-            command_args.append("-w")
-        if m is True:
-            command_args.append("-m")
-        if no_cpu_affinity is True:
-            command_args.append("--no-cpu-affinity")
+            command_args: List[str] = []
 
-        return command_args
+            if w is True:
+                command_args.append("--warmstart")
+            if m is True:
+                command_args.append("--nonuma")
+            if no_cpu_affinity is True:
+                command_args.append("--no-cpu-affinity")
 
-    def _bladebit2_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+            return command_args
+
+        # if plot_type == "diskplot"
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
         no_cpu_affinity = request.get("no_cpu_affinity", False)
@@ -742,9 +744,9 @@ class WebSocketServer:
         command_args: List[str] = []
 
         if w is True:
-            command_args.append("-w")
+            command_args.append("--warmstart")
         if m is True:
-            command_args.append("-m")
+            command_args.append("--nonuma")
         if no_cpu_affinity is True:
             command_args.append("--no-cpu-affinity")
 
@@ -810,6 +812,13 @@ class WebSocketServer:
         plotter: str = request.get("plotter", "chiapos")
         command_args: List[str] = ["chia", "plotters", plotter]
 
+        if plotter == "bladebit":
+            # plotter command must be either
+            # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
+            plot_type = request["plot_type"]
+            assert plot_type == "diskplot" or plot_type == "ramplot"
+            command_args.append(plot_type)
+
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))
 
         if plotter == "chiapos":
@@ -818,8 +827,6 @@ class WebSocketServer:
             command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
         elif plotter == "bladebit":
             command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
-        elif plotter == "bladebit2":
-            command_args.extend(self._bladebit2_plotting_command_args(request, ignoreCount))
 
         return command_args
 
