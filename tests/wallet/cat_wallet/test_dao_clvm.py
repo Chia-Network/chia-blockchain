@@ -160,6 +160,7 @@ def test_treasury() -> None:
     # PROPOSAL_TIMELOCK
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         singleton_struct,
+        DAO_TREASURY_MOD.get_tree_hash(),
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         P2_SINGLETON_MOD.get_tree_hash(),
