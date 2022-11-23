@@ -81,6 +81,7 @@
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
+    TREASURY_MOD_HASH
     CAT_TAIL
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
@@ -97,6 +98,7 @@
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE CAT_TAIL)
+				     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -132,14 +134,15 @@
     )
     (calculate_singleton_puzzle_hash treasury_singleton_struct
       (puzzle-hash-of-curried-function TREASURY_MOD_HASH
-        (sha256 ONE TREASURY_MOD_HASH)
-        (sha256 ONE PROPOSAL_MOD_HASH)
-        (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-        (sha256 ONE p2_singleton_mod_hash)
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CAT_TAIL)
-        (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
         (sha256 ONE PROPOSAL_TIMELOCK)
+	(sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+	(sha256 ONE CURRENT_CAT_ISSUANCE)
+	(sha256 ONE CAT_TAIL)
+	(sha256 ONE CAT_MOD_HASH)
+	(sha256 ONE p2_singleton_mod_hash)
+	(sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+	(sha256 ONE PROPOSAL_MOD_HASH)
+        (sha256 ONE TREASURY_MOD_HASH)
         (sha256tree treasury_singleton_struct)
       )
     )
@@ -180,6 +183,7 @@
               PROPOSAL_MOD_HASH
               PROPOSAL_TIMER_MOD_HASH
               CAT_MOD_HASH
+	      TREASURY_MOD_HASH
               CAT_TAIL
               PROPOSAL_PASS_PERCENTAGE
               TREASURY_ID

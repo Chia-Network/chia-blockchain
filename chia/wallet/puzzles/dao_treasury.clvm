@@ -3,8 +3,10 @@
 
 (mod (
   SINGLETON_STRUCT
+  TREASURY_MOD_HASH
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
+  LOCKUP_MOD_HASH
   P2_SINGLETON_MOD
   CAT_MOD_HASH
   CAT_TAIL
@@ -39,7 +41,8 @@
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
-    EPHEMERAL_VOTE_PUZHASH
+    TREASURY_MOD_HASH
+    LOCKUP_MOD_HASH
     CAT_TAIL
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
@@ -56,7 +59,8 @@
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE CAT_TAIL)
-                                     (sha256 ONE EPHEMERAL_VOTE_PUZHASH)
+				     (sha256 ONE LOCKUP_MOD_HASH)
+				     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -102,10 +106,11 @@
                   PROPOSAL_MOD_HASH
                   PROPOSAL_TIMER_MOD_HASH
                   CAT_MOD_HASH
-                  EPHEMERAL_VOTE_PUZHASH
+		  TREASURY_MOD_HASH
+		  LOCKUP_MOD_HASH
                   CAT_TAIL
                   PROPOSAL_PASS_PERCENTAGE
-                  (f SINGLETON_STRUCT)
+                  (f (r SINGLETON_STRUCT))
                   PROPOSAL_TIMELOCK
                   proposal_current_votes
                   proposal_total_votes

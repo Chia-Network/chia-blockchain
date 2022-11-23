@@ -33,7 +33,6 @@
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
-    EPHEMERAL_VOTE_PUZZLE_HASH
     CAT_TAIL
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
@@ -50,7 +49,6 @@
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE CAT_TAIL)
-                                     (sha256 ONE EPHEMERAL_VOTE_PUZZLE_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -80,7 +78,6 @@
                 PROPOSAL_MOD_HASH
                 PROPOSAL_TIMER_MOD_HASH
                 CAT_MOD_HASH
-                EPHEMERAL_VOTE_PUZZLE_HASH
                 CAT_TAIL
                 PROPOSAL_PASS_PERCENTAGE
                 TREASURY_ID
