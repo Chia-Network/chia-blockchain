@@ -408,7 +408,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
         # Step 3: Attempt to find matching aliases for the actions
-        info, actions = matches[0]
+        info, actions, _ = matches[0]
         actions = info.alias_actions(actions, wallet_state_manager.action_aliases)
 
         # Step 4: Re-order the actions so that DL graftroots are the last applied (need to be outermost)
@@ -769,7 +769,9 @@ def nonce_payments(action: Solver) -> WalletAction:
 async def build_spend(wallet_state_manager: Any, solver: Solver, previous_actions: List[CoinSpend]) -> List[CoinSpend]:
     bundle_actions_left: List[Solver] = solver["bundle_actions"]
     if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
-        bundle_actions_left = map(nonce_payments, bundle_actions_left)
+        bundle_actions_left = list(map(nonce_payments, bundle_actions_left))
+
+    all_actions: List[Solver] = bundle_actions_left.copy()
     # Step 1: Determine which coins we need to complete the action
     for action_spec in solver["actions"]:
         coin_spec: Solver = action_spec["with"]
@@ -819,7 +821,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                 )
 
         if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
-            actions = map(nonce_payments, actions)
+            actions = list(map(nonce_payments, actions))
+
+        all_actions.extend(actions)
 
         bundle_actions_left, coin_spends = await spends_from_actions_and_infos(
             actions, bundle_actions_left, coin_infos, coin_announcements, wallet_state_manager.action_aliases
@@ -829,15 +833,27 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
     spent_coins: List[Coin] = [cs.coin for cs in previous_actions]
     replacement_nonce: bytes32 = nonce_coin_list(spent_coins)
+
+    strings_to_replace: List[Tuple[bytes32, bytes32]] = []
+    for action in all_actions:
+        if action["type"] == RequestPayment.name() and action["nonce"] == BUNDLE_NONCE:
+            payment_action: RequestPayment = RequestPayment.from_solver(action)
+            nonced_payment: RequestPayment = dataclasses.replace(payment_action, nonce=replacement_nonce)
+            strings_to_replace.append((payment_action.construct_announcement_assertion().name(), nonced_payment.construct_announcement_assertion().name()))
+
     nonced_previous_actions: List[CoinSpend] = []
     for i, spend in enumerate(previous_actions):
         next_coin: Coin = spent_coins[0 if i == len(spent_coins) - 1 else i + 1]
         fake_origin_info: bytes32 = Program.to((spend.coin.name(), "next coin")).get_tree_hash()
         assertion_to_replace: bytes32 = Announcement(fake_origin_info, BUNDLE_NONCE).name()
         replacement_assertion: bytes32 = Announcement(next_coin.name(), replacement_nonce).name()
-        new_spend = CoinSpend.from_bytes(
-            bytes(spend).replace(BUNDLE_NONCE, replacement_nonce).replace(assertion_to_replace, replacement_assertion)
-        )
+
+        spend_bytes: bytes = bytes(spend)
+        spend_bytes = spend_bytes.replace(BUNDLE_NONCE, replacement_nonce).replace(assertion_to_replace, replacement_assertion)
+        for string, replacement in strings_to_replace:
+            spend_bytes = spend_bytes.replace(string, replacement)
+
+        new_spend = CoinSpend.from_bytes(spend_bytes)
         nonced_previous_actions.append(new_spend)
 
     return nonced_previous_actions
@@ -848,9 +864,10 @@ async def deconstruct_spend(
     bundle: SpendBundle,
 ) -> Solver:
     final_actions: List[Solver] = []
+    final_signatures: List[Tuple[bytes32, G1Element, bytes, bool]] = []
     for spend in bundle.coin_spends:
         # Step 1: Get any wallets that claim to identify the puzzle
-        matches: List[Tuple[CoinInfo, List[WalletAction]]] = []
+        matches: List[Tuple[CoinInfo, List[WalletAction], List[Tuple[G1Element, bytes, bool]]]] = []
         mod, curried_args = spend.puzzle_reveal.uncurry()
         for wallet in wallet_state_manager.outer_wallets:
             match = await wallet.match_spend(wallet_state_manager, spend, mod, curried_args)
@@ -864,10 +881,11 @@ async def deconstruct_spend(
             raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
         # Step 2: Attempt to find matching aliases for the actions
-        info, actions = matches[0]
+        info, actions, sigs = matches[0]
         actions = info.alias_actions(actions, wallet_state_manager.action_aliases)
 
         final_actions.append(Solver({"with": info.description, "do": [action.to_solver() for action in actions]}))
+        final_signatures.extend([(info.coin.name(), *sig) for sig in sigs])
 
     # Step 4: Attempt to group coins in some way
     asset_types: List[List[Solver]] = []
@@ -888,7 +906,10 @@ async def deconstruct_spend(
     for typs, amount, do in zip(asset_types, amounts, action_lists):
         grouped_actions.append(Solver({"with": {"asset_types": typs, "amount": amount}, "do": do}))
 
-    return Solver({"actions": grouped_actions, "bundle_actions": []})
+    return Solver({"actions": grouped_actions, "bundle_actions": [], "signatures": [
+        {"coin_id": "0x" + coin_id.hex(), "pubkey": "0x" + bytes(pubkey).hex(), "data": "0x" + msg.hex(), "me": "1" if me else "()"}
+        for coin_id, pubkey, msg, me in final_signatures
+    ]})
 
 
 async def generate_summary_complement(
@@ -1032,10 +1053,11 @@ async def solve_spend(wallet_state_manager: Any, bundle: SpendBundle, environmen
             raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
         # Step 3: Attempt to find matching aliases for the actions
-        info, actions = matches[0]
+        info, actions, _ = matches[0]
         actions = info.alias_actions(actions, wallet_state_manager.action_aliases)
         # Step 4: Augment each action with the environment
         augmented_actions: List[Solver] = [action.augment(environment).to_solver() for action in actions]
+        temp_spend = spend
         remaining_actions, spend = await info.create_spend_for_actions(
             augmented_actions, wallet_state_manager.action_aliases, optimize=True
         )

@@ -1720,11 +1720,11 @@ class WalletStateManager:
 
     async def match_inner_puzzle_and_solution(
         self, puzzle: Program, solution: Program, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[InnerDriver, List[WalletAction], Solver]]:
-        matches: List[Tuple[InnerDriver, List[WalletAction], Solver]] = []
+    ) -> Optional[Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]]:
+        matches: List[Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]] = []
         for wallet in self.inner_wallets:
             match: Optional[
-                Tuple[InnerDriver, List[WalletAction], Solver]
+                Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
             ] = await wallet.match_inner_puzzle_and_solution(self, puzzle, solution, mod, curried_args)
             if match is not None:
                 matches.append(match)

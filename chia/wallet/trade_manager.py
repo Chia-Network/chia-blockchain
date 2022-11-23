@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 import traceback
-from blspy import G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from typing_extensions import Literal
@@ -725,7 +725,8 @@ class TradeManager:
                 deconstructed_spend,
                 modified_solver,
             )
-            complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
+            unsigned_complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
+            complement_spend: SpendBundle = await self.sign_spend(unsigned_complement_spend)
             full_spend: SpendBundle = SpendBundle.aggregate(
                 [
                     complement_spend,
@@ -875,10 +876,11 @@ class TradeManager:
                         )
                         or None in offer_dict
                     ):
-                        unsigned_spend = await self.create_spend_for_actions(
+                        unsigned_spend: SpendBundle = await self.create_spend_for_actions(
                             await old_request_to_new(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
                         )
-                        return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, unsigned_spend))
+                        signed_spend: SpendBundle = await self.sign_spend(unsigned_spend)
+                        return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
 
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee, min_coin_amount
@@ -974,3 +976,23 @@ class TradeManager:
                             self.wallet_state_manager, offer_to_spend(offer)
                         )
         return None
+
+    async def sign_spend(self, unsigned_spend: SpendBundle) -> SpendBundle:
+        signature_info: List[Tuple[bytes32, G1Element, bytes, bool]] = [
+            (bytes32(solver["coin_id"]), G1Element.from_bytes(solver["pubkey"]), solver["data"], solver["me"] != Program.to(None))
+            for solver in (await deconstruct_spend(self.wallet_state_manager, unsigned_spend))["signatures"]
+        ]
+
+        signatures: List[G2Element] = []
+        for coin_id, pk, msg, me in signature_info:
+            secret_key = self.wallet_state_manager.main_wallet.secret_key_store.secret_key_for_public_key(pk)
+            if secret_key is not None:
+                assert bytes(secret_key.get_g1()) == bytes(pk)
+                if me:
+                    msg_to_sign: bytes = msg + coin_id + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                else:
+                    msg_to_sign = msg
+                signature = AugSchemeMPL.sign(secret_key, msg_to_sign)
+                signatures.append(signature)
+
+        return SpendBundle(unsigned_spend.coin_spends, AugSchemeMPL.aggregate(signatures))

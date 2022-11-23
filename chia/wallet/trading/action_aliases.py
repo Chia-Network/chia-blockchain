@@ -387,6 +387,23 @@ class RequestPayment:
             self.construct_metadata(),
         )
 
+    def construct_announcement_assertion(self) -> Announcement:
+        puzzle_reveal: Program = OFFER_MOD
+        for typ in self.asset_types:
+            puzzle_reveal = Program.to(
+                [
+                    2,
+                    (1, typ["mod"]),
+                    RequestPayment.build_environment(
+                        typ["solution_template"], typ["committed_args"], typ["committed_args"], puzzle_reveal
+                    ),
+                ]
+            )
+        return Announcement(
+            puzzle_reveal.get_tree_hash(),
+            Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
+        )
+
     def construct_metadata(self) -> Program:
         return Program.to(
             (
@@ -401,26 +418,8 @@ class RequestPayment:
 
     def construct_puzzle_wrapper(self) -> Program:
         if self.check_for_optimization():
-            puzzle_reveal: Program = OFFER_MOD
-            for typ in self.asset_types:
-                puzzle_reveal = Program.to(
-                    [
-                        2,
-                        (1, typ["mod"]),
-                        RequestPayment.build_environment(
-                            typ["solution_template"], typ["committed_args"], typ["committed_args"], puzzle_reveal
-                        ),
-                    ]
-                )
-            assertion: Program = Program.to(
-                [
-                    63,
-                    Announcement(
-                        puzzle_reveal.get_tree_hash(),
-                        Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
-                    ).name(),
-                ]
-            )
+            announcement: Announcement = self.construct_announcement_assertion()
+            assertion: Program = Program.to([63, announcement.name()])
             # (mod (inner_puz) (qq (c (q . assertion) (a (q . (unquote inner_puz)) 1))))
             # (c (q . 4) (c (q 1 . "assertion") (c (c (q . 2) (c (c (q . 1) 2) (q 1))) ())))
             return Program.to([4, (1, 4), [4, (1, (1, assertion)), [4, [4, (1, 2), [4, [4, (1, 1), 2], [1, 1]]], []]]])

@@ -1483,7 +1483,7 @@ class DataLayerWallet:
     @staticmethod
     async def match_spend(
         wallet_state_manager: Any, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[CoinInfo, List[WalletAction]]]:
+    ) -> Optional[Tuple[CoinInfo, List[WalletAction], List[Tuple[G1Element, bytes, bool]]]]:
         matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
         if matched:
             innerpuz, rt, lid = curried_args
@@ -1493,14 +1493,14 @@ class DataLayerWallet:
             inner_mod, inner_args = innerpuz.uncurry()
 
             inner_info: Optional[
-                Tuple[InnerDriver, List[WalletAction], Solver]
+                Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
             ] = await wallet_state_manager.match_inner_puzzle_and_solution(
                 innerpuz, spend.solution.to_program().at("rrff"), inner_mod, inner_args
             )
             if inner_info is None:
                 return None
 
-            inner_driver, inner_actions, inner_description = inner_info
+            inner_driver, inner_actions, inner_sigs, inner_description = inner_info
 
             return (
                 CoinInfo(
@@ -1521,6 +1521,7 @@ class DataLayerWallet:
                     inner_driver,
                 ),
                 inner_actions,
+                inner_sigs,
             )
         else:
             return None
@@ -1605,6 +1606,7 @@ class OuterDriver:
                 )
             new_inner_actions[new_inner_actions.index(singleton_recreations[0])] = singleton_recreation.de_alias()
         else:
+            breakpoint()
             raise ValueError("Need to recreate or melt the singleton when spending")
 
         return [], new_inner_actions

@@ -651,16 +651,16 @@ class Wallet:
     @staticmethod
     async def match_spend(
         wallet_state_manager: Any, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[CoinInfo, List[WalletAction]]]:
+    ) -> Optional[Tuple[CoinInfo, List[WalletAction], List[Tuple[G1Element, bytes, bool]]]]:
         inner_info: Optional[
-            Tuple[InnerDriver, List[WalletAction], Solver]
+            Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
         ] = await wallet_state_manager.match_inner_puzzle_and_solution(
             spend.puzzle_reveal.to_program(), spend.solution.to_program(), mod, curried_args
         )
         if inner_info is None:
             return None
-        inner_driver, inner_actions, inner_description = inner_info
-        return CoinInfo(spend.coin, inner_description, OuterDriver(), inner_driver), inner_actions
+        inner_driver, inner_actions, inner_sigs, inner_description = inner_info
+        return CoinInfo(spend.coin, inner_description, OuterDriver(), inner_driver), inner_actions, inner_sigs
 
     @staticmethod
     async def match_inner_puzzle_and_solution(
@@ -669,7 +669,7 @@ class Wallet:
         solution: Program,
         mod: Program,
         curried_args: Program,
-    ) -> Optional[Tuple[InnerDriver, List[WalletAction], Solver]]:
+    ) -> Optional[Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]]:
         if mod != MOD:
             return None
 
@@ -678,11 +678,15 @@ class Wallet:
         if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
             metadata = delegated_solution.rest().as_iter()
             actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
-            actions.extend([Graftroot(*graftroot.as_iter()) for graftroot in metadata])
+            all_graftroots: List[Graftroot] = [Graftroot(*graftroot.as_iter()) for graftroot in metadata]
+            all_graftroots.reverse()
+            actions.extend(all_graftroots)
         else:
             actions.extend([Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()])
 
-        return InnerDriver(G1Element.from_bytes(curried_args.first().as_python())), actions, Solver({})
+        pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
+
+        return InnerDriver(pubkey), actions, [(pubkey, solution.at("rf").get_tree_hash(), True)], Solver({})
 
 
 @dataclass(frozen=True)
