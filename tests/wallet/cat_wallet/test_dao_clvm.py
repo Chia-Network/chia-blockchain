@@ -163,6 +163,7 @@ def test_treasury() -> None:
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
         P2_SINGLETON_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
