@@ -603,7 +603,7 @@ class Wallet:
         pass
 
     def get_name(self) -> str:
-        raise RuntimeError("The Standard Wallet does not support get_name")
+        return "Standard Wallet"
 
 
 if TYPE_CHECKING:
