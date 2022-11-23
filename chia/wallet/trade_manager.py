@@ -724,6 +724,7 @@ class TradeManager:
                 self.wallet_state_manager,
                 deconstructed_spend,
                 modified_solver,
+                fee,
             )
             unsigned_complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
             complement_spend: SpendBundle = await self.sign_spend(unsigned_complement_spend)

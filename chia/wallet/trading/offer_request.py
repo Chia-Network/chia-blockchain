@@ -932,13 +932,14 @@ async def generate_summary_complement(
             elif action["type"] == RequestPayment.name():
                 requested_payment = RequestPayment.from_solver(action)
                 offered_amount: int = sum(p.amount for p in requested_payment.payments)
+                total_amount: int = offered_amount
                 if not paid_fee and requested_payment.asset_types == []:
-                    offered_amount += fee
+                    total_amount += fee
                     paid_fee = True
                 comp_actions.append(
                     Solver(
                         {
-                            "with": {"asset_types": requested_payment.asset_types, "amount": str(offered_amount)},
+                            "with": {"asset_types": requested_payment.asset_types, "amount": str(total_amount)},
                             "do": [
                                 OfferedAmount(offered_amount).to_solver(),
                                 *(

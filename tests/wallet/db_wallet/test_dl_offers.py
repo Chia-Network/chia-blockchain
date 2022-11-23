@@ -254,7 +254,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         "asset_types": [],
                         "payments": [
                             {
-                                "puzhash": "0x" + bytes32([0] * 32).hex(),
+                                "puzhash": "0x" + (await wallet_node_maker.wallet_state_manager.main_wallet.get_new_puzzlehash()).hex(),
                                 "amount": "1000000",
                                 "memos": ["0xcafef00d"],
                             }
@@ -269,8 +269,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    temp_2 = Offer.from_bytes(offer_maker.offer).bundle
-    temp = await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer))
     # assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
     #     "offered": [
     #         {
@@ -327,18 +325,18 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     # }
 
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
-    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee - 1000000 + 1)
 
     # Let's hack a way to await this offer's confirmation
-    offer_record = dataclasses.replace(dl_record, spend_bundle=Offer.from_bytes(offer_taker.offer).bundle)
+    offer_record = dataclasses.replace(dl_record, spend_bundle=Offer.from_bytes(offer_taker.offer).to_valid_spend())
     await full_node_api.process_transaction_records(records=[offer_record])
     maker_funds -= fee
     taker_funds -= fee
 
-    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
-    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
-    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
-    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds - 1 + 1000000)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds - 1 + 1000000)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds - 1000000 + 1)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - 1000000 + 1)
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
@@ -346,7 +344,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, offer_maker)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
 
-    await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 3)
+    await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 4)
 
     txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32))
     for tx in txs:
