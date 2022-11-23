@@ -307,7 +307,7 @@ class AddressManager:
         if node_id is None:
             return None
 
-        if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
+        if info.peer_info != addr:
             return None
 
         # update info
@@ -368,7 +368,7 @@ class AddressManager:
         if not peer_info.is_valid(self.allow_private_subnets):
             return False
         (info, node_id) = self.find_(peer_info)
-        if info is not None and info.peer_info.host == addr.host and info.peer_info.port == addr.port:
+        if info is not None and info.peer_info == peer_info:
             penalty = 0
 
         if info is not None:
@@ -426,7 +426,7 @@ class AddressManager:
         if info is None:
             return None
 
-        if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
+        if info.peer_info != addr:
             return None
 
         info.last_try = timestamp
@@ -585,7 +585,7 @@ class AddressManager:
             return None
 
         # check whether we are talking about the exact same peer
-        if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
+        if info.peer_info != addr:
             return None
 
         update_interval = 20 * 60
