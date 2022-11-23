@@ -8,7 +8,8 @@ import pytest
 import pytest_asyncio
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
-from chia.simulator.setup_services import BlockTools, setup_daemon
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.setup_services import setup_daemon
 from chia.util.keychain import KeyData
 
 TEST_KEY_1 = KeyData.generate(label="🚽🍯")
