@@ -1,5 +1,6 @@
-import asyncio
+from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from chia.server.server import ChiaServer
