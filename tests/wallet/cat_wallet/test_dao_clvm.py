@@ -68,7 +68,7 @@ def test_proposal() -> None:
             1,
             Program.to("vote_coin").get_tree_hash(),
             [0xFADEDDAB],
-            0xcafef00d,
+            0xCAFEF00D,
         ]
     )
     conds: Program = full_proposal.run(solution)
@@ -113,7 +113,6 @@ def test_proposal_timer() -> None:
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
     # CAT_MOD_HASH
-    # EPHEMERAL_VOTE_PUZZLE_HASH
     # CAT_TAIL
     # CURRENT_CAT_ISSUANCE
     # PROPOSAL_TIMELOCK
@@ -153,7 +152,6 @@ def test_treasury() -> None:
     # SINGLETON_STRUCT
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
-    # EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
     # P2_SINGLETON_MOD
     # CAT_MOD_HASH
     # CAT_TAIL
@@ -182,13 +180,15 @@ def test_treasury() -> None:
     # proposal_total_votes
 
     # Add money solution
-    solution: Program = Program.to([
-        200,
-        100,
-        full_treasury_puz.get_tree_hash(),
-        Program.to("payment_nonce").get_tree_hash(),
-        0,
-    ])
+    solution: Program = Program.to(
+        [
+            200,
+            100,
+            full_treasury_puz.get_tree_hash(),
+            Program.to("payment_nonce").get_tree_hash(),
+            0,
+        ]
+    )
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 4
 
@@ -265,23 +265,27 @@ def test_lockup() -> None:
     # new_proposal_vote_id_or_return_address
     # vote_info
     # proposal_curry_vals
-    solution: Program = Program.to([
-        my_id,
-        generated_conditions,
-        20,
-        new_proposal,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
-        1,
-    ])
+    solution: Program = Program.to(
+        [
+            my_id,
+            generated_conditions,
+            20,
+            new_proposal,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+            1,
+        ]
+    )
     conds: Program = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 5
 
-    solution = Program.to([
-        0,
-        generated_conditions,
-        20,
-        0xFADEDDAB,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
-    ])
+    solution = Program.to(
+        [
+            0,
+            generated_conditions,
+            20,
+            0xFADEDDAB,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+        ]
+    )
     conds = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 3
