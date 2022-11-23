@@ -602,6 +602,9 @@ class Wallet:
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 
+    def get_name(self) -> str:
+        raise RuntimeError("The Standard Wallet does not support get_name")
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

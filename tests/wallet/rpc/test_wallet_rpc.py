@@ -880,7 +880,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["name"] == "Profile 1"
     nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
     assert isinstance(nft_wallet, NFTWallet)
-    assert nft_wallet.wallet_info.name == "Profile 1 NFT Wallet"
+    assert nft_wallet.get_name() == "Profile 1 NFT Wallet"
 
     # Set wallet name
     new_wallet_name = "test name"

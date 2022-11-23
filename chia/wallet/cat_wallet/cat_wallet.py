@@ -312,7 +312,7 @@ class CATWallet:
 
         return uint128(total_amount)
 
-    async def get_name(self) -> str:
+    def get_name(self) -> str:
         return self.wallet_info.name
 
     async def set_name(self, new_name: str) -> None:

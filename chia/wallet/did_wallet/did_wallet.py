@@ -1396,7 +1396,7 @@ class DIDWallet:
         max_num = 0
         for wallet in self.wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DECENTRALIZED_ID:
-                matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)
+                matched = re.search(r"^Profile (\d+)$", wallet.get_name())
                 if matched and int(matched.group(1)) > max_num:
                     max_num = int(matched.group(1))
         return f"Profile {max_num + 1}"

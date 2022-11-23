@@ -1319,7 +1319,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         assert isinstance(wallet, CATWallet)
-        name: str = await wallet.get_name()
+        name: str = wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
     async def get_stray_cats(self, request) -> EndpointResult:
@@ -1430,7 +1430,7 @@ class WalletRpcApi:
             else:
                 raise ValueError("The asset ID specified does not belong to a wallet")
         else:
-            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
+            return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
 
     async def create_offer_for_ids(self, request) -> EndpointResult:
         offer: Dict[str, int] = request["offer"]
@@ -1685,7 +1685,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         assert isinstance(wallet, DIDWallet)
-        name: str = await wallet.get_name()
+        name: str = wallet.get_name()
         return {"success": True, "wallet_id": wallet_id, "name": name}
 
     async def did_update_recovery_ids(self, request) -> EndpointResult:
