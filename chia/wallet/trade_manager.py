@@ -34,6 +34,7 @@ from chia.wallet.trading.offer_request import (
     build_spend,
     deconstruct_spend,
     generate_summary_complement,
+    new_summary_to_old,
     nonce_coin_list,
     offer_to_spend,
     request_payment_to_legacy_encoding,
@@ -929,8 +930,8 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return await deconstruct_spend(  # Advanced offer summary
-                            self.wallet_state_manager, offer_to_spend(offer)
+                        return new_summary_to_old(
+                            await deconstruct_spend(self.wallet_state_manager, offer_to_spend(offer))
                         )
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
@@ -980,7 +981,12 @@ class TradeManager:
 
     async def sign_spend(self, unsigned_spend: SpendBundle) -> SpendBundle:
         signature_info: List[Tuple[bytes32, G1Element, bytes, bool]] = [
-            (bytes32(solver["coin_id"]), G1Element.from_bytes(solver["pubkey"]), solver["data"], solver["me"] != Program.to(None))
+            (
+                bytes32(solver["coin_id"]),
+                G1Element.from_bytes(solver["pubkey"]),
+                solver["data"],
+                solver["me"] != Program.to(None),
+            )
             for solver in (await deconstruct_spend(self.wallet_state_manager, unsigned_spend))["signatures"]
         ]
 

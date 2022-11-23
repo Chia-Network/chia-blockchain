@@ -842,7 +842,8 @@ class CATWallet:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount)
 
-    def get_asset_types(self, request: Solver) -> Solver:
+    @staticmethod
+    def get_asset_types(request: Solver) -> Solver:
         return [
             Solver(
                 {

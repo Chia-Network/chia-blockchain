@@ -254,7 +254,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         "asset_types": [],
                         "payments": [
                             {
-                                "puzhash": "0x" + (await wallet_node_maker.wallet_state_manager.main_wallet.get_new_puzzlehash()).hex(),
+                                "puzhash": "0x"
+                                + (await wallet_node_maker.wallet_state_manager.main_wallet.get_new_puzzlehash()).hex(),
                                 "amount": "1000000",
                                 "memos": ["0xcafef00d"],
                             }
@@ -269,19 +270,21 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    # assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
-    #     "offered": [
-    #         {
-    #             "asset_id": None,
-    #             "dependencies": [
-    #                 {
-    #                     "launcher_id": launcher_id_taker.hex(),
-    #                     "values_to_prove": [taker_branch.hex()],
-    #                 }
-    #             ],
-    #         }
-    #     ]
-    # }
+    assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
+        "offered": [
+            {
+                "asset_types": [],
+                "amount": "1",
+                "dependencies": [
+                    {
+                        "launcher_id": "b7cfc5d7c0abdfa73cc484a59215a3f42c4b9f5c3a07419bcf660e1047e06584",
+                        "values_to_prove": ["0601b1cf82e33cf7cecbd4f9accc8190352cc0ab5e976de08e3bfaa4b0a2f254"],
+                    }
+                ],
+            }
+        ],
+        "requested": [{"asset_types": [], "amount": "1000000"}],
+    }
 
     success, offer_taker, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
@@ -306,23 +309,36 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_taker is not None
 
-    # assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
-    #     "offered": [
-    #         {
-    #             "asset_id": None,
-    #             "dependencies": [
-    #                 {
-    #                     "launcher_id": launcher_id_taker.hex(),
-    #                     "values_to_prove": [taker_branch.hex()],
-    #                 }
-    #             ],
-    #         },
-    #         {
-    #             "launcher_id": launcher_id_taker.hex(),
-    #             "new_root": taker_root.hex(),
-    #         },
-    #     ]
-    # }
+    assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
+        "offered": [
+            {
+                "asset_types": [],
+                "amount": "1000001",
+                "dependencies": [
+                    {
+                        "launcher_id": "b7cfc5d7c0abdfa73cc484a59215a3f42c4b9f5c3a07419bcf660e1047e06584",
+                        "values_to_prove": ["0601b1cf82e33cf7cecbd4f9accc8190352cc0ab5e976de08e3bfaa4b0a2f254"],
+                    }
+                ],
+            },
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 (i (logand 47 52) (q 4 (c 32 (c 47 ())) (c (a 62 (c 2 (c 5 (c (a 42 (c 2 (c 39 (c (a (i 119 (q 2 54 (c 2 (c 9 (c 87 (c (a 46 (c 2 (c 5 ()))) ()))))) (q . 29)) 1) (c (a (i 119 (q . -73) (q . 87)) 1) ()))))) (c 119 ()))))) (a 58 (c 2 (c 5 (c (a 11 95) (q ()))))))) (q 8)) 1) (c (q (((73 . 71) 2 . 51) (c . 1) 1 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 60 (sha256 52 36) (sha256 60 (sha256 60 (sha256 52 44) 9) (sha256 60 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) 2 (i 11 (q 2 (i (a 38 (c 2 (c 19 ()))) (q 2 (i (not 23) (q 2 (i (= -77 (q . -113)) (q 2 58 (c 2 (c 5 (c 27 (c 52 ()))))) (q 4 (c 35 (c (a 54 (c 2 (c 9 (c 83 (c (a 46 (c 2 (c 5 ()))) ()))))) 115)) (a 58 (c 2 (c 5 (c 27 (c 52 ()))))))) 1) (q 8)) 1) (q 4 19 (a 58 (c 2 (c 5 (c 27 (c 23 ()))))))) 1) (q 2 (i 23 () (q 8)) 1)) 1) ((a (i (= 9 56) (q 2 (i (logand 45 (q . 1)) (q 1 . 1) ()) 1) ()) 1) 11 60 (sha256 52 40) (sha256 60 (sha256 60 (sha256 52 44) 5) (sha256 60 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i (any 23 (= 11 21)) (q 4 48 (c 11 ())) (q 8)) 1) 1))",
+                        "solution_template": "((1 . (1 . 1)) 0 . $)",
+                        "committed_args": "((0x7faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9f . (0xb7cfc5d7c0abdfa73cc484a59215a3f42c4b9f5c3a07419bcf660e1047e06584 . 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)) () . ())",
+                    },
+                    {
+                        "mod": "(a (q 2 62 (c 2 (c 5 (c (a 47 95) (c () (c (c (c 11 (c 23 ())) (q ())) (q ()))))))) (c (q ((a . 51) 4 1 . 1) (a 2 (i 5 (q 2 26 (c 2 (c 13 (c (sha256 18 (sha256 44 20) (sha256 18 (sha256 18 (sha256 44 60) 9) (sha256 18 11 (sha256 44 ())))) ())))) (q . 11)) 1) (sha256 18 (sha256 44 16) (sha256 18 (sha256 18 (sha256 44 60) 5) (sha256 18 (a 26 (c 2 (c 7 (c (sha256 44 44) ())))) (sha256 44 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i 11 (q 2 (i (= 35 24) (q 2 (i (logand -77 44) (q 2 (i (not 23) (q 2 62 (c 2 (c 5 (c 27 (c 51 (c 47 (c 95 ()))))))) (q 8)) 1) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1) (q 2 (i (= 35 (q . -24)) (q 2 62 (c 2 (c 5 (c 27 (c 23 (c (a (i (all (= (a 46 (c 2 (c 83 ()))) 335) (not 95)) (q 2 83 (c -113 (c 335 (c -77 ())))) (q 8)) 1) (c 44 ()))))))) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1)) 1) (q 4 (c 24 (c (a 22 (c 2 (c 5 (c 39 (c (sha256 44 335) (c (a 46 (c 2 (c -113 ()))) (c (sha256 44 5) ()))))))) 55)) -81)) 1) 1))",
+                        "solution_template": "(1 1 1 0 . $)",
+                        "committed_args": "(0xa04d9f57764f54a43e4030befb4d80026e870519aaa66334aef8304f5d0393c2 (0x8ba1e245bfc322ead4046f8f84bbe35ce6e865fe16bb21ad3d3b4668ee3470aa) 0x57bfd1cb0adda3d94315053fda723f2028320faa8338225d99f629e3d46d43a9 () . ())",
+                    },
+                ],
+                "new_root": "0x8ba1e245bfc322ead4046f8f84bbe35ce6e865fe16bb21ad3d3b4668ee3470aa",
+            },
+        ],
+        "requested": [{"asset_types": [], "amount": "1000001"}],
+    }
 
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee - 1000000 + 1)

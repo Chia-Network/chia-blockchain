@@ -1324,7 +1324,8 @@ class DataLayerWallet:
     ########################
     # OuterWallet Protocol #
     ########################
-    def get_asset_types(self, request: Solver) -> Solver:
+    @staticmethod
+    def get_asset_types(request: Solver) -> Solver:
         return [
             Solver(
                 {
@@ -1345,7 +1346,7 @@ class DataLayerWallet:
                     "committed_args": (
                         "("
                         f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()} "
-                        f"{'0x' + request['metadata'].hex() if 'metadata' in request else '()'} "
+                        f"{request.info['metadata'] if 'metadata' in request else '()'} "
                         f"{'0x' + ACS_MU_PH.hex()} () . ())"
                     ),
                 }
@@ -1510,6 +1511,9 @@ class DataLayerWallet:
                             "launcher_id": "0x" + launcher_id.hex(),
                             "root": "0x" + root.hex(),
                             **inner_description.info,
+                            "asset_types": DataLayerWallet.get_asset_types(
+                                Solver({"launcher_id": "0x" + launcher_id.hex(), "metadata": "(0x" + root.hex() + ")"})
+                            ),
                         }
                     ),
                     OuterDriver(

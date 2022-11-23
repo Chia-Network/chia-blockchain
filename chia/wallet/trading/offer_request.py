@@ -1,3 +1,4 @@
+import ast
 import dataclasses
 import inspect
 import math
@@ -7,6 +8,7 @@ from clvm_tools.binutils import disassemble
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from chia.data_layer.data_layer_wallet import UpdateMetadataDL
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -668,7 +670,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                 )
             )
         elif announcement_hash_index != -1:
-            delegated_puzzle = Program.from_bytes(solution_bytes[announcement_hash_index - 8 :])
+            delegated_puzzle = Program.from_bytes(solution_bytes[announcement_hash_index - 9 :])
         else:
             new_spends.append(spend)
             continue
@@ -839,7 +841,12 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         if action["type"] == RequestPayment.name() and action["nonce"] == BUNDLE_NONCE:
             payment_action: RequestPayment = RequestPayment.from_solver(action)
             nonced_payment: RequestPayment = dataclasses.replace(payment_action, nonce=replacement_nonce)
-            strings_to_replace.append((payment_action.construct_announcement_assertion().name(), nonced_payment.construct_announcement_assertion().name()))
+            strings_to_replace.append(
+                (
+                    payment_action.construct_announcement_assertion().name(),
+                    nonced_payment.construct_announcement_assertion().name(),
+                )
+            )
 
     nonced_previous_actions: List[CoinSpend] = []
     for i, spend in enumerate(previous_actions):
@@ -849,7 +856,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         replacement_assertion: bytes32 = Announcement(next_coin.name(), replacement_nonce).name()
 
         spend_bytes: bytes = bytes(spend)
-        spend_bytes = spend_bytes.replace(BUNDLE_NONCE, replacement_nonce).replace(assertion_to_replace, replacement_assertion)
+        spend_bytes = spend_bytes.replace(BUNDLE_NONCE, replacement_nonce).replace(
+            assertion_to_replace, replacement_assertion
+        )
         for string, replacement in strings_to_replace:
             spend_bytes = spend_bytes.replace(string, replacement)
 
@@ -906,10 +915,21 @@ async def deconstruct_spend(
     for typs, amount, do in zip(asset_types, amounts, action_lists):
         grouped_actions.append(Solver({"with": {"asset_types": typs, "amount": amount}, "do": do}))
 
-    return Solver({"actions": grouped_actions, "bundle_actions": [], "signatures": [
-        {"coin_id": "0x" + coin_id.hex(), "pubkey": "0x" + bytes(pubkey).hex(), "data": "0x" + msg.hex(), "me": "1" if me else "()"}
-        for coin_id, pubkey, msg, me in final_signatures
-    ]})
+    return Solver(
+        {
+            "actions": grouped_actions,
+            "bundle_actions": [],
+            "signatures": [
+                {
+                    "coin_id": "0x" + coin_id.hex(),
+                    "pubkey": "0x" + bytes(pubkey).hex(),
+                    "data": "0x" + msg.hex(),
+                    "me": "1" if me else "()",
+                }
+                for coin_id, pubkey, msg, me in final_signatures
+            ],
+        }
+    )
 
 
 async def generate_summary_complement(
@@ -1069,3 +1089,86 @@ async def solve_spend(wallet_state_manager: Any, bundle: SpendBundle, environmen
         new_spends.append(spend)
 
     return SpendBundle(new_spends, bundle.aggregated_signature)
+
+
+def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
+    old_summary: Dict[str, Any] = {"offered": [], "requested": []}
+    for total_action in new_summary["actions"]:
+        asset_description: Dict[str, Any] = total_action["with"].info
+        if "amount" in asset_description:
+            del asset_description["amount"]
+        offered_descriptions: List[Dict[str, Any]] = []
+        requested_descriptions: List[Dict[str, Any]] = []
+        for action in total_action["do"]:
+            if action["type"] == OfferedAmount.name():
+                new_offered_descriptions: List[Dict[str, Any]] = []
+                added_amount: bool = False
+                for description in offered_descriptions:
+                    if "amount" in description:
+                        new_offered_descriptions.append(
+                            {"amount": str(int(description["amount"]) + int(action.info["amount"]))}
+                        )
+                        added_amount = True
+                    else:
+                        new_offered_descriptions.append(description)
+                offered_descriptions = new_offered_descriptions
+                if not added_amount:
+                    offered_descriptions.append({"amount": action.info["amount"]})
+            elif action["type"] == RequestPayment.name():
+                payment_request: RequestPayment = RequestPayment.from_solver(action)
+                if len(payment_request.asset_types) > 0:
+                    outer_mod: Program = payment_request.asset_types[0]["mod"]
+                    if outer_mod == CAT_MOD:
+                        asset_id: str = payment_request.asset_types[0]["committed_args"].at("rf").as_python().hex()
+                    elif outer_mod == SINGLETON_TOP_LAYER_MOD:
+                        asset_id = payment_request.asset_types[0]["committed_args"].at("frf").as_python().hex()
+
+                new_requested_descriptions: List[Dict[str, Any]] = []
+                added_amount: bool = False
+                for description in requested_descriptions:
+                    if "amount" in description:
+                        new_requested_descriptions.append(
+                            {
+                                **({"asset_id": asset_id} if len(payment_request.asset_types) > 0 else {}),
+                                "amount": str(
+                                    int(description["amount"]) + sum(p.amount for p in payment_request.payments)
+                                ),
+                            }
+                        )
+                        added_amount = True
+                    else:
+                        new_requested_descriptions.append(description)
+                requested_descriptions = new_requested_descriptions
+                if not added_amount:
+                    requested_descriptions.append(
+                        {
+                            **({"asset_id": asset_id} if len(payment_request.asset_types) > 0 else {}),
+                            "amount": str(sum(p.amount for p in payment_request.payments)),
+                        }
+                    )
+            elif action["type"] == UpdateMetadataDL.name():
+                offered_descriptions.append({"new_root": action.info["new_metadata"][1:-1]})
+            elif action["type"] == RequireDLInclusion.name():
+                dl_requirement: RequireDLInclusion = RequireDLInclusion.from_solver(action)
+                offered_descriptions.append(
+                    {
+                        "dependencies": [
+                            {"launcher_id": launcher_id.hex(), "values_to_prove": [v.hex() for v in values]}
+                            for launcher_id, values in zip(dl_requirement.launcher_ids, dl_requirement.values_to_prove)
+                        ]
+                    }
+                )
+
+        offered: Dict[str, Any] = asset_description.copy()
+        requested: Dict[str, Any] = asset_description.copy()
+        for description in offered_descriptions:
+            offered.update(description)
+        for description in requested_descriptions:
+            requested.update(description)
+
+        if offered_descriptions != []:
+            old_summary["offered"].append(offered)
+        if requested_descriptions != []:
+            old_summary["requested"].append(requested)
+
+    return ast.literal_eval(repr(old_summary))
