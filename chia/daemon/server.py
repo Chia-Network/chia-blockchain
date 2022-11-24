@@ -744,10 +744,10 @@ class WebSocketServer:
         if no_cpu_affinity is True:
             command_args.append("--no-cpu-affinity")
 
-        command_args.append(f"-t")
+        command_args.append("-t")
         command_args.append(t1)
         if t2:
-            command_args.append(f"-2")
+            command_args.append("-2")
             command_args.append(t2)
         if u:
             command_args.append("-u")

@@ -212,7 +212,7 @@ def plot_bladebit(args, chia_root_path, root_path):
 
     if found and int(version_or_exception[0]) < 2:
         print(f"Version {'.'.join(version_or_exception)} is detected.")
-        print(f"bladebit < 2 is not supported any more.")
+        print("bladebit < 2 is not supported any more.")
         return
 
     bladebit_executable_path = get_bladebit_executable_path(root_path)
