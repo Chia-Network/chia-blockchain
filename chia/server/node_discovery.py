@@ -663,14 +663,12 @@ class FullNodePeers(FullNodeDiscovery):
                         break
                     peer_info = connection.get_peer_info()
                     async with self.lock:
-                        if (
-                            peer_info in self.neighbour_known_peers
-                            and relay_peer.host in self.neighbour_known_peers[peer_info]
-                        ):
-                            continue
                         if peer_info not in self.neighbour_known_peers:
                             self.neighbour_known_peers[peer_info] = set()
-                        self.neighbour_known_peers[peer_info].add(relay_peer.host)
+                        known_peers = self.neighbour_known_peers[peer_info]
+                        if relay_peer.host in known_peers:
+                            continue
+                        known_peers.add(relay_peer.host)
                     if connection.peer_node_id is None:
                         continue
                     msg = make_msg(
