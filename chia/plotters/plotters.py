@@ -97,6 +97,7 @@ bladebit_ram_plotter_options = [
     Options.ID,
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_NONUMA,
+    Options.BLADEBIT_NO_CPU_AFFINITY,
     Options.VERBOSE,
     Options.CONNECT_TO_DAEMON,
     Options.FINAL_DIR,
@@ -451,9 +452,7 @@ def call_plotters(root_path: Path, args):
     install_parser = subparsers.add_parser("install", help=deprecation_warning)
     install_parser.add_argument("install_plotter", type=str, nargs="*")
 
-    deprecation_warning_bb2 = (
-        "[DEPRECATED] 'chia plotters bladebit2' was integrated to 'chia plotters bladebit'"
-    )
+    deprecation_warning_bb2 = "[DEPRECATED] 'chia plotters bladebit2' was integrated to 'chia plotters bladebit'"
     bladebit2_parser = subparsers.add_parser("bladebit2", help=deprecation_warning_bb2)
     bladebit2_parser.add_argument("bladebit2_plotter", type=str, nargs="*")
 

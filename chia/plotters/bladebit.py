@@ -211,10 +211,8 @@ def plot_bladebit(args, chia_root_path, root_path):
         return
 
     if found and int(version_or_exception[0]) < 2:
-        print(
-            f"Version {'.'.join(version_or_exception)} is detected."
-            f"bladebit < 2 is not supported any more."
-        )
+        print(f"Version {'.'.join(version_or_exception)} is detected.")
+        print(f"bladebit < 2 is not supported any more.")
         return
 
     bladebit_executable_path = get_bladebit_executable_path(root_path)
@@ -239,45 +237,45 @@ def plot_bladebit(args, chia_root_path, root_path):
     plot_type = "ramplot" if args.plot_type == "ramplot" else "diskplot"
     call_args = [
         os.fspath(bladebit_executable_path),
-        "-t",
+        "--threads",
         str(args.threads),
-        "-n",
+        "--count",
         str(args.count),
-        "-f",
+        "--farmer-key",
         bytes(plot_keys.farmer_public_key).hex(),
     ]
     if plot_keys.pool_public_key is not None:
-        call_args.append("-p")
+        call_args.append("--pool-key")
         call_args.append(bytes(plot_keys.pool_public_key).hex())
     if plot_keys.pool_contract_address is not None:
-        call_args.append("-c")
+        call_args.append("--pool-contract")
         call_args.append(plot_keys.pool_contract_address)
     if args.warmstart:
-        call_args.append("-w")
+        call_args.append("--warm-start")
     if args.id is not None and args.id != b"":
-        call_args.append("-i")
+        call_args.append("--plot-id")
         call_args.append(args.id.hex())
-    if args.verbose:
-        call_args.append("-v")
-    if args.nonuma:
-        call_args.append("-m")
     if "memo" in args and args.memo is not None and args.memo != b"":
         call_args.append("--memo")
         call_args.append(args.memo)
+    if args.nonuma:
+        call_args.append("--no-numa")
+    if args.no_cpu_affinity:
+        call_args.append("--no-cpu-affinity")
+    if args.verbose:
+        call_args.append("--verbose")
 
     call_args.append(plot_type)
 
     if "buckets" in args and args.buckets:
-        call_args.append("-b")
+        call_args.append("--buckets")
         call_args.append(str(args.buckets))
     if "tmpdir" in args and args.tmpdir:
-        call_args.append("-t1")
+        call_args.append("--temp1")
         call_args.append(str(args.tmpdir))
     if "tmpdir2" in args and args.tmpdir2:
-        call_args.append("-t2")
+        call_args.append("--temp2")
         call_args.append(str(args.tmpdir2))
-    if "no_cpu_affinity" in args and args.no_cpu_affinity:
-        call_args.append("--no-cpu-affinity")
     if "cache" in args and args.cache is not None:
         call_args.append("--cache")
         call_args.append(str(args.cache))

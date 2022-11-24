@@ -660,17 +660,17 @@ class WebSocketServer:
         p = request.get("p")  # Pool pubkey
         c = request.get("c")  # Pool contract address
 
-        command_args: List[str] = []
-        command_args.append(f"-n{n}")
-        command_args.append(f"-d{d}")
-        command_args.append(f"-r{r}")
+        command_args: List[str] = ["-n", str(n), "-d", d, "-r", str(r)]
 
         if f is not None:
-            command_args.append(f"-f{f}")
+            command_args.append("-f")
+            command_args.append(str(f))
         if p is not None:
-            command_args.append(f"-p{p}")
+            command_args.append("-p")
+            command_args.append(str(p))
         if c is not None:
-            command_args.append(f"-c{c}")
+            command_args.append("-c")
+            command_args.append(str(c))
 
         return command_args
 
@@ -685,15 +685,11 @@ class WebSocketServer:
         x = request["x"]  # Exclude final directory
         override_k = request["overrideK"]  # Force plot sizes < k32
 
-        command_args: List[str] = []
-        command_args.append(f"-k{k}")
-        command_args.append(f"-t{t}")
-        command_args.append(f"-2{t2}")
-        command_args.append(f"-b{b}")
-        command_args.append(f"-u{u}")
+        command_args: List[str] = ["-k", str(k), "-t", t, "-2", t2, "-b", str(b), "-u", str(u)]
 
         if a is not None:
-            command_args.append(f"-a{a}")
+            command_args.append("-a")
+            command_args.append(str(a))
         if e is True:
             command_args.append("-e")
         if x is True:
@@ -707,12 +703,12 @@ class WebSocketServer:
         plot_type = request["plot_type"]
         assert plot_type == "ramplot" or plot_type == "diskplot"
 
+        command_args: List[str] = []
+
         if plot_type == "ramplot":
             w = request.get("w", False)  # Warm start
             m = request.get("m", False)  # Disable NUMA
             no_cpu_affinity = request.get("no_cpu_affinity", False)
-
-            command_args: List[str] = []
 
             if w is True:
                 command_args.append("--warmstart")
@@ -741,8 +737,6 @@ class WebSocketServer:
         no_t1_direct = request.get("no_t1_direct", False)
         no_t2_direct = request.get("no_t2_direct", False)
 
-        command_args: List[str] = []
-
         if w is True:
             command_args.append("--warmstart")
         if m is True:
@@ -750,11 +744,14 @@ class WebSocketServer:
         if no_cpu_affinity is True:
             command_args.append("--no-cpu-affinity")
 
-        command_args.append(f"-t{t1}")
+        command_args.append(f"-t")
+        command_args.append(t1)
         if t2:
-            command_args.append(f"-2{t2}")
+            command_args.append(f"-2")
+            command_args.append(t2)
         if u:
-            command_args.append(f"-u{u}")
+            command_args.append("-u")
+            command_args.append(str(u))
         if cache:
             command_args.append("--cache")
             command_args.append(str(cache))
