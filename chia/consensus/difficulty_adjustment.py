@@ -91,11 +91,6 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
         # a block in the previous epoch, which would be height < 0
         return _get_blocks_at_height(blocks, last_b, uint32(0))[0]
 
-    # If the prev slot is the first slot, the iterations start at 0
-    # We will compute the timestamps of the 2nd to last block in epoch, as well as the total iterations at infusion
-    prev_slot_start_iters: uint128
-    prev_slot_time_start: uint64
-
     # The target block must be in this range. Either the surpass block must be a transaction block, or something
     # in it's sub slot must be a transaction block. If that is the only transaction block in the sub-slot, the last
     # block in the previous sub-slot from that must also be a transaction block (therefore -1 is used).
