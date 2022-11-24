@@ -557,8 +557,8 @@ class FullNodePeers(FullNodeDiscovery):
                     return None
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
-                    for neighbour in list(self.neighbour_known_peers.keys()):
-                        self.neighbour_known_peers[neighbour].clear()
+                    for neighbour, known_peers in self.neighbour_known_peers.items():
+                        known_peers.clear()
                 # Self advertise every 24 hours.
                 peer = await self.server.get_peer_info()
                 if peer is None:
