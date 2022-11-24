@@ -533,7 +533,7 @@ class FullNodePeers(FullNodeDiscovery):
             log,
         )
         self.relay_queue = asyncio.Queue()
-        self.neighbour_known_peers: Dict = {}
+        self.neighbour_known_peers: Dict[PeerInfo, Set[str]] = {}
         self.key = randbits(256)
 
     async def start(self) -> None:
@@ -583,14 +583,13 @@ class FullNodePeers(FullNodeDiscovery):
                 self.log.error(f"Exception in self advertise: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
-    async def add_peers_neighbour(self, peers, neighbour_info) -> None:
-        neighbour_data = (neighbour_info.host, neighbour_info.port)
+    async def add_peers_neighbour(self, peers: List[TimestampedPeerInfo], neighbour_info: PeerInfo) -> None:
         async with self.lock:
             for peer in peers:
-                if neighbour_data not in self.neighbour_known_peers:
-                    self.neighbour_known_peers[neighbour_data] = set()
-                if peer.host not in self.neighbour_known_peers[neighbour_data]:
-                    self.neighbour_known_peers[neighbour_data].add(peer.host)
+                if neighbour_info not in self.neighbour_known_peers:
+                    self.neighbour_known_peers[neighbour_info] = set()
+                if peer.host not in self.neighbour_known_peers[neighbour_info]:
+                    self.neighbour_known_peers[neighbour_info].add(peer.host)
 
     async def request_peers(self, peer_info: PeerInfo) -> Optional[Message]:
         try:
@@ -663,13 +662,15 @@ class FullNodePeers(FullNodeDiscovery):
                     if index >= num_peers:
                         break
                     peer_info = connection.get_peer_info()
-                    pair = (peer_info.host, peer_info.port)
                     async with self.lock:
-                        if pair in self.neighbour_known_peers and relay_peer.host in self.neighbour_known_peers[pair]:
+                        if (
+                            peer_info in self.neighbour_known_peers
+                            and relay_peer.host in self.neighbour_known_peers[peer_info]
+                        ):
                             continue
-                        if pair not in self.neighbour_known_peers:
-                            self.neighbour_known_peers[pair] = set()
-                        self.neighbour_known_peers[pair].add(relay_peer.host)
+                        if peer_info not in self.neighbour_known_peers:
+                            self.neighbour_known_peers[peer_info] = set()
+                        self.neighbour_known_peers[peer_info].add(relay_peer.host)
                     if connection.peer_node_id is None:
                         continue
                     msg = make_msg(
