@@ -412,5 +412,5 @@ class TestFullSync:
         res = await peers[0].request_proof_of_weight(request, timeout=5)
         assert res is None
         duration = time.time() - start
-        assert duration > 4
+        assert duration > 5
         log.info(f"result was {res}")

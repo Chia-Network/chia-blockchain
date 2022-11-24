@@ -639,7 +639,8 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.send_message(response_message)
-                    elif metadata.reply_types:
+                    # check that this call needs a reply
+                    elif metadata.reply_types is not None and len(metadata.reply_types) > 0:
                         if Capability.NONE_RESPONSE in connection.peer_capabilities:
                             # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
                             response_message = Message(
