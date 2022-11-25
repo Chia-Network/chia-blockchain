@@ -10,7 +10,8 @@ from typing import Dict, List, Optional, Set
 
 import dns.asyncresolver
 
-from chia.protocols import full_node_protocol, introducer_protocol
+from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
+from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_sqlite_store import create_address_manager_from_db
@@ -159,7 +160,7 @@ class FullNodeDiscovery:
             and (self.server._local_type is NodeType.FULL_NODE or self.server._local_type is NodeType.WALLET)
             and self.address_manager is not None
         ):
-            msg = make_msg(ProtocolMessageTypes.request_peers, full_node_protocol.RequestPeers())
+            msg = make_msg(ProtocolMessageTypes.request_peers, RequestPeers())
             await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
@@ -202,7 +203,7 @@ class FullNodeDiscovery:
             return None
 
         async def on_connect(peer: WSChiaConnection):
-            msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
+            msg = make_msg(ProtocolMessageTypes.request_peers_introducer, RequestPeersIntroducer())
             await peer.send_message(msg)
 
         await self.server.start_client(self.introducer_info, on_connect)
@@ -230,7 +231,7 @@ class FullNodeDiscovery:
                     )
                 self.log.info(f"Received {len(peers)} peers from DNS seeder, using rdtype = {rdtype}.")
                 if len(peers) > 0:
-                    await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
+                    await self._respond_peers_common(RespondPeers(peers), None, False)
         except Exception as e:
             self.log.warning(f"querying DNS introducer failed: {e}")
 
@@ -511,7 +512,6 @@ class FullNodePeers(FullNodeDiscovery):
     def __init__(
         self,
         server,
-        max_inbound_count,
         target_outbound_count,
         peer_store_resolver: PeerStoreResolver,
         introducer_info,
@@ -533,7 +533,7 @@ class FullNodePeers(FullNodeDiscovery):
             log,
         )
         self.relay_queue = asyncio.Queue()
-        self.neighbour_known_peers: Dict = {}
+        self.neighbour_known_peers: Dict[PeerInfo, Set[str]] = {}
         self.key = randbits(256)
 
     async def start(self) -> None:
@@ -557,8 +557,8 @@ class FullNodePeers(FullNodeDiscovery):
                     return None
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
-                    for neighbour in list(self.neighbour_known_peers.keys()):
-                        self.neighbour_known_peers[neighbour].clear()
+                    for neighbour, known_peers in self.neighbour_known_peers.items():
+                        known_peers.clear()
                 # Self advertise every 24 hours.
                 peer = await self.server.get_peer_info()
                 if peer is None:
@@ -572,7 +572,7 @@ class FullNodePeers(FullNodeDiscovery):
                 ]
                 msg = make_msg(
                     ProtocolMessageTypes.respond_peers,
-                    full_node_protocol.RespondPeers(timestamped_peer),
+                    RespondPeers(timestamped_peer),
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
@@ -583,14 +583,13 @@ class FullNodePeers(FullNodeDiscovery):
                 self.log.error(f"Exception in self advertise: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
-    async def add_peers_neighbour(self, peers, neighbour_info) -> None:
-        neighbour_data = (neighbour_info.host, neighbour_info.port)
+    async def add_peers_neighbour(self, peers: List[TimestampedPeerInfo], neighbour_info: PeerInfo) -> None:
         async with self.lock:
             for peer in peers:
-                if neighbour_data not in self.neighbour_known_peers:
-                    self.neighbour_known_peers[neighbour_data] = set()
-                if peer.host not in self.neighbour_known_peers[neighbour_data]:
-                    self.neighbour_known_peers[neighbour_data].add(peer.host)
+                if neighbour_info not in self.neighbour_known_peers:
+                    self.neighbour_known_peers[neighbour_info] = set()
+                if peer.host not in self.neighbour_known_peers[neighbour_info]:
+                    self.neighbour_known_peers[neighbour_info].add(peer.host)
 
     async def request_peers(self, peer_info: PeerInfo) -> Optional[Message]:
         try:
@@ -608,7 +607,7 @@ class FullNodePeers(FullNodeDiscovery):
 
             msg = make_msg(
                 ProtocolMessageTypes.respond_peers,
-                full_node_protocol.RespondPeers(peers),
+                RespondPeers(peers),
             )
 
             return msg
@@ -663,18 +662,18 @@ class FullNodePeers(FullNodeDiscovery):
                     if index >= num_peers:
                         break
                     peer_info = connection.get_peer_info()
-                    pair = (peer_info.host, peer_info.port)
                     async with self.lock:
-                        if pair in self.neighbour_known_peers and relay_peer.host in self.neighbour_known_peers[pair]:
+                        if peer_info not in self.neighbour_known_peers:
+                            self.neighbour_known_peers[peer_info] = set()
+                        known_peers = self.neighbour_known_peers[peer_info]
+                        if relay_peer.host in known_peers:
                             continue
-                        if pair not in self.neighbour_known_peers:
-                            self.neighbour_known_peers[pair] = set()
-                        self.neighbour_known_peers[pair].add(relay_peer.host)
+                        known_peers.add(relay_peer.host)
                     if connection.peer_node_id is None:
                         continue
                     msg = make_msg(
                         ProtocolMessageTypes.respond_peers,
-                        full_node_protocol.RespondPeers([relay_peer]),
+                        RespondPeers([relay_peer]),
                     )
                     await connection.send_message(msg)
             except Exception as e:

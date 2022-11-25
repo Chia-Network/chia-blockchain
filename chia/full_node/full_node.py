@@ -506,7 +506,6 @@ class FullNode:
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
-                self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
                 self.config["target_outbound_peer_count"],
                 PeerStoreResolver(
                     self.root_path,
