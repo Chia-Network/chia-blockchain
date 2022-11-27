@@ -31,9 +31,7 @@ class VettedPeer:
         self.port = p
 
     def __eq__(self, rhs: object) -> bool:
-        if not isinstance(rhs, VettedPeer):
-            return NotImplemented
-        return self.host == rhs.host and self.port == rhs.port
+        return self.host == rhs.host and self.port == rhs.port  # type: ignore[no-any-return, attr-defined]
 
     def __hash__(self) -> int:
         return hash((self.host, self.port))
