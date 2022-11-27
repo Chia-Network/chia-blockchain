@@ -247,7 +247,7 @@ class WalletRpcApi:
             ),
         )
 
-    async def get_latest_coin_spend(
+    async def get_latest_singleton_coin_spend(
         self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
     ) -> Tuple[CoinSpend, CoinState]:
         if peer is None:
@@ -264,15 +264,15 @@ class WalletRpcApi:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
                     coin_state.coin.name(), peer=peer
                 )
-                odd_coin = 0
+                odd_coin = None
                 for coin in coin_state_list:
                     if coin.coin.amount % 2 == 1:
-                        odd_coin += 1
-                    if odd_coin > 1:
-                        raise ValueError("This is not a singleton, multiple children coins found.")
-                if odd_coin == 0:
+                        if odd_coin is not None:
+                            raise ValueError("This is not a singleton, multiple children coins found.")
+                        odd_coin = coin
+                if odd_coin is None:
                     raise ValueError("Cannot find child coin, please wait then retry.")
-                coin_state = coin_state_list[0]
+                coin_state = odd_coin
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
@@ -1734,7 +1734,7 @@ class WalletRpcApi:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -2180,7 +2180,7 @@ class WalletRpcApi:
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
         assert peer is not None
-        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))

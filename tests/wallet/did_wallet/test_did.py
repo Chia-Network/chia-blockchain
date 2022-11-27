@@ -828,7 +828,7 @@ class TestDIDWallet:
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
@@ -842,6 +842,32 @@ class TestDIDWallet:
         assert response["num_verification"] == 0
         assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
         assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
+
+        # Test non-singleton coin
+        coin = (await wallet.select_coins(uint64(1))).pop()
+        assert coin.amount % 2 == 1
+        response = await api_0.did_get_info({"coin_id": coin.name().hex()})
+        assert not response["success"]
+
+        # Test multiple odd coins
+        coin_1 = (await wallet.select_coins(uint64(1), exclude=[coin])).pop()
+        assert coin_1.amount % 2 == 0
+        tx = await wallet.generate_signed_transaction(
+            1,
+            ph1,
+            fee,
+            exclude_coins=set([coin]),
+        )
+        await wallet.push_transaction(tx)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await time_out_assert(15, wallet1.get_confirmed_balance, 2000000000001)
+        try:
+            await api_0.did_get_info({"coin_id": coin_1.name().hex()})
+            # We expect a ValueError here
+            assert False
+        except ValueError:
+            pass
 
     @pytest.mark.parametrize(
         "trusted",
