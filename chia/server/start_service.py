@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 from pathlib import Path
+from types import FrameType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.daemon.server import service_launch_lock_path
@@ -219,7 +220,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
                 functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
             )
 
-    def _accept_signal(self, signal_number: int, stack_frame: Optional[Any] = None) -> None:
+    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
         self._log.info(f"got signal {signal_number}")
 
         # we only handle signals in the main process. In the ProcessPoolExecutor
