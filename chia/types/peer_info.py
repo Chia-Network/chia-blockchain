@@ -59,7 +59,7 @@ class PeerInfo(Streamable):
         elif ip_v6 is not None:
             group = bytes([0]) + ip_v6.packed[:4]
         else:
-            raise ValueError("PeerInfo.host is not a ip address")
+            raise ValueError("PeerInfo.host is not an ip address")
         return group
 
 
