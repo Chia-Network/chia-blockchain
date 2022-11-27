@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import math
-import random
 import time
 import traceback
 from logging import Logger
@@ -194,7 +193,7 @@ class FullNodeDiscovery:
     (https://en.wikipedia.org/wiki/Poisson_distribution)
     """
 
-    def _poisson_next_send(self, now: float, avg_interval_seconds: int, random: random.Random) -> float:
+    def _poisson_next_send(self, now: float, avg_interval_seconds: int, random: Random) -> float:
         return now + (
             math.log(random.randrange(1 << 48) * -0.0000000000000035527136788 + 1) * avg_interval_seconds * -1000000.0
             + 0.5
@@ -269,7 +268,7 @@ class FullNodeDiscovery:
             self.log.error(f"Exception in create outbound connections: {e}")
             self.log.error(f"Traceback: {traceback.format_exc()}")
 
-    async def _connect_to_peers(self, random: random.Random) -> None:
+    async def _connect_to_peers(self, random: Random) -> None:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         retry_introducers = False
         introducer_attempts: int = 0
