@@ -65,7 +65,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
 
         if puzzle_reveal.get_tree_hash() != coin_spend.coin.puzzle_hash:
             print("*** BAD PUZZLE REVEAL")
-            print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_spend.coin.puzzle_hash.hex()}")
+            print(f"COINSPEND={puzzle_reveal.get_tree_hash().hex()} vs COIN={coin_spend.coin.puzzle_hash.hex()}")
             print("*" * 80)
             continue
 

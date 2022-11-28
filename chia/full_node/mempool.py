@@ -6,7 +6,6 @@ from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
-from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.coin import Coin
@@ -18,7 +17,13 @@ from chia.util.ints import uint64
 
 
 class Mempool:
-    def __init__(self, max_size_in_cost: int, minimum_fee_per_cost_to_replace: uint64, max_block_cost_clvm: uint64):
+    def __init__(
+        self,
+        max_size_in_cost: int,
+        minimum_fee_per_cost_to_replace: uint64,
+        max_block_cost_clvm: uint64,
+        fee_estimator: FeeEstimatorInterface,
+    ):
         self.log = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
@@ -26,7 +31,7 @@ class Mempool:
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
         self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
-        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, self.log)
+        self.fee_estimator = fee_estimator
 
     def get_min_fee_rate(self, cost: int) -> float:
         """

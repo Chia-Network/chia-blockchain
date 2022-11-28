@@ -11,6 +11,7 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -148,7 +149,8 @@ class TestMempool:
 
         max_block_cost_clvm = 40000000
         max_mempool_cost = max_block_cost_clvm * 5
-        mempool = Mempool(max_mempool_cost, uint64(5), uint64(max_block_cost_clvm))
+        fee_estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
+        mempool = Mempool(max_mempool_cost, uint64(5), uint64(max_block_cost_clvm), fee_estimator)
         assert mempool.get_min_fee_rate(104000) == 0
 
         with pytest.raises(ValueError):
