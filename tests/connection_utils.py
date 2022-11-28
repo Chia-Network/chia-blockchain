@@ -61,7 +61,6 @@ async def add_dummy_connection(
         server._port,
         log,
         True,
-        False,
         self_hostname,
         incoming_queue,
         None,
