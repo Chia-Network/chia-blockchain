@@ -1,32 +1,25 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import dataclasses
 import logging
-from blspy import AugSchemeMPL, G1Element, G2Element
+from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple, Union
 
-
-from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
-from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import Solver, cast_to_int
-import dataclasses
-
+from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.action_manager.action_aliases import (
-    DirectPayment,
-    RequestPayment,
-)
-from chia.wallet.action_manager.protocols import ActionAlias
+from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint64
+from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import WalletAction
-
+from chia.wallet.action_manager.protocols import ActionAlias, WalletAction
+from chia.wallet.payment import Payment
+from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
 # Using a place holder nonce to replace with the correct nonce at the end of spend construction (sha256 "bundle nonce")
 BUNDLE_NONCE: bytes32 = bytes.fromhex("bba981ec36ebb2a0df2052893646b01ffb483128626b68e70f767f48fc5fbdbb")

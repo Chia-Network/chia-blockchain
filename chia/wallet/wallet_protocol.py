@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Set
 
 from blspy import G1Element
 from typing_extensions import Protocol

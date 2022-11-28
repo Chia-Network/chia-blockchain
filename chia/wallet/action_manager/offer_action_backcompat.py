@@ -1,9 +1,9 @@
 import ast
 import dataclasses
 import math
+from typing import Any, Dict, List, Optional, Tuple
 
 from clvm_tools.binutils import disassemble
-from typing import Any, Dict, List, Optional, Tuple
 
 from chia.data_layer.data_layer_wallet import UpdateMetadataDL
 from chia.types.announcement import Announcement
@@ -13,26 +13,21 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
+from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
+from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.db_wallet.db_wallet_puzzles import (
-    create_host_fullpuz,
     GRAFTROOT_DL_OFFERS,
-    RequireDLInclusion,
     SINGLETON_TOP_LAYER_MOD,
+    RequireDLInclusion,
+    create_host_fullpuz,
 )
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver, cast_to_int
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
-from chia.wallet.action_manager.action_aliases import (
-    Fee,
-    MakeAnnouncement,
-    OfferedAmount,
-    RequestPayment,
-)
 from chia.wallet.trading.offer import OFFER_MOD, Offer
-from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
 

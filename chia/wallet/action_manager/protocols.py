@@ -1,7 +1,6 @@
-from typing_extensions import Protocol
-
 from typing import Any, Callable, Dict, List
 
+from typing_extensions import Protocol
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

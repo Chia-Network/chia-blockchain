@@ -7,7 +7,6 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.puzzle_drivers import Solver
 
-
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
 
 
