@@ -157,7 +157,6 @@ def test_treasury() -> None:
     # SINGLETON_STRUCT
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
-    # P2_SINGLETON_MOD
     # CAT_MOD_HASH
     # CAT_TAIL
     # CURRENT_CAT_ISSUANCE
@@ -169,7 +168,6 @@ def test_treasury() -> None:
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        P2_SINGLETON_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
         current_cat_issuance,
@@ -346,7 +344,6 @@ def test_proposal_innerpuz() -> None:
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        P2_SINGLETON_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
         current_cat_issuance,
