@@ -158,7 +158,7 @@ class SpendSim:
 
     async def all_non_reward_coins(self) -> List[Coin]:
         coins = set()
-        async with self.coin_store.db_wrapper.reader_no_transaction() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
             )
@@ -366,18 +366,16 @@ class SimClient:
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
         )[0]
         block_height: uint32 = selected_block.height
-        additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block_height)  # noqa
-        removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block_height)  # noqa
+        additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block_height)
+        removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block_height)
         return additions, removals
 
     async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSpend]:
         filtered_generators = list(filter(lambda block: block.height == height, self.service.blocks))
         # real consideration should be made for the None cases instead of just hint ignoring
         generator: BlockGenerator = filtered_generators[0].transactions_generator  # type: ignore[assignment]
-        coin_record: CoinRecord
-        coin_record = await self.service.coin_store.get_coin_record(  # type: ignore[assignment]
-            coin_id,
-        )
+        coin_record = await self.service.coin_store.get_coin_record(coin_id)
+        assert coin_record is not None
         error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_record.coin)
         if error:
             return None
