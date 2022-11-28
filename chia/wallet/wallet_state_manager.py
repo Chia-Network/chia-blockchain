@@ -36,6 +36,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
+from chia.wallet.action_manager.action_manager import WalletActionManager
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -72,7 +73,7 @@ from chia.wallet.trading.action_aliases import (
     OfferedAmount,
     RequestPayment,
 )
-from chia.wallet.trading.coin_info import CoinInfo
+from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.trading.wallet_actions import WalletAction
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
@@ -125,6 +126,7 @@ class WalletStateManager:
     wallets: Dict[uint32, WalletProtocol]
     private_key: PrivateKey
 
+    action_manager: WalletActionManager
     trade_manager: TradeManager
     notification_manager: NotificationManager
     new_wallet: bool
@@ -203,6 +205,7 @@ class WalletStateManager:
         self.user_store = await WalletUserStore.create(self.db_wrapper)
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
+        self.action_manager = WalletActionManager(self)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)

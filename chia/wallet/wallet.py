@@ -44,7 +44,7 @@ from chia.wallet.puzzles.puzzle_utils import (
 from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.trading.coin_info import CoinInfo
+from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.trading.wallet_actions import Condition, Graftroot, WalletAction
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos

@@ -19,6 +19,16 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.action_manager.action_manager import nonce_coin_list
+from chia.wallet.action_manager.offer_action_backcompat import (
+    old_request_to_new,
+    old_solver_to_new,
+    generate_summary_complement,
+    new_summary_to_old,
+    offer_to_spend,
+    request_payment_to_legacy_encoding,
+    spend_to_offer_bytes,
+)
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -28,19 +38,6 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.action_aliases import RequestPayment
 from chia.wallet.trading.offer import NotarizedPayment, Offer
-from chia.wallet.trading.offer_request import (
-    old_request_to_new,
-    old_solver_to_new,
-    build_spend,
-    deconstruct_spend,
-    generate_summary_complement,
-    new_summary_to_old,
-    nonce_coin_list,
-    offer_to_spend,
-    request_payment_to_legacy_encoding,
-    solve_spend,
-    spend_to_offer_bytes,
-)
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -592,10 +589,6 @@ class TradeManager:
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    # A more general version of create_offer_for_ids
-    async def create_spend_for_actions(self, request: Solver) -> SpendBundle:
-        return SpendBundle(await build_spend(self.wallet_state_manager, request, []), G2Element())
-
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
@@ -727,15 +720,15 @@ class TradeManager:
                 modified_solver,
                 fee,
             )
-            unsigned_complement_spend: SpendBundle = await self.create_spend_for_actions(complement_summary)
-            complement_spend: SpendBundle = await self.sign_spend(unsigned_complement_spend)
+            unsigned_complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(complement_summary)
+            complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(unsigned_complement_spend)
             full_spend: SpendBundle = SpendBundle.aggregate(
                 [
                     complement_spend,
                     offer_to_spend(offer),
                 ]
             )
-            final_spend_bundle: SpendBundle = await solve_spend(self.wallet_state_manager, full_spend, modified_solver)
+            final_spend_bundle: SpendBundle = await self.wallet_state_manager.action_manager.solve_spend(full_spend, modified_solver)
             offer_no_payments: Offer = Offer.from_spend_bundle(final_spend_bundle)
             payment_spends: List[CoinSpend] = [
                 request_payment_to_legacy_encoding(
@@ -878,10 +871,10 @@ class TradeManager:
                         )
                         or None in offer_dict
                     ):
-                        unsigned_spend: SpendBundle = await self.create_spend_for_actions(
+                        unsigned_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
                             await old_request_to_new(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
                         )
-                        signed_spend: SpendBundle = await self.sign_spend(unsigned_spend)
+                        signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(unsigned_spend)
                         return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
 
                 return await DataLayerWallet.make_update_offer(
@@ -931,7 +924,7 @@ class TradeManager:
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
                         return new_summary_to_old(
-                            await deconstruct_spend(self.wallet_state_manager, offer_to_spend(offer))
+                            await self.wallet_state_manager.action_manager.deconstruct_spend(offer_to_spend(offer))
                         )
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
@@ -974,32 +967,7 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return await deconstruct_spend(  # Advanced offer summary
-                            self.wallet_state_manager, offer_to_spend(offer)
+                        return await self.wallet_state_manager.action_manager.deconstruct_spend(  # Advanced offer summary
+                            offer_to_spend(offer)
                         )
         return None
-
-    async def sign_spend(self, unsigned_spend: SpendBundle) -> SpendBundle:
-        signature_info: List[Tuple[bytes32, G1Element, bytes, bool]] = [
-            (
-                bytes32(solver["coin_id"]),
-                G1Element.from_bytes(solver["pubkey"]),
-                solver["data"],
-                solver["me"] != Program.to(None),
-            )
-            for solver in (await deconstruct_spend(self.wallet_state_manager, unsigned_spend))["signatures"]
-        ]
-
-        signatures: List[G2Element] = []
-        for coin_id, pk, msg, me in signature_info:
-            secret_key = self.wallet_state_manager.main_wallet.secret_key_store.secret_key_for_public_key(pk)
-            if secret_key is not None:
-                assert bytes(secret_key.get_g1()) == bytes(pk)
-                if me:
-                    msg_to_sign: bytes = msg + coin_id + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                else:
-                    msg_to_sign = msg
-                signature = AugSchemeMPL.sign(secret_key, msg_to_sign)
-                signatures.append(signature)
-
-        return SpendBundle(unsigned_spend.coin_spends, AugSchemeMPL.aggregate(signatures))

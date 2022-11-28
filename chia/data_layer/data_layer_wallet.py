@@ -56,7 +56,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.trading.coin_info import CoinInfo
+from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.action_aliases import DirectPayment
 from chia.wallet.trading.wallet_actions import Condition, WalletAction
