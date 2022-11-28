@@ -11,7 +11,8 @@ from chia.util.ints import uint64
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, CURRY, OFFER_MOD, OFFER_MOD_HASH
-from chia.wallet.trading.wallet_actions import Condition, Graftroot, WalletAction
+from chia.wallet.action_manager.wallet_actions import Condition, Graftroot
+from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_coin_announcement,
     make_assert_puzzle_announcement,
@@ -20,30 +21,6 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
-
-
-class ActionAlias(Protocol):
-    @staticmethod
-    def name() -> str:
-        ...
-
-    @classmethod
-    def from_solver(cls, solver: Solver) -> "ActionAlias":
-        ...
-
-    def to_solver(self) -> Solver:
-        ...
-
-    def de_alias(self) -> WalletAction:
-        ...
-
-    @staticmethod
-    def action_name() -> str:
-        ...
-
-    @classmethod
-    def from_action(cls, action: WalletAction) -> "ActionAlias":
-        ...
 
 
 _T_DirectPayment = TypeVar("_T_DirectPayment", bound="DirectPayment")

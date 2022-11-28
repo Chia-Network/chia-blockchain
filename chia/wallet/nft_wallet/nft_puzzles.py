@@ -14,7 +14,8 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.trading.wallet_actions import WalletAction, Condition
+from chia.wallet.action_manager.wallet_actions import Condition
+from chia.wallet.action_manager.protocols import WalletAction
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")

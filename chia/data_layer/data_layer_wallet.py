@@ -58,8 +58,9 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.trading.offer import NotarizedPayment, Offer
-from chia.wallet.trading.action_aliases import DirectPayment
-from chia.wallet.trading.wallet_actions import Condition, WalletAction
+from chia.wallet.action_manager.action_aliases import DirectPayment
+from chia.wallet.action_manager.wallet_actions import Condition
+from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof

@@ -26,7 +26,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.action_aliases import RequestPayment
+from chia.wallet.action_manager.action_aliases import RequestPayment
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
@@ -65,8 +65,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
-from chia.wallet.trading.action_aliases import (
-    ActionAlias,
+from chia.wallet.action_manager.action_aliases import (
     AssertAnnouncement,
     DirectPayment,
     Fee,
@@ -74,9 +73,10 @@ from chia.wallet.trading.action_aliases import (
     OfferedAmount,
     RequestPayment,
 )
+from chia.wallet.action_manager.protocols import ActionAlias
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, Offer, OFFER_MOD
-from chia.wallet.trading.wallet_actions import WalletAction
+from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
 

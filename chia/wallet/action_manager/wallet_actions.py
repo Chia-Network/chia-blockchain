@@ -1,24 +1,12 @@
 from dataclasses import dataclass
-from typing import List, Protocol, TypeVar
+from typing import List, TypeVar
 
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.puzzle_drivers import Solver
-
-
-class WalletAction(Protocol):
-    @staticmethod
-    def name() -> str:
-        ...
-
-    @classmethod
-    def from_solver(cls, solver: Solver) -> "WalletAction":
-        ...
-
-    def to_solver(self) -> Solver:
-        ...
 
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
