@@ -1,9 +1,10 @@
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
 
 from typing_extensions import Protocol
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.coin_spend import CoinSpend
 from chia.wallet.puzzle_drivers import Solver
 
 
