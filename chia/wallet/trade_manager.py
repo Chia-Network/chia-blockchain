@@ -792,9 +792,8 @@ class TradeManager:
         self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
-        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
-
         await self.maybe_create_wallets_for_offer(complete_offer)
+        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
 
         trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
@@ -886,7 +885,7 @@ class TradeManager:
                         return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
 
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee, min_coin_amount
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee
                 )
         return None
 

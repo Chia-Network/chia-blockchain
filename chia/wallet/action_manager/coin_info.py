@@ -1,19 +1,11 @@
 from dataclasses import dataclass
-from typing import Dict, List, Protocol, Tuple
+from typing import Dict, List, Tuple
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.action_manager.protocols import ActionAlias, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, WalletAction
 from chia.wallet.puzzle_drivers import Solver
-
-
-class OuterDriver(Protocol):
-    ...
-
-
-class InnerDriver(Protocol):
-    ...
 
 
 @dataclass(frozen=True)

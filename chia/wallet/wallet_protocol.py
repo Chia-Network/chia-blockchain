@@ -9,7 +9,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 if TYPE_CHECKING:
@@ -59,9 +58,6 @@ class WalletProtocol(Protocol):
         ...
 
     def require_derivation_paths(self) -> bool:
-        ...
-
-    def get_wallet_actions(self) -> List[WalletAction]:
         ...
 
     # WalletStateManager is only imported for type hinting thus leaving pylint

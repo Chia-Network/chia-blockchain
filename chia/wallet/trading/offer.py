@@ -33,8 +33,6 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
-CURRY = load_clvm("curry.clsp")
-ADD_WRAPPED_ANNOUNCEMENT = load_clvm("add_wrapped_announcement.clsp")
 ZERO_32 = bytes32([0] * 32)
 
 

@@ -241,7 +241,6 @@ class WalletStateManager:
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }
-        self.mod_hash_to_wallet_map = {}
         self.outer_wallets = [Wallet, DataLayerWallet]
         self.inner_wallets = [Wallet]
 

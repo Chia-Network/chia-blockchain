@@ -27,9 +27,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias
 from chia.wallet.action_manager.protocols import InnerDriver as InnerDriverProtocol
-from chia.wallet.action_manager.protocols import WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, WalletAction
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
@@ -1144,7 +1143,6 @@ class DataLayerWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         solver: Solver,
         fee: uint64 = uint64(0),
-        min_coin_amount: Optional[uint64] = None,
     ) -> Offer:
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
