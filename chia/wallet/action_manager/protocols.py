@@ -7,11 +7,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import Solver
 
-from typing import Any, Dict, List
-
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzle_drivers import Solver
 
 class WalletAction(Protocol):
     @staticmethod

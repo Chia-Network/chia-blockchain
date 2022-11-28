@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 
 from clvm_tools.binutils import disassemble
 
@@ -348,16 +348,6 @@ class RequestPayment:
         return Solver(solver_dict)
 
     def de_alias(self) -> WalletAction:
-        def walk_tree_and_hash_curried(tree: Program, template: Program) -> Program:
-            if template.atom is None:
-                return walk_tree_and_hash_curried(tree.first(), template.first()).cons(
-                    walk_tree_and_hash_curried(tree.rest(), template.rest())
-                )
-            elif template == Program.to(1):
-                return tree.get_tree_hash()
-            else:
-                return tree
-
         return Graftroot(
             self.construct_puzzle_wrapper(),
             Program.to(None),
@@ -401,6 +391,17 @@ class RequestPayment:
             # (c (q . 4) (c (q 1 . "assertion") (c (c (q . 2) (c (c (q . 1) 2) (q 1))) ())))
             return Program.to([4, (1, 4), [4, (1, (1, assertion)), [4, [4, (1, 2), [4, [4, (1, 1), 2], [1, 1]]], []]]])
         else:
+
+            def walk_tree_and_hash_curried(tree: Program, template: Program) -> Program:
+                if template.atom is None:
+                    return walk_tree_and_hash_curried(tree.first(), template.first()).cons(
+                        walk_tree_and_hash_curried(tree.rest(), template.rest())
+                    )
+                elif template == Program.to(1):
+                    return tree.get_tree_hash()
+                else:
+                    return tree
+
             return CURRY.curry(
                 ADD_WRAPPED_ANNOUNCEMENT.curry(
                     [bytes32(Program.to(typ["mod"]).get_tree_hash()) for typ in self.asset_types],
@@ -496,7 +497,7 @@ class RequestPayment:
                     Payment(bytes32(p["puzhash"]), cast_to_int(p["amount"]), p["memos"])
                     for p in payment_type["payments"]
                 ]
-                asset_types: List[Solver] = payment_type["asset_types"] if "asset_types" in payment else []
+                asset_types: List[Solver] = payment_type["asset_types"] if "asset_types" in payments else []
                 if (
                     nonce == self.nonce
                     and set(payments) == set(self.payments)

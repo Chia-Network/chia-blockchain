@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Iterator, List, Tuple, TypeVar, Union
+from typing import Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -248,7 +248,7 @@ class RequireDLInclusion:
                             else:
                                 acceptable_roots.remove(proved_root)
                                 proved_root = None
-                                proof_of_inclusion = []
+                                proofs_of_inclusion = []
                                 break
 
                 all_proofs.append(proofs_of_inclusion)

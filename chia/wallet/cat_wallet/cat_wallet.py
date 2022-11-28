@@ -8,6 +8,7 @@ from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from blspy import AugSchemeMPL, G2Element, G1Element
+from clvm_tools.binutils import disassemble
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -34,6 +35,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
@@ -850,7 +852,8 @@ class CATWallet:
                     "mod": disassemble(CAT_MOD),
                     "solution_template": f"(1 {'1' if 'tail' in request else '-1'} 0 . $)",
                     "committed_args": (
-                        f"({'0x' + CAT_MOD_HASH.hex()} {'0x' + request['tail'].hex() if 'tail' in request else '()'} () . ())"
+                        f"({'0x' + CAT_MOD_HASH.hex()} {'0x' + request['tail'].hex() if 'tail' in request else '()'}"
+                        " () . ())"
                     ),
                 }
             )

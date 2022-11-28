@@ -5,7 +5,7 @@ import logging
 import time
 from dataclasses import dataclass
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
@@ -25,6 +25,8 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.action_manager.protocols import InnerDriver as InnerDriverProtocol
+from chia.wallet.action_manager.protocols import ActionAlias
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -52,9 +54,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_public_key,
 )
-from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.trading.offer import NotarizedPayment, Offer
@@ -1495,7 +1495,7 @@ class DataLayerWallet:
             inner_mod, inner_args = innerpuz.uncurry()
 
             inner_info: Optional[
-                Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
+                Tuple[InnerDriverProtocol, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
             ] = await wallet_state_manager.match_inner_puzzle_and_solution(
                 innerpuz, spend.solution.to_program().at("rrff"), inner_mod, inner_args
             )
@@ -1617,12 +1617,15 @@ class OuterDriver:
         return [], new_inner_actions
 
 
+_T_UpdateMetadataDL = TypeVar("_T_UpdateMetadataDL", bound="UpdateMetadataDL")
+
+
 @dataclass(frozen=True)
 class UpdateMetadataDL(UpdateMetadata):
     metadata_updater: Program = ACS_MU
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> _T_UpdateMetadata:
+    def from_solver(cls, solver: Solver) -> _T_UpdateMetadataDL:
         args: List[Program] = []
         if "new_metadata" in solver:
             args.append([[solver["new_metadata"], ACS_MU_PH], None])

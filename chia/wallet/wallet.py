@@ -2,9 +2,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from blspy import G1Element, G2Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -46,7 +46,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.wallet_actions import Condition, Graftroot
-from chia.wallet.action_manager.protocols import WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, WalletAction
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -631,7 +631,6 @@ class Wallet:
             cast_to_int(coin_spec["amount"]),
             exclude=exclude,
         )
-        infos: List[CoinInfo] = []
         return [
             CoinInfo(
                 coin,

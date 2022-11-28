@@ -2,83 +2,30 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-import time
-import traceback
 from blspy import AugSchemeMPL, G1Element, G2Element
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
-from typing_extensions import Literal
 
-from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.protocols.wallet_protocol import CoinState
-from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.db_wrapper import DBWrapper2
-from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
-from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.outer_puzzles import AssetType
+from chia.util.ints import uint64
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.action_manager.action_aliases import RequestPayment
-from chia.wallet.trading.offer import NotarizedPayment, Offer
-from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.trading.trade_store import TradeStore
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-import ast
+from chia.wallet.puzzle_drivers import Solver, cast_to_int
 import dataclasses
-import inspect
-import math
 
-from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
 
-from chia.data_layer.data_layer_wallet import UpdateMetadataDL
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint16, uint64
-from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz, GRAFTROOT_DL_OFFERS, RequireDLInclusion
-from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
-from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_coin_announcement,
-    make_create_coin_announcement,
-    make_create_coin_condition,
-    make_create_puzzle_announcement,
-    make_reserve_fee_condition,
-)
 from chia.wallet.action_manager.action_aliases import (
-    AssertAnnouncement,
     DirectPayment,
-    Fee,
-    MakeAnnouncement,
-    OfferedAmount,
     RequestPayment,
 )
 from chia.wallet.action_manager.protocols import ActionAlias
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, Offer, OFFER_MOD
 from chia.wallet.action_manager.protocols import WalletAction
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_protocol import WalletProtocol
 
 
 # Using a place holder nonce to replace with the correct nonce at the end of spend construction (sha256 "bundle nonce")
@@ -104,6 +51,7 @@ class WalletActionManager:
     This class defines methods for creating spends from user input and performing actions on those spends
     once they are created.
     """
+
     wallet_state_manager: Any
     log: logging.Logger = logging.getLogger(__name__)
 
@@ -365,7 +313,6 @@ class WalletActionManager:
             actions = info.alias_actions(actions, self.wallet_state_manager.action_aliases)
             # Step 4: Augment each action with the environment
             augmented_actions: List[Solver] = [action.augment(environment).to_solver() for action in actions]
-            temp_spend = spend
             remaining_actions, spend = await info.create_spend_for_actions(
                 augmented_actions, self.wallet_state_manager.action_aliases, optimize=True
             )

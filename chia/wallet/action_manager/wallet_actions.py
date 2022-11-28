@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import List, TypeVar
+from typing import TypeVar
 
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.puzzle_drivers import Solver

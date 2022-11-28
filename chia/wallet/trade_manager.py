@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import time
 import traceback
-from blspy import AugSchemeMPL, G1Element, G2Element
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from typing_extensions import Literal
@@ -15,6 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
@@ -720,15 +720,21 @@ class TradeManager:
                 modified_solver,
                 fee,
             )
-            unsigned_complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(complement_summary)
-            complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(unsigned_complement_spend)
+            unsigned_complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
+                complement_summary
+            )
+            complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
+                unsigned_complement_spend
+            )
             full_spend: SpendBundle = SpendBundle.aggregate(
                 [
                     complement_spend,
                     offer_to_spend(offer),
                 ]
             )
-            final_spend_bundle: SpendBundle = await self.wallet_state_manager.action_manager.solve_spend(full_spend, modified_solver)
+            final_spend_bundle: SpendBundle = await self.wallet_state_manager.action_manager.solve_spend(
+                full_spend, modified_solver
+            )
             offer_no_payments: Offer = Offer.from_spend_bundle(final_spend_bundle)
             payment_spends: List[CoinSpend] = [
                 request_payment_to_legacy_encoding(
@@ -874,7 +880,9 @@ class TradeManager:
                         unsigned_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
                             await old_request_to_new(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
                         )
-                        signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(unsigned_spend)
+                        signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
+                            unsigned_spend
+                        )
                         return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
 
                 return await DataLayerWallet.make_update_offer(
@@ -967,7 +975,9 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return await self.wallet_state_manager.action_manager.deconstruct_spend(  # Advanced offer summary
-                            offer_to_spend(offer)
+                        return (
+                            await self.wallet_state_manager.action_manager.deconstruct_spend(  # Advanced offer summary
+                                offer_to_spend(offer)
+                            )
                         )
         return None

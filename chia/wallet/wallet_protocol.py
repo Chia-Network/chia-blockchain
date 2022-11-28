@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional, Set
+from typing import List, Optional, Set, TYPE_CHECKING
 
-from blspy import G1Element, G2Element
+from blspy import G1Element
 from typing_extensions import Protocol
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 

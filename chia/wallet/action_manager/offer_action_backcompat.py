@@ -1,44 +1,37 @@
 import ast
 import dataclasses
-import inspect
 import math
 
-from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.data_layer.data_layer_wallet import UpdateMetadataDL
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz, GRAFTROOT_DL_OFFERS, RequireDLInclusion
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD
+from chia.wallet.db_wallet.db_wallet_puzzles import (
+    create_host_fullpuz,
+    GRAFTROOT_DL_OFFERS,
+    RequireDLInclusion,
+    SINGLETON_TOP_LAYER_MOD,
+)
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
-from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_coin_announcement,
-    make_create_coin_announcement,
-    make_create_coin_condition,
-    make_create_puzzle_announcement,
-    make_reserve_fee_condition,
-)
 from chia.wallet.action_manager.action_aliases import (
-    AssertAnnouncement,
-    DirectPayment,
     Fee,
     MakeAnnouncement,
     OfferedAmount,
     RequestPayment,
 )
-from chia.wallet.action_manager.protocols import ActionAlias
-from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, Offer, OFFER_MOD
+from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -549,12 +542,6 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
             new_spends.append(spend)
             continue
 
-        delegated_puzzle_bytes = bytes(delegated_puzzle)
-        graftroot_solution_index = solution_bytes.find(delegated_puzzle_bytes) - 3
-        graftroot_solution_bytes = solution_bytes[graftroot_solution_index:]
-        graftroot_solution = Program.from_bytes(graftroot_solution_bytes)
-        delegated_solution = graftroot_solution.at("rrf")
-
         metadata: Program = Program.to(None)
         for alias in [*requested_payments, *dl_inclusions]:
             graftroot = alias.de_alias()
@@ -639,11 +626,11 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
     actions: List[Solver] = []
     for key, solver in old_solver.info.items():
         try:
-            asset_id: bytes32 = bytes32.from_hexstr(key)
+            bytes32.from_hexstr(key)
         except ValueError:
             continue
 
-        wallet: OuterWallet = await wallet_state_manager.get_wallet_for_asset_id(key)
+        wallet: WalletProtocol = await wallet_state_manager.get_wallet_for_asset_id(key)
         if wallet.type() == WalletType.DATA_LAYER:
             asset_types = wallet.get_asset_types(Solver({"launcher_id": "0x" + key if key[0:2] != "0x" else key}))
             actions.append(
