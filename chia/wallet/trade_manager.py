@@ -797,7 +797,7 @@ class TradeManager:
             if not result[0] or result[1] is None:
                 raise ValueError(result[2])
 
-            complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
+            complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, result[1]]), solver)
 
         self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
