@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import json
 import logging
@@ -16,8 +18,6 @@ def skip(path: Path) -> bool:
 
 
 def subdirs(per: str) -> List[Path]:
-    dirs: List[Path]
-
     if per == "directory":
         glob_pattern = "**/"
     elif per == "file":

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -9,7 +11,11 @@ from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_plot_id_ph,
+    calculate_plot_id_pk,
+    generate_plot_public_key,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.keychain import Keychain
@@ -187,17 +193,17 @@ async def create_plots(
         # The plot public key is the combination of the harvester and farmer keys
         # New plots will also include a taproot of the keys, for extensibility
         include_taproot: bool = keys.pool_contract_puzzle_hash is not None
-        plot_public_key = ProofOfSpace.generate_plot_public_key(
+        plot_public_key = generate_plot_public_key(
             master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, include_taproot
         )
 
         # The plot id is based on the harvester, farmer, and pool keys
         if keys.pool_public_key is not None:
-            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
+            plot_id: bytes32 = calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
             plot_memo: bytes32 = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
         else:
             assert keys.pool_contract_puzzle_hash is not None
-            plot_id = ProofOfSpace.calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
+            plot_id = calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
             plot_memo = stream_plot_info_ph(keys.pool_contract_puzzle_hash, keys.farmer_public_key, sk)
 
         if args.plotid is not None:

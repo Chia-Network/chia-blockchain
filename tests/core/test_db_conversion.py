@@ -1,21 +1,22 @@
-import pytest
-import aiosqlite
+from __future__ import annotations
+
 import random
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
-from tests.setup_nodes import test_constants
-from tests.util.temp_file import TempFile
+import pytest
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
-from chia.util.db_wrapper import DBWrapper2
+from chia.consensus.blockchain import Blockchain
+from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint64
+from tests.util.temp_file import TempFile
 
 
 def rand_bytes(num) -> bytes:
@@ -54,12 +55,14 @@ class TestDbUpgrade:
 
         with TempFile() as in_file, TempFile() as out_file:
 
-            conn = await aiosqlite.connect(in_file)
-            await conn.execute("pragma journal_mode=OFF")
-            await conn.execute("pragma synchronous=OFF")
+            db_wrapper1 = await DBWrapper2.create(
+                database=in_file,
+                reader_count=1,
+                db_version=1,
+                journal_mode="OFF",
+                synchronous="OFF",
+            )
 
-            db_wrapper1 = DBWrapper2(conn, 1)
-            await db_wrapper1.add_connection(await aiosqlite.connect(in_file))
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
@@ -84,13 +87,8 @@ class TestDbUpgrade:
             # now, convert v1 in_file to v2 out_file
             convert_v1_to_v2(in_file, out_file)
 
-            conn = await aiosqlite.connect(in_file)
-            db_wrapper1 = DBWrapper2(conn, 1)
-            await db_wrapper1.add_connection(await aiosqlite.connect(in_file))
-
-            conn2 = await aiosqlite.connect(out_file)
-            db_wrapper2 = DBWrapper2(conn2, 2)
-            await db_wrapper2.add_connection(await aiosqlite.connect(out_file))
+            db_wrapper1 = await DBWrapper2.create(database=in_file, reader_count=1, db_version=1)
+            db_wrapper2 = await DBWrapper2.create(database=out_file, reader_count=1, db_version=2)
 
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)

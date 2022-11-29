@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from chia.types.blockchain_format.coin import Coin

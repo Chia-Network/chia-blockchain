@@ -1,86 +1,85 @@
-import functools
+from __future__ import annotations
+
 import logging
-from inspect import signature
-from typing import Any, Callable, Coroutine, List, Optional, Union
+from dataclasses import dataclass, field
+from typing import Callable, List, Optional, Type, TypeVar, Union, get_type_hints
+
+from typing_extensions import Concatenate, ParamSpec
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message
-from chia.server.ws_connection import WSChiaConnection
-from chia.util.streamable import Streamable, _T_Streamable
+from chia.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
 
-converted_api_f_type = Union[
-    Callable[[Union[bytes, _T_Streamable]], Coroutine[Any, Any, Optional[Message]]],
-    Callable[[Union[bytes, _T_Streamable], WSChiaConnection], Coroutine[Any, Any, Optional[Message]]],
-]
-
-initial_api_f_type = Union[
-    Callable[[Any, _T_Streamable], Coroutine[Any, Any, Optional[Message]]],
-    Callable[[Any, _T_Streamable, WSChiaConnection], Coroutine[Any, Any, Optional[Message]]],
-]
+P = ParamSpec("P")
+R = TypeVar("R")
+S = TypeVar("S", bound=Streamable)
+Self = TypeVar("Self")
 
 
-def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
-    @functools.wraps(f)
-    def f_substitute(*args, **kwargs) -> Any:  # type: ignore
-        sig = signature(f)
-        binding = sig.bind(*args, **kwargs)
-        binding.apply_defaults()
-        inter = dict(binding.arguments)
-
-        # Converts each parameter from a Python dictionary, into an instance of the object
-        # specified by the type annotation (signature) of the function that is being called (f)
-        # The method can also be called with the target type instead of a dictionary.
-        for param_name, param_class in f.__annotations__.items():
-            if param_name != "return" and isinstance(inter[param_name], Streamable):
-                if param_class.__name__ == "bytes":
-                    continue
-                if hasattr(f, "bytes_required"):
-                    inter[f"{param_name}_bytes"] = bytes(inter[param_name])
-                    continue
-            if param_name != "return" and isinstance(inter[param_name], bytes):
-                if param_class.__name__ == "bytes":
-                    continue
-                if hasattr(f, "bytes_required"):
-                    inter[f"{param_name}_bytes"] = inter[param_name]
-                inter[param_name] = param_class.from_bytes(inter[param_name])
-        return f(**inter)  # type: ignore
-
-    setattr(f_substitute, "api_function", True)
-    return f_substitute
+metadata_attribute_name = "_chia_api_metadata"
 
 
-def peer_required(func: Callable[..., Any]) -> Callable[..., Any]:
-    def inner() -> Callable[..., Any]:
-        setattr(func, "peer_required", True)
-        return func
-
-    return inner()
-
-
-def bytes_required(func: Callable[..., Any]) -> Callable[..., Any]:
-    def inner() -> Callable[..., Any]:
-        setattr(func, "bytes_required", True)
-        return func
-
-    return inner()
+@dataclass
+class ApiMetadata:
+    message_class: Type[Streamable]
+    peer_required: bool = False
+    bytes_required: bool = False
+    execute_task: bool = False
+    reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
 
 
-def execute_task(func: Callable[..., Any]) -> Callable[..., Any]:
-    def inner() -> Callable[..., Any]:
-        setattr(func, "execute_task", True)
-        return func
-
-    return inner()
+def get_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
+    return getattr(function, metadata_attribute_name, None)
 
 
-def reply_type(prot_type: List[ProtocolMessageTypes]) -> Callable[..., Any]:
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
-        def inner() -> Callable[..., Any]:
-            setattr(func, "reply_type", prot_type)
-            return func
+def _set_metadata(function: Callable[..., object], metadata: ApiMetadata) -> None:
+    setattr(function, metadata_attribute_name, metadata)
 
-        return inner()
 
-    return wrap
+# TODO: This hinting does not express that the returned callable *_bytes parameter
+#       corresponding to the first parameter name will be filled in by the wrapper.
+def api_request(
+    peer_required: bool = False,
+    bytes_required: bool = False,
+    execute_task: bool = False,
+    reply_types: Optional[List[ProtocolMessageTypes]] = None,
+) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, Union[bytes, S], P], R]]:
+    non_optional_reply_types: List[ProtocolMessageTypes]
+    if reply_types is None:
+        non_optional_reply_types = []
+    else:
+        non_optional_reply_types = reply_types
+
+    def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
+        def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
+            arg: S
+            if isinstance(original, bytes):
+                if metadata.bytes_required:
+                    kwargs[message_name_bytes] = original
+                arg = message_class.from_bytes(original)
+            else:
+                arg = original
+                if metadata.bytes_required:
+                    kwargs[message_name_bytes] = bytes(original)
+
+            return f(self, arg, *args, **kwargs)
+
+        message_name, message_class = next(
+            (name, hint) for name, hint in get_type_hints(f).items() if name not in {"self", "peer", "return"}
+        )
+        message_name_bytes = f"{message_name}_bytes"
+
+        metadata = ApiMetadata(
+            peer_required=peer_required,
+            bytes_required=bytes_required,
+            execute_task=execute_task,
+            reply_types=non_optional_reply_types,
+            message_class=message_class,
+        )
+
+        _set_metadata(function=wrapper, metadata=metadata)
+
+        return wrapper
+
+    return inner

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -23,12 +25,12 @@ SERVICE_NAME = "farmer"
 
 def create_farmer_service(
     root_path: pathlib.Path,
-    config: Dict,
-    config_pool: Dict,
+    config: Dict[str, Any],
+    config_pool: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Farmer]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = []
@@ -57,7 +59,6 @@ def create_farmer_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         on_connect_callback=farmer.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,

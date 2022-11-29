@@ -3,7 +3,6 @@ import pickle
 from pathlib import Path
 from typing import List, Optional
 
-import aiosqlite
 import tempfile
 
 from chia.consensus.blockchain import Blockchain
@@ -21,9 +20,7 @@ async def create_blockchain(constants: ConsensusConstants, db_version: int):
 
     if db_path.exists():
         db_path.unlink()
-    connection = await aiosqlite.connect(db_path)
-    wrapper = DBWrapper2(connection, db_version)
-    await wrapper.add_connection(await aiosqlite.connect(db_path))
+    wrapper = await DBWrapper2.create(database=db_path, reader_count=1, db_version=db_version)
 
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)

@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import os
 import stat
 import sys
-from chia.util.config import load_config, traverse_dict
-from chia.util.permissions import octal_mode_string, verify_file_permissions
 from logging import Logger
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
+
+from chia.util.config import load_config, traverse_dict
+from chia.util.permissions import octal_mode_string, verify_file_permissions
 
 DEFAULT_PERMISSIONS_CERT_FILE: int = 0o644
 DEFAULT_PERMISSIONS_KEY_FILE: int = 0o600

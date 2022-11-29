@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -22,11 +24,11 @@ SERVICE_NAME = "harvester"
 
 def create_harvester_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     farmer_peer: Optional[PeerInfo],
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Harvester]:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
@@ -48,7 +50,6 @@ def create_harvester_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=[] if farmer_peer is None else [farmer_peer],
-        auth_connect_peers=True,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,

@@ -1,26 +1,36 @@
+from __future__ import annotations
+
 import json
 from typing import Optional
 
 import pytest
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element, G2Element
 
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.hash import std_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
-
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
+from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.wallet_types import WalletType
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
 async def get_wallet_num(wallet_manager):
     return len(await wallet_manager.get_all_wallet_info_entries())
+
+
+def get_parent_num(did_wallet: DIDWallet):
+    return len(did_wallet.did_info.parent_info)
 
 
 class TestDIDWallet:
@@ -465,7 +475,7 @@ class TestDIDWallet:
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         ph2 = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
@@ -561,7 +571,6 @@ class TestDIDWallet:
             )
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-
         new_ph = await did_wallet_4.get_new_did_inner_hash()
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
@@ -575,6 +584,7 @@ class TestDIDWallet:
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+        await time_out_assert(15, wallet.get_pending_change_balance, 0)
         (
             test_info_list,
             test_message_spend_bundle,
@@ -586,7 +596,7 @@ class TestDIDWallet:
         )
 
         spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -692,6 +702,7 @@ class TestDIDWallet:
             )
         )
         did_wallet_2: Optional[DIDWallet] = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
+        assert len(wallet_node.wallet_state_manager.wallets) == 2
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
         if with_recovery:
             assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
@@ -769,8 +780,174 @@ class TestDIDWallet:
         [True, False],
     )
     @pytest.mark.asyncio
+    async def test_get_info(self, two_wallet_nodes, trusted):
+        num_blocks = 3
+        fee = uint64(1000)
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet1 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        ph1 = await wallet1.get_new_puzzlehash()
+        api_0 = WalletRpcApi(wallet_node)
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101), [], metadata={"twitter": "twitter"}, fee=fee
+            )
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_1.id()
+        )
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+        response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
+
+        assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
+        assert response["full_puzzle"] == create_fullpuz(
+            did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
+        )
+        assert response["metadata"]["twitter"] == "twitter"
+        assert response["latest_coin"] == (await did_wallet_1.select_coins(uint64(1))).pop().name().hex()
+        assert response["num_verification"] == 0
+        assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
+        assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
+
+        # Test non-singleton coin
+        coin = (await wallet.select_coins(uint64(1))).pop()
+        assert coin.amount % 2 == 1
+        response = await api_0.did_get_info({"coin_id": coin.name().hex()})
+        assert not response["success"]
+
+        # Test multiple odd coins
+        coin_1 = (await wallet.select_coins(uint64(1), exclude=[coin])).pop()
+        assert coin_1.amount % 2 == 0
+        tx = await wallet.generate_signed_transaction(
+            1,
+            ph1,
+            fee,
+            exclude_coins=set([coin]),
+        )
+        await wallet.push_transaction(tx)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await time_out_assert(15, wallet1.get_confirmed_balance, 2000000000001)
+        try:
+            await api_0.did_get_info({"coin_id": coin_1.name().hex()})
+            # We expect a ValueError here
+            assert False
+        except ValueError:
+            pass
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_message_spend(self, two_wallet_nodes, trusted):
+        num_blocks = 3
+        fee = uint64(1000)
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet1 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        ph1 = await wallet1.get_new_puzzlehash()
+        api_0 = WalletRpcApi(wallet_node)
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101), [], fee=fee
+            )
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_1.id()
+        )
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+        response = await api_0.did_message_spend(
+            {"wallet_id": did_wallet_1.wallet_id, "coin_announcements": ["0abc"], "puzzle_announcements": ["0def"]}
+        )
+        assert "spend_bundle" in response
+        spend = response["spend_bundle"].coin_spends[0]
+        error, conditions, cost = conditions_dict_for_solution(
+            spend.puzzle_reveal.to_program(),
+            spend.solution.to_program(),
+            wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+        )
+
+        assert len(conditions[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT]) == 1
+        assert conditions[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0].hex() == "0abc"
+        assert len(conditions[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]) == 1
+        assert conditions[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT][0].vars[0].hex() == "0def"
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
     async def test_update_metadata(self, two_wallet_nodes, trusted):
-        num_blocks = 5
+        num_blocks = 3
         fee = uint64(1000)
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -819,8 +996,12 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
-        await time_out_assert(15, wallet.get_confirmed_balance, 7999999998899)
-        await time_out_assert(15, wallet.get_unconfirmed_balance, 7999999998899)
+
+        await time_out_assert(15, wallet.get_confirmed_balance, 3999999998899)
+        await time_out_assert(15, wallet.get_unconfirmed_balance, 3999999998899)
+        puzhash = did_wallet_1.did_info.current_inner.get_tree_hash()
+        parent_num = get_parent_num(did_wallet_1)
+
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
@@ -830,8 +1011,12 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
-        await time_out_assert(15, wallet.get_confirmed_balance, 7999999997899)
-        await time_out_assert(15, wallet.get_unconfirmed_balance, 7999999997899)
+
+        await time_out_assert(15, get_parent_num, parent_num + 2, did_wallet_1)
+        assert puzhash != did_wallet_1.did_info.current_inner.get_tree_hash()
+        await time_out_assert(15, wallet.get_confirmed_balance, 3999999997899)
+        await time_out_assert(15, wallet.get_unconfirmed_balance, 3999999997899)
+
         assert did_wallet_1.did_info.metadata.find("Twitter") > 0
 
     @pytest.mark.parametrize(
@@ -849,6 +1034,7 @@ class TestDIDWallet:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
@@ -896,9 +1082,16 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
-        hex_message = "abcd"
-        pubkey, signature = await did_wallet_1.sign_message(bytes.fromhex(hex_message))
-        message = std_hash(
-            f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
+        message = "Hello World"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+            }
         )
-        assert AugSchemeMPL.verify(pubkey, message, signature)
+        puzzle: Program = Program.to(("Chia Signed Message", message))
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )

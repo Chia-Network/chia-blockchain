@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import asyncio
+import functools
 import json
 import logging
 import os
@@ -15,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
+from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
@@ -26,14 +29,11 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
-from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
+from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import (
-    Keychain,
-    passphrase_requirements,
-    supports_os_passphrase_storage,
-)
+from chia.util.keychain import Keychain, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -142,13 +142,13 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        self.websocket_runner: Optional[web.AppRunner] = None
+        self.webserver: Optional[WebServer] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = shutdown_event
 
-    async def start(self):
+    async def start(self) -> None:
         self.log.info("Starting Daemon Server")
 
         # Note: the minimum_version has been already set to TLSv1_2
@@ -170,24 +170,26 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        app = web.Application(client_max_size=self.daemon_max_message_size)
-        app.add_routes([web.get("/", self.incoming_connection)])
-        self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
-        await self.websocket_runner.setup()
-
-        site = web.TCPSite(
-            self.websocket_runner,
-            host=self.self_hostname,
+        self.webserver = await WebServer.create(
+            hostname=self.self_hostname,
             port=self.daemon_port,
+            keepalive_timeout=300,
             shutdown_timeout=3,
+            routes=[web.get("/", self.incoming_connection)],
             ssl_context=self.ssl_context,
+            logger=self.log,
         )
-        await site.start()
 
     async def setup_process_global_state(self) -> None:
         try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self._accept_signal)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self._accept_signal)
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
         except NotImplementedError:
             self.log.info("Not implemented")
 
@@ -204,7 +206,9 @@ class WebSocketServer:
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
         service_names = list(self.services.keys())
-        stop_service_jobs = [kill_service(self.root_path, self.services, s_n) for s_n in service_names]
+        stop_service_jobs = [
+            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+        ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()
@@ -341,14 +345,10 @@ class WebSocketServer:
             response = await self.unlock_keyring(data)
         elif command == "validate_keyring_passphrase":
             response = await self.validate_keyring_passphrase(data)
-        elif command == "migrate_keyring":
-            response = await self.migrate_keyring(data)
         elif command == "set_keyring_passphrase":
             response = await self.set_keyring_passphrase(data)
         elif command == "remove_keyring_passphrase":
             response = await self.remove_keyring_passphrase(data)
-        elif command == "notify_keyring_migration_completed":
-            response = await self.notify_keyring_migration_completed(data)
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
@@ -375,8 +375,6 @@ class WebSocketServer:
         can_save_passphrase: bool = supports_os_passphrase_storage()
         user_passphrase_is_set: bool = Keychain.has_master_passphrase() and not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
-        needs_migration: bool = Keychain.needs_migration()
-        can_remove_legacy_keys: bool = False  # Disabling GUI support for removing legacy keys post-migration
         can_set_passphrase_hint: bool = True
         passphrase_hint: str = Keychain.get_master_passphrase_hint() or ""
         requirements: Dict[str, Any] = passphrase_requirements()
@@ -385,8 +383,6 @@ class WebSocketServer:
             "is_keyring_locked": locked,
             "can_save_passphrase": can_save_passphrase,
             "user_passphrase_is_set": user_passphrase_is_set,
-            "needs_migration": needs_migration,
-            "can_remove_legacy_keys": can_remove_legacy_keys,
             "can_set_passphrase_hint": can_set_passphrase_hint,
             "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
@@ -444,54 +440,6 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def migrate_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        if Keychain.needs_migration() is False:
-            # If the keyring has already been migrated, we'll raise an error to the client.
-            # The reason for raising an error is because the migration request has side-
-            # effects beyond copying keys from the legacy keyring to the new keyring. The
-            # request may have set a passphrase and indicated that keys should be cleaned
-            # from the legacy keyring. If we were to return early and indicate success,
-            # the client and user's expectations may not match reality (were my keys
-            # deleted from the legacy keyring? was my passphrase set?).
-            return {"success": False, "error": "migration not needed"}
-
-        success: bool = False
-        error: Optional[str] = None
-        passphrase: Optional[str] = request.get("passphrase", None)
-        passphrase_hint: Optional[str] = request.get("passphrase_hint", None)
-        save_passphrase: bool = request.get("save_passphrase", False)
-        cleanup_legacy_keyring: bool = request.get("cleanup_legacy_keyring", False)
-
-        if passphrase is not None and type(passphrase) is not str:
-            return {"success": False, "error": 'expected string value for "passphrase"'}
-
-        if passphrase_hint is not None and type(passphrase_hint) is not str:
-            return {"success": False, "error": 'expected string value for "passphrase_hint"'}
-
-        if not Keychain.passphrase_meets_requirements(passphrase):
-            return {"success": False, "error": "passphrase doesn't satisfy requirements"}
-
-        if type(cleanup_legacy_keyring) is not bool:
-            return {"success": False, "error": 'expected bool value for "cleanup_legacy_keyring"'}
-
-        try:
-            Keychain.migrate_legacy_keyring(
-                passphrase=passphrase,
-                passphrase_hint=passphrase_hint,
-                save_passphrase=save_passphrase,
-                cleanup_legacy_keyring=cleanup_legacy_keyring,
-            )
-            success = True
-            # Inform the GUI of keyring status changes
-            self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
-        except Exception as e:
-            tb = traceback.format_exc()
-            self.log.error(f"Legacy keyring migration failed: {e} {tb}")
-            error = f"keyring migration failed: {e}"
-
-        response: Dict[str, Any] = {"success": success, "error": error}
-        return response
-
     async def set_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
@@ -523,8 +471,6 @@ class WebSocketServer:
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
-        except KeychainRequiresMigration:
-            error = "keyring requires migration"
         except KeychainCurrentPassphraseIsInvalid:
             error = "current passphrase is invalid"
         except Exception as e:
@@ -565,32 +511,6 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def notify_keyring_migration_completed(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        success: bool = False
-        error: Optional[str] = None
-        key: Optional[str] = request.get("key", None)
-
-        if type(key) is not str:
-            return {"success": False, "error": "missing key"}
-
-        Keychain.handle_migration_completed()
-
-        try:
-            if Keychain.master_passphrase_is_valid(key, force_reload=True):
-                Keychain.set_cached_master_passphrase(key)
-                success = True
-                # Inform the GUI of keyring status changes
-                self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
-            else:
-                error = "bad passphrase"
-        except Exception as e:
-            tb = traceback.format_exc()
-            self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
-            error = "validation exception"
-
-        response: Dict[str, Any] = {"success": success, "error": error}
-        return response
-
     def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
         return response
@@ -607,7 +527,7 @@ class WebSocketServer:
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
         """
         Attempt to communicate with the GUI to inform it of any keyring status changes
-        (e.g. keyring becomes unlocked or migration completes)
+        (e.g. keyring becomes unlocked)
         """
         websockets = self.connections.get("wallet_ui", None)
 
@@ -699,6 +619,8 @@ class WebSocketServer:
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
+        elif plotter == "bladebit2":
+            final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
@@ -747,10 +669,8 @@ class WebSocketServer:
 
         if f is not None:
             command_args.append(f"-f{f}")
-
         if p is not None:
             command_args.append(f"-p{p}")
-
         if c is not None:
             command_args.append(f"-c{c}")
 
@@ -776,13 +696,10 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
-
         if e is True:
             command_args.append("-e")
-
         if x is True:
             command_args.append("-x")
-
         if override_k is True:
             command_args.append("--override-k")
 
@@ -791,14 +708,75 @@ class WebSocketServer:
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
 
         command_args: List[str] = []
 
         if w is True:
             command_args.append("-w")
-
         if m is True:
             command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        return command_args
+
+    def _bladebit2_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
+        # memo = request["memo"]
+        t1 = request["t"]  # Temp directory
+        t2 = request.get("t2")  # Temp2 directory
+        u = request.get("u")  # Buckets
+        cache = request.get("cache")
+        f1_threads = request.get("f1_threads")
+        fp_threads = request.get("fp_threads")
+        c_threads = request.get("c_threads")
+        p2_threads = request.get("p2_threads")
+        p3_threads = request.get("p3_threads")
+        alternate = request.get("alternate", False)
+        no_t1_direct = request.get("no_t1_direct", False)
+        no_t2_direct = request.get("no_t2_direct", False)
+
+        command_args: List[str] = []
+
+        if w is True:
+            command_args.append("-w")
+        if m is True:
+            command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        command_args.append(f"-t{t1}")
+        if t2:
+            command_args.append(f"-2{t2}")
+        if u:
+            command_args.append(f"-u{u}")
+        if cache:
+            command_args.append("--cache")
+            command_args.append(str(cache))
+        if f1_threads:
+            command_args.append("--f1-threads")
+            command_args.append(str(f1_threads))
+        if fp_threads:
+            command_args.append("--fp-threads")
+            command_args.append(str(fp_threads))
+        if c_threads:
+            command_args.append("--c-threads")
+            command_args.append(str(c_threads))
+        if p2_threads:
+            command_args.append("--p2-threads")
+            command_args.append(str(p2_threads))
+        if p3_threads:
+            command_args.append("--p3-threads")
+            command_args.append(str(p3_threads))
+        if alternate:
+            command_args.append("--alternate")
+        if no_t1_direct:
+            command_args.append("--no-t1-direct")
+        if no_t2_direct:
+            command_args.append("--no-t2-direct")
 
         return command_args
 
@@ -840,6 +818,8 @@ class WebSocketServer:
             command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
         elif plotter == "bladebit":
             command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
+        elif plotter == "bladebit2":
+            command_args.extend(self._bladebit2_plotting_command_args(request, ignoreCount))
 
         return command_args
 
@@ -892,7 +872,7 @@ class WebSocketServer:
             if state is not PlotState.SUBMITTED:
                 raise Exception(f"Plot with ID {id} has no state submitted")
 
-            id = config["id"]
+            assert id == config["id"]
             delay = config["delay"]
             await asyncio.sleep(delay)
 
@@ -1133,14 +1113,18 @@ class WebSocketServer:
         return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
-        if self.websocket_runner is not None:
-            await self.websocket_runner.cleanup()
+        if self.webserver is not None:
+            self.webserver.close()
+            await self.webserver.await_closed()
         self.shutdown_event.set()
         log.info("chia daemon exiting")
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
-        service = request["service"]
+        service = request.get("service")
+        if service is None:
+            self.log.error("Service Name missing from request to 'register_service'")
+            return {"success": False}
         if service not in self.connections:
             self.connections[service] = []
         self.connections[service].append(websocket)

@@ -1,31 +1,31 @@
+from __future__ import annotations
+
 from typing import AsyncIterator, List, Tuple
 
 import pytest
 import pytest_asyncio
 
 from chia.cmds.units import units
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.full_node.full_node import FullNode
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.simulator.block_tools import create_block_tools_async, BlockTools
+from chia.server.start_service import Service
+from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets, setup_full_system
+from chia.simulator.setup_services import setup_full_node
 from chia.wallet.wallet_node import WalletNode
-from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import (
-    SimulatorsAndWallets,
-    setup_full_node,
-    setup_full_system,
-    test_constants,
-    setup_simulators_and_wallets,
-)
-from tests.util.keyring import TempKeyring
+from chia.simulator.block_tools import test_constants
+from chia.simulator.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
     **{
-        "DIFFICULTY_STARTING": 2 ** 8,
+        "DIFFICULTY_STARTING": 2**8,
         "DISCRIMINANT_SIZE_BITS": 1024,
         "SUB_EPOCH_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -33,7 +33,7 @@ test_constants_modified = test_constants.replace(
         "MAX_SUB_SLOT_BLOCKS": 50,
         "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
         "EPOCH_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2 ** 20,
+        "SUB_SLOT_ITERS_STARTING": 2**20,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
     }
 )
@@ -47,14 +47,14 @@ test_constants_modified = test_constants.replace(
 async def extra_node(self_hostname):
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
-        async for _ in setup_full_node(
+        async for service in setup_full_node(
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
             b_tools,
             db_version=1,
         ):
-            yield _
+            yield service._api
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -73,14 +73,30 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
-        server1 = node1.server
+        server1: ChiaServer = node1.full_node.server
 
-        node1_port = node1.full_node.server.get_port()
-        node2_port = node2.full_node.server.get_port()
-        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(600, node_height_at_least, True, node2, 7)
-        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        node1_port: uint16 = server1.get_port()
+        node2_port: uint16 = node2.full_node.server.get_port()
+
+        # Connect node 1 to node 2
+        connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
+        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
+
+        # Connect node3 to node1 and node2 - checks come later
+        node3: Service[FullNode] = extra_node
+        server3: ChiaServer = node3.full_node.server
+        connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
+        assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
+        connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
+        assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
+
+        # wait up to 10 mins for node2 to sync the chain to height 7
+        await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
+
+        connected = await sanitizer_server.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"sanitizer_server was unable to connect to node2 on port {node2_port}"
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
@@ -121,12 +137,13 @@ class TestSimulation:
             return has_compact == [True, True]
 
         await time_out_assert(600, has_compact, True, node1, node2)
-        node3 = extra_node
-        server3 = node3.full_node.server
-        peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
-        await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
-        await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        await time_out_assert(600, node_height_at_least, True, node3, peak_height)
+
+        # check node3 has synced to the proper height
+        peak_height: uint32 = max(
+            node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
+        )
+        # wait up to 10 mins for node3 to sync
+        await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
 
     @pytest.mark.asyncio
     async def test_simulator_auto_farm_and_get_coins(
@@ -325,13 +342,16 @@ class TestSimulation:
             # TODO: this fails but it seems like it shouldn't when above passes
             # assert tx.is_in_mempool()
 
+    @pytest.mark.parametrize(argnames="records_or_bundles_or_coins", argvalues=["records", "bundles", "coins"])
     @pytest.mark.asyncio
-    async def test_process_transaction_records(
+    async def test_process_transactions(
         self,
         one_wallet_node: SimulatorsAndWallets,
+        records_or_bundles_or_coins: str,
     ) -> None:
-        repeats = 50
+        repeats = 20
         tx_amount = 1
+        tx_per_repeat = 2
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -342,22 +362,48 @@ class TestSimulation:
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         # generate some coins for repetitive testing
-        await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
-        coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
-        assert len(coins) == repeats
+        await full_node_api.farm_rewards(amount=tx_amount * repeats * tx_per_repeat, wallet=wallet)
+        all_coins = await full_node_api.create_coins_with_amounts(
+            amounts=[tx_amount] * repeats * tx_per_repeat, wallet=wallet
+        )
+        assert len(all_coins) == repeats * tx_per_repeat
 
+        coins_iter = iter(all_coins)
         # repeating just to try to expose any flakiness
-        for coin in coins:
-            tx = await wallet.generate_signed_transaction(
-                amount=uint64(tx_amount),
-                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                coins={coin},
-            )
-            await wallet.push_transaction(tx)
+        for repeat in range(repeats):
+            coins = [next(coins_iter) for _ in range(tx_per_repeat)]
+            transactions = [
+                await wallet.generate_signed_transaction(
+                    amount=uint64(tx_amount),
+                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    coins={coin},
+                )
+                for coin in coins
+            ]
+            for tx in transactions:
+                assert tx.spend_bundle is not None, "the above created transaction is missing the expected spend bundle"
+                await wallet.push_transaction(tx)
 
-            await full_node_api.process_transaction_records(records=[tx])
-            # TODO: is this the proper check?
-            assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
+            if records_or_bundles_or_coins == "records":
+                await full_node_api.process_transaction_records(records=transactions)
+            elif records_or_bundles_or_coins == "bundles":
+                await full_node_api.process_spend_bundles(
+                    bundles=[tx.spend_bundle for tx in transactions if tx.spend_bundle is not None]
+                )
+            elif records_or_bundles_or_coins == "coins":
+                await full_node_api.process_coin_spends(
+                    coins=[
+                        coin
+                        for tx in transactions
+                        if tx.spend_bundle is not None
+                        for coin in tx.spend_bundle.additions()
+                    ]
+                )
+            else:
+                raise Exception("unexpected parametrization")
+            for coin in coins:
+                coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
+                assert coin_record is not None
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

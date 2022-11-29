@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -80,53 +82,61 @@ def test_tuple() -> None:
     assert t.to_json_dict() == {"d": ["foo", 123, "bar"]}
 
 
+@streamable
+@dataclass(frozen=True)
+class NestedWithTupleInner(Streamable):
+    a: Tuple[str, uint32, str]
+    b: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class NestedWithTupleOuter(Streamable):
+    a: Tuple[NestedWithTupleInner, uint32, str]
+
+
 def test_nested_with_tuple() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class Inner(Streamable):
-        a: Tuple[str, uint32, str]
-        b: bytes
-
-    @streamable
-    @dataclass(frozen=True)
-    class NestedTest(Streamable):
-        a: Tuple[Inner, uint32, str]
-
-    t = NestedTest((Inner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])), uint32(321), "baz"))
+    t = NestedWithTupleOuter(
+        (NestedWithTupleInner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])), uint32(321), "baz")
+    )
 
     assert t.to_json_dict() == {"a": [{"a": ["foo", 123, "bar"], "b": "0x1337"}, 321, "baz"]}
 
 
+@streamable
+@dataclass(frozen=True)
+class NestedWithListInner(Streamable):
+    a: uint32
+    b: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class NestedWithListOuter(Streamable):
+    a: List[NestedWithListInner]
+
+
 def test_nested_with_list() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class Inner(Streamable):
-        a: uint32
-        b: bytes
-
-    @streamable
-    @dataclass(frozen=True)
-    class NestedTest(Streamable):
-        a: List[Inner]
-
-    t = NestedTest([Inner(uint32(123), bytes([0x13, 0x37]))])
+    t = NestedWithListOuter([NestedWithListInner(uint32(123), bytes([0x13, 0x37]))])
 
     assert t.to_json_dict() == {"a": [{"a": 123, "b": "0x1337"}]}
 
 
+@streamable
+@dataclass(frozen=True)
+class TestNestedInner(Streamable):
+    a: Tuple[str, uint32, str]
+    b: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class TestNestedOuter(Streamable):
+    a: TestNestedInner
+
+
 def test_nested() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class Inner(Streamable):
-        a: Tuple[str, uint32, str]
-        b: bytes
-
-    @streamable
-    @dataclass(frozen=True)
-    class NestedTest(Streamable):
-        a: Inner
-
-    t = NestedTest(Inner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])))
+    t = TestNestedOuter(TestNestedInner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])))
 
     assert t.to_json_dict() == {"a": {"a": ["foo", 123, "bar"], "b": "0x1337"}}
 

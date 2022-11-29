@@ -29,7 +29,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from tests.util.wallet_is_synced import wallet_is_synced
-from tests.setup_nodes import setup_simulators_and_wallets
+from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # TODO: Compare deducted fees in all tests against reported total_fee
@@ -86,7 +86,7 @@ async def one_wallet_node_and_rpc(
     self_hostname,
 ) -> AsyncGenerator[Tuple[WalletRpcClient, Any, FullNodeAPI, BlockTools], None]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    async for nodes in setup_simulators_and_wallets(1, 1, {}, yield_services=True):
+    async for nodes in setup_simulators_and_wallets_service(1, 1, {}):
         full_nodes, wallets, bt = nodes
         full_node_api = full_nodes[0]._api
         wallet_service = wallets[0]
@@ -94,7 +94,7 @@ async def one_wallet_node_and_rpc(
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
         await farm_blocks(full_node_api, our_ph, PREFARMED_BLOCKS)
-
+        assert wallet_service.rpc_server is not None
         client = await WalletRpcClient.create(
             self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
         )

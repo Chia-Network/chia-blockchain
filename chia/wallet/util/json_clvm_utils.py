@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from chia.types.blockchain_format.program import Program

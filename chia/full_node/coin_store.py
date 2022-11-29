@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import sqlite3
-from typing import List, Optional, Set, Dict, Any, Tuple, Union
+import time
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -11,12 +13,9 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.ints import uint32, uint64
 from chia.util.chunks import chunks
-import time
-import logging
-
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -272,7 +271,7 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hash: bytes32,
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
 
         coins = set()
@@ -296,7 +295,7 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hashes: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
         if len(puzzle_hashes) == 0:
             return []
@@ -328,7 +327,7 @@ class CoinStore:
         include_spent_coins: bool,
         names: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
         if len(names) == 0:
             return []
@@ -402,7 +401,7 @@ class CoinStore:
         include_spent_coins: bool,
         parent_ids: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
         if len(parent_ids) == 0:
             return []

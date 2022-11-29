@@ -1,20 +1,20 @@
 from __future__ import annotations
-import io
-from typing import Callable, Dict, List, Set, Tuple, Optional, Any
 
+import io
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
+from chia_rs import MEMPOOL_MODE, run_chia_program, run_generator, serialized_length, tree_hash
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator, tree_hash
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
 
 from .tree_hash import sha256_treehash
-
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
 
@@ -33,7 +33,7 @@ class Program(SExp):
 
     @classmethod
     def from_bytes(cls, blob: bytes) -> Program:
-        # this runs the program "1", which just returns the first arugment.
+        # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
         # parse serialized programs into a python compatible structure

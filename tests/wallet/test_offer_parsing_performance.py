@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cProfile
 from contextlib import contextmanager
 from typing import Iterator

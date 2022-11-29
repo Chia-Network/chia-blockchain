@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 from pathlib import Path
 from typing import Any, List
@@ -196,11 +198,6 @@ class KeychainIsLocked(KeychainException):
 
 class KeychainSecretsMissing(KeychainException):
     pass
-
-
-class KeychainRequiresMigration(KeychainException):
-    def __init__(self) -> None:
-        super().__init__("Keychain requires migration")
 
 
 class KeychainCurrentPassphraseIsInvalid(KeychainException):

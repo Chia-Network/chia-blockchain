@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 from typing import List
@@ -11,12 +13,12 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-from tests.setup_nodes import test_constants
 from tests.util.misc import assert_runtime
 
 from .make_block_generator import make_block_generator

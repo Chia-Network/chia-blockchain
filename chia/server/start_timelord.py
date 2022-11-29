@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -26,10 +28,10 @@ log = logging.getLogger(__name__)
 
 def create_timelord_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Timelord]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = [PeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])]
@@ -54,7 +56,6 @@ def create_timelord_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,

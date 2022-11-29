@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -174,8 +176,6 @@ class WalletTool:
 
     def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
         signatures = []
-        solution: Program
-        puzzle: Program
         for coin_spend in coin_spends:  # noqa
             secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)

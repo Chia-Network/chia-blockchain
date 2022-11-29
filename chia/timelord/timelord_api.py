@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 from typing import Callable, Optional
@@ -19,8 +21,8 @@ class TimelordAPI:
     def _set_state_changed_callback(self, callback: Callable):
         self.timelord.state_changed_callback = callback
 
-    @api_request
-    async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord):
+    @api_request()
+    async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord) -> None:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
@@ -47,7 +49,7 @@ class TimelordAPI:
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
                 self.timelord.new_subslot_end = None
 
-    @api_request
+    @api_request()
     async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
         if self.timelord.last_state is None:
             return None
@@ -79,7 +81,7 @@ class TimelordAPI:
                     self.timelord.total_unfinished += 1
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
-    @api_request
+    @api_request()
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
         async with self.timelord.lock:
             if not self.timelord.bluebox_mode:

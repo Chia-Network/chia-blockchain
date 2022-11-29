@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -5,10 +7,10 @@ from typing import Any, Dict, Optional
 import pytest
 from blspy import PrivateKey
 
+from chia.simulator.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, generate_mnemonic
 from chia.wallet.wallet_node import WalletNode
-from tests.setup_nodes import test_constants
 
 
 @pytest.mark.asyncio
