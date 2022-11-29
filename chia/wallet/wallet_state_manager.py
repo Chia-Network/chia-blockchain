@@ -936,8 +936,8 @@ class WalletStateManager:
                 assert isinstance(nft_wallet, NFTWallet)
                 if parent_coin_state.spent_height is not None:
                     await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
-                    num = await nft_wallet.get_current_nfts()
-                    if len(num) == 0 and nft_wallet.did_id is not None and new_did_id != old_did_id:
+                    is_empty = await nft_wallet.is_empty()
+                    if is_empty and nft_wallet.did_id is not None and new_did_id != old_did_id:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
                         await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
                         self.wallets.pop(nft_wallet.wallet_info.id)
