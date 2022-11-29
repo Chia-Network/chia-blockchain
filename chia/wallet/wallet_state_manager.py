@@ -70,6 +70,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
@@ -1499,6 +1500,14 @@ class WalletStateManager:
                         await self.tx_store.set_confirmed(record.name, height)
             elif not change:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
+                parent_coin_states = await self.wallet_node.get_coin_state([coin.parent_coin_info], peer)
+                memos = []
+                if parent_coin_states:
+                    parent_coin_state: CoinState = parent_coin_states[-1]
+                    parent_coin: Coin = parent_coin_state.coin
+                    cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
+                    spend_memos = compute_memos_for_spend(cs)
+                    memos = list(spend_memos.items())
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(height),
                     created_at_time=timestamp,
@@ -1515,7 +1524,7 @@ class WalletStateManager:
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=coin_name,
-                    memos=[],
+                    memos=memos,
                 )
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record)

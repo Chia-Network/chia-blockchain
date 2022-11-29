@@ -28,6 +28,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from tests.util.wallet_is_synced import wallet_is_synced
 
 
@@ -920,6 +921,75 @@ class TestWalletSimulator:
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds - AMOUNT_TO_SEND)
         await time_out_assert(20, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_wallet_make_transaction_with_memo(
+        self,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+        self_hostname: str,
+    ) -> None:
+        num_blocks = 2
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet1 = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet1.get_new_puzzlehash()
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        await time_out_assert(20, wallet1.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet1.get_unconfirmed_balance, funds)
+        memo = b"hehe"
+        tx = await wallet1.generate_signed_transaction(
+            uint64(10), await wallet2.get_new_puzzlehash(), uint64(0), memos=[memo]
+        )
+        await wallet1.push_transaction(tx)
+
+        await time_out_assert(20, wallet1.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet1.get_unconfirmed_balance, funds - 10)
+        await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        new_funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, (2 * num_blocks))
+            ]
+        )
+        await time_out_assert(20, wallet1.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(20, wallet1.get_unconfirmed_balance, new_funds - 10)
+
+        await time_out_assert(20, wallet2.get_confirmed_balance, 10)
+        await time_out_assert(20, wallet2.get_unconfirmed_balance, 10)
+        tx_store: WalletTransactionStore = wallet2.wallet_state_manager.tx_store
+        txs = await tx_store.get_all_transactions()
+        assert len(txs) == 1
+        memo_tx: TransactionRecord = txs[0]
+        assert memo_tx.memos[0][1][0] == memo
 
 
 def test_get_wallet_db_path_v2_r1() -> None:

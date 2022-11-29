@@ -58,6 +58,10 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        memos = "n/a"
+        if tx.memos and tx.memos[0][1:]:
+            memos = ", ".join([x.decode("utf-8") for x in tx.memos[0][1]])
+        print(f"Memos: {memos}")
         print("")
 
 
@@ -429,7 +433,8 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                         total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
                         total_amounts_requested[summary["asset"]] += summary["amount"]
                         print(
-                            f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
+                            f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos)"
+                            " to {summary['address']}"
                         )
 
                 print()
@@ -662,7 +667,8 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                     total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
                     total_amounts_requested[summary["asset"]] += summary["amount"]
                     print(
-                        f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
+                        f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos)"
+                        " to {summary['address']}"
                     )
 
             print()
