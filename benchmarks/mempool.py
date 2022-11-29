@@ -82,7 +82,7 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
     try:
         coin_store = await CoinStore.create(db_wrapper)
-        mempool = MempoolManager(coin_store, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        mempool = MempoolManager(coin_store.get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
 
         wt = WalletTool(DEFAULT_CONSTANTS)
 
