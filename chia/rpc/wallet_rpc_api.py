@@ -1788,7 +1788,7 @@ class WalletRpcApi:
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
         assert peer is not None
-        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id)
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
