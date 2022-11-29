@@ -164,6 +164,9 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
     target_times = [60, 120, 300]
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
+    if res["full_node_synced"] is not True:
+        print("No Fee Estimates available. Full Node still syncing ...\n")
+        return
     print(f"  Mempool max size: {res['mempool_max_size']:>12} CLVM cost")
     print(f"      Mempool size: {res['mempool_size']:>12} CLVM cost")
     print(f"  Current Fee Rate: {res['current_fee_rate']:>12} mojo per CLVM cost")
