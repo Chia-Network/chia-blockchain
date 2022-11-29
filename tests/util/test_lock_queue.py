@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -5,7 +7,7 @@ from asyncio import CancelledError
 
 import pytest
 
-from chia.full_node.lock_queue import LockQueue, LockClient
+from chia.full_node.lock_queue import LockClient, LockQueue
 
 log = logging.getLogger(__name__)
 
