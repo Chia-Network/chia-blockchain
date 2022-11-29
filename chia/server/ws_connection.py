@@ -258,7 +258,7 @@ class WSChiaConnection:
                 self.inbound_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
-            if self.ws is not None and self.ws._closed is False:
+            if self.ws is not None and self.ws.closed is False:
                 await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
@@ -458,7 +458,7 @@ class WSChiaConnection:
             message: WSMessage = await self.ws.receive(30)
         except asyncio.TimeoutError:
             # self.ws._closed if we didn't receive a ping / pong
-            if self.ws._closed:
+            if self.ws.closed:
                 asyncio.create_task(self.close())
                 await asyncio.sleep(3)
                 return None
