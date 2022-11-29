@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -86,6 +86,8 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
+
+TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
 
 
 class WalletStateManager:
@@ -268,6 +270,24 @@ class WalletStateManager:
         private = master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
         pubkey = private.get_g1()
         return pubkey, private
+
+    def get_wallet(
+        self,
+        id: uint32,
+        required_type: Type[TWalletType],
+        message_format: str = "wallet id {id} is of type {type} but type {required_type} is required",
+    ) -> TWalletType:
+        wallet = self.wallets[id]
+        if not isinstance(wallet, required_type):
+            raise Exception(
+                message_format.format(
+                    id=id,
+                    type=type(wallet).__name__,
+                    required_type=required_type.__name__,
+                ),
+            )
+
+        return wallet
 
     async def create_more_puzzle_hashes(
         self,
@@ -932,8 +952,7 @@ class WalletStateManager:
                     uncurried_nft.singleton_launcher_id.hex(),
                     old_did_id,
                 )
-                nft_wallet: WalletProtocol = self.wallets[wallet_info.id]
-                assert isinstance(nft_wallet, NFTWallet)
+                nft_wallet = self.get_wallet(id=wallet_info.id, required_type=NFTWallet)
                 if parent_coin_state.spent_height is not None:
                     await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
                     is_empty = await nft_wallet.is_empty()
@@ -1207,20 +1226,19 @@ class WalletStateManager:
 
                         if record.wallet_type == WalletType.POOLING_WALLET:
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
-                                wallet = self.wallets[uint32(record.wallet_id)]
-                                assert isinstance(wallet, PoolWallet)
+                                pool_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=PoolWallet)
                                 curr_coin_state: CoinState = coin_state
 
                                 while curr_coin_state.spent_height is not None:
                                     cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
                                         curr_coin_state.spent_height, curr_coin_state.coin, peer
                                     )
-                                    success = await wallet.apply_state_transition(
+                                    success = await pool_wallet.apply_state_transition(
                                         cs, uint32(curr_coin_state.spent_height)
                                     )
                                     if not success:
                                         break
-                                    new_singleton_coin: Optional[Coin] = wallet.get_next_interesting_coin(cs)
+                                    new_singleton_coin: Optional[Coin] = pool_wallet.get_next_interesting_coin(cs)
                                     if new_singleton_coin is None:
                                         # No more singleton (maybe destroyed?)
                                         break
@@ -1250,8 +1268,7 @@ class WalletStateManager:
                             singleton_spend = await self.wallet_node.fetch_puzzle_solution(
                                 coin_state.spent_height, coin_state.coin, peer
                             )
-                            dl_wallet = self.wallets[uint32(record.wallet_id)]
-                            assert isinstance(dl_wallet, DataLayerWallet)
+                            dl_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=DataLayerWallet)
                             await dl_wallet.singleton_removed(
                                 singleton_spend,
                                 uint32(coin_state.spent_height),
@@ -1259,8 +1276,7 @@ class WalletStateManager:
 
                         elif record.wallet_type == WalletType.NFT:
                             if coin_state.spent_height is not None:
-                                nft_wallet = self.wallets[uint32(record.wallet_id)]
-                                assert isinstance(nft_wallet, NFTWallet)
+                                nft_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=NFTWallet)
                                 await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
 
                         # Check if a child is a singleton launcher
@@ -1630,8 +1646,7 @@ class WalletStateManager:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
     async def get_wallet_for_asset_id(self, asset_id: str):
-        for wallet_id in self.wallets:
-            wallet = self.wallets[wallet_id]
+        for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.CAT:
                 assert isinstance(wallet, CATWallet)
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
