@@ -2071,7 +2071,10 @@ class WalletRpcApi:
     async def nft_set_bulk_nft_did(self, request):
         """
         Bulk set DID for NFTs across different wallets.
-        nft_coin_list = List[{"nft_coin_id": COIN_ID/NFT_ID, "wallet_id": WALLET_ID}]
+        accepted `request` dict keys:
+         - required `nft_coin_list`: [{"nft_coin_id": COIN_ID/NFT_ID, "wallet_id": WALLET_ID},....]
+         - optional `fee`, in mojos, defaults to 0
+         - optional `did_id`, defaults to no DID, meaning it will reset the NFT's DID
         :param request:
         :return:
         """
