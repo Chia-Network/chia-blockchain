@@ -271,20 +271,11 @@ class WalletStateManager:
         pubkey = private.get_g1()
         return pubkey, private
 
-    def get_wallet(
-        self,
-        id: uint32,
-        required_type: Type[TWalletType],
-        message_format: str = "wallet id {id} is of type {type} but type {required_type} is required",
-    ) -> TWalletType:
+    def get_wallet(self, id: uint32, required_type: Type[TWalletType]) -> TWalletType:
         wallet = self.wallets[id]
         if not isinstance(wallet, required_type):
             raise Exception(
-                message_format.format(
-                    id=id,
-                    type=type(wallet).__name__,
-                    required_type=required_type.__name__,
-                ),
+                f"wallet id {id} is of type {type(wallet).__name__} but type {required_type.__name__} is required",
             )
 
         return wallet

@@ -902,11 +902,7 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
         wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(
-            id=wallet_id,
-            required_type=Wallet,
-            message_format="send_transaction only works for standard wallets, wallet id {id} is of type {type}",
-        )
+        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=Wallet)
 
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
