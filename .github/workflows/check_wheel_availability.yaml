@@ -69,5 +69,16 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - uses: Chia-Network/actions/create-venv@main
+      id: create-venv
+
+    - uses: Chia-Network/actions/activate-venv@main
+      with:
+        directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
+
+    - name: Update
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+
     - name: Check Wheel Availability
       run: python build_scripts/check_dependency_artifacts.py
