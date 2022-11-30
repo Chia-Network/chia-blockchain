@@ -33,6 +33,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.util.wallet_is_synced import wallet_is_synced
 
 pytestmark = pytest.mark.data_layer
@@ -44,7 +45,10 @@ two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple
 
 @contextlib.asynccontextmanager
 async def init_data_layer(
-    wallet_rpc_port: uint16, bt: BlockTools, db_path: Path, wallet_service: Optional[Service[WalletNode]] = None
+    wallet_rpc_port: uint16,
+    bt: BlockTools,
+    db_path: Path,
+    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
 ) -> AsyncIterator[DataLayer]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)

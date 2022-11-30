@@ -11,8 +11,10 @@ import pytest
 import pytest_asyncio
 from blspy import G1Element
 
-from chia.farmer.farmer_api import Farmer
-from chia.harvester.harvester_api import Harvester
+from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
+from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
@@ -108,8 +110,8 @@ class ExpectedResult:
 @dataclass
 class Environment:
     root_path: Path
-    harvester_services: List[Service[Harvester]]
-    farmer_service: Service[Farmer]
+    harvester_services: List[Service[Harvester, HarvesterAPI]]
+    farmer_service: Service[Farmer, FarmerAPI]
     harvesters: List[Harvester]
     farmer: Farmer
     dir_1: Directory
@@ -272,7 +274,10 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
+    tmp_path: Path,
+    farmer_two_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -557,7 +562,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
+    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

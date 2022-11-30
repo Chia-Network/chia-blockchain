@@ -17,6 +17,7 @@ from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -29,9 +30,9 @@ log = logging.getLogger(__name__)
 def create_data_layer_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
-    wallet_service: Optional[Service[WalletNode]] = None,
+    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     connect_to_daemon: bool = True,
-) -> Service[DataLayer]:
+) -> Service[DataLayer, DataLayerAPI]:
     service_config = config[SERVICE_NAME]
     self_hostname = config["self_hostname"]
     wallet_rpc_port = service_config["wallet_peer"]["port"]

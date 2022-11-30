@@ -32,7 +32,7 @@ def create_full_node_simulator_service(
     bt: BlockTools,
     connect_to_daemon: bool = True,
     override_capabilities: List[Tuple[uint16, str]] = None,
-) -> Service[FullNode]:
+) -> Service[FullNode, FullNodeSimulator]:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
