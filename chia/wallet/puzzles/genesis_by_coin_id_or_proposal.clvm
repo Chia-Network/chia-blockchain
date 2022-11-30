@@ -10,7 +10,7 @@
       DAO_TREASURY_ID
       SINGLETON_MOD_HASH
       SINGLETON_LAUNCHER_PUZHASH
-      DAO_PROPOSAL_MOD
+      DAO_PROPOSAL_MOD_HASH
       Truths  ; ((Inner puzzle hash . (MOD hash . (MOD hash hash . TAIL hash))) . (my_id . (my_parent_info my_puzhash my_amount)))
       parent_is_cat
       lineage_proof
@@ -34,38 +34,58 @@
 
     (defun calculate_proposal_puzzlehash (
       (
-        PROPOSAL_SINGLETON_STRUCT
-        PROPOSAL_MOD_HASH
-        PROPOSAL_TIMER_MOD_HASH
-        CAT_MOD_HASH
-        CAT_TAIL
-        CURRENT_CAT_ISSUANCE
-        PROPOSAL_PASS_PERCENTAGE
-        TREASURY_ID
-        PROPOSAL_TIMELOCK
-        proposal_current_votes
-        proposal_total_votes
-        proposal_innerpuzhash
+        PROPOSAL_MOD_HASH  ; i'm not sure if we need this or not - todo: think
+        DAO_TREASURY_ID  ; as long as the treasury ID is curried in, we can trust that it has checked the other values we pass in the solution
+        SINGLETON_STRUCT  ; i'm not sure if we need this or not - todo: think
+        (
+          proposal_timer_mod_hash
+          cat_mod_hash
+          treasury_mod_hash
+          lockup_mod_hash
+          cat_tail
+          proposal_pass_percentage
+          proposal_timelock
+          proposal_current_votes
+          proposal_total_votes
+          proposal_innerpuzhash
+        )
       )
     )
+    ; SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+    ; PROPOSAL_MOD_HASH
+    ; PROPOSAL_TIMER_MOD_HASH
+    ; CAT_MOD_HASH
+    ; TREASURY_MOD_HASH
+    ; LOCKUP_MOD_HASH
+    ; CAT_TAIL
+    ; PROPOSAL_PASS_PERCENTAGE
+    ; TREASURY_ID
+    ; PROPOSAL_TIMELOCK
+    ; VOTES_SUM  ; yes votes are +1, no votes are -1
+    ; TOTAL_VOTES  ; how many people responded
+    ; INNERPUZ  ; this is what runs if this proposal is successful
       (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
                                        proposal_innerpuzhash
                                        (sha256 ONE proposal_total_votes)
                                        (sha256 ONE proposal_current_votes)
-                                       (sha256 ONE PROPOSAL_TIMELOCK)
-                                       (sha256 ONE TREASURY_ID)
-                                       (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
-                                       (sha256 ONE CURRENT_CAT_ISSUANCE)
-                                       (sha256 ONE CAT_TAIL)
-                                       (sha256 ONE CAT_MOD_HASH)
-                                       (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+                                       (sha256 ONE proposal_timelock)
+                                       (sha256 ONE DAO_TREASURY_ID)
+                                       (sha256 ONE proposal_pass_percentage)
+                                       (sha256 ONE cat_tail)
+                                       (sha256 ONE lockup_mod_hash)
+                                       (sha256 ONE treasury_mod_hash)
+                                       (sha256 ONE cat_mod_hash)
+                                       (sha256 ONE proposal_timer_mod_hash)
                                        (sha256 ONE PROPOSAL_MOD_HASH)
-                                       (sha256tree PROPOSAL_SINGLETON_STRUCT)
+                                       (sha256tree SINGLETON_STRUCT)
       )
     )
 
-    (defun-inline create_proposal_puzhash (SINGLETON_STRUCT proposal_curry_vals)
-      (calculate_singleton_puzzle_hash SINGLETON_STRUCT (calculate_proposal_puzzlehash proposal_curry_vals))
+    (defun-inline create_proposal_puzhash (DAO_PROPOSAL_MOD_HASH DAO_TREASURY_ID SINGLETON_STRUCT proposal_curry_vals)
+      (calculate_singleton_puzzle_hash
+        SINGLETON_STRUCT
+        (calculate_proposal_puzzlehash DAO_PROPOSAL_MOD_HASH DAO_TREASURY_ID SINGLETON_STRUCT proposal_curry_vals)
+      )
     )
 
     (if delta
@@ -75,7 +95,12 @@
           (if
             (=
               (my_parent_cat_truth Truths)
-              (create_proposal_puzhash (c SINGLETON_MOD_HASH (c proposal_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)
+              (create_proposal_puzhash
+                DAO_PROPOSAL_MOD_HASH
+                DAO_TREASURY_ID
+                (c SINGLETON_MOD_HASH (c proposal_id SINGLETON_LAUNCHER_PUZHASH))
+                proposal_curry_vals
+              )
             )
             ()
             (x)
