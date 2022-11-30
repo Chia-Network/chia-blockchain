@@ -221,6 +221,9 @@ class ChiaServer:
                 chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path, log=log
             )
 
+        node_id_cert_path = private_cert_path if public_cert_path is None else public_cert_path
+        assert node_id_cert_path is not None
+
         sending_compressed_messages_enabled: bool = config.get("cx_sending_compressed_messages_enabled", False)
         compress_if_at_least_size: int = config.get("cx_compress_if_at_least_size", 8 * 1024)
 
@@ -239,7 +242,7 @@ class ChiaServer:
             config=config,
             ssl_context=ssl_context,
             ssl_client_context=ssl_client_context,
-            node_id=calculate_node_id(private_cert_path if public_cert_path is None else public_cert_path),
+            node_id=calculate_node_id(node_id_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
             sending_compressed_messages_enabled=sending_compressed_messages_enabled,
@@ -337,7 +340,6 @@ class ChiaServer:
                 ws,
                 self._port,
                 self.log,
-                False,
                 False,
                 request.remote,
                 self.incoming_messages,
@@ -495,7 +497,6 @@ class ChiaServer:
                 self._port,
                 self.log,
                 True,
-                False,
                 target_node.host,
                 self.incoming_messages,
                 self.connection_closed,

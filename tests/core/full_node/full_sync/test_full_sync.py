@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -8,14 +10,14 @@ from unittest.mock import MagicMock
 import pytest
 
 from chia.protocols import full_node_protocol
+from chia.simulator.block_tools import test_constants
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
-from tests.core.node_height import node_height_exactly, node_height_between
-from chia.simulator.block_tools import test_constants
-from chia.simulator.time_out_assert import time_out_assert
+from tests.core.node_height import node_height_between, node_height_exactly
 
 log = logging.getLogger(__name__)
 

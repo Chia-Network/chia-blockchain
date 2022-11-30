@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import logging
+from typing import Type
+
 import pytest
 
-from chia.util.errors import KeychainLabelError, KeychainLabelExists, KeychainFingerprintNotFound, KeychainLabelInvalid
-from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-from typing import Type
 from chia.simulator.keyring import using_temp_file_keyring
+from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 
 log = logging.getLogger(__name__)
 

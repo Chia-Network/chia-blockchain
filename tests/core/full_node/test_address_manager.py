@@ -585,6 +585,6 @@ class TestPeerManager:
         await addrman.mark_good(PeerInfo("250.250.2.2", 9999))
         assert await addrman.size() == 2
         for _ in range(5):
-            await addrman.attempt(peer1, True, time.time() - 61)
+            await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, time.time() - 61)
         addrman.cleanup(7 * 3600 * 24, 5)
         assert await addrman.size() == 1

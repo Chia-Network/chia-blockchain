@@ -380,7 +380,7 @@ class FullNode:
         )
 
         self._mempool_manager = MempoolManager(
-            coin_store=self.coin_store,
+            get_coin_record=self.coin_store.get_coin_record,
             consensus_constants=self.constants,
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
@@ -506,7 +506,6 @@ class FullNode:
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
-                self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
                 self.config["target_outbound_peer_count"],
                 PeerStoreResolver(
                     self.root_path,
@@ -2242,7 +2241,10 @@ class FullNode:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
-                cost, status, error = await self.mempool_manager.add_spend_bundle(transaction, cost_result, spend_name)
+                assert self.mempool_manager.peak
+                cost, status, error = await self.mempool_manager.add_spend_bundle(
+                    transaction, cost_result, spend_name, self.mempool_manager.peak.height
+                )
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(
                     f"Added transaction to mempool: {spend_name} mempool size: "
