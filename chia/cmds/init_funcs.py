@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 import sqlite3
@@ -7,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from chia import __version__
+from chia.cmds.configure import configure
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import create_all_ssl
 from chia.util.bech32m import encode_puzzle_hash
@@ -30,13 +33,12 @@ from chia.util.ssl_check import (
     fix_ssl,
 )
 from chia.wallet.derive_keys import (
+    _derive_path,
+    _derive_path_unhardened,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk_intermediate,
     master_sk_to_wallet_sk_unhardened_intermediate,
-    _derive_path,
-    _derive_path_unhardened,
 )
-from chia.cmds.configure import configure
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):

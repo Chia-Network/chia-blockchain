@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
+import functools
 import logging
 import time
 import traceback
-import functools
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -16,29 +19,29 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
-from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.full_node.signage_point import SignagePoint
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.full_node import FullNode
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.signage_point import SignagePoint
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
+    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
-    CoinState,
     RespondFeeEstimates,
     RespondSESInfo,
 )
+from chia.server.outbound_message import Message, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from concurrent.futures import ThreadPoolExecutor
 from chia.types.block_protocol import BlockInfo
-from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
@@ -57,7 +60,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 
 
 class FullNodeAPI:
@@ -720,8 +722,8 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Checks that the proof of space is valid
-            quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-                self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
+            quality_string: Optional[bytes32] = verify_and_get_quality_string(
+                request.proof_of_space, self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
             )
             assert quality_string is not None and len(quality_string) == 32
 

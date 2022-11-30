@@ -41,8 +41,15 @@ from chia.wallet.derive_keys import (
     master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
+from chia.wallet.did_wallet import did_wallet_puzzles
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, program_to_metadata
+from chia.wallet.did_wallet.did_wallet_puzzles import (
+    match_did_puzzle,
+    program_to_metadata,
+    DID_INNERPUZ_MOD,
+    create_fullpuz,
+)
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
@@ -57,6 +64,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
+from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
@@ -161,6 +169,7 @@ class WalletRpcApi:
             "/did_transfer_did": self.did_transfer_did,
             "/did_message_spend": self.did_message_spend,
             "/did_get_info": self.did_get_info,
+            "/did_find_lost_did": self.did_find_lost_did,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -247,7 +256,7 @@ class WalletRpcApi:
             ),
         )
 
-    async def get_latest_coin_spend(
+    async def get_latest_singleton_coin_spend(
         self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
     ) -> Tuple[CoinSpend, CoinState]:
         if peer is None:
@@ -264,15 +273,15 @@ class WalletRpcApi:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
                     coin_state.coin.name(), peer=peer
                 )
-                odd_coin = 0
+                odd_coin = None
                 for coin in coin_state_list:
                     if coin.coin.amount % 2 == 1:
-                        odd_coin += 1
-                    if odd_coin > 1:
-                        raise ValueError("This is not a singleton, multiple children coins found.")
-                if odd_coin == 0:
+                        if odd_coin is not None:
+                            raise ValueError("This is not a singleton, multiple children coins found.")
+                        odd_coin = coin
+                if odd_coin is None:
                     raise ValueError("Cannot find child coin, please wait then retry.")
-                coin_state = coin_state_list[0]
+                coin_state = odd_coin
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
@@ -1551,12 +1560,9 @@ class WalletRpcApi:
             peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
             if peer is None:
                 raise ValueError("No peer connected")
-            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+            trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
                 offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
             )
-        if not result[0]:
-            raise ValueError(result[3])
-        success, trade_record, tx_records, error = result
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
     async def get_offer(self, request: Dict) -> EndpointResult:
@@ -1737,7 +1743,7 @@ class WalletRpcApi:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -1763,6 +1769,153 @@ class WalletRpcApi:
             "full_puzzle": full_puzzle,
             "hints": hints,
         }
+
+    async def did_find_lost_did(self, request) -> EndpointResult:
+        """
+        Recover a missing or unspendable DID wallet by a coin id of the DID
+        :param coin_id: It can be DID ID, launcher coin ID or any coin ID of the DID you want to find.
+        The latest coin ID will take less time.
+        :return:
+        """
+        if "coin_id" not in request:
+            return {"success": False, "error": "DID coin ID is required."}
+        coin_id = request["coin_id"]
+        # Check if we have a DID wallet for this
+        if coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+            coin_id = decode_puzzle_hash(coin_id)
+        else:
+            coin_id = bytes32.from_hexstr(coin_id)
+        # Get coin state
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        assert peer is not None
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
+        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        uncurried = uncurry_puzzle(full_puzzle)
+        curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+        if curried_args is None:
+            return {"success": False, "error": "The coin is not a DID."}
+        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
+
+        hint_list = compute_coin_hints(coin_spend)
+        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
+            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+        ).get_tree_hash()
+        derivation_record = None
+        # Hint is required, if it doesn't have any hint then it should be invalid
+        is_invalid = len(hint_list) == 0
+        for hint in hint_list:
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    bytes32(hint)
+                )
+            )
+            if derivation_record is not None:
+                break
+            # Check if the mismatch is because of the memo bug
+            if hint == old_inner_puzhash:
+                is_invalid = True
+                break
+        if is_invalid:
+            # This is an invalid DID, check if we are owner
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    p2_puzzle.get_tree_hash()
+                )
+            )
+        launcher_id = singleton_struct.rest().first().as_python()
+        if derivation_record is None:
+            return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
+        else:
+            our_inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
+                derivation_record.pubkey
+            )
+            did_puzzle = DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+            )
+            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+            did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
+            )
+            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
+            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = did_puzzle_empty_recovery
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Cannot recover DID {launcher_id.hex()} because the last spend is metadata update.",
+                    }
+            # Check if we have the DID wallet
+            did_wallet: Optional[DIDWallet] = None
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if isinstance(wallet, DIDWallet):
+                    assert wallet.did_info.origin_coin is not None
+                    if wallet.did_info.origin_coin.name() == launcher_id:
+                        did_wallet = wallet
+                        break
+
+            if did_wallet is None:
+                # Create DID wallet
+                response: List[CoinState] = await self.service.get_coin_state([launcher_id], peer=peer)
+                if len(response) == 0:
+                    return {"success": False, "error": f"Could not find the launch coin with ID: {launcher_id.hex()}"}
+                launcher_coin: CoinState = response[0]
+                did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
+                    self.service.wallet_state_manager,
+                    self.service.wallet_state_manager.main_wallet,
+                    launcher_coin.coin,
+                    did_puzzle,
+                    coin_spend,
+                    f"DID {encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config))}",
+                )
+            else:
+                assert did_wallet.did_info.current_inner is not None
+                if did_wallet.did_info.current_inner.get_tree_hash() != did_puzzle.get_tree_hash():
+                    # Inner DID puzzle doesn't match, we need to update the DID info
+                    full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
+                    inner_solution: Program = full_solution.rest().rest().first()
+                    recovery_list: List[bytes32] = []
+                    backup_required: int = num_verification.as_int()
+                    if recovery_list_hash != Program.to([]).get_tree_hash():
+                        try:
+                            for did in inner_solution.rest().rest().rest().rest().rest().as_python():
+                                recovery_list.append(did[0])
+                        except Exception:
+                            # We cannot recover the recovery list, but it's okay to leave it blank
+                            pass
+                    did_info: DIDInfo = DIDInfo(
+                        did_wallet.did_info.origin_coin,
+                        recovery_list,
+                        uint64(backup_required),
+                        [],
+                        did_puzzle,
+                        None,
+                        None,
+                        None,
+                        False,
+                        json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+                    )
+                    await did_wallet.save_info(did_info)
+                    await self.service.wallet_state_manager.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)
+
+            try:
+                coins = await did_wallet.select_coins(uint64(1))
+                coin = coins.pop()
+                if coin.name() == coin_state.coin.name():
+                    return {"success": True, "latest_coin_id": coin.name().hex()}
+            except ValueError:
+                # We don't have any coin for this wallet, add the coin
+                pass
+
+            wallet_id = did_wallet.id()
+            wallet_type = WalletType(did_wallet.type())
+            assert coin_state.created_height is not None
+            coin_record: WalletCoinRecord = WalletCoinRecord(
+                coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
+            )
+            await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())
+            await did_wallet.coin_added(coin_state.coin, uint32(coin_state.created_height), peer)
+            return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
 
     async def did_update_metadata(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2019,7 +2172,12 @@ class WalletRpcApi:
             did_id,
             fee,
         )
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        nft_id = None
+        assert spend_bundle is not None
+        for cs in spend_bundle.coin_spends:
+            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
+                nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle, "nft_id": nft_id}
 
     async def nft_get_nfts(self, request) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)
@@ -2141,10 +2299,12 @@ class WalletRpcApi:
         try:
             nft_coin_id = request["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-                nft_coin_id = decode_puzzle_hash(nft_coin_id)
+                nft_id = decode_puzzle_hash(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft(nft_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            assert nft_coin_info is not None
             fee = uint64(request.get("fee", 0))
             txs = await nft_wallet.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
@@ -2176,7 +2336,7 @@ class WalletRpcApi:
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
         assert peer is not None
-        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
+        coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
@@ -2363,10 +2523,14 @@ class WalletRpcApi:
                 xch_change_ph=xch_change_ph,
                 fee=fee,
             )
-
+        nft_id_list = []
+        for cs in sb.coin_spends:
+            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
+                nft_id_list.append(encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config)))
         return {
             "success": True,
             "spend_bundle": sb,
+            "nft_id_list": nft_id_list,
         }
 
     async def get_farmed_amount(self, request) -> EndpointResult:

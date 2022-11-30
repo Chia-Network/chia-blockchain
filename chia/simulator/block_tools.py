@@ -75,7 +75,14 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import INFINITE_COST
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import (
+    ProofOfSpace,
+    calculate_pos_challenge,
+    generate_plot_public_key,
+    generate_taproot_sk,
+    passes_plot_filter,
+    verify_and_get_quality_string,
+)
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
@@ -464,12 +471,12 @@ class BlockTools:
                     assert isinstance(pool_pk_or_ph, bytes32)
                     include_taproot = True
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
+                agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 if include_taproot:
-                    taproot_sk: PrivateKey = ProofOfSpace.generate_taproot_sk(local_sk.get_g1(), farmer_sk.get_g1())
+                    taproot_sk: PrivateKey = generate_taproot_sk(local_sk.get_g1(), farmer_sk.get_g1())
                     taproot_share: G2Element = AugSchemeMPL.sign(taproot_sk, m, agg_pk)
                 else:
                     taproot_share = G2Element()
@@ -1250,8 +1257,8 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
-                new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, challenge_hash, signage_point)
+            if passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
+                new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
@@ -1279,9 +1286,7 @@ class BlockTools:
                         else:
                             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
                             include_taproot = True
-                        plot_pk = ProofOfSpace.generate_plot_public_key(
-                            local_sk.get_g1(), farmer_public_key, include_taproot
-                        )
+                        plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,
                             plot_info.pool_public_key,
@@ -1509,8 +1514,8 @@ def load_block_list(
             assert full_block.reward_chain_block.challenge_chain_sp_vdf is not None
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-        quality_str = full_block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
-            constants, challenge, sp_hash
+        quality_str = verify_and_get_quality_string(
+            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash
         )
         assert quality_str is not None
         required_iters: uint64 = calculate_iterations_quality(

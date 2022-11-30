@@ -180,14 +180,12 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     peer = wallet_node_taker.get_full_node_peer()
     assert peer is not None
 
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
 
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    assert error is None
-    assert success is True
     assert trade_take is not None
     assert tx_records is not None
 
@@ -340,12 +338,10 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     peer = wallet_node_taker.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
-    assert error is None
-    assert success is True
     assert trade_take is not None
 
     await full_node_api.process_transaction_records(records=tx_records)
@@ -516,12 +512,10 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
 
     peer = wallet_node_taker.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
-    assert error is None
-    assert success is True
     assert trade_take is not None
     assert tx_records is not None
 
@@ -712,12 +706,10 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
 
     peer = wallet_node_taker.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
-    assert error is None
-    assert success is True
     assert trade_take is not None
     assert tx_records is not None
 
@@ -912,12 +904,10 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
 
     peer = wallet_node_taker.get_full_node_peer()
     assert peer is not None
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
-    assert error is None
-    assert success is True
     assert trade_take is not None
     assert tx_records is not None
 
@@ -1396,13 +1386,11 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert success
     assert trade_make is not None
 
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         wallet_node_taker.get_full_node_peer(),
         fee=FEE,
     )
-    assert error is None
-    assert success
     assert trade_take is not None
     assert tx_records is not None
     await full_node_api.process_transaction_records(records=tx_records)
@@ -1497,13 +1485,11 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert success
     assert trade_make is not None
 
-    success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         wallet_node_taker.get_full_node_peer(),
         fee=uint64(0),
     )
-    assert error is None
-    assert success
     assert trade_take is not None
     assert tx_records is not None
     await time_out_assert(20, mempool_not_empty, True, full_node_api)

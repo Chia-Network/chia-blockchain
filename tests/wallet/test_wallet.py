@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import time
 from pathlib import Path
@@ -9,8 +11,10 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, wait_for_coins_in_wallet
 from chia.simulator.simulator_protocol import ReorgProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -23,8 +27,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.simulator.block_tools import BlockTools
-from chia.simulator.time_out_assert import time_out_assert
 from tests.util.wallet_is_synced import wallet_is_synced, wallets_are_synced
 
 

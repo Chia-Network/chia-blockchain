@@ -47,14 +47,14 @@ test_constants_modified = test_constants.replace(
 async def extra_node(self_hostname):
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
-        async for _ in setup_full_node(
+        async for service in setup_full_node(
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
             b_tools,
             db_version=1,
         ):
-            yield _
+            yield service._api
 
 
 @pytest_asyncio.fixture(scope="function")

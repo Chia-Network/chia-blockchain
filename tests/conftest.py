@@ -12,6 +12,7 @@ import pytest
 import pytest_asyncio
 import tempfile
 
+
 from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -23,10 +24,12 @@ from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 
+
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
 from chia.simulator.setup_services import setup_daemon, setup_introducer, setup_timelord
+from chia.util.ints import uint16, uint64
 from chia.util.task_timing import (
     main as task_instrumentation_main,
     start_task_instrumentation,
@@ -39,9 +42,10 @@ from tests.core.node_height import node_height_at_least
 from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
-    setup_full_system,
     setup_n_nodes,
     setup_two_nodes,
+    setup_simulators_and_wallets_service,
+    setup_full_system_connect_to_deamon,
 )
 from tests.simulation.test_simulation import test_constants_modified
 from chia.simulator.time_out_assert import time_out_assert
@@ -327,7 +331,7 @@ async def two_nodes_sim_and_wallets():
 
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes_sim_and_wallets_services():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, yield_services=True):
+    async for _ in setup_simulators_and_wallets_service(2, 0, {}):
         yield _
 
 
@@ -341,7 +345,7 @@ async def wallet_node_sim_and_wallet() -> AsyncIterator[
 
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_and_one_simulator_services():
-    async for _ in setup_simulators_and_wallets(1, 1, {}, yield_services=True):
+    async for _ in setup_simulators_and_wallets_service(1, 1, {}):
         yield _
 
 
@@ -370,7 +374,7 @@ async def two_wallet_nodes(request):
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_services() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
-    async for _ in setup_simulators_and_wallets(1, 2, {}, yield_services=True):
+    async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
 
 
@@ -487,7 +491,7 @@ async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNod
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=reward_ph,
         pool_reward_puzzle_hash=reward_ph,
-        genesis_timestamp=10000,
+        genesis_timestamp=uint64(10000),
         time_per_block=10,
     )
     assert blocks[0].height == 0
@@ -571,12 +575,11 @@ async def farmer_three_harvester_not_started(
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
 async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
-    async for _ in setup_full_system(
+    async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
         b_tools=get_b_tools,
         b_tools_1=get_b_tools_1,
-        connect_to_daemon=True,
         db_version=1,
     ):
         yield _, get_b_tools, get_b_tools_1
@@ -672,25 +675,25 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
 
 @pytest_asyncio.fixture(scope="function")
 async def introducer(bt):
+    async for service in setup_introducer(bt, 0):
+        yield service._api, service._node.server
+
+
+@pytest_asyncio.fixture(scope="function")
+async def introducer_service(bt):
     async for _ in setup_introducer(bt, 0):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def introducer_service(bt):
-    async for _ in setup_introducer(bt, 0, yield_service=True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for _ in setup_timelord(uint16(0), False, test_constants, bt):
-        yield _
+    async for service in setup_timelord(uint16(0), False, test_constants, bt):
+        yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, test_constants, bt, yield_service=True):
+    async for _ in setup_timelord(uint16(0), False, test_constants, bt):
         yield _
 
 

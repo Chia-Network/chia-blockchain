@@ -18,11 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import annotations
+
 # Based on this specification from Pieter Wuille:
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
-
 """Reference implementation for Bech32m and segwit addresses."""
-from typing import List, Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
