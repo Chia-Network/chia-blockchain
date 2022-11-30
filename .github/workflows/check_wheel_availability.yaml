@@ -33,7 +33,7 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: macos-latest
+              intel: macos-10.14
               arm: [macos, arm64]
           - name: Windows
             matrix: windows
