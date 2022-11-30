@@ -43,7 +43,7 @@ class TestPerformance:
     async def test_full_block_performance(self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname):
         full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
-        full_node_1.full_node.mempool_manager.limit_factor = 1
+        full_node_1.full_node.mempool_manager.block_limit_factor = 1
 
         wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(

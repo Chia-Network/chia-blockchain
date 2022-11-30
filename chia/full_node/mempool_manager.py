@@ -108,7 +108,8 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        self.limit_factor = 0.5
+        self.block_limit_factor = 0.5
+        self.max_block_size = uint64(int(self.block_limit_factor * self.constants.MAX_BLOCK_COST_CLVM))
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
@@ -127,11 +128,9 @@ class MempoolManager:
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
 
-        max_block_cost_clvm = uint64(self.constants.MAX_BLOCK_COST_CLVM)
-
         mempool_init_info = FeeMempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
-            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
+            CLVMCost(uint64(self.max_block_size)),
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(0)),
             Mojos(uint64(0)),
@@ -177,10 +176,7 @@ class MempoolManager:
                 if not item_inclusion_filter(self, item):
                     continue
                 log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
-                if (
-                    item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
-                    and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
-                ):
+                if item.cost + cost_sum <= self.max_block_size and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT:
                     spend_bundles.append(item.spend_bundle)
                     cost_sum += item.cost
                     fee_sum += item.fee
@@ -299,7 +295,7 @@ class MempoolManager:
             self.pool,
             validate_clvm_and_signature,
             new_spend_bytes,
-            int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
+            self.max_block_size,
             self.constants.COST_PER_BYTE,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
@@ -397,7 +393,7 @@ class MempoolManager:
 
         log.debug(f"Cost: {cost}")
 
-        if cost > int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM):
+        if cost > self.max_block_size:
             # we shouldn't ever end up here, since the cost is limited when we
             # execute the CLVM program.
             return Err.BLOCK_COST_EXCEEDS_MAX, None, []
