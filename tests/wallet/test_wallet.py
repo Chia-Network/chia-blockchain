@@ -634,6 +634,12 @@ class TestWalletSimulator:
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
 
+        await time_out_assert(
+            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
+        )
+        assert await wallet.get_confirmed_balance() == permanent_funds
+        assert await wallet_2.get_confirmed_balance() == 0
+
         # process the resubmitted tx
         for _ in range(10):
             await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
