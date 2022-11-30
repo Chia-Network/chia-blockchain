@@ -245,7 +245,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         assert False
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
     await time_out_assert(30, get_nft_count, 0, nft_wallet_0)
-    await time_out_assert(30, get_wallet_number, 1, wallet_node_0.wallet_state_manager)
+    await time_out_assert(30, get_wallet_number, 2, wallet_node_0.wallet_state_manager)
 
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"

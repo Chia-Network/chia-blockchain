@@ -157,6 +157,19 @@ class WalletNftStore:
                 return int(count_row[0])
         return -1
 
+    async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
+        sql = "SELECT 1 FROM users_nfts WHERE removed_height is NULL"
+        params: List[Union[uint32, bytes32]] = []
+        if wallet_id is not None:
+            sql += " AND wallet_id=?"
+            params.append(wallet_id)
+        sql += " LIMIT 1"
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            count_row = await execute_fetchone(conn, sql, params)
+            if count_row:
+                return False
+        return True
+
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
     ) -> List[NFTCoinInfo]:

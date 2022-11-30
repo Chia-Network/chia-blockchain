@@ -7,7 +7,7 @@ import time
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import GTElement
 from chiabip158 import PyBIP158
@@ -16,7 +16,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
@@ -86,7 +85,7 @@ class MempoolManager:
 
     def __init__(
         self,
-        coin_store: CoinStore,
+        get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
         consensus_constants: ConsensusConstants,
         multiprocessing_context: Optional[BaseContext] = None,
         *,
@@ -97,7 +96,7 @@ class MempoolManager:
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
-        self.coin_store = coin_store
+        self.get_coin_record = get_coin_record
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
@@ -422,7 +421,7 @@ class MempoolManager:
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
         for name in removal_names:
-            removal_record = await self.coin_store.get_coin_record(name)
+            removal_record = await self.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
                 return Err.UNKNOWN_UNSPENT, None, []
             elif name in additions_dict:
@@ -553,11 +552,17 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash].spend_bundle
         return None
 
-    def get_mempool_item(self, bundle_hash: bytes32) -> Optional[MempoolItem]:
-        """Returns a MempoolItem if it's inside one the mempools"""
-        if bundle_hash in self.mempool.spends:
-            return self.mempool.spends[bundle_hash]
-        return None
+    def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
+        """
+        Returns a MempoolItem if it's inside one the mempools.
+
+        If include_pending is specified, also check the PENDING cache.
+        """
+        item = self.mempool.spends.get(bundle_hash, None)
+        if not item and include_pending:
+            # no async lock needed since we're not mutating the potential_cache
+            item = self.potential_cache._txs.get(bundle_hash, None)
+        return item
 
     async def new_peak(
         self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]

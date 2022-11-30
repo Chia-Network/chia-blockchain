@@ -766,6 +766,7 @@ class WalletStateManager:
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
         hint_list = compute_coin_hints(coin_spend)
+
         derivation_record = None
         for hint in hint_list:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
@@ -932,6 +933,24 @@ class WalletStateManager:
                     uncurried_nft.singleton_launcher_id.hex(),
                     old_did_id,
                 )
+                nft_wallet: WalletProtocol = self.wallets[wallet_info.id]
+                assert isinstance(nft_wallet, NFTWallet)
+                if parent_coin_state.spent_height is not None:
+                    await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
+                    is_empty = await nft_wallet.is_empty()
+                    has_did = False
+                    for did_wallet_info in await self.get_all_wallet_info_entries(
+                        wallet_type=WalletType.DECENTRALIZED_ID
+                    ):
+                        did_wallet: DIDInfo = DIDInfo.from_json_dict(json.loads(did_wallet_info.data))
+                        assert did_wallet.origin_coin is not None
+                        if did_wallet.origin_coin.name() == old_did_id:
+                            has_did = True
+                            break
+                    if is_empty and nft_wallet.did_id is not None and not has_did:
+                        self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
+                        await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
+                        self.wallets.pop(nft_wallet.wallet_info.id)
             if nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
@@ -1221,7 +1240,7 @@ class WalletStateManager:
                                     if existing is None:
                                         await self.coin_added(
                                             new_singleton_coin,
-                                            uint32(coin_state.spent_height),
+                                            uint32(curr_coin_state.spent_height),
                                             [],
                                             uint32(record.wallet_id),
                                             record.wallet_type,
@@ -1605,10 +1624,6 @@ class WalletStateManager:
                 assert isinstance(wallet, PoolWallet)
                 remove: bool = await wallet.rewind(height)
                 if remove:
-                    remove_ids.append(wallet_id)
-            if wallet.type() == WalletType.NFT.value:
-                assert isinstance(wallet, NFTWallet)
-                if await wallet.get_nft_count() == 0:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
