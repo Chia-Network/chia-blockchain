@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+import logging
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
@@ -10,8 +10,10 @@ from chia.full_node.fee_tracker import FeeTracker
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
-from chia.types.mojos import Mojos
 from chia.util.ints import uint32, uint64
+
+
+log = logging.getLogger(__name__)
 
 
 class BitcoinFeeEstimator(FeeEstimatorInterface):
@@ -20,27 +22,41 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
     https://github.com/bitcoin/bitcoin/tree/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy
     """
 
-    def __init__(self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator) -> None:
+    def __init__(
+        self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator, mempool_info: FeeMempoolInfo
+    ) -> None:
         self.fee_rate_estimator: SmartFeeEstimator = smart_fee_estimator
         self.tracker: FeeTracker = fee_tracker
-        self.last_mempool_info = FeeMempoolInfo(
-            CLVMCost(uint64(0)),
-            FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))),
-            CLVMCost(uint64(0)),
-            datetime.min,
-            CLVMCost(uint64(0)),
-        )
+        self.last_mempool_info: FeeMempoolInfo = mempool_info
 
     def new_block(self, block_info: FeeBlockInfo) -> None:
-        # if len(block_info.included_items) > 0:
-        #    breakpoint()
         self.tracker.process_block(block_info.block_height, block_info.included_items)
 
-    def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
+    def add_mempool_item(self, mempool_info: FeeMempoolInfo, item: MempoolItem) -> None:
         self.last_mempool_info = mempool_info
-        self.tracker.add_tx(mempool_item)
+
+        # NOTE: There is an implicit assumption that we are never
+        # called when the local chain is not synced
+
+        # Only update estimates when we are synced, otherwise we'll
+        # miscalculate how many blocks its taking to get included.
+        # if not mempool_info.synced:
+        #     log.warning(f"Ignoring mempool item {item.name} because we are not yet synced")
+        #     return
+
+        # Ignore side chains and re-orgs
+        if item.height_added_to_mempool >= self.tracker.latest_seen_height:
+            log.warning(
+                f"Ignoring mempool item {item.name} because it is old."
+                f"item added at height: {item.height_added_to_mempool}; "
+                f"node blockchain height: {self.tracker.latest_seen_height}"
+            )
+            return
+
+        self.tracker.add_tx(item)
 
     def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
+        # CBlockPolicyEstimator::_removeTx
         self.last_mempool_info = mempool_info
         self.tracker.remove_tx(mempool_item)
 
@@ -75,10 +91,10 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         return self.tracker
 
 
-def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64) -> BitcoinFeeEstimator:
+def create_bitcoin_fee_estimator(mempool_info: FeeMempoolInfo) -> BitcoinFeeEstimator:
     # fee_store and fee_tracker are particular to the BitcoinFeeEstimator, and
     # are not necessary if a different fee estimator is used.
     fee_store = FeeStore()
     fee_tracker = FeeTracker(fee_store)
-    smart_fee_estimator = SmartFeeEstimator(fee_tracker, max_block_cost_clvm)
-    return BitcoinFeeEstimator(fee_tracker, smart_fee_estimator)
+    smart_fee_estimator = SmartFeeEstimator(fee_tracker, mempool_info.max_block_clvm_cost)
+    return BitcoinFeeEstimator(fee_tracker, smart_fee_estimator, mempool_info)

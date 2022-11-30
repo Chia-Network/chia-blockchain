@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import datetime
 import logging
 import time
 from concurrent.futures import Executor
@@ -30,6 +31,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.mojos import Mojos
 from chia.types.spend_bundle import SpendBundle
 from chia.util import cached_bls
 from chia.util.cached_bls import LOCAL_CACHE
@@ -129,9 +131,14 @@ class MempoolManager:
         self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm)
 
         self.mempool: Mempool = Mempool(
-            self.mempool_max_total_cost,
-            uint64(self.nonzero_fee_minimum_fpc),
-            uint64(self.constants.MAX_BLOCK_COST_CLVM),
+            FeeMempoolInfo(
+                CLVMCost(uint64(self.mempool_max_total_cost)),
+                CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
+                FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
+                CLVMCost(uint64(0)),
+                Mojos(uint64(0)),
+                datetime.datetime.now(),
+            ),
             self.fee_estimator,
         )
 
@@ -343,11 +350,12 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
-            self.mempool.add_to_pool(item)
-            self.mempool.remove_from_pool(remove_items)
+            mempool_info = self.get_mempool_info()
+            self.mempool.add_to_pool(mempool_info, item)
+            self.mempool.remove_from_pool(mempool_info, remove_items)
             return item.cost, MempoolInclusionStatus.SUCCESS, None
         elif item is not None:
-            # There is an error,  but we still returned a mempool item, this means we should add to the pending pool.
+            # There is an error, but we still returned a mempool item, this means we should add to the pending pool.
             self.potential_cache.add(item)
             return item.cost, MempoolInclusionStatus.PENDING, err
         else:
@@ -580,7 +588,11 @@ class MempoolManager:
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
         if new_peak is None:
+            log.warning(f"new_peak: {new_peak}")
             return []
+        log.warning(
+            f"new_peak: height={new_peak.height} time={new_peak.timestamp} is_tx_block={new_peak.is_transaction_block}"
+        )
         if new_peak.is_transaction_block is False:
             return []
         if self.peak == new_peak:
@@ -591,24 +603,23 @@ class MempoolManager:
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
 
+        mempool_info = self.get_mempool_info()
         if use_optimization and last_npc_result is not None:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
                         c_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(c_ids)
+                        self.mempool.remove_from_pool(mempool_info, c_ids)
                         for c_id in c_ids:
+                            item = self.mempool.spends.get(c_id)
+                            if item:
+                                included_items.append(item)
                             self.remove_seen(c_id)
         else:
             old_pool = self.mempool
+            self.mempool = Mempool(self.get_mempool_info(), self.fee_estimator)
 
-            self.mempool = Mempool(
-                self.mempool_max_total_cost,
-                uint64(self.nonzero_fee_minimum_fpc),
-                uint64(self.constants.MAX_BLOCK_COST_CLVM),
-                self.fee_estimator,
-            )
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, err = await self.add_spend_bundle(
@@ -660,12 +671,23 @@ class MempoolManager:
         return items
 
     def get_mempool_info(self) -> FeeMempoolInfo:
-        import datetime
 
         return FeeMempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.mempool.total_mempool_cost)),
-            datetime.datetime.now(),
-            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
+            Mojos(uint64(self.mempool.total_mempool_fees)),
+            time=datetime.datetime.now(),
         )
+
+    # def get_mempool_info(self) -> FeeMempoolInfo:
+    #     return FeeMempoolInfo(
+    #         CLVMCost(uint64(self.max_size_in_cost)),
+    #         CLVMCost(uint64(self.max_block_clvm_cost)),
+    #         self.minimum_fee_per_cost_to_replace,
+    #         CLVMCost(uint64(self.total_mempool_cost)),
+    #         Mojos(uint64(self.total_mempool_fees)),
+    #         synced=True,
+    #         time=datetime.now(),
+    #     )

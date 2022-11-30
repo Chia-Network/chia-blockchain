@@ -153,12 +153,13 @@ class FeeStat:  # TxConfirmStats
         return int(bucket_index)
 
     def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItem) -> None:
-        if blocks_to_confirm < 1:  # todo breakpoint and check here
+        if blocks_to_confirm < 1:
             raise ValueError("tx_confirmed called with < 1 block to confirm")
 
         periods_to_confirm = int((blocks_to_confirm + self.scale - 1) / self.scale)
 
         fee_rate = item.fee_per_cost * 1000  # XXX
+        # fee_rate = item.fee_per_cost # xxx
         bucket_index = self.get_bucket_index(fee_rate)
 
         for i in range(periods_to_confirm, len(self.confirmed_average)):
@@ -182,6 +183,7 @@ class FeeStat:  # TxConfirmStats
             self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i] = 0
 
     def new_mempool_tx(self, block_height: uint32, fee_rate: float) -> int:
+        # TxConfirmStats::NewTx
         bucket_index: int = self.get_bucket_index(fee_rate)
         block_index = block_height % len(self.unconfirmed_txs)
         self.unconfirmed_txs[block_index][bucket_index] += 1
@@ -498,17 +500,30 @@ class FeeTracker:
         self.fee_store.store_fee_data(backup)
 
     def process_block(self, block_height: uint32, items: List[MempoolItem]) -> None:
+        # CBlockPolicyEstimator::processBlock
+        # CBlockPolicyEstimator::processTransaction
         """A new block has been farmed and these transactions have been included in that block"""
+        # self.log.warning( xxx
+        #    f"process_block: {block_height} {[(m.name,m.fee,m.height_added_to_mempool,m.cost) for m in items]}"
+        #    f" ({len(items)})"
+        # )
         if block_height <= self.latest_seen_height:
             # Ignore reorgs
             return
 
         self.latest_seen_height = block_height
 
+        # Update unconfirmed circular buffer
+        self.short_horizon.clear_current(block_height)
+        self.med_horizon.clear_current(block_height)
+        self.long_horizon.clear_current(block_height)
+
+        # Decay all exponential averages
         self.short_horizon.update_moving_averages()
         self.med_horizon.update_moving_averages()
         self.long_horizon.update_moving_averages()
 
+        # Update averages with data points from current block
         for item in items:
             self.process_block_tx(block_height, item)
 
@@ -516,13 +531,20 @@ class FeeTracker:
             self.first_recorded_height = block_height
             self.log.info(f"Fee Estimator first recorded height: {self.first_recorded_height}")
 
-    def process_block_tx(self, current_height: uint32, item: MempoolItem) -> None:
+    def process_block_tx(
+        self, current_height: uint32, item: MempoolItem
+    ) -> None:  # CBlockPolicyEstimator::processBlockTx
+        """
+        A transaction has entered a block on the blockchain
+        """
         if item.height_added_to_mempool is None:
             raise ValueError("process_block_tx called with item.height_added_to_mempool=None")
 
         blocks_to_confirm = current_height - item.height_added_to_mempool
         if blocks_to_confirm <= 0:
             return
+
+        # self.log.warning(f"process_block_tx: height={current_height} item={item.name}")
 
         self.short_horizon.tx_confirmed(blocks_to_confirm, item)
         self.med_horizon.tx_confirmed(blocks_to_confirm, item)
@@ -537,12 +559,19 @@ class FeeTracker:
         return int(bucket_index)
 
     def add_tx(self, item: MempoolItem) -> None:
+        # CBlockPolicyEstimator::processTransaction
+        """
+        A transaction has entered the mempool
+        """
         self.short_horizon.new_mempool_tx(self.latest_seen_height, item.fee_per_cost)
         self.med_horizon.new_mempool_tx(self.latest_seen_height, item.fee_per_cost)
         self.long_horizon.new_mempool_tx(self.latest_seen_height, item.fee_per_cost)
 
-    def remove_tx(self, item: MempoolItem) -> None:
-        bucket_index = self.get_bucket_index(item.fee_per_cost * 1000)
+    def remove_tx(self, item: MempoolItem) -> None:  # TxConfirmStats::removeTx
+        """
+        A transaction has been removed from the mempool
+        """
+        bucket_index = self.get_bucket_index(item.fee_per_cost)
         self.short_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.med_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.long_horizon.remove_tx(self.latest_seen_height, item, bucket_index)

@@ -164,12 +164,27 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
     target_times = [60, 120, 300]
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
+
     if res["full_node_synced"] is not True:
         print("No Fee Estimates available. Full Node still syncing ...\n")
         return
-    print(f"  Mempool max size: {res['mempool_max_size']:>12} CLVM cost")
-    print(f"      Mempool size: {res['mempool_size']:>12} CLVM cost")
-    print(f"  Current Fee Rate: {res['current_fee_rate']:>12} mojo per CLVM cost")
+
+    print(res)
+    print("\n")
+    print(f"  Mempool max cost: {res['mempool_max_size']:>12} CLVM cost")
+    print(f"      Mempool cost: {res['mempool_size']:>12} CLVM cost")
+    print(f"     Mempool count: {res['num_spends']:>12} spends")
+    print(f"   Fees in Mempool: {res['mempool_fees']:>12} mojos")
+    print()
+
+    print("Stats for last transaction block:")
+    print(f"      Block height: {res['last_tx_block_height']:>12}")
+    print(f"        Block fees: {res['fees_last_block']:>12} mojos")
+    print(f"        Block cost: {res['last_block_cost']:>12} CLVM cost")
+    print(f"          Fee rate: {res['fee_rate_last_block']:>12.5} mojos per CLVM cost")
+    # print(f"  Current Fee Rate: {res['current_fee_rate']:>12} mojos per CLVM cost") # TOO: Fee to replace
+    # Note that having a non-zero fee rate last block does not imply that the estimated fee rate
+    # should be nonzero. For example, if the block was only 10% full, no fees are required.
 
     print("\nFee Rate Estimates:")
     max_name_len = max(len(name) for name in target_times_names)

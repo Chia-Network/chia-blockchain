@@ -742,7 +742,7 @@ class FullNode:
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
 
-            # This is the either the case where we were not able to sync successfully (for example, due to the fork
+            # This is either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
             self._sync_task = asyncio.create_task(self._sync())
 
@@ -1039,8 +1039,8 @@ class FullNode:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
-            # dont sync to wp if local peak is heavier,
-            # dont ban peer, we asked for this peak
+            # don't sync to wp if local peak is heavier,
+            # don't ban peer, we asked for this peak
             current_peak = self.blockchain.get_peak()
             if current_peak is not None:
                 if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:

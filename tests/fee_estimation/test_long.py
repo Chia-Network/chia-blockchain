@@ -39,7 +39,6 @@ class CoinPair:
     fee_coin: Coin
 
 
-# xxx break dep: mempoolmangager / mempool info
 async def farm(
     sim: SpendSim,
     puzzle_hash: bytes32,

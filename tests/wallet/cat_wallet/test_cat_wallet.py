@@ -474,7 +474,7 @@ class TestCATWallet:
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
         print(len(txs))
         # Test with Memo
-        tx_records_3: TransactionRecord = await cat_wallet_1.generate_signed_transaction(
+        tx_records_3: List[TransactionRecord] = await cat_wallet_1.generate_signed_transaction(
             [uint64(30)], [cat_hash], memos=[[b"Markus Walburg"]]
         )
         with pytest.raises(ValueError):
@@ -483,6 +483,7 @@ class TestCATWallet:
             )
 
         for tx_record in tx_records_3:
+            assert tx_record is not None
             await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
         await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records_3)
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
