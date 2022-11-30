@@ -128,19 +128,18 @@ class MempoolManager:
         self.peak: Optional[BlockRecord] = None
 
         max_block_cost_clvm = uint64(self.constants.MAX_BLOCK_COST_CLVM)
-        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm)
 
-        self.mempool: Mempool = Mempool(
-            FeeMempoolInfo(
-                CLVMCost(uint64(self.mempool_max_total_cost)),
-                CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
-                FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
-                CLVMCost(uint64(0)),
-                Mojos(uint64(0)),
-                datetime.datetime.now(),
-            ),
-            self.fee_estimator,
+        mempool_init_info = FeeMempoolInfo(
+            CLVMCost(uint64(self.mempool_max_total_cost)),
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
+            FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
+            CLVMCost(uint64(0)),
+            Mojos(uint64(0)),
+            datetime.datetime.now(),
         )
+
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(mempool_init_info)
+        self.mempool: Mempool = Mempool(mempool_init_info, self.fee_estimator)
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
