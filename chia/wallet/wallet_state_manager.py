@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
+from clvm.casts import int_from_bytes
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
@@ -21,15 +22,16 @@ from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import CoinState
+from chia.protocols.wallet_protocol import CoinState, PuzzleSolutionResponse, RespondPuzzleSolution
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
@@ -70,7 +72,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
-from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
@@ -1500,13 +1501,30 @@ class WalletStateManager:
                         await self.tx_store.set_confirmed(record.name, height)
             elif not change:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
-                parent_coin_states = await self.wallet_node.get_coin_state([coin.parent_coin_info], peer)
-                memos = []
-                if parent_coin_states:
-                    parent_coin_state: CoinState = parent_coin_states[-1]
-                    parent_coin: Coin = parent_coin_state.coin
-                    cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
-                    spend_memos = compute_memos_for_spend(cs)
+                # only calculate memos for standard transactions
+                if wallet_type == WalletType.STANDARD_WALLET:
+                    # we're trying to avoid fetching parent coin, so directly calling fetch p/s
+                    # we can use height for current coin as that's when parent was spent
+                    solution_response: RespondPuzzleSolution = await peer.request_puzzle_solution(
+                        wallet_protocol.RequestPuzzleSolution(coin.parent_coin_info, height)
+                    )
+                    spend: PuzzleSolutionResponse = solution_response.response
+
+                    _, result = spend.puzzle.run_with_cost(INFINITE_COST, spend.solution)
+                    spend_coins: Set[bytes32] = set()
+                    spend_memos: Dict[bytes32, List[bytes]] = {}
+                    parent_coin_name = coin.parent_coin_info
+                    for condition in result.as_python():
+                        if condition[0] == ConditionOpcode.CREATE_COIN:
+                            coin_added = Coin(
+                                bytes32(parent_coin_name), bytes32(condition[1]), int_from_bytes(condition[2])
+                            )
+                            spend_coins.add(coin_added.name())
+                            if len(condition) >= 4 and type(condition[3]) == list:
+                                # we have memos, if 4 entries in condition and 4th is a list
+                                spend_memos[coin_added.name()] = condition[3]
+                    # validate received solution and puzzle
+                    assert coin.name() in spend_coins
                     memos = list(spend_memos.items())
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(height),

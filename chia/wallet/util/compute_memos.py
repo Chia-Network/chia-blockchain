@@ -14,11 +14,12 @@ from chia.types.spend_bundle import SpendBundle
 
 def compute_memos_for_spend(coin_spend: CoinSpend) -> Dict[bytes32, List[bytes]]:
     _, result = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
+    coin_name = coin_spend.coin.name()
     memos: Dict[bytes32, List[bytes]] = {}
     for condition in result.as_python():
         if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:
             # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount
-            coin_added = Coin(coin_spend.coin.name(), bytes32(condition[1]), int_from_bytes(condition[2]))
+            coin_added = Coin(coin_name, bytes32(condition[1]), int_from_bytes(condition[2]))
             if type(condition[3]) != list:
                 # If it's not a list, it's not the correct format
                 continue
