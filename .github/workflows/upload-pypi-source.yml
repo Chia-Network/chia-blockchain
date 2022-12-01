@@ -30,20 +30,6 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Check for unsigned commits
-      if: github.event_name == 'pull_request'
-      shell: bash
-      run: |
-        git show ${{ github.event.pull_request.base.sha }}
-        git show ${{ github.event.pull_request.head.sha }}
-        git log --left-right --oneline --pretty='format:%H|%aN|%aI|%s|%G?' ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} > unsigned_commit_check_log
-        echo
-        echo All commits in log:
-        cat unsigned_commit_check_log
-        echo
-        echo Commits in log considered unsigned:
-        if grep 'N$' unsigned_commit_check_log; then false; else true; fi
-
     - uses: actions/setup-python@v3
       name: Install Python
       with:
