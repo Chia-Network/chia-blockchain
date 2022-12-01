@@ -154,7 +154,12 @@ class RpcServer:
 
     @classmethod
     def create(
-        cls, rpc_api: Any, service_name: str, stop_cb: Callable[[], None], root_path: Path, net_config: Dict[str, Any]
+        cls,
+        rpc_api: RpcApiProtocol,
+        service_name: str,
+        stop_cb: Callable[[], None],
+        root_path: Path,
+        net_config: Dict[str, Any],
     ) -> RpcServer:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
