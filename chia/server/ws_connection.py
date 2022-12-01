@@ -561,3 +561,6 @@ class WSChiaConnection:
             return PeerInfo(self.peer_host, port)
         else:
             return info
+
+    def has_capability(self, Capability) -> bool:
+        return Capability in self.peer_capabilities

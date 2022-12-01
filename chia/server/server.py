@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from typing_extensions import final
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_requires_reply
+from chia.protocols.protocol_state_machine import message_requires_reply, VALID_REPLY_MESSAGE_MAP
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
@@ -640,13 +640,15 @@ class ChiaServer:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.send_message(response_message)
                     # check that this call needs a reply
-                    elif metadata.reply_types is not None and len(metadata.reply_types) > 0:
-                        if Capability.NONE_RESPONSE in connection.peer_capabilities:
-                            # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
-                            response_message = Message(
-                                uint8(ProtocolMessageTypes.none_response.value), full_message.id, b""
-                            )
-                            await connection.send_message(response_message)
+
+                    elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and connection.has_capability(
+                        Capability.NONE_RESPONSE
+                    ):
+                        # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
+                        response_message = Message(
+                            uint8(ProtocolMessageTypes.none_response.value), full_message.id, b""
+                        )
+                        await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
