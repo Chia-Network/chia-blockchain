@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 from clvm_tools.binutils import assemble
@@ -7,15 +9,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 from chia.wallet.nft_wallet.ownership_outer_puzzle import puzzle_for_ownership_layer
 from chia.wallet.nft_wallet.transfer_program_puzzle import puzzle_for_transfer_program
-from chia.wallet.outer_puzzles import (
-    construct_puzzle,
-    create_asset_id,
-    get_inner_puzzle,
-    get_inner_solution,
-    match_puzzle,
-    solve_puzzle,
-)
+from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 def test_ownership_outer_puzzle() -> None:
@@ -34,10 +30,10 @@ def test_ownership_outer_puzzle() -> None:
     ownership_puzzle: Program = puzzle_for_ownership_layer(owner, transfer_program, ACS)
     ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, transfer_program, ACS)
     ownership_puzzle_default: Program = puzzle_for_ownership_layer(owner, transfer_program_default, ACS)
-    ownership_driver: Optional[PuzzleInfo] = match_puzzle(ownership_puzzle)
-    ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(ownership_puzzle_empty)
-    ownership_driver_default: Optional[PuzzleInfo] = match_puzzle(ownership_puzzle_default)
-    transfer_program_driver: Optional[PuzzleInfo] = match_puzzle(transfer_program_default)
+    ownership_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle))
+    ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_empty))
+    ownership_driver_default: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_default))
+    transfer_program_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(transfer_program_default))
 
     assert ownership_driver is not None
     assert ownership_driver_empty is not None
@@ -55,8 +51,7 @@ def test_ownership_outer_puzzle() -> None:
     assert construct_puzzle(ownership_driver, ACS) == ownership_puzzle
     assert construct_puzzle(ownership_driver_empty, ACS) == ownership_puzzle_empty
     assert construct_puzzle(ownership_driver_default, ACS) == ownership_puzzle_default
-    assert get_inner_puzzle(ownership_driver, ownership_puzzle) == ACS
-    assert create_asset_id(ownership_driver) is None
+    assert get_inner_puzzle(ownership_driver, uncurry_puzzle(ownership_puzzle)) == ACS
 
     # Set up for solve
     inner_solution = Program.to(

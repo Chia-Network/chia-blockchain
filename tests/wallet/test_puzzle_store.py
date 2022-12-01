@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 
 import pytest
@@ -37,7 +39,7 @@ class TestPuzzleStore:
                         uint32(i),
                         token_bytes(32),
                         AugSchemeMPL.key_gen(token_bytes(32)).get_g1(),
-                        WalletType.RATE_LIMITED,
+                        WalletType.CAT,
                         uint32(2),
                         False,
                     )

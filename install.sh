@@ -3,10 +3,12 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-adh]
+Usage: $0 [-adsph]
 
   -a                          automated install, no questions
   -d                          install development dependencies
+  -s                          skip python package installation and just do pip install
+  -p                          additional plotters installation
   -h                          display this help and exit
 "
 
@@ -16,14 +18,19 @@ usage() {
 
 PACMAN_AUTOMATED=
 EXTRAS=
+SKIP_PACKAGE_INSTALL=
+PLOTTER_INSTALL=
 
-while getopts adh flag
+while getopts adsph flag
 do
   case "${flag}" in
     # automated
     a) PACMAN_AUTOMATED=--noconfirm;;
     # development
     d) EXTRAS=${EXTRAS}dev,;;
+    # simple install
+    s) SKIP_PACKAGE_INSTALL=1;;
+    p) PLOTTER_INSTALL=1;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -122,8 +129,63 @@ install_python3_and_sqlite3_from_source_with_yum() {
   cd "$CURRENT_WD"
 }
 
+# You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
+# e.g. `export INSTALL_PYTHON_VERSION=3.8`
+INSTALL_PYTHON_PATH=
+PYTHON_MAJOR_VER=
+PYTHON_MINOR_VER=
+SQLITE_VERSION=
+SQLITE_MAJOR_VER=
+SQLITE_MINOR_VER=
+OPENSSL_VERSION_STRING=
+OPENSSL_VERSION_INT=
+
+find_python() {
+  set +e
+  unset BEST_VERSION
+  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
+    if command -v python$V >/dev/null; then
+      if [ "$BEST_VERSION" = "" ]; then
+        BEST_VERSION=$V
+      fi
+    fi
+  done
+
+  if [ -n "$BEST_VERSION" ]; then
+    INSTALL_PYTHON_VERSION="$BEST_VERSION"
+    INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
+    PY3_VER=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
+    PYTHON_MAJOR_VER=$(echo "$PY3_VER" | cut -d'.' -f1)
+    PYTHON_MINOR_VER=$(echo "$PY3_VER" | cut -d'.' -f2)
+  fi
+  set -e
+}
+
+find_sqlite() {
+  set +e
+  if [ -n "$INSTALL_PYTHON_PATH" ]; then
+    # Check sqlite3 version bound to python
+    SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
+    SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
+    SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
+  fi
+  set -e
+}
+
+find_openssl() {
+  set +e
+  if [ -n "$INSTALL_PYTHON_PATH" ]; then
+    # Check openssl version python will use
+    OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+    OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+  fi
+  set -e
+}
+
 # Manage npm and other install requirements on an OS specific basis
-if [ "$(uname)" = "Linux" ]; then
+if [ "$SKIP_PACKAGE_INSTALL" = "1" ]; then
+  echo "Skipping system package installation"
+elif [ "$(uname)" = "Linux" ]; then
   #LINUX=1
   if [ "$UBUNTU_PRE_20" = "1" ]; then
     # Ubuntu
@@ -193,7 +255,9 @@ elif [ "$(uname)" = "Darwin" ]; then
   fi
   echo "Installing OpenSSL"
   brew install openssl
-elif [ "$(uname)" = "OpenBSD" ]; then
+fi
+
+if [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 elif [ "$(uname)" = "FreeBSD" ]; then
@@ -201,64 +265,44 @@ elif [ "$(uname)" = "FreeBSD" ]; then
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 fi
 
-find_python() {
-  set +e
-  unset BEST_VERSION
-  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
-    if command -v python$V >/dev/null; then
-      if [ "$BEST_VERSION" = "" ]; then
-        BEST_VERSION=$V
-        if [ "$BEST_VERSION" = "3" ]; then
-          PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
-            echo "Chia requires Python version < 3.11.0" >&2
-            echo "Current Python version = $PY3_VERSION" >&2
-            # If Arch, direct to Arch Wiki
-            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
-              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
-            fi
-            exit 1
-          fi
-        fi
-      fi
-    fi
-  done
-  echo $BEST_VERSION
-  set -e
-}
-
 if [ "$INSTALL_PYTHON_VERSION" = "" ]; then
-  INSTALL_PYTHON_VERSION=$(find_python)
+  echo "Searching available python executables..."
+  find_python
+else
+  echo "Python $INSTALL_PYTHON_VERSION is requested"
+  INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
+  PY3_VER=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
+  PYTHON_MAJOR_VER=$(echo "$PY3_VER" | cut -d'.' -f1)
+  PYTHON_MINOR_VER=$(echo "$PY3_VER" | cut -d'.' -f2)
 fi
-
-# This fancy syntax sets INSTALL_PYTHON_PATH to "python3.7", unless
-# INSTALL_PYTHON_VERSION is defined.
-# If INSTALL_PYTHON_VERSION equals 3.8, then INSTALL_PYTHON_PATH becomes python3.8
-
-INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
 if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
   echo "${INSTALL_PYTHON_PATH} was not found"
   exit 1
 fi
 
+if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "11" ]; then
+  echo "Chia requires Python version >= 3.7 and  < 3.11.0" >&2
+  echo "Current Python version = $INSTALL_PYTHON_VERSION" >&2
+  # If Arch, direct to Arch Wiki
+  if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+    echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
+  fi
+
+  exit 1
+fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
 
-# Check sqlite3 version bound to python
-SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
-SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
-SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
+find_sqlite
 echo "SQLite version for Python is ${SQLITE_VERSION}"
 if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLITE_MINOR_VER" -lt "8" ]; then
   echo "Only sqlite>=3.8 is supported"
   exit 1
 fi
 
-# Check openssl version python will use
-OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
-OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
 # There is also ssl.OPENSSL_VERSION_INFO returning a tuple
 # 1.1.1n corresponds to 269488367 as an integer
+find_openssl
 echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
 if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
   echo "WARNING: OpenSSL versions before 3.0.2, 1.1.1n, or 1.0.2zd are vulnerable to CVE-2022-0778"
@@ -296,6 +340,16 @@ python -m pip install wheel
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
+
+if [ -n "$PLOTTER_INSTALL" ]; then
+  set +e
+  PREV_VENV="$VIRTUAL_ENV"
+  export VIRTUAL_ENV="venv"
+  ./install-plotter.sh bladebit
+  ./install-plotter.sh madmax
+  export VIRTUAL_ENV="$PREV_VENV"
+  set -e
+fi
 
 echo ""
 echo "Chia blockchain install.sh complete."

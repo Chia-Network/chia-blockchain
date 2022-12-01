@@ -640,7 +640,7 @@ class Streamable:
         return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:
+    def from_bytes(cls: Type[_T_Streamable], blob: bytes) -> _T_Streamable:
         f = io.BytesIO(blob)
         parsed = cls.parse(f)
         assert f.read() == b""

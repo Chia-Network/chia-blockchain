@@ -112,13 +112,14 @@ daemon_ssl:
   private_key: "config/ssl/daemon/private_daemon.key"
 
 
-# Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
+# Controls logging of all servers (harvester, farmer, etc..). Each one can be overridden.
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
   log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
   log_maxbytesrotation: 52428800 #  Max bytes logged before rotating logs
+  log_use_gzip: False #  Use gzip to compress rotated logs
   log_syslog: False  # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514  # UDP port of the remote or local Unix syslog
@@ -278,7 +279,7 @@ timelord:
   # fast_algorithm is a faster proof generation algorithm. This speed increase
   # requires much less memory usage and a does not have the risk of OOM that
   # the normal timelord has but requires significantly more cores doing
-  # parrallel proof generation and creates a larger and slower to verify
+  # parallel proof generation and creates a larger and slower to verify
   # resulting proof.
   # An Intel Core i9-10900K can run 2 normal vdf_clients at ~221,000 ips
   # without slowing down but running more than 1 with fast_algorithm will
@@ -393,6 +394,8 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  enable_memory_profiler: False
+
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
@@ -468,6 +471,8 @@ wallet:
 
   enable_profiler: False
 
+  enable_memory_profiler: False
+
   # see description for full_node.db_sync
   db_sync: auto
 
@@ -478,11 +483,6 @@ wallet:
 
   connect_to_unknown_peers: True
 
-  # The minimum height that we care about for our transactions. Set to zero
-  # If we are restoring from private key and don't know the height.
-  starting_height: 0
-  start_height_buffer: 100  # Wallet will stop fly sync at starting_height - buffer
-  num_sync_batches: 50
   initial_num_public_keys: 425
 
   dns_servers:
@@ -491,7 +491,10 @@ wallet:
   full_node_peer:
     host: *self_hostname
     port: 8444
-
+  # The path of NFT off-chain metadata cache
+  nft_metadata_cache_path: "nft_cache"
+  # The length of NFT ID prefix will be used as hash index
+  nft_metadata_cache_hash_length: 3
   multiprocessing_start_method: default
 
   testing: False
@@ -544,6 +547,52 @@ wallet:
 
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
+
+  # After n received unspent transactions, the spam filter will be enabled, which will filter out received
+  # coins with very small value. Any standard TX under xch_spam_amount is filtered
+  spam_filter_after_n_txs: 200
+  xch_spam_amount: 1000000
+  # Accept notifications from parties on chain
+  accept_notifications: False
+  # The amount someone has to pay you in mojos for you to see their notification
+  required_notification_amount: 10000000
+
+data_layer:
+  # TODO: consider name
+  # TODO: organize consistently with other sections
+
+  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
+  port: 8561
+  wallet_peer:
+    host: localhost
+    port: 9256
+
+  database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
+  # The location where the server files will be stored.
+  server_files_location: "data_layer/db/server_files_location_CHALLENGE"
+  # The timeout for the client to download a file from a server
+  client_timeout: 15
+  # Data for running a data layer server.
+  host_ip: 0.0.0.0
+  host_port: 8575
+  # Data for running a data layer client.
+  manage_data_interval: 60
+  selected_network: *selected_network
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  # TODO: what considerations are there in choosing this?
+  rpc_port: 8562
+  rpc_server_max_request_body_size: 26214400
+  fee: 1000000000
+  logging: *logging
+
+  # TODO: which of these are really appropriate?
+
+  ssl:
+    private_crt:  "config/ssl/data_layer/private_data_layer.crt"
+    private_key:  "config/ssl/data_layer/private_data_layer.key"
+    public_crt:  "config/ssl/data_layer/public_data_layer.crt"
+    public_key:  "config/ssl/data_layer/public_data_layer.key"
 
 simulator:
 

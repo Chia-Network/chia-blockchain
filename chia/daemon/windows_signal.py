@@ -3,6 +3,8 @@ Code taken from Stack Overflow Eryk Sun.
 https://stackoverflow.com/questions/35772001/how-to-handle-the-signal-in-python-on-windows-machine
 """
 
+from __future__ import annotations
+
 import os
 import signal
 import sys

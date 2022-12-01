@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import operator
 from typing import Any, Callable, Dict, List, Optional
@@ -99,10 +101,13 @@ class FarmerRpcApi:
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
-    async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         payloads = []
 
-        if change == "new_signage_point":
+        if change_data is None:
+            # TODO: maybe something better?
+            pass
+        elif change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
             payloads.append(

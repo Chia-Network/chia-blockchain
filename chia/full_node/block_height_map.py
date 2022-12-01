@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from chia.util.ints import uint32
+
+import aiofiles
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from pathlib import Path
-import aiofiles
-from dataclasses import dataclass
-from chia.util.streamable import Streamable, streamable
-from chia.util.files import write_file_async
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.files import write_file_async
+from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +131,7 @@ class BlockHeightMap:
 
         return self
 
-    def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]):
+    def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]) -> None:
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
         assert height * 32 <= len(self.__height_to_hash)
@@ -152,7 +156,7 @@ class BlockHeightMap:
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can
     # assume all previous blocks have already been populated
-    async def _load_blocks_from(self, height: uint32, prev_hash: bytes32):
+    async def _load_blocks_from(self, height: uint32, prev_hash: bytes32) -> None:
 
         while height > 0:
             # load 5000 blocks at a time
@@ -207,7 +211,7 @@ class BlockHeightMap:
                 self.__set_hash(height, prev_hash)
                 prev_hash = entry[1]
 
-    def __set_hash(self, height: int, block_hash: bytes32):
+    def __set_hash(self, height: int, block_hash: bytes32) -> None:
         idx = height * 32
         self.__height_to_hash[idx : idx + 32] = block_hash
         self.__dirty += 1
@@ -220,7 +224,7 @@ class BlockHeightMap:
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)
 
-    def rollback(self, fork_height: int):
+    def rollback(self, fork_height: int) -> None:
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []

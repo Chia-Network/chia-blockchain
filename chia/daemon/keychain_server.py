@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type
 
 from blspy import PrivateKey
+
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
 from chia.util.ints import uint32
-from chia.util.keychain import KeyData, Keychain
-from chia.util.streamable import streamable, Streamable
-from pathlib import Path
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, cast, Type
+from chia.util.keychain import Keychain, KeyData
+from chia.util.streamable import Streamable, streamable
 
 # Commands that are handled by the KeychainServer
 keychain_commands = [
@@ -21,6 +24,8 @@ keychain_commands = [
     "get_key_for_fingerprint",
     "get_key",
     "get_keys",
+    "set_label",
+    "delete_label",
 ]
 
 log = logging.getLogger(__name__)
@@ -30,6 +35,12 @@ KEYCHAIN_ERR_LOCKED = "keyring is locked"
 KEYCHAIN_ERR_NO_KEYS = "no keys present"
 KEYCHAIN_ERR_KEY_NOT_FOUND = "key not found"
 KEYCHAIN_ERR_MALFORMED_REQUEST = "malformed request"
+
+
+@streamable
+@dataclass(frozen=True)
+class EmptyResponse(Streamable):
+    pass
 
 
 @streamable
@@ -63,6 +74,27 @@ class GetKeysRequest(Streamable):
         return GetKeysResponse(keys=keychain.get_keys(self.include_secrets))
 
 
+@streamable
+@dataclass(frozen=True)
+class SetLabelRequest(Streamable):
+    fingerprint: uint32
+    label: str
+
+    def run(self, keychain: Keychain) -> EmptyResponse:
+        keychain.set_label(int(self.fingerprint), self.label)
+        return EmptyResponse()
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteLabelRequest(Streamable):
+    fingerprint: uint32
+
+    def run(self, keychain: Keychain) -> EmptyResponse:
+        keychain.delete_label(self.fingerprint)
+        return EmptyResponse()
+
+
 class KeychainServer:
     """
     Implements a remote keychain service for clients to perform key operations on
@@ -93,26 +125,30 @@ class KeychainServer:
                 self._alt_keychains[key] = keychain
         return keychain
 
-    async def handle_command(self, command, data) -> Dict[str, Any]:
+    async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_private_key(cast(Dict[str, Any], data))
+                return await self.add_private_key(data)
             elif command == "check_keys":
-                return await self.check_keys(cast(Dict[str, Any], data))
+                return await self.check_keys(data)
             elif command == "delete_all_keys":
-                return await self.delete_all_keys(cast(Dict[str, Any], data))
+                return await self.delete_all_keys(data)
             elif command == "delete_key_by_fingerprint":
-                return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
+                return await self.delete_key_by_fingerprint(data)
             elif command == "get_all_private_keys":
-                return await self.get_all_private_keys(cast(Dict[str, Any], data))
+                return await self.get_all_private_keys(data)
             elif command == "get_first_private_key":
-                return await self.get_first_private_key(cast(Dict[str, Any], data))
+                return await self.get_first_private_key(data)
             elif command == "get_key_for_fingerprint":
-                return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
+                return await self.get_key_for_fingerprint(data)
             elif command == "get_key":
                 return await self.run_request(data, GetKeyRequest)
             elif command == "get_keys":
                 return await self.run_request(data, GetKeysRequest)
+            elif command == "set_label":
+                return await self.run_request(data, SetLabelRequest)
+            elif command == "delete_label":
+                return await self.run_request(data, DeleteLabelRequest)
             return {}
         except Exception as e:
             log.exception(e)
@@ -123,6 +159,8 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         mnemonic = request.get("mnemonic", None)
+        label = request.get("label", None)
+
         if mnemonic is None:
             return {
                 "success": False,
@@ -131,7 +169,7 @@ class KeychainServer:
             }
 
         try:
-            self.get_keychain_for_request(request).add_private_key(mnemonic)
+            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
         except KeyError as e:
             return {
                 "success": False,
@@ -145,7 +183,7 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True}
+        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():

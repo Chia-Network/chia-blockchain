@@ -1,8 +1,10 @@
-import pathlib
+from __future__ import annotations
+
 import os
-from multiprocessing import freeze_support
+import pathlib
 import sys
-from typing import Dict, Optional
+from multiprocessing import freeze_support
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -10,10 +12,11 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
-from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config_cli, load_config
+from chia.util.chia_logging import initialize_service_logging
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.util.task_timing import maybe_manage_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 
 # See: https://bugs.python.org/issue29288
@@ -26,11 +29,11 @@ SERVICE_NAME = "wallet"
 
 def create_wallet_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[WalletNode]:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
@@ -74,7 +77,6 @@ def create_wallet_service(
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         network_id=network_id,
         rpc_info=rpc_info,
         advertised_port=service_config["port"],
@@ -99,11 +101,7 @@ async def async_main() -> int:
         service_config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=DEFAULT_ROOT_PATH,
-    )
+    initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_wallet_service(DEFAULT_ROOT_PATH, config, constants)
     await service.setup_process_global_state()
     await service.run()
@@ -113,13 +111,9 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
-    if os.getenv("CHIA_INSTRUMENT_WALLET", 0) != 0:
-        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-        import atexit
 
-        start_task_instrumentation()
-        atexit.register(stop_task_instrumentation)
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_WALLET") is not None):
+        return async_run(async_main())
 
 
 if __name__ == "__main__":

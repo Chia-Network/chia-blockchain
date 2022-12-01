@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import dataclasses
-from typing import List, Iterator, Optional
+from typing import Iterator, List, Optional
 
 from blspy import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 NULL_SIGNATURE = G2Element()
 
@@ -30,13 +33,13 @@ class SpendableCAT:
     limitations_program_reveal: Program = Program.to([])
 
 
-def match_cat_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
+def match_cat_puzzle(puzzle: UncurriedPuzzle) -> Optional[Iterator[Program]]:
     """
     Given the curried puzzle and args, test if it's a CAT and,
     if it is, return the curried arguments
     """
-    if mod == CAT_MOD:
-        ret: Iterator[Program] = curried_args.as_iter()
+    if puzzle.mod == CAT_MOD:
+        ret: Iterator[Program] = puzzle.args.as_iter()
         return ret
     else:
         return None

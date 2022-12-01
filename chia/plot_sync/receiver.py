@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 from dataclasses import dataclass, field
@@ -25,7 +27,9 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint32, uint64
 from chia.util.misc import get_list_or_len
@@ -102,7 +106,7 @@ class Receiver:
             log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
 
     def reset(self) -> None:
-        log.error(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
+        log.info(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
         self._current_sync = Sync()
         self._last_sync = Sync()
         self._plots.clear()

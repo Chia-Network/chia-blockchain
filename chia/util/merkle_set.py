@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from hashlib import sha256
 from typing import Any, Dict, List, Tuple

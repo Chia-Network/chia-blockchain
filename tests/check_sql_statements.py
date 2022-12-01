@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import sys
 from subprocess import check_output
 from typing import Dict, Set, Tuple

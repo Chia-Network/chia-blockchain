@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import random
 from typing import Dict, List, Optional, Set
@@ -17,6 +19,7 @@ async def select_coins(
     amount: uint128,
     exclude: Optional[List[Coin]] = None,
     min_coin_amount: Optional[uint64] = None,
+    excluded_coin_amounts: Optional[List[uint64]] = None,
 ) -> Set[Coin]:
     """
     Returns a set of coins that can be used for generating a new transaction.
@@ -25,6 +28,8 @@ async def select_coins(
         exclude = []
     if min_coin_amount is None:
         min_coin_amount = uint64(0)
+    if excluded_coin_amounts is None:
+        excluded_coin_amounts = []
 
     if amount > spendable_amount:
         error_msg = (
@@ -45,6 +50,8 @@ async def select_coins(
         if coin_record.coin in exclude:
             continue
         if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
+            continue
+        if coin_record.coin.amount in excluded_coin_amounts:
             continue
         valid_spendable_coins.append(coin_record.coin)
         sum_spendable_coins += coin_record.coin.amount

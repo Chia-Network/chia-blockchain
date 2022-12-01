@@ -1,7 +1,8 @@
-import os
+from __future__ import annotations
 
+import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 class PeerStoreResolver:
@@ -12,7 +13,7 @@ class PeerStoreResolver:
     def __init__(
         self,
         root_path: Path,
-        config: Dict,
+        config: Dict[str, Any],
         *,
         selected_network: str,
         peers_file_path_key: str,  # config key for the peers data file relative path

@@ -1,20 +1,20 @@
-import io
-from typing import Callable, Dict, List, Set, Tuple, Optional, Any
+from __future__ import annotations
 
+import io
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
+from chia_rs import MEMPOOL_MODE, run_chia_program, run_generator, serialized_length, tree_hash
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator, tree_hash
-from clvm_tools.curry import uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
 
 from .tree_hash import sha256_treehash
-
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
 
@@ -32,11 +32,18 @@ class Program(SExp):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> "Program":
-        f = io.BytesIO(blob)
-        result = cls.parse(f)  # noqa
-        assert f.read() == b""
-        return result
+    def from_bytes(cls, blob: bytes) -> Program:
+        # this runs the program "1", which just returns the first argument.
+        # the first argument is the buffer we want to parse. This effectively
+        # leverages the rust parser and LazyNode, making it a lot faster to
+        # parse serialized programs into a python compatible structure
+        cost, ret = run_chia_program(
+            b"\x01",
+            blob,
+            50,
+            0,
+        )
+        return Program.to(ret)
 
     @classmethod
     def fromhex(cls, hexstr: str) -> "Program":
@@ -136,11 +143,37 @@ class Program(SExp):
             fixed_args = [4, (1, arg), fixed_args]
         return Program.to([2, (1, self), fixed_args])
 
-    def uncurry(self) -> Tuple["Program", "Program"]:
-        r = uncurry(self)
-        if r is None:
+    def uncurry(self) -> Tuple[Program, Program]:
+        def match(o: SExp, expected: bytes) -> None:
+            if o.atom != expected:
+                raise ValueError(f"expected: {expected.hex()}")
+
+        try:
+            # (2 (1 . <mod>) <args>)
+            ev, quoted_inner, args_list = self.as_iter()
+            match(ev, b"\x02")
+            match(quoted_inner.pair[0], b"\x01")
+            mod = quoted_inner.pair[1]
+            args = []
+            while args_list.pair is not None:
+                # (4 (1 . <arg>) <rest>)
+                cons, quoted_arg, rest = args_list.as_iter()
+                match(cons, b"\x04")
+                match(quoted_arg.pair[0], b"\x01")
+                args.append(quoted_arg.pair[1])
+                args_list = rest
+            match(args_list, b"\x01")
+            return Program.to(mod), Program.to(args)
+        except ValueError:  # too many values to unpack
+            # when unpacking as_iter()
+            # or when a match() fails
             return self, self.to(0)
-        return r
+        except TypeError:  # NoneType not subscriptable
+            # when an object is not a pair or atom as expected
+            return self, self.to(0)
+        except EvalError:  # first of non-cons
+            # when as_iter() fails
+            return self, self.to(0)
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
@@ -267,7 +300,7 @@ class SerializedProgram:
         self, max_cost: int, flags: int, *args
     ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
 
-        serialized_args = b""
+        serialized_args = bytearray()
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
             for a in args:
@@ -279,7 +312,7 @@ class SerializedProgram:
 
         err, ret = run_generator(
             self._buf,
-            serialized_args,
+            bytes(serialized_args),
             max_cost,
             flags,
         )
@@ -295,7 +328,7 @@ class SerializedProgram:
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
         # serialize them back again. This is handled by _serialize()
-        serialized_args = b""
+        serialized_args = bytearray()
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
             for a in args:
@@ -307,7 +340,7 @@ class SerializedProgram:
 
         cost, ret = run_chia_program(
             self._buf,
-            serialized_args,
+            bytes(serialized_args),
             max_cost,
             flags,
         )

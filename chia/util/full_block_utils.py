@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import io
-from typing import Callable, List, Optional
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple
 
 from blspy import G1Element, G2Element
 from chia_rs import serialized_length
@@ -9,6 +12,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint32
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
@@ -166,6 +170,16 @@ def skip_foliage(buf: memoryview) -> memoryview:
     return skip_optional(buf, skip_g2_element)  # foliage_transaction_block_signature
 
 
+def prev_hash_from_foliage(buf: memoryview) -> Tuple[memoryview, bytes32]:
+    prev_hash = buf[:32]  # prev_block_hash
+    buf = skip_bytes32(buf)  # prev_block_hash
+    buf = skip_bytes32(buf)  # reward_block_hash
+    buf = skip_foliage_block_data(buf)  # foliage_block_data
+    buf = skip_g2_element(buf)  # foliage_block_data_signature
+    buf = skip_optional(buf, skip_bytes32)  # foliage_transaction_block_hash
+    return skip_optional(buf, skip_g2_element), bytes32(prev_hash)  # foliage_transaction_block_signature
+
+
 def skip_foliage_transaction_block(buf: memoryview) -> memoryview:
     # buf = skip_bytes32(buf)  # prev_transaction_block_hash
     # buf = skip_uint64(buf)  # timestamp
@@ -212,6 +226,47 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
     buf = buf[1:]
     length = serialized_length(buf)
     return SerializedProgram.from_bytes(bytes(buf[:length]))
+
+
+# this implements the BlockInfo protocol
+@dataclass(frozen=True)
+class GeneratorBlockInfo:
+    prev_header_hash: bytes32
+    transactions_generator: Optional[SerializedProgram]
+    transactions_generator_ref_list: List[uint32]
+
+
+def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
+    buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    buf = skip_reward_chain_block(buf)  # reward_chain_block
+    buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf, prev_hash = prev_hash_from_foliage(buf)  # foliage
+    buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
+    buf = skip_optional(buf, skip_transactions_info)  # transactions_info
+
+    # this is the transactions_generator optional
+    generator = None
+    if buf[0] != 0:
+        buf = buf[1:]
+        length = serialized_length(buf)
+        generator = SerializedProgram.from_bytes(bytes(buf[:length]))
+        buf = buf[length:]
+    else:
+        buf = buf[1:]
+
+    refs_length = uint32.from_bytes(buf[:4])
+    buf = buf[4:]
+
+    refs = []
+    for i in range(refs_length):
+        refs.append(uint32.from_bytes(buf[:4]))
+        buf = buf[4:]
+
+    return GeneratorBlockInfo(prev_hash, generator, refs)
 
 
 def header_block_from_block(

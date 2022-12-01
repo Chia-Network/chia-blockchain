@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -28,6 +30,7 @@ async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
 
 
 async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
+    __tracebackhide__ = True
     start = time.time()
     while time.time() - start < timeout:
         if asyncio.iscoroutinefunction(function):

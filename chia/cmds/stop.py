@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 from pathlib import Path
@@ -50,6 +52,10 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_d
 @click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
+    from chia.cmds.beta_funcs import warn_if_beta_enabled
+
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
+    warn_if_beta_enabled(config)
+
     sys.exit(asyncio.run(async_stop(root_path, config, group, daemon)))

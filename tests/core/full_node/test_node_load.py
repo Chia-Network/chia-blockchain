@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from chia.protocols import full_node_protocol

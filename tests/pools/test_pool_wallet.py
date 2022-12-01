@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional, cast
@@ -94,13 +96,13 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
 
     # Create an empty PoolWallet and populate only the required fields
-    wallet = PoolWallet()
-    # We need a standard wallet to provide a puzzlehash
-    wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
-    # We need a wallet state manager to hold a root_path member
-    wallet.wallet_state_manager = MockWalletStateManager()
-    # We need a log object, but we don't care about how it's used
-    wallet.log = MagicMock()
+    wallet = PoolWallet(
+        wallet_state_manager=MockWalletStateManager(),
+        standard_wallet=cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph)),
+        log=MagicMock(),
+        wallet_info=MagicMock(),
+        wallet_id=MagicMock(),
+    )
 
     await wallet.update_pool_config()
 
@@ -177,13 +179,13 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
 
     # Create an empty PoolWallet and populate only the required fields
-    wallet = PoolWallet()
-    # We need a standard wallet to provide a puzzlehash
-    wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
-    # We need a wallet state manager to hold a root_path member
-    wallet.wallet_state_manager = MockWalletStateManager()
-    # We need a log object, but we don't care about how it's used
-    wallet.log = MagicMock()
+    wallet = PoolWallet(
+        wallet_state_manager=MockWalletStateManager(),
+        standard_wallet=cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph)),
+        log=MagicMock(),
+        wallet_info=MagicMock(),
+        wallet_id=MagicMock(),
+    )
 
     await wallet.update_pool_config()
 
