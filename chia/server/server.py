@@ -309,7 +309,6 @@ class ChiaServer:
             raise web.HTTPForbidden(reason=reason)
         ws = web.WebSocketResponse(max_msg_size=max_message_size)
         await ws.prepare(request)
-        close_event = asyncio.Event()
         ssl_object = request.get_extra_info("ssl_object")
         if ssl_object is None:
             reason = f"ssl_object is None for request {request}"
@@ -335,7 +334,6 @@ class ChiaServer:
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
                 self._local_capabilities_for_handshake,
-                close_event,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -348,7 +346,6 @@ class ChiaServer:
                     f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
                 )
                 await connection.close()
-                close_event.set()
             else:
                 await self.connection_added(connection, self.on_connect)
                 if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
@@ -358,29 +355,24 @@ class ChiaServer:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
-                close_event.set()
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
                 self.log.warning("Incompatible network ID. Maybe the peer is on another network")
-                close_event.set()
-            elif e.code == Err.SELF_CONNECTION:
-                close_event.set()
             else:
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
-                close_event.set()
         except ValueError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
             self.log.warning(f"{e} - closing connection")
-            close_event.set()
         except Exception as e:
             if connection is not None:
                 await connection.close(ws_close_code=WSCloseCode.PROTOCOL_ERROR, error=Err.UNKNOWN)
             error_stack = traceback.format_exc()
             self.log.error(f"Exception {e}, exception Stack: {error_stack}")
-            close_event.set()
 
-        await close_event.wait()
+        if connection is not None:
+            await connection.wait_until_closed()
+
         return ws
 
     async def connection_added(
