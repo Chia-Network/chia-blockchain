@@ -79,7 +79,7 @@ class DAOWallet:
         fee: uint64 = uint64(0),
     ):
         """
-        Create a brand new DID wallet
+        Create a brand new DAO wallet
         This must be called under the wallet state manager lock
         :param wallet_state_manager: Wallet state manager
         :param wallet: Standard wallet
@@ -89,7 +89,7 @@ class DAOWallet:
         :param metadata: Metadata saved in the DID
         :param name: Wallet name
         :param fee: transaction fee
-        :return: DID wallet
+        :return: DAO wallet
         """
 
         self = DAOWallet()
@@ -137,7 +137,7 @@ class DAOWallet:
     async def create_new_dao_wallet_for_existing_dao(
         wallet_state_manager: Any,
         wallet: Wallet,
-        backup_data: str,
+        treasury_id: bytes32,
         name: Optional[str] = None,
     ):
         """
@@ -146,7 +146,7 @@ class DAOWallet:
         :param wallet: Standard wallet
         :param backup_data: A serialized backup data
         :param name: Wallet name
-        :return: DID wallet
+        :return: DAO wallet
         """
         self = DAOWallet()
         self.wallet_state_manager = wallet_state_manager
@@ -157,15 +157,16 @@ class DAOWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DID wallet from recovery file ...")
-        # load backup will also set our DIDInfo
-        self.did_info = DAOWallet.deserialize_backup_data(backup_data)
-        self.check_existed_did()
-        info_as_string = json.dumps(self.did_info.to_json_dict())
+        info = DAOInfo(treasury_id, None, [], [])
+        # teasury_id: bytes32
+        # cat_wallet_id: int
+        # proposals_list: List[ProposalInfo]
+        # parent_info: List[LineageProof]
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DECENTRALIZED_ID.value, info_as_string
+            name, WalletType.DAO.value, info
         )
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-        await self.save_info(self.did_info)
+        await self.save_info(self.dao_info)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         await self.load_parent(self.did_info)
         if self.wallet_info is None:
@@ -1086,6 +1087,28 @@ class DAOWallet:
         if cat_tail is None:
             cat_tail = generate_cat_tail(origin.name(), launcher_coin.name())
 
+        assert cat_tail is not None
+        cat_tail_info = {"identifier": cat_tail.get_tree_hash()}
+
+        # This will also mint the coins
+        new_cat_wallet = await CATWallet.create_new_cat_wallet(
+            self.wallet_state_manager,
+            self.standard_wallet,
+            cat_tail_info,
+            amount_of_cats,
+        )
+
+        cat_wallet_id = new_cat_wallet.wallet_info.id
+
+        dao_info = DAOInfo(
+            self.dao_info.teasury_id,
+            cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+        )
+
+        await self.save_info(dao_info)
+
         dao_treasury_puzzle = get_treasury_puzzle(
             launcher_coin.name(),
             cat_tail,
@@ -1243,10 +1266,10 @@ class DAOWallet:
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return True
 
-    async def save_info(self, did_info: DIDInfo):
-        self.did_info = did_info
+    async def save_info(self, dao_info: DIDInfo):
+        self.dao_info = dao_info
         current_info = self.wallet_info
-        data_str = json.dumps(did_info.to_json_dict())
+        data_str = json.dumps(dao_info.to_json_dict())
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
@@ -1276,35 +1299,3 @@ class DAOWallet:
             ):
                 self.log.warning(f"DID {self.did_info.origin_coin} already existed, ignore the wallet creation.")
                 raise ValueError("Wallet already exists")
-
-    @staticmethod
-    def deserialize_backup_data(backup_data: str) -> DIDInfo:
-        """
-        Get a DIDInfo from a serialized string
-        :param backup_data: serialized
-        :return: DIDInfo
-        """
-        details = backup_data.split(":")
-        origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(int(details[2])))
-        backup_ids = []
-        if len(details[3]) > 0:
-            for d in details[3].split(","):
-                backup_ids.append(bytes32.from_hexstr(d))
-        num_of_backup_ids_needed = uint64(int(details[5]))
-        if num_of_backup_ids_needed > len(backup_ids):
-            raise Exception
-        innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
-        metadata: str = details[6]
-        did_info: DIDInfo = DIDInfo(
-            origin,
-            backup_ids,
-            num_of_backup_ids_needed,
-            [],
-            innerpuz,
-            None,
-            None,
-            None,
-            False,
-            metadata,
-        )
-        return did_info
