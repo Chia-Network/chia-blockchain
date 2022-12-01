@@ -282,7 +282,7 @@ class TestWalletSimulator:
         assert await wallet_0.get_unconfirmed_balance() == funds - tx_amount
 
         await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
-        funds -= 10
+        funds -= tx_amount
 
         # Full node height 17, wallet height 15
         await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
@@ -297,7 +297,7 @@ class TestWalletSimulator:
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
         await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
-        funds += 5
+        funds += tx_amount
 
         await wallet_0.get_confirmed_balance()
         await wallet_0.get_unconfirmed_balance()
