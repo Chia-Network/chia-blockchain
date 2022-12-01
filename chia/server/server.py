@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -45,6 +45,9 @@ from chia.util.ssl_check import verify_ssl_certs_and_keys
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 ConnectionCallback = Callable[[WSChiaConnection], Awaitable[None]]
+
+# TODO: maybe don't copy this
+_T_PeerApiProtocol = TypeVar("_T_PeerApiProtocol", bound=PeerApiProtocol)
 
 
 def ssl_context_for_server(
@@ -119,7 +122,7 @@ def calculate_node_id(cert_path: Path) -> bytes32:
 
 @final
 @dataclass
-class ChiaServer:
+class ChiaServer(Generic[_T_PeerApiProtocol]):
     _port: int
     _local_type: NodeType
     _local_capabilities_for_handshake: List[Tuple[uint16, str]]
@@ -127,8 +130,8 @@ class ChiaServer:
     _network_id: str
     _inbound_rate_limit_percent: int
     _outbound_rate_limit_percent: int
-    api: Any
-    node: PeerApiProtocol
+    api: _T_PeerApiProtocol
+    node: Any
     root_path: Path
     config: Dict[str, Any]
     log: logging.Logger
@@ -158,7 +161,7 @@ class ChiaServer:
         cls,
         port: int,
         node: Any,
-        api: PeerApiProtocol,
+        api: _T_PeerApiProtocol,
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
@@ -170,7 +173,7 @@ class ChiaServer:
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = __name__,
-    ) -> ChiaServer:
+    ) -> ChiaServer[_T_PeerApiProtocol]:
 
         log = logging.getLogger(name)
         log.info("Service capabilities: %s", capabilities)
@@ -559,9 +562,8 @@ class ChiaServer:
                     f" while closing. Handshake never finished."
                 )
             self.cancel_tasks_from_peer(connection.peer_node_id)
-            on_disconnect = getattr(self.node, "on_disconnect", None)
-            if on_disconnect is not None:
-                on_disconnect(connection)
+            if self.node.on_disconnect is not None:
+                self.node.on_disconnect(connection)
 
     def cancel_tasks_from_peer(self, peer_id: bytes32) -> None:
         if peer_id not in self.tasks_from_peer:

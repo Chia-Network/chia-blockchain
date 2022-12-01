@@ -7,12 +7,14 @@ import traceback
 from logging import Logger
 from random import Random
 from secrets import randbits
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Generic, List, Optional, Set, Tuple, TypeVar, Union
 
 import dns.asyncresolver
 
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
+from chia.protocols.metadata import PeerApiProtocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_sqlite_store import create_address_manager_from_db
@@ -24,6 +26,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -36,12 +39,17 @@ NETWORK_ID_DEFAULT_PORTS = {
 }
 
 
-class FullNodeDiscovery:
+# TODO: maybe don't copy this
+_T_PeerApiProtocol = TypeVar("_T_PeerApiProtocol", bound=PeerApiProtocol)
+_T_FullNodeApi = TypeVar("_T_FullNodeApi", bound=FullNodeAPI)
+
+
+class FullNodeDiscovery(Generic[_T_PeerApiProtocol]):
     resolver: Optional[dns.asyncresolver.Resolver]
 
     def __init__(
         self,
-        server: ChiaServer,
+        server: ChiaServer[_T_PeerApiProtocol],
         target_outbound_count: int,
         peer_store_resolver: PeerStoreResolver,
         introducer_info: Optional[Dict[str, Any]],
@@ -51,7 +59,7 @@ class FullNodeDiscovery:
         default_port: Optional[int],
         log: Logger,
     ) -> None:
-        self.server: ChiaServer = server
+        self.server = server
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.legacy_peer_db_path = peer_store_resolver.legacy_peer_db_path
@@ -508,13 +516,13 @@ class FullNodeDiscovery:
             await self.address_manager.add_to_new_table(peers_adjusted_timestamp, None, 0)
 
 
-class FullNodePeers(FullNodeDiscovery):
+class FullNodePeers(FullNodeDiscovery[_T_FullNodeApi]):
     self_advertise_task: Optional[asyncio.Task[None]] = None
     address_relay_task: Optional[asyncio.Task[None]] = None
 
     def __init__(
         self,
-        server: ChiaServer,
+        server: ChiaServer[_T_FullNodeApi],
         target_outbound_count: int,
         peer_store_resolver: PeerStoreResolver,
         introducer_info: Dict[str, Any],
@@ -691,10 +699,10 @@ class FullNodePeers(FullNodeDiscovery):
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
 
-class WalletPeers(FullNodeDiscovery):
+class WalletPeers(FullNodeDiscovery[WalletNodeAPI]):
     def __init__(
         self,
-        server: ChiaServer,
+        server: ChiaServer[WalletNodeAPI],
         target_outbound_count: int,
         peer_store_resolver: PeerStoreResolver,
         introducer_info: Dict[str, Any],

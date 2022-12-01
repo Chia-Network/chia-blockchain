@@ -40,8 +40,8 @@ from .reconnect_task import start_reconnect_task
 main_pid: Optional[int] = None
 
 T = TypeVar("T")
-_T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 _T_PeerApiProtocol = TypeVar("_T_PeerApiProtocol", bound=PeerApiProtocol)
+_T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol[_T_PeerApiProtocol])
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
 

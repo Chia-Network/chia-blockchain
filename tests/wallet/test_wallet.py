@@ -27,6 +27,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced
 
@@ -39,14 +40,14 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase(
         self,
-        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
         num_blocks = 10
         full_nodes, wallets, _ = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
-        server_1: ChiaServer = full_node_api.full_node.server
+        server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
 
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -100,7 +101,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -163,7 +164,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(
         self,
-        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -209,7 +210,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_send_to_three_peers(
         self,
-        three_sim_two_wallets: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        three_sim_two_wallets: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -284,7 +285,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(
         self,
-        two_wallet_nodes_five_freeze: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes_five_freeze: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -409,7 +410,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_with_fee(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -484,7 +485,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_create_hit_max_send_amount(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -571,7 +572,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_prevent_fee_theft(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -664,7 +665,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_tx_reorg(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -771,13 +772,13 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_address_sliding_window(
         self,
-        wallet_node_100_pk: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        wallet_node_100_pk: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
         full_nodes, wallets, _ = wallet_node_100_pk
         full_node_api = full_nodes[0]
-        server_1: ChiaServer = full_node_api.full_node.server
+        server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -819,7 +820,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_sign_message(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -857,7 +858,7 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_transaction_options(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer[WalletNodeAPI]]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:

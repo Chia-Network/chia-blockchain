@@ -59,7 +59,7 @@ from chia.wallet.util.wallet_sync_utils import (
 )
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
-
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint: str) -> Path:
     """

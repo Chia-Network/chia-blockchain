@@ -7,11 +7,12 @@ import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
 
+from chia.protocols.metadata import PeerApiProtocol
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
@@ -31,13 +32,16 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 
+# TODO: maybe don't copy this
+_T_PeerApiProtocol = TypeVar("_T_PeerApiProtocol", bound=PeerApiProtocol)
+
 
 class StateChangedProtocol(Protocol):
     def __call__(self, change: str, change_data: Dict[str, Any]) -> None:
         ...
 
 
-class RpcServiceProtocol(Protocol):
+class RpcServiceProtocol(Protocol[_T_PeerApiProtocol]):
     _shut_down: bool
     """Indicates a request to shut down the service.
 
@@ -46,7 +50,7 @@ class RpcServiceProtocol(Protocol):
     """
 
     @property
-    def server(self) -> ChiaServer:
+    def server(self) -> ChiaServer[_T_PeerApiProtocol]:
         """The server object that handles the common server behavior for the RPC."""
         # a property so as to be read only which allows ChiaServer to satisfy
         # Optional[ChiaServer]
@@ -89,18 +93,18 @@ class RpcServiceProtocol(Protocol):
         ...
 
 
-class RpcApiProtocol(Protocol):
+class RpcApiProtocol(Protocol[_T_PeerApiProtocol]):
     service_name: str
     """The name of the service.
 
     All lower case with underscores as needed.
     """
 
-    def __init__(self, node: RpcServiceProtocol) -> None:
+    def __init__(self, node: RpcServiceProtocol[_T_PeerApiProtocol]) -> None:
         ...
 
     @property
-    def service(self) -> RpcServiceProtocol:
+    def service(self) -> RpcServiceProtocol[_T_PeerApiProtocol]:
         """The service object that provides the specific behavior for the API."""
         # using a read-only property per https://github.com/python/mypy/issues/12990
         ...
@@ -114,7 +118,9 @@ class RpcApiProtocol(Protocol):
         ...
 
 
-def default_get_connections(server: ChiaServer, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+def default_get_connections(
+    server: ChiaServer[PeerApiProtocol], request_node_type: Optional[NodeType]
+) -> List[Dict[str, Any]]:
     connections = server.get_connections(request_node_type)
     con_info = [
         {
@@ -136,12 +142,12 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
 
 @final
 @dataclass
-class RpcServer:
+class RpcServer(Generic[_T_PeerApiProtocol]):
     """
     Implementation of RPC server.
     """
 
-    rpc_api: RpcApiProtocol
+    rpc_api: RpcApiProtocol[_T_PeerApiProtocol]
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
@@ -154,8 +160,13 @@ class RpcServer:
 
     @classmethod
     def create(
-        cls, rpc_api: Any, service_name: str, stop_cb: Callable[[], None], root_path: Path, net_config: Dict[str, Any]
-    ) -> RpcServer:
+        cls,
+        rpc_api: RpcApiProtocol[_T_PeerApiProtocol],
+        service_name: str,
+        stop_cb: Callable[[], None],
+        root_path: Path,
+        net_config: Dict[str, Any],
+    ) -> RpcServer[_T_PeerApiProtocol]:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
@@ -395,7 +406,7 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: RpcApiProtocol,
+    rpc_api: RpcApiProtocol[_T_PeerApiProtocol],
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
@@ -404,7 +415,7 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
-) -> RpcServer:
+) -> RpcServer[_T_PeerApiProtocol]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.

@@ -30,6 +30,7 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     leaf_hash,
 )
+from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
@@ -57,10 +58,10 @@ class DataLayer:
     initialized: bool
     none_bytes: bytes32
     lock: asyncio.Lock
-    _server: Optional[ChiaServer]
+    _server: Optional[ChiaServer[DataLayerAPI]]
 
     @property
-    def server(self) -> ChiaServer:
+    def server(self) -> ChiaServer[DataLayerAPI]:
         # This is a stop gap until the class usage is refactored such the values of
         # integral attributes are known at creation of the instance.
         if self._server is None:
@@ -106,7 +107,7 @@ class DataLayer:
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
-    def set_server(self, server: ChiaServer) -> None:
+    def set_server(self, server: ChiaServer[DataLayerAPI]) -> None:
         self._server = server
 
     async def _start(self) -> None:

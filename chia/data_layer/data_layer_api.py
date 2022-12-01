@@ -16,7 +16,7 @@ class DataLayerAPI:
     #     self.full_node.state_changed_callback = callback
 
     @property
-    def server(self) -> ChiaServer:
+    def server(self) -> ChiaServer[DataLayerAPI]:
         return self.data_layer.server
 
     @property

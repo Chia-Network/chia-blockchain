@@ -143,7 +143,7 @@ async def run_sync_test(
             config["full_node"]["single_threaded"] = True
         config["full_node"]["db_sync"] = db_sync
         config["full_node"]["enable_profiler"] = node_profiler
-        full_node = FullNode(
+        full_node = FullNode[FakeServer](
             config["full_node"],
             root_path=root_path,
             consensus_constants=constants,
@@ -347,7 +347,7 @@ async def run_sync_checkpoint(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     config["full_node"]["db_sync"] = "off"
-    full_node = FullNode(
+    full_node = FullNode[FakeServer](
         config["full_node"],
         root_path=root_path,
         consensus_constants=constants,

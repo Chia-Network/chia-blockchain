@@ -63,15 +63,15 @@ from chia.util.merkle_set import MerkleSet
 
 
 class FullNodeAPI:
-    full_node: FullNode
+    full_node: FullNode[FullNodeAPI]
     executor: ThreadPoolExecutor
 
-    def __init__(self, full_node: FullNode) -> None:
+    def __init__(self, full_node: FullNode[FullNodeAPI]) -> None:
         self.full_node = full_node
         self.executor = ThreadPoolExecutor(max_workers=1)
 
     @property
-    def server(self) -> ChiaServer:
+    def server(self) -> ChiaServer[FullNodeAPI]:
         assert self.full_node.server is not None
         return self.full_node.server
 
@@ -169,7 +169,7 @@ class FullNodeAPI:
             new_set.add(peer.peer_node_id)
             self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
 
-            async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
+            async def tx_request_and_timeout(full_node: FullNode[FullNodeAPI], transaction_id: bytes32, task_id: bytes32) -> None:
                 counter = 0
                 try:
                     while True:

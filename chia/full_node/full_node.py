@@ -11,7 +11,7 @@ import time
 import traceback
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, Set, Tuple, TypeVar, Union
 
 from blspy import AugSchemeMPL
 
@@ -28,6 +28,7 @@ from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
@@ -38,6 +39,7 @@ from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
+from chia.protocols.metadata import PeerApiProtocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
@@ -45,6 +47,7 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -75,6 +78,8 @@ from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
 
 
+_T_FullNodeApi = TypeVar("_T_FullNodeApi", bound=FullNodeAPI)
+
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
@@ -84,17 +89,17 @@ class PeakPostProcessingResult:
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
-class FullNode:
+class FullNode(Generic[_T_FullNodeApi]):
     _segment_task: Optional[asyncio.Task[None]]
     initialized: bool
     root_path: Path
     config: Dict[str, Any]
-    _server: Optional[ChiaServer]
+    _server: Optional[ChiaServer[_T_FullNodeApi]]
     _shut_down: bool
     constants: ConsensusConstants
     pow_creation: Dict[bytes32, asyncio.Event]
     state_changed_callback: Optional[Callable[[str, Optional[Dict[str, Any]]], None]]
-    full_node_peers: Optional[FullNodePeers]
+    full_node_peers: Optional[FullNodePeers[_T_FullNodeApi]]
     sync_store: Any
     signage_point_times: List[float]
     full_node_store: FullNodeStore
@@ -137,7 +142,7 @@ class FullNode:
     _maybe_blockchain_lock_low_priority: Optional[LockClient]
 
     @property
-    def server(self) -> ChiaServer:
+    def server(self) -> ChiaServer[_T_FullNodeApi]:
         # This is a stop gap until the class usage is refactored such the values of
         # integral attributes are known at creation of the instance.
         if self._server is None:
@@ -489,7 +494,7 @@ class FullNode:
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
 
-    def set_server(self, server: ChiaServer) -> None:
+    def set_server(self, server: ChiaServer[_T_FullNodeApi]) -> None:
         self._server = server
         dns_servers: List[str] = []
         network_name = self.config["selected_network"]

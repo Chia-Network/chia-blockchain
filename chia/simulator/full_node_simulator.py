@@ -48,7 +48,7 @@ def backoff_times(
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
     """Wait until all of the specified coins are simultaneously reported as spendable
     in by the wallet.
-
+typevar
     Arguments:
         coins: The coins expected to be received.
         wallet: The wallet expected to receive the coins.
