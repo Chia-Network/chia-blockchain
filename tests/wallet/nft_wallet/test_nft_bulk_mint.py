@@ -19,7 +19,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -265,7 +265,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
         did_lineage_parent = None
         spends = []
-
+        nft_ids = set([])
         for i in range(0, n, chunk):
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
@@ -290,7 +290,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
             xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
             assert len(xch_adds) == 1
             next_coin = xch_adds[0]
-
+            for nft_id in resp["nft_id_list"]:
+                nft_ids.add(decode_puzzle_hash(nft_id))
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
@@ -320,7 +321,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
             assert meta_dict["license_uris"] == nft.license_uris
             assert meta_dict["edition_number"] == nft.edition_number
             assert meta_dict["edition_total"] == nft.edition_total
-
+            assert nft.launcher_id in nft_ids
     finally:
         client.close()
         client_node.close()

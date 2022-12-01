@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from decimal import Decimal
 from typing import Optional
 
 import click
-from chia.cmds.cmds_util import execute_with_wallet
 
+from chia.cmds.cmds_util import execute_with_wallet
 
 MAX_CMDLINE_FEE = Decimal(0.5)
 
@@ -47,6 +49,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
 def get_login_link_cmd(launcher_id: str) -> None:
     import asyncio
+
     from .plotnft_funcs import get_login_link
 
     asyncio.run(get_login_link(launcher_id))
@@ -219,6 +222,7 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
 @click.option("-a", "--address", help="New address for payout instructions", type=str, required=True)
 def change_payout_instructions_cmd(launcher_id: str, address: str) -> None:
     import asyncio
+
     from .plotnft_funcs import change_payout_instructions
 
     asyncio.run(change_payout_instructions(launcher_id, address))

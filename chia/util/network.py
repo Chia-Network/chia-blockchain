@@ -4,13 +4,14 @@ import asyncio
 import logging
 import socket
 import ssl
+from dataclasses import dataclass
+from ipaddress import IPv4Network, IPv6Network, ip_address
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from aiohttp import web
 from aiohttp.log import web_logger
-from dataclasses import dataclass
-from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, List, Tuple, Union, Any, Optional, Dict
 from typing_extensions import final
+
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo

@@ -1,4 +1,6 @@
-from typing import KeysView, Generator
+from __future__ import annotations
+
+from typing import Generator, KeysView
 
 SERVICES_FOR_GROUP = {
     "all": (

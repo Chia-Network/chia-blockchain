@@ -1,20 +1,22 @@
-import pytest
+from __future__ import annotations
+
 import random
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
-from tests.setup_nodes import test_constants
-from tests.util.temp_file import TempFile
+import pytest
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
-from chia.util.db_wrapper import DBWrapper2
+from chia.consensus.blockchain import Blockchain
+from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint64
+from tests.util.temp_file import TempFile
 
 
 def rand_bytes(num) -> bytes:

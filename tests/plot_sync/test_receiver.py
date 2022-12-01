@@ -22,7 +22,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.ws_connection import NodeType
+from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import get_list_or_len

@@ -3,11 +3,12 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-adsh]
+Usage: $0 [-adsph]
 
   -a                          automated install, no questions
   -d                          install development dependencies
   -s                          skip python package installation and just do pip install
+  -p                          additional plotters installation
   -h                          display this help and exit
 "
 
@@ -18,8 +19,9 @@ usage() {
 PACMAN_AUTOMATED=
 EXTRAS=
 SKIP_PACKAGE_INSTALL=
+PLOTTER_INSTALL=
 
-while getopts adsh flag
+while getopts adsph flag
 do
   case "${flag}" in
     # automated
@@ -28,6 +30,7 @@ do
     d) EXTRAS=${EXTRAS}dev,;;
     # simple install
     s) SKIP_PACKAGE_INSTALL=1;;
+    p) PLOTTER_INSTALL=1;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -337,6 +340,16 @@ python -m pip install wheel
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
+
+if [ -n "$PLOTTER_INSTALL" ]; then
+  set +e
+  PREV_VENV="$VIRTUAL_ENV"
+  export VIRTUAL_ENV="venv"
+  ./install-plotter.sh bladebit
+  ./install-plotter.sh madmax
+  export VIRTUAL_ENV="$PREV_VENV"
+  set -e
+fi
 
 echo ""
 echo "Chia blockchain install.sh complete."

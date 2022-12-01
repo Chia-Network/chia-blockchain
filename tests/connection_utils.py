@@ -25,9 +25,10 @@ log = logging.getLogger(__name__)
 
 
 async def disconnect_all(server: ChiaServer) -> None:
-    cons = list(server.all_connections.values())[:]
-    for con in cons:
-        await con.close()
+    connections = list(server.all_connections.values())
+    await asyncio.gather(*(connection.close() for connection in connections))
+
+    await asyncio.sleep(5)  # 5 seconds to allow connections and tasks to all drain
 
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
@@ -54,16 +55,15 @@ async def add_dummy_connection(
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
     url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
-    wsc = WSChiaConnection(
+    wsc = WSChiaConnection.create(
         type,
         ws,
         server._port,
         log,
         True,
-        False,
         self_hostname,
         incoming_queue,
-        lambda x, y: x,
+        None,
         peer_id,
         100,
         30,

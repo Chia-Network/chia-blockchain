@@ -8,7 +8,6 @@ import sys
 import tempfile
 
 excepted_packages = {
-    "keyrings.cryptfile",  # pure python
     "dnslib",  # pure python
 }
 

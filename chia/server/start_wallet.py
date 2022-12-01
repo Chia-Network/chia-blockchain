@@ -1,8 +1,10 @@
-import pathlib
+from __future__ import annotations
+
 import os
-from multiprocessing import freeze_support
+import pathlib
 import sys
-from typing import Dict, Optional
+from multiprocessing import freeze_support
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,9 +13,10 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config_cli, load_config
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.util.task_timing import maybe_manage_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 
 # See: https://bugs.python.org/issue29288
@@ -26,7 +29,7 @@ SERVICE_NAME = "wallet"
 
 def create_wallet_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
@@ -108,13 +111,9 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
-    if os.getenv("CHIA_INSTRUMENT_WALLET", 0) != 0:
-        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-        import atexit
 
-        start_task_instrumentation()
-        atexit.register(stop_task_instrumentation)
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_WALLET") is not None):
+        return async_run(async_main())
 
 
 if __name__ == "__main__":

@@ -136,7 +136,7 @@ def create_commands() -> None:
                     endpoint = endpoint[1:]
                 print_result(asyncio.run(call_endpoint(service, endpoint, request_json, config)))
             except Exception as e:
-                sys.exit(e)
+                sys.exit(str(e))
 
 
 create_commands()

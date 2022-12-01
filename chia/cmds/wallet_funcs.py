@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import pathlib
@@ -192,6 +194,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     address = args["address"]
     override = args["override"]
     min_coin_amount = Decimal(args["min_coin_amount"])
+    max_coin_amount = Decimal(args["max_coin_amount"])
+    exclude_coin_ids: List[str] = args["exclude_coin_ids"]
     memo = args["memo"]
     if memo is None:
         memos = None
@@ -210,26 +214,38 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
     try:
         typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+        mojo_per_unit = get_mojo_per_unit(typ)
     except LookupError:
         print(f"Wallet id: {wallet_id} not found.")
         return
 
-    final_fee = uint64(int(fee * units["chia"]))
-    final_amount: uint64
-    final_min_coin_amount: uint64
+    final_fee = uint64(int(fee * mojo_per_unit))
+    final_amount: uint64 = uint64(int(amount * mojo_per_unit))
+    final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
+    final_max_coin_amount: uint64 = uint64(int(max_coin_amount * mojo_per_unit))
     if typ == WalletType.STANDARD_WALLET:
-        final_amount = uint64(int(amount * units["chia"]))
-        final_min_coin_amount = uint64(int(min_coin_amount * units["chia"]))
         print("Submitting transaction...")
         res = await wallet_client.send_transaction(
-            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+            str(wallet_id),
+            final_amount,
+            address,
+            final_fee,
+            memos,
+            final_min_coin_amount,
+            final_max_coin_amount,
+            exclude_coin_ids=exclude_coin_ids,
         )
     elif typ == WalletType.CAT:
-        final_amount = uint64(int(amount * units["cat"]))
-        final_min_coin_amount = uint64(int(min_coin_amount * units["cat"]))
         print("Submitting transaction...")
         res = await wallet_client.cat_spend(
-            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+            str(wallet_id),
+            final_amount,
+            address,
+            final_fee,
+            memos,
+            final_min_coin_amount,
+            final_max_coin_amount,
+            exclude_coin_ids=exclude_coin_ids,
         )
     else:
         print("Only standard wallet and CAT wallets are supported")

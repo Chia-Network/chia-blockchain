@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, BinaryIO
+from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import G2Element
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
@@ -16,22 +17,24 @@ from chia.util.ints import uint64
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
-    match_puzzle,
-    solve_puzzle,
     get_inner_puzzle,
     get_inner_solution,
+    match_puzzle,
+    solve_puzzle,
 )
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
+OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
 
@@ -149,13 +152,12 @@ class Offer:
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
-        OFFER_HASH: bytes32 = OFFER_MOD_HASH
         for parent_spend in self.bundle.coin_spends:
             coins_for_this_spend: List[Coin] = []
 
             parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
             parent_solution: Program = parent_spend.solution.to_program()
-            additions: List[Coin] = [a for a in parent_spend.additions() if a not in self.bundle.removals()]
+            additions: List[Coin] = parent_spend.additions()
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
@@ -163,27 +165,52 @@ class Offer:
                 inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
                 inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
                 assert inner_puzzle is not None and inner_solution is not None
+
+                # We're going to look at the conditions created by the inner puzzle
                 conditions: Program = inner_puzzle.run(inner_solution)
-                matching_spend_additions: List[Coin] = []  # coins that match offered amount and are sent to offer ph.
+                expected_num_matches: int = 0
+                offered_amounts: List[int] = []
                 for condition in conditions.as_iter():
-                    if condition.first() == 51 and condition.rest().first() == OFFER_HASH:
-                        matching_spend_additions.extend(
-                            [a for a in additions if a.amount == condition.rest().rest().first().as_int()]
-                        )
-                if len(matching_spend_additions) == 1:
-                    coins_for_this_spend.append(matching_spend_additions[0])
+                    if condition.first() == 51 and condition.rest().first() in [OFFER_MOD_HASH, OFFER_MOD_OLD_HASH]:
+                        expected_num_matches += 1
+                        offered_amounts.append(condition.rest().rest().first().as_int())
+
+                # Start by filtering additions that match the amount
+                matching_spend_additions = [a for a in additions if a.amount in offered_amounts]
+
+                if len(matching_spend_additions) == expected_num_matches:
+                    coins_for_this_spend.extend(matching_spend_additions)
+                # We didn't quite get there so now lets narrow it down by puzzle hash
                 else:
-                    additions_w_amount_and_puzhash: List[Coin] = [
+                    # If we narrowed down too much, we can't trust the amounts so start over with all additions
+                    if len(matching_spend_additions) < expected_num_matches:
+                        matching_spend_additions = additions
+                    matching_spend_additions = [
                         a
                         for a in matching_spend_additions
                         if a.puzzle_hash
-                        == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash_precalc(OFFER_HASH)  # type: ignore
+                        in [
+                            construct_puzzle(puzzle_driver, OFFER_MOD_OLD_HASH).get_tree_hash_precalc(  # type: ignore
+                                OFFER_MOD_OLD_HASH
+                            ),
+                            construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
+                                OFFER_MOD_HASH
+                            ),
+                        ]
                     ]
-                    if len(additions_w_amount_and_puzhash) == 1:
-                        coins_for_this_spend.append(additions_w_amount_and_puzhash[0])
+                    if len(matching_spend_additions) == expected_num_matches:
+                        coins_for_this_spend.extend(matching_spend_additions)
+                    else:
+                        raise ValueError("Could not properly guess offered coins from parent spend")
             else:
+                # It's much easier if the asset is bare XCH
                 asset_id = None
-                coins_for_this_spend.extend([a for a in additions if a.puzzle_hash == OFFER_HASH])
+                coins_for_this_spend.extend(
+                    [a for a in additions if a.puzzle_hash in [OFFER_MOD_HASH, OFFER_MOD_OLD_HASH]]
+                )
+
+            # We only care about unspent coins
+            coins_for_this_spend = [c for c in coins_for_this_spend if c not in self.bundle.removals()]
 
             if coins_for_this_spend != []:
                 offered_coins.setdefault(asset_id, [])
@@ -413,11 +440,17 @@ class Offer:
 
             for coin in offered_coins:
                 if asset_id:
+                    if coin.puzzle_hash == construct_puzzle(
+                        self.driver_dict[asset_id], OFFER_MOD_OLD_HASH  # type: ignore
+                    ).get_tree_hash_precalc(OFFER_MOD_OLD_HASH):
+                        offer_mod: Program = OFFER_MOD_OLD
+                    else:
+                        offer_mod = OFFER_MOD
                     siblings: str = "("
                     sibling_spends: str = "("
                     sibling_puzzles: str = "("
                     sibling_solutions: str = "("
-                    disassembled_offer_mod: str = disassemble(OFFER_MOD)  # type: ignore
+                    disassembled_offer_mod: str = disassemble(offer_mod)
                     for sibling_coin in offered_coins:
                         if sibling_coin != coin:
                             siblings += (
@@ -429,7 +462,7 @@ class Offer:
                             )
                             sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + " "
                             sibling_puzzles += disassembled_offer_mod + " "
-                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin]) + " "  # type: ignore
+                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin]) + " "
                     siblings += ")"
                     sibling_spends += ")"
                     sibling_puzzles += ")"
@@ -450,16 +483,20 @@ class Offer:
                                 "sibling_solutions": sibling_solutions,
                             }
                         ),
-                        OFFER_MOD,
+                        offer_mod,
                         Program.to(coin_to_solution_dict[coin]),
                     )
                 else:
+                    if coin.puzzle_hash == OFFER_MOD_OLD_HASH:
+                        offer_mod = OFFER_MOD_OLD
+                    else:
+                        offer_mod = OFFER_MOD
                     solution = Program.to(coin_to_solution_dict[coin])
 
                 completion_spends.append(
                     CoinSpend(
                         coin,
-                        construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD,
+                        construct_puzzle(self.driver_dict[asset_id], offer_mod) if asset_id else offer_mod,
                         solution,
                     )
                 )
@@ -532,7 +569,7 @@ class Offer:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
             mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
-            version = max(lowest_best_version(mods), 2)  # 2 is the version where OFFER_MOD lives
+            version = max(lowest_best_version(mods), 5)  # 5 is the version where OFFER_MOD lives
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 
     @classmethod

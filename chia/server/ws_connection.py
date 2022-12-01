@@ -5,9 +5,13 @@ import contextlib
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from aiohttp import WSCloseCode, WSMessage, WSMsgType
+from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
+from aiohttp.client import ClientWebSocketResponse
+from aiohttp.web import WebSocketResponse
+from typing_extensions import Protocol, final
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -16,18 +20,35 @@ from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
+from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
+from chia.util.streamable import Streamable
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
 
+WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
 
+
+class ConnectionClosedCallbackProtocol(Protocol):
+    def __call__(
+        self,
+        connection: WSChiaConnection,
+        ban_time: int,
+        closed_connection: bool = ...,
+    ) -> None:
+        ...
+
+
+@final
+@dataclass
 class WSChiaConnection:
     """
     Represents a connection to another node. Local host and port are ours, while peer host and
@@ -35,87 +56,105 @@ class WSChiaConnection:
     set after the handshake is performed in this connection.
     """
 
-    def __init__(
-        self,
+    ws: WebSocket
+    local_type: NodeType
+    local_port: int
+    local_capabilities_for_handshake: List[Tuple[uint16, str]]
+    local_capabilities: List[Capability]
+    peer_host: str
+    peer_port: uint16
+    peer_node_id: bytes32
+    log: logging.Logger
+
+    close_callback: Optional[ConnectionClosedCallbackProtocol]
+    outbound_rate_limiter: RateLimiter
+    inbound_rate_limiter: RateLimiter
+
+    # connection properties
+    is_outbound: bool
+
+    # Messaging
+    incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]]
+    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue)
+
+    # ChiaConnection metrics
+    creation_time: float = field(default_factory=time.time)
+    bytes_read: int = 0
+    bytes_written: int = 0
+    last_message_time: float = 0
+
+    peer_server_port: Optional[uint16] = None
+    inbound_task: Optional[asyncio.Task[None]] = None
+    outbound_task: Optional[asyncio.Task[None]] = None
+    active: bool = False  # once handshake is successful this will be changed to True
+    close_event: Optional[asyncio.Event] = None
+    session: Optional[ClientSession] = None
+
+    pending_requests: Dict[uint16, asyncio.Event] = field(default_factory=dict)
+    request_results: Dict[uint16, Message] = field(default_factory=dict)
+    closed: bool = False
+    connection_type: Optional[NodeType] = None
+    request_nonce: uint16 = uint16(0)
+    peer_capabilities: List[Capability] = field(default_factory=list)
+    # Used by the Chia Seeder.
+    version: str = field(default_factory=str)
+    protocol_version: str = field(default_factory=str)
+
+    @classmethod
+    def create(
+        cls,
         local_type: NodeType,
-        ws: Any,  # Websocket
+        ws: WebSocket,
         server_port: int,
         log: logging.Logger,
         is_outbound: bool,
-        is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
-        peer_host,
-        incoming_queue,
-        close_callback: Callable,
-        peer_id,
+        peer_host: str,
+        incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]],
+        close_callback: Optional[ConnectionClosedCallbackProtocol],
+        peer_id: bytes32,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         local_capabilities_for_handshake: List[Tuple[uint16, str]],
-        close_event=None,
-        session=None,
-    ):
-        # Local properties
-        self.ws: Any = ws
-        self.local_type = local_type
-        self.local_port = server_port
-        self.local_capabilities_for_handshake = local_capabilities_for_handshake
-        self.local_capabilities: List[Capability] = [
-            Capability(x[0]) for x in local_capabilities_for_handshake if x[1] == "1"
-        ]
+        close_event: Optional[asyncio.Event] = None,
+        session: Optional[ClientSession] = None,
+    ) -> WSChiaConnection:
 
-        # Remote properties
-        self.peer_host = peer_host
-
-        peername = self.ws._writer.transport.get_extra_info("peername")
+        assert ws._writer is not None
+        peername = ws._writer.transport.get_extra_info("peername")
 
         if peername is None:
-            raise ValueError(f"Was not able to get peername from {self.peer_host}")
+            raise ValueError(f"Was not able to get peername from {peer_host}")
 
-        connection_port = peername[1]
-        self.peer_port = connection_port
-        self.peer_server_port: Optional[uint16] = None
-        self.peer_node_id = peer_id
-        self.log = log
-
-        # connection properties
-        self.is_outbound = is_outbound
-        self.is_feeler = is_feeler
-
-        # ChiaConnection metrics
-        self.creation_time = time.time()
-        self.bytes_read = 0
-        self.bytes_written = 0
-        self.last_message_time: float = 0
-
-        # Messaging
-        self.incoming_queue: asyncio.Queue = incoming_queue
-        self.outgoing_queue: asyncio.Queue = asyncio.Queue()
-
-        self.inbound_task: Optional[asyncio.Task] = None
-        self.outbound_task: Optional[asyncio.Task] = None
-        self.active: bool = False  # once handshake is successful this will be changed to True
-        self.close_event: asyncio.Event = close_event
-        self.session = session
-        self.close_callback = close_callback
-
-        self.pending_requests: Dict[uint16, asyncio.Event] = {}
-        self.request_results: Dict[uint16, Message] = {}
-        self.closed = False
-        self.connection_type: Optional[NodeType] = None
         if is_outbound:
-            self.request_nonce: uint16 = uint16(0)
+            request_nonce = uint16(0)
         else:
             # Different nonce to reduce chances of overlap. Each peer will increment the nonce by one for each
             # request. The receiving peer (not is_outbound), will use 2^15 to 2^16 - 1
-            self.request_nonce = uint16(2**15)
+            request_nonce = uint16(2**15)
 
-        # This means that even if the other peer's boundaries for each minute are not aligned, we will not
-        # disconnect. Also it allows a little flexibility.
-        self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
-        self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
-        self.peer_capabilities: List[Capability] = []
-        # Used by the Chia Seeder.
-        self.version = ""
-        self.protocol_version = ""
+        return cls(
+            ws=ws,
+            local_type=local_type,
+            local_port=server_port,
+            local_capabilities_for_handshake=local_capabilities_for_handshake,
+            local_capabilities=[Capability(x[0]) for x in local_capabilities_for_handshake if x[1] == "1"],
+            peer_host=peer_host,
+            peer_port=peername[1],
+            peer_node_id=peer_id,
+            log=log,
+            close_callback=close_callback,
+            request_nonce=request_nonce,
+            outbound_rate_limiter=RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent),
+            inbound_rate_limiter=RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent),
+            is_outbound=is_outbound,
+            incoming_queue=incoming_queue,
+            close_event=close_event,
+            session=session,
+        )
+
+    def _get_extra_info(self, name: str) -> Optional[Any]:
+        assert self.ws._writer is not None, "websocket's ._writer is None, was .prepare() called?"
+        return self.ws._writer.transport.get_extra_info(name)
 
     async def perform_handshake(
         self,
@@ -124,19 +163,18 @@ class WSChiaConnection:
         server_port: int,
         local_type: NodeType,
     ) -> None:
+        outbound_handshake = make_msg(
+            ProtocolMessageTypes.handshake,
+            Handshake(
+                network_id,
+                protocol_version,
+                chia_full_version_str(),
+                uint16(server_port),
+                uint8(local_type.value),
+                self.local_capabilities_for_handshake,
+            ),
+        )
         if self.is_outbound:
-            outbound_handshake = make_msg(
-                ProtocolMessageTypes.handshake,
-                Handshake(
-                    network_id,
-                    protocol_version,
-                    chia_full_version_str(),
-                    uint16(server_port),
-                    uint8(local_type.value),
-                    self.local_capabilities_for_handshake,
-                ),
-            )
-            assert outbound_handshake is not None
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
@@ -182,17 +220,6 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-            outbound_handshake = make_msg(
-                ProtocolMessageTypes.handshake,
-                Handshake(
-                    network_id,
-                    protocol_version,
-                    chia_full_version_str(),
-                    uint16(server_port),
-                    uint8(local_type.value),
-                    self.local_capabilities_for_handshake,
-                ),
-            )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
@@ -202,13 +229,22 @@ class WSChiaConnection:
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
 
-    async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
+    async def close(
+        self,
+        ban_time: int = 0,
+        ws_close_code: WSCloseCode = WSCloseCode.OK,
+        error: Optional[Err] = None,
+    ) -> None:
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
-
         if self.closed:
+            # always try to call the callback even for closed connections
+            with log_exceptions(self.log, consume=True):
+                self.log.debug(f"Closing already closed connection for {self.peer_host}")
+                if self.close_callback is not None:
+                    self.close_callback(self, ban_time, closed_connection=True)
             return None
         self.closed = True
 
@@ -222,7 +258,7 @@ class WSChiaConnection:
                 self.inbound_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
-            if self.ws is not None and self.ws._closed is False:
+            if self.ws is not None and self.ws.closed is False:
                 await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
@@ -232,25 +268,19 @@ class WSChiaConnection:
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
-            try:
-                self.close_callback(self, ban_time)
-            except Exception:
-                error_stack = traceback.format_exc()
-                self.log.error(f"Error closing1: {error_stack}")
             raise
-        try:
-            self.close_callback(self, ban_time)
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error closing2: {error_stack}")
+        finally:
+            with log_exceptions(self.log, consume=True):
+                if self.close_callback is not None:
+                    self.close_callback(self, ban_time, closed_connection=False)
 
-    async def ban_peer_bad_protocol(self, log_err_msg: str):
+    async def ban_peer_bad_protocol(self, log_err_msg: str) -> None:
         """Ban peer for protocol violation"""
         ban_seconds = INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
         self.log.error(f"Banning peer for {ban_seconds} seconds: {self.peer_host} {log_err_msg}")
         await self.close(ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE)
 
-    def cancel_pending_requests(self):
+    def cancel_pending_requests(self) -> None:
         for message_id, event in self.pending_requests.items():
             try:
                 event.set()
@@ -280,10 +310,10 @@ class WSChiaConnection:
                 self.log.error(f"Exception: {e} with {self.peer_host}")
                 self.log.error(f"Exception Stack: {error_stack}")
 
-    async def inbound_handler(self):
+    async def inbound_handler(self) -> None:
         try:
             while not self.closed:
-                message: Message = await self._read_one_message()
+                message = await self._read_one_message()
                 if message is not None:
                     if message.id in self.pending_requests:
                         self.request_results[message.id] = message
@@ -307,36 +337,40 @@ class WSChiaConnection:
         await self.outgoing_queue.put(message)
         return True
 
-    def __getattr__(self, attr_name: str):
+    def __getattr__(self, attr_name: str) -> Any:
         # TODO KWARGS
-        async def invoke(*args, **kwargs):
+        async def invoke(*args: Any, **kwargs: Any) -> Optional[Streamable]:
             timeout = 60
             if "timeout" in kwargs:
                 timeout = kwargs["timeout"]
+            if self.connection_type is None:
+                raise ValueError("handshake not done yet")
             attribute = getattr(class_for_type(self.connection_type), attr_name, None)
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg: Message = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
+            request = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, bytes(args[0]))
             request_start_t = time.time()
-            result = await self.send_request(msg, timeout)
+            response = await self.send_request(request, timeout)
             self.log.debug(
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
-                f"None? {result is None}"
+                f"None? {response is None}"
             )
-            if result is not None:
-                sent_message_type = ProtocolMessageTypes(msg.type)
-                recv_message_type = ProtocolMessageTypes(result.type)
-                if not message_response_ok(sent_message_type, recv_message_type):
-                    # peer protocol violation
-                    error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
-                    f"but received {recv_message_type.name}"
-                    await self.ban_peer_bad_protocol(self.error_message)
-                    raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
+            if response is None:
+                return None
+            sent_message_type = ProtocolMessageTypes(request.type)
+            recv_message_type = ProtocolMessageTypes(response.type)
+            if not message_response_ok(sent_message_type, recv_message_type):
+                # peer protocol violation
+                error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
+                f"but received {recv_message_type.name}"
+                await self.ban_peer_bad_protocol(self.error_message)
+                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-                recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
-                result = get_metadata(recv_method).message_class.from_bytes(result.data)
-            return result
+            recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
+            api_metadata = get_metadata(recv_method)
+            assert api_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
+            return api_metadata.message_class.from_bytes(response.data)
 
         return invoke
 
@@ -377,21 +411,21 @@ class WSChiaConnection:
 
         return result
 
-    async def send_messages(self, messages: List[Message]):
+    async def send_messages(self, messages: List[Message]) -> None:
         if self.closed:
             return None
         for message in messages:
             await self.outgoing_queue.put(message)
 
-    async def _wait_and_retry(self, msg: Message, queue: asyncio.Queue):
+    async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
-            await queue.put(msg)
+            await self.outgoing_queue.put(msg)
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
 
-    async def _send_message(self, message: Message):
+    async def _send_message(self, message: Message) -> None:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
@@ -399,14 +433,14 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         ):
             if not is_localhost(self.peer_host):
-                self.log.warning(
+                self.log.debug(
                     f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
                     f"peer: {self.peer_host}"
                 )
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    asyncio.create_task(self._wait_and_retry(message, self.outgoing_queue))
+                    asyncio.create_task(self._wait_and_retry(message))
 
                 return None
             else:
@@ -424,7 +458,7 @@ class WSChiaConnection:
             message: WSMessage = await self.ws.receive(30)
         except asyncio.TimeoutError:
             # self.ws._closed if we didn't receive a ping / pong
-            if self.ws._closed:
+            if self.ws.closed:
                 asyncio.create_task(self.close())
                 await asyncio.sleep(3)
                 return None
@@ -502,14 +536,14 @@ class WSChiaConnection:
         return self.version
 
     def get_tls_version(self) -> str:
-        ssl_obj = self.ws._writer.transport.get_extra_info("ssl_object")
+        ssl_obj = self._get_extra_info("ssl_object")
         if ssl_obj is not None:
-            return ssl_obj.version()
+            return str(ssl_obj.version())
         else:
             return "unknown"
 
     def get_peer_info(self) -> Optional[PeerInfo]:
-        result = self.ws._writer.transport.get_extra_info("peername")
+        result = self._get_extra_info("peername")
         if result is None:
             return None
         connection_host = result[0]

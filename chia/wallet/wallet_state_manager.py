@@ -1,4 +1,5 @@
-import aiosqlite
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -9,6 +10,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
+import aiosqlite
 from blspy import G1Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -26,6 +28,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -39,16 +42,17 @@ from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
-    master_sk_to_wallet_sk,
-    master_sk_to_wallet_sk_unhardened,
-    master_sk_to_wallet_sk_intermediate,
     _derive_path,
-    master_sk_to_wallet_sk_unhardened_intermediate,
     _derive_path_unhardened,
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_intermediate,
+    master_sk_to_wallet_sk_unhardened,
+    master_sk_to_wallet_sk_unhardened_intermediate,
 )
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -63,10 +67,11 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import last_change_height_cs, PeerRequestException
+from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
@@ -76,11 +81,11 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
+from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 class WalletStateManager:
@@ -267,7 +272,6 @@ class WalletStateManager:
     async def create_more_puzzle_hashes(
         self,
         from_zero: bool = False,
-        in_transaction=False,
         mark_existing_as_used=True,
         up_to_index: Optional[uint32] = None,
         num_additional_phs: Optional[int] = None,
@@ -761,18 +765,33 @@ class WalletStateManager:
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
         hint_list = compute_coin_hints(coin_spend)
+
         derivation_record = None
         for hint in hint_list:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
             if derivation_record is not None:
                 break
 
+        launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
+            # Check if it was owned by us
+            removed_wallet_ids = []
+            for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DECENTRALIZED_ID):
+                did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
+                if (
+                    did_info.origin_coin is not None
+                    and launch_id == did_info.origin_coin.name()
+                    and not did_info.sent_recovery_transaction
+                ):
+                    await self.user_store.delete_wallet(wallet_info.id)
+                    removed_wallet_ids.append(wallet_info.id)
+            for remove_id in removed_wallet_ids:
+                self.wallets.pop(remove_id)
+                self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
-            launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
@@ -916,8 +935,8 @@ class WalletStateManager:
                 assert isinstance(nft_wallet, NFTWallet)
                 if parent_coin_state.spent_height is not None:
                     await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
-                    num = await nft_wallet.get_current_nfts()
-                    if len(num) == 0 and nft_wallet.did_id is not None and new_did_id != old_did_id:
+                    is_empty = await nft_wallet.is_empty()
+                    if is_empty and nft_wallet.did_id is not None and new_did_id != old_did_id:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
                         await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
                         self.wallets.pop(nft_wallet.wallet_info.id)
@@ -1005,7 +1024,10 @@ class WalletStateManager:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
-                            if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
+                            if (
+                                await potential_dl.get_singleton_record(coin_state.coin.name()) is not None
+                                or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
+                            ):
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
 
@@ -1207,7 +1229,7 @@ class WalletStateManager:
                                     if existing is None:
                                         await self.coin_added(
                                             new_singleton_coin,
-                                            uint32(coin_state.spent_height),
+                                            uint32(curr_coin_state.spent_height),
                                             [],
                                             uint32(record.wallet_id),
                                             record.wallet_type,
@@ -1255,7 +1277,7 @@ class WalletStateManager:
                                 # TODO handle spending launcher later block
                                 continue
                             launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                                coin_state.spent_height, child.coin, peer
+                                child.spent_height, child.coin, peer
                             )
                             if launcher_spend is None:
                                 continue
@@ -1293,7 +1315,6 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            assert child.spent_height is not None
                             pool_wallet = await PoolWallet.create(
                                 self,
                                 self.main_wallet,
@@ -1537,6 +1558,21 @@ class WalletStateManager:
     async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
+    async def get_transaction_by_wallet_record(self, wr: WalletCoinRecord) -> Optional[TransactionRecord]:
+        records = await self.tx_store.get_transactions_by_height(wr.confirmed_block_height)
+        for record in records:
+            if wr.coin in record.additions or record.removals:
+                return record
+        return None
+
+    async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> CoinRecord:
+        timestamp: uint64 = await self.wallet_node.get_timestamp_for_height(wr.confirmed_block_height)
+        return wr.to_coin_record(timestamp)
+
+    async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:
+        records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(**kwargs)
+        return [await self.get_coin_record_by_wallet_record(record) for record in records if record is not None]
+
     async def is_addition_relevant(self, addition: Coin):
         """
         Check whether we care about a new addition (puzzle_hash). Returns true if we
@@ -1578,10 +1614,6 @@ class WalletStateManager:
                 remove: bool = await wallet.rewind(height)
                 if remove:
                     remove_ids.append(wallet_id)
-            if wallet.type() == WalletType.NFT.value:
-                assert isinstance(wallet, NFTWallet)
-                if await wallet.get_nft_count() == 0:
-                    remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
 
@@ -1618,7 +1650,7 @@ class WalletStateManager:
         for wallet in self.wallets.values():
             match_function = getattr(wallet, "match_puzzle_info", None)
             if match_function is not None and callable(match_function):
-                if match_function(puzzle_driver):
+                if await match_function(puzzle_driver):
                     return wallet
         return None
 

@@ -14,7 +14,6 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from chiavdf import create_discriminant, prove
 
-import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
@@ -22,6 +21,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord_state import LastState
 from chia.timelord.types import Chain, IterationType, StateType
@@ -167,7 +167,7 @@ class Timelord:
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: WSChiaConnection):
         pass
 
     def get_vdf_server_port(self) -> Optional[uint16]:

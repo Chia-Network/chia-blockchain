@@ -121,3 +121,7 @@ class DataLayerRpcClient(RpcClient):
     async def get_owned_stores(self) -> Dict[str, Any]:
         response = await self.fetch("get_owned_stores", {})
         return response  # type: ignore[no-any-return]
+
+    async def get_sync_status(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_sync_status", {"id": store_id.hex()})
+        return response  # type: ignore[no-any-return]

@@ -41,14 +41,15 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Python environment
-        uses: actions/setup-python@v3
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Get pip cache dir
         id: pip-cache
+        shell: bash
         run: |
-          echo "::set-output name=dir::$(pip cache dir)"
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache pip
         uses: actions/cache@v3

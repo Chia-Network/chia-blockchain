@@ -19,6 +19,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
+from chia.types.spend_bundle import SpendBundle
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
@@ -408,13 +409,14 @@ class FullNodeSimulator(FullNodeAPI):
 
             await asyncio.sleep(0.050)
 
-    async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
+    async def process_transaction_records(self, records: Collection[TransactionRecord] = ()) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
 
         Arguments:
             records: The transaction records to process.
         """
+
         coins_to_wait_for: Set[Coin] = set()
         for record in records:
             if record.spend_bundle is None:
@@ -422,22 +424,44 @@ class FullNodeSimulator(FullNodeAPI):
 
             coins_to_wait_for.update(record.spend_bundle.additions())
 
-        coin_store = self.full_node.coin_store
-
         await self.wait_transaction_records_entered_mempool(records=records)
+
+        return await self.process_coin_spends(coins=coins_to_wait_for)
+
+    async def process_spend_bundles(self, bundles: Collection[SpendBundle] = ()) -> None:
+        """Process the specified spend bundles and wait until they have been included
+        in a block.
+
+        Arguments:
+            bundles: The spend bundles to process.
+        """
+
+        coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
+        return await self.process_coin_spends(coins=coins_to_wait_for)
+
+    async def process_coin_spends(self, coins: Collection[Coin] = ()) -> None:
+        """Process the specified coin names and wait until they have been created in a
+        block.
+
+        Arguments:
+            coin_names: The coin names to process.
+        """
+
+        coin_set = set(coins)
+        coin_store = self.full_node.coin_store
 
         while True:
             await self.process_blocks(count=1)
 
             found: Set[Coin] = set()
-            for coin in coins_to_wait_for:
+            for coin in coin_set:
                 # TODO: is this the proper check?
                 if await coin_store.get_coin_record(coin.name()) is not None:
                     found.add(coin)
 
-            coins_to_wait_for = coins_to_wait_for.difference(found)
+            coin_set = coin_set.difference(found)
 
-            if len(coins_to_wait_for) == 0:
+            if len(coin_set) == 0:
                 return
 
     async def create_coins_with_amounts(
@@ -505,3 +529,10 @@ class FullNodeSimulator(FullNodeAPI):
         await wait_for_coins_in_wallet(coins=coins_to_receive, wallet=wallet)
 
         return coins_to_receive
+
+    def tx_id_in_mempool(self, tx_id: bytes32) -> bool:
+        spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_hash=tx_id)
+        return spendbundle is not None
+
+    def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
+        return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)

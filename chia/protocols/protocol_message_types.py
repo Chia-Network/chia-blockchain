@@ -110,3 +110,5 @@ class ProtocolMessageTypes(Enum):
     request_block_headers = 86
     reject_block_headers = 87
     respond_block_headers = 88
+    request_fee_estimates = 89
+    respond_fee_estimates = 90

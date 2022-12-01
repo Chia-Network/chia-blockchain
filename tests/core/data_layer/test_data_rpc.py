@@ -21,6 +21,7 @@ from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -32,7 +33,6 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from tests.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.wallet_is_synced import wallet_is_synced
 
 pytestmark = pytest.mark.data_layer
@@ -1761,3 +1761,58 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
     # make sure there is no left over pending root by inserting and publishing
     await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
+
+
+@pytest.mark.asyncio
+async def test_get_sync_status(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32.from_hexstr(res["id"])
+        await farm_block_check_singelton(data_layer, full_node_api, ph, store_id)
+
+        key = b"a"
+        value = b"\x00\x01"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
+
+        key_2 = b"b"
+        value_2 = b"\x00\x01"
+        changelist = [{"action": "insert", "key": key_2.hex(), "value": value_2.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec1 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
+
+        res_before = await data_rpc_api.get_root({"id": store_id.hex()})
+
+        key_3 = b"c"
+        value_3 = b"\x00\x01"
+        changelist = [{"action": "insert", "key": key_3.hex(), "value": value_3.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec2 = res["tx_id"]
+        await farm_block_with_spend(full_node_api, ph, update_tx_rec2, wallet_rpc_api)
+
+        res_after = await data_rpc_api.get_root({"id": store_id.hex()})
+
+        sync_status_res = await data_rpc_api.get_sync_status({"id": store_id.hex()})
+        sync_status = sync_status_res["sync_status"]
+        assert sync_status["root_hash"] == sync_status["target_root_hash"] == res_after["hash"].hex()
+        assert sync_status["generation"] == sync_status["target_generation"] == 3
+
+        await data_layer.data_store.rollback_to_generation(store_id, 2)
+        sync_status_res = await data_rpc_api.get_sync_status({"id": store_id.hex()})
+        sync_status = sync_status_res["sync_status"]
+
+        assert sync_status["root_hash"] == res_before["hash"].hex()
+        assert sync_status["target_root_hash"] == res_after["hash"].hex()
+        assert sync_status["target_root_hash"] != sync_status["root_hash"]
+        assert sync_status["generation"] == 2
+        assert sync_status["target_generation"] == 3
