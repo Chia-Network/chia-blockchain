@@ -489,7 +489,8 @@ class WSChiaConnection:
         message_type = ProtocolMessageTypes(message.type)
         if message_type == ProtocolMessageTypes.wrapped_compressed:
             if len(message.data) > 0:
-                message_type = ProtocolMessageTypes(message.data[0])
+                wrappedcompressed = full_node_protocol.WrappedCompressed.from_bytes(message.data)
+                message_type = ProtocolMessageTypes(wrappedcompressed.inner_type)
 
         message_to_send = self._potentially_compress(message)
 
@@ -612,7 +613,8 @@ class WSChiaConnection:
                     full_message_loaded.type == ProtocolMessageTypes.wrapped_compressed.value
                     and Capability.CAN_DECOMPRESS_MESSAGES in self.local_capabilities
                 ):
-                    message_type = ProtocolMessageTypes(full_message_loaded.data[0]).name
+                    wrappedcompressed = full_node_protocol.WrappedCompressed.from_bytes(full_message_loaded.data)
+                    message_type = ProtocolMessageTypes(wrappedcompressed.inner_type).name
                 else:
                     message_type = ProtocolMessageTypes(full_message_loaded.type).name
             except Exception:

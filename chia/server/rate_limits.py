@@ -59,12 +59,11 @@ class RateLimiter:
         try:
             message_type = ProtocolMessageTypes(message.type)
             if message_type == ProtocolMessageTypes.wrapped_compressed:
-                # The serialization (streamable) makes the first byte be
-                # the "inner_type: uint8" for the WrappedCompressed,
-                # (with the compressed data at message.data[1:])
                 # For the purposes of rate limiting, the compressed size
                 # is the one used.
-                message_type = ProtocolMessageTypes(message.data[0])
+                from chia.protocols.full_node_protocol import WrappedCompressed
+                wrappedcompressed = WrappedCompressed.from_bytes(message.data)
+                message_type = ProtocolMessageTypes(wrappedcompressed.inner_type)
         except Exception as e:
             log.warning(f"Invalid message: {message.type}, {e}")
             return True

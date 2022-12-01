@@ -91,13 +91,9 @@ class TestConnectionCompression:
 
         new_message = make_msg(
             ProtocolMessageTypes.wrapped_compressed,
-            zstd.compress(
-                bytes(
-                    make_msg(
-                        ProtocolMessageTypes.request_block,
-                        full_node_protocol.RequestBlock(height=uint32(1), include_transaction_block=False),
-                    )
-                )
+            full_node_protocol.WrappedCompressed(
+                uint8(ProtocolMessageTypes.request_block.value),
+                zstd.compress(bytes(full_node_protocol.RequestBlock(height=uint32(1), include_transaction_block=False))),
             ),
         )
         await ws_con_1._send_message(new_message)
