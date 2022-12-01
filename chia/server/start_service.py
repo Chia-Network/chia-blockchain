@@ -24,6 +24,7 @@ except ImportError:
     uvloop = None
 
 from chia.cmds.init_funcs import chia_full_version_str
+from chia.protocols.metadata import PeerApiProtocol
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -40,6 +41,7 @@ main_pid: Optional[int] = None
 
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
+_T_PeerApiProtocol = TypeVar("_T_PeerApiProtocol", bound=PeerApiProtocol)
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
 
@@ -48,12 +50,12 @@ class ServiceException(Exception):
     pass
 
 
-class Service(Generic[_T_RpcServiceProtocol]):
+class Service(Generic[_T_RpcServiceProtocol, _T_PeerApiProtocol]):
     def __init__(
         self,
         root_path: Path,
         node: _T_RpcServiceProtocol,
-        peer_api: Any,
+        peer_api: _T_PeerApiProtocol,
         node_type: NodeType,
         advertised_port: int,
         service_name: str,

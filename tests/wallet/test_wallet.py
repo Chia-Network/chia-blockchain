@@ -375,7 +375,6 @@ class TestWalletSimulator:
     #             "blockchain_test.db",
     #             11234,
     #             introducer_port=11236,
-    #             simulator=False,
     #         ),
     #         setup_wallet_node(
     #             11235,

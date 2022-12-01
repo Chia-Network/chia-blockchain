@@ -29,7 +29,7 @@ def create_full_node_crawler_service(
     config: Dict,
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service[Crawler]:
+) -> Service[Crawler, CrawlerAPI]:
     service_config = config[SERVICE_NAME]
 
     crawler = Crawler(

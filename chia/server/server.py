@@ -25,6 +25,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from typing_extensions import final
 
+from chia.protocols.metadata import PeerApiProtocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
@@ -127,7 +128,7 @@ class ChiaServer:
     _inbound_rate_limit_percent: int
     _outbound_rate_limit_percent: int
     api: Any
-    node: Any
+    node: PeerApiProtocol
     root_path: Path
     config: Dict[str, Any]
     log: logging.Logger
@@ -157,7 +158,7 @@ class ChiaServer:
         cls,
         port: int,
         node: Any,
-        api: Any,
+        api: PeerApiProtocol,
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
