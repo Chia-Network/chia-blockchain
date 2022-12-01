@@ -1000,7 +1000,7 @@ class WalletStateManager:
                     wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                         coin_state.coin.puzzle_hash
                     )
-                    self.log.debug("%s: %s", coin_name, coin_state)
+                    self.log.info("new_coin_state %s: %s", coin_name.hex(), coin_state)
 
                     # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
                     if local_record is not None:
@@ -1011,6 +1011,7 @@ class WalletStateManager:
                             local_spent == coin_state.spent_height
                             and local_record.confirmed_block_height == coin_state.created_height
                         ):
+                            self.log.info("new_coin_state we already have this coin, & it was spent & confirmed at the same heights, then return")
                             continue
 
                     wallet_id: Optional[uint32] = None
@@ -1032,7 +1033,7 @@ class WalletStateManager:
                                 wallet_type = WalletType(potential_dl.type())
 
                     if wallet_id is None or wallet_type is None:
-                        self.log.debug(f"No wallet for coin state: {coin_state}")
+                        self.log.info(f"new_coin_state No wallet for coin state: {coin_state}")
                         continue
 
                     # Update the DB to signal that we used puzzle hashes up to this one
@@ -1270,16 +1271,20 @@ class WalletStateManager:
                         assert children is not None
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
+                                self.log.info("new_coin_state child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH")
                                 continue
                             if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):
+                                self.log.info("new_coin_state have_a_pool_wallet_with_launched_id")
                                 continue
                             if child.spent_height is None:
                                 # TODO handle spending launcher later block
+                                self.log.info("new_coin_state handle spending launcher later block")
                                 continue
                             launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
                                 child.spent_height, child.coin, peer
                             )
                             if launcher_spend is None:
+                                self.log.info("new_coin_state launcher_spend is None")
                                 continue
                             try:
                                 pool_state = solution_to_pool_state(launcher_spend)
@@ -1308,11 +1313,12 @@ class WalletStateManager:
                                         spend=launcher_spend,
                                         height=uint32(child.spent_height),
                                     )
+                                self.log.info("new_coin_state exception")
                                 continue
 
                             # solution_to_pool_state may return None but this may not be an error
                             if pool_state is None:
-                                self.log.debug("solution_to_pool_state returned None, ignore and continue")
+                                self.log.info("new_coin_state solution_to_pool_state returned None, ignore and continue")
                                 continue
 
                             pool_wallet = await PoolWallet.create(
@@ -1348,6 +1354,7 @@ class WalletStateManager:
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
                     await self.retry_store.remove_state(coin_state)
+                self.log.info("new_coin_state Error adding state")
                 continue
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height, peer)

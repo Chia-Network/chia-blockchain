@@ -1309,9 +1309,11 @@ class WalletNode:
         Returns all state that is valid and included in the blockchain proved by the weight proof. If return_old_states
         is False, only new states that are not in the coin_store are returned.
         """
+        self.log.info(f"validate_received_state_from_peer {coin_state.coin.name().hex()}")
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
+            self.log.info(f"validate_received_state_from_peer {coin_state.coin.name().hex()} can_use_peer_request_cache")
             return True
 
         spent_height: Optional[uint32] = None if coin_state.spent_height is None else uint32(coin_state.spent_height)
@@ -1333,6 +1335,7 @@ class WalletNode:
             and current.confirmed_block_height == confirmed_height
         ):
             peer_request_cache.add_to_states_validated(coin_state)
+            self.log.info(f"validate_received_state_from_peer {coin_state.coin.name().hex()} Same as current state, nothing to do")
             return True
 
         reorg_mode = False
@@ -1341,6 +1344,7 @@ class WalletNode:
         if confirmed_height is None:
             if current is None:
                 # Coin does not exist in local DB, so no need to do anything
+                self.log.info("validate_received_state_from_peer Coin does not exist in local DB, so no need to do anything")
                 return False
             # This coin got reorged
             reorg_mode = True
@@ -1351,6 +1355,7 @@ class WalletNode:
         if state_block is None or reorg_mode:
             state_blocks = await request_header_blocks(peer, confirmed_height, confirmed_height)
             if state_blocks is None:
+                self.log.info("validate_received_state_from_peer request_header_blocks is None")
                 return False
             state_block = state_blocks[0]
             assert state_block is not None
@@ -1368,7 +1373,7 @@ class WalletNode:
         )
 
         if validate_additions_result is False:
-            self.log.warning("Validate false 1")
+            self.log.info("validate_received_state_from_peer validate_additions_result is False")
             await peer.close(9999)
             return False
 
@@ -1377,6 +1382,7 @@ class WalletNode:
         if coin_state.spent_height is None:
             validated = await self.validate_block_inclusion(state_block, peer, peer_request_cache)
             if not validated:
+                self.log.info("validate_received_state_from_peer validate_block_inclusion not validated")
                 return False
 
         # TODO: make sure all cases are covered
@@ -1389,6 +1395,7 @@ class WalletNode:
                     peer, current.spent_block_height, current.spent_block_height
                 )
                 if spent_state_blocks is None:
+                    self.log.info("validate_received_state_from_peer spent_state_blocks is None")
                     return False
                 spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == current.spent_block_height
@@ -1403,11 +1410,12 @@ class WalletNode:
                     spent_state_block.foliage_transaction_block.removals_root,
                 )
                 if validate_removals_result is False:
-                    self.log.warning("Validate false 2")
+                    self.log.info("validate_received_state_from_peer validate_removals_result is False")
                     await peer.close(9999)
                     return False
                 validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
                 if not validated:
+                    self.log.info("validate_received_state_from_peer self.validate_block_inclusion not validated")
                     return False
 
         if spent_height is not None:
@@ -1416,6 +1424,7 @@ class WalletNode:
             if cached_spent_state_block is None:
                 spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
                 if spent_state_blocks is None:
+                    self.log.info("validate_received_state_from_peer request_header_blocks is None")
                     return False
                 spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == spent_height
@@ -1433,11 +1442,12 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
-                self.log.warning("Validate false 3")
+                self.log.info("validate_received_state_from_peer validate_removals_result is False")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
             if not validated:
+                self.log.info("validate_received_state_from_peer validate_block_inclusion not validated")
                 return False
         peer_request_cache.add_to_states_validated(coin_state)
 
