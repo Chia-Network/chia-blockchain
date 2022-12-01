@@ -913,7 +913,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
-    with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
+    with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
         await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"})
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
     assert res["success"]
