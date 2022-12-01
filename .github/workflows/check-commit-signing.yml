@@ -1,4 +1,4 @@
-name: 🚨 Unsigned commits
+name: 🚨 Check commit signing
 
 on:
   pull_request:
@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unsigned_commits:
-    name: Unsigned commits
+  check-commit-signing:
+    name: Check commit signing
     runs-on: [ubuntu-latest]
     timeout-minutes: 5
 
@@ -22,4 +22,4 @@ jobs:
       with:
         fetch-depth: 0
 
-    - uses: chia-network/actions/unsigned-commits@main
+    - uses: chia-network/actions/check-commit-signing@main
