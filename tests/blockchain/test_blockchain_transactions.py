@@ -11,9 +11,9 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia.simulator.block_tools import test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
 from chia.simulator.wallet_tools import WalletTool
+from chia.simulator.block_tools import test_constants
 
 BURN_PUZZLE_HASH = b"0" * 32
 

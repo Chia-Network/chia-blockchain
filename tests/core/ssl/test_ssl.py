@@ -29,7 +29,6 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             server._port,
             server.log,
             True,
-            False,
             self_hostname,
             incoming_queue,
             None,

@@ -72,7 +72,6 @@ class WSChiaConnection:
 
     # connection properties
     is_outbound: bool
-    is_feeler: bool
 
     # Messaging
     incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]]
@@ -109,7 +108,6 @@ class WSChiaConnection:
         server_port: int,
         log: logging.Logger,
         is_outbound: bool,
-        is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
         peer_host: str,
         incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]],
         close_callback: Optional[ConnectionClosedCallbackProtocol],
@@ -149,7 +147,6 @@ class WSChiaConnection:
             outbound_rate_limiter=RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent),
             inbound_rate_limiter=RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent),
             is_outbound=is_outbound,
-            is_feeler=is_feeler,
             incoming_queue=incoming_queue,
             close_event=close_event,
             session=session,
@@ -261,7 +258,7 @@ class WSChiaConnection:
                 self.inbound_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
-            if self.ws is not None and self.ws._closed is False:
+            if self.ws is not None and self.ws.closed is False:
                 await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
@@ -461,7 +458,7 @@ class WSChiaConnection:
             message: WSMessage = await self.ws.receive(30)
         except asyncio.TimeoutError:
             # self.ws._closed if we didn't receive a ping / pong
-            if self.ws._closed:
+            if self.ws.closed:
                 asyncio.create_task(self.close())
                 await asyncio.sleep(3)
                 return None

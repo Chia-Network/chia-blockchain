@@ -1,6 +1,7 @@
-from typing import List, Optional, Set, Dict
+from __future__ import annotations
 
 import sqlite3
+from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
