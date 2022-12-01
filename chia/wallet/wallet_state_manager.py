@@ -1501,6 +1501,7 @@ class WalletStateManager:
                         await self.tx_store.set_confirmed(record.name, height)
             elif not change:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
+                memos = []
                 # only calculate memos for standard transactions
                 if wallet_type == WalletType.STANDARD_WALLET:
                     # we're trying to avoid fetching parent coin, so directly calling fetch p/s
