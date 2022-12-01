@@ -26,10 +26,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.wallet import Wallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.did_wallet import did_wallet_puzzles
+from chia.wallet.did_wallet.did_wallet_puzzles import SINGLETON_LAUNCHER
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -37,27 +38,36 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.dao_wallet.dao_utils import (
+    get_treasury_puzzle,
+    get_lockup_puzzle,
+    get_proposal_puzzle,
+    get_proposal_timer_puzzle,
+    generate_cat_tail,
+    curry_singleton
+)
 
 
 class ProposalInfo:
     proposal_id: bytes32
     inner_puzzle: Program
+    voted: bool
 
 
 class DAOInfo:
     teasury_id: bytes32
     cat_wallet_id: int
     proposals_list: List[ProposalInfo]
+    parent_info: List[LineageProof]
 
 
 class DAOWallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
-    did_info: DIDInfo
+    dao_info: DAOInfo
     standard_wallet: Wallet
-    base_puzzle_program: Optional[bytes]
-    base_inner_puzzle_hash: Optional[bytes32]
+    cat_wallet: CATWallet
     wallet_id: int
 
     @staticmethod
@@ -65,9 +75,6 @@ class DAOWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
-        backups_ids: List = [],
-        num_of_backup_ids_needed: uint64 = None,
-        metadata: Dict[str, str] = {},
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ):
@@ -98,18 +105,14 @@ class DAOWallet:
         if amount > bal:
             raise ValueError("Not enough balance")
         if amount & 1 == 0:
-            raise ValueError("DID amount must be odd number")
+            raise ValueError("DAO Treasury amount must be odd number")
 
-        if num_of_backup_ids_needed is None:
-            num_of_backup_ids_needed = uint64(len(backups_ids))
-        if num_of_backup_ids_needed > len(backups_ids):
-            raise ValueError("Cannot require more IDs than are known.")
-        self.did_info = DIDInfo(
-            None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None, False, json.dumps(metadata)
+        self.dao_info = DAOInfo(
+            0, 0, [],
         )
-        info_as_string = json.dumps(self.did_info.to_json_dict())
+        info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DECENTRALIZED_ID.value, info_as_string
+            name, WalletType.DAO.value, info_as_string
         )
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
@@ -118,7 +121,7 @@ class DAOWallet:
             raise ValueError("Not enough balance")
 
         try:
-            spend_bundle = await self.generate_new_decentralised_id(amount, fee)
+            spend_bundle = await self.generate_new_dao(amount, fee)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -1052,40 +1055,64 @@ class DAOWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
-    async def generate_new_decentralised_id(self, amount: uint64, fee: uint64 = uint64(0)) -> Optional[SpendBundle]:
+    async def generate_new_dao(
+        self,
+        amount_of_cats: uint64,
+        proposal_pass_percentage: uint64,  # reminder that this is between 0 - 10,000
+        proposal_timelock: uint64,
+        fee: uint64 = uint64(0)
+    ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
         """
 
-        coins = await self.standard_wallet.select_coins(uint64(amount + fee))
+        if proposal_pass_percentage > 10000 or proposal_pass_percentage < 0:
+            raise ValueError("proposal pass percentage must be between 0 and 10000")
+
+        coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
         if coins is None:
             return None
 
         origin = coins.copy().pop()
-        genesis_launcher_puz = did_wallet_puzzles.SINGLETON_LAUNCHER
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
+        genesis_launcher_puz = SINGLETON_LAUNCHER
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
-        did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
-        did_inner_hash = did_inner.get_tree_hash()
-        did_full_puz = did_wallet_puzzles.create_fullpuz(did_inner, launcher_coin.name())
-        did_puzzle_hash = did_full_puz.get_tree_hash()
+        cat_wallet = None
+        cat_tail = None
+        if self.dao_info.cat_wallet_id is None:
+            cat_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
+            if cat_wallet is not None:
+                cat_tail = cat_wallet.cat_info.limitations_program_hash
+        if cat_tail is None:
+            cat_tail = generate_cat_tail(origin.name(), launcher_coin.name())
+
+        dao_treasury_puzzle = get_treasury_puzzle(
+            launcher_coin.name(),
+            cat_tail,
+            amount_of_cats,
+            proposal_pass_percentage,
+            proposal_timelock,
+        )
+
+        full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
+        full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
+        announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount, genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
+            1, genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
         )
 
-        genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
+        genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
 
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
-        eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
+        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, 1)
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
-            did_inner_hash,
+            dao_treasury_puzzle,
             uint64(eve_coin.amount),
         )
         eve_parent = LineageProof(
@@ -1099,33 +1126,21 @@ class DAOWallet:
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        # Only want to save this information if the transaction is valid
-        did_info: DIDInfo = DIDInfo(
+        eve_spend = await self.generate_treasury_eve_spend(
+            eve_coin,
+            full_treasury_puzzle,
+            dao_treasury_puzzle,
             launcher_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            did_inner,
-            None,
-            None,
-            None,
-            False,
-            self.did_info.metadata,
         )
-        await self.save_info(did_info)
-        eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        assert self.did_info.origin_coin is not None
-        assert self.did_info.current_inner is not None
-        did_puzzle_hash = did_wallet_puzzles.create_fullpuz(
-            self.did_info.current_inner, self.did_info.origin_coin.name()
-        ).get_tree_hash()
+        # assert self.did_info.origin_coin is not None
+        # assert self.did_info.current_inner is not None
 
-        did_record = TransactionRecord(
+        treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=did_puzzle_hash,
-            amount=uint64(amount),
+            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),
+            amount=uint64(1),
             fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
@@ -1141,31 +1156,23 @@ class DAOWallet:
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
-        await self.wallet_state_manager.add_pending_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(treasury_record)
         return full_spend
 
-    async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
-        assert self.did_info.origin_coin is not None
-        uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
-        assert uncurried is not None
-        p2_puzzle = uncurried[0]
-        # innerpuz solution is (mode p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ]
-        )
-        innersol = Program.to([1, p2_solution])
+    async def generate_treasury_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program, origin_coin: Coin):
+        inner_sol = Program.to([
+            coin.amount,
+            0,  # make a payment with relative change 0, just to spend the coin
+            coin.puzzle_hash,
+            0,  # this is a list of messages which the treasury will parrot - assert from the proposal and also create
+            0,  # if this variable is 0 then we do the "add_money" spend case
+        ])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [
-                [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
+                [origin_coin.parent_coin_info, origin_coin.amount],
                 coin.amount,
-                innersol,
+                inner_sol,
             ]
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
@@ -1173,13 +1180,15 @@ class DAOWallet:
         return await self.sign(unsigned_spend_bundle)
 
     async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
+        # return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
+        return 0
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id, unspent_records
-        )
-        return spendable_am
+        # spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+        #     self.wallet_info.id, unspent_records
+        # )
+        # return spendable_am
+        return 0
 
     async def get_max_send_amount(self, records=None):
         max_send_amount = await self.get_confirmed_balance()
@@ -1190,19 +1199,13 @@ class DAOWallet:
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
-        did_info: DIDInfo = DIDInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
+        dao_info: DAOInfo = DAOInfo(
+            self.dao_info.teasury_id,
+            self.dao_info.cat_wallet_id,
+            self.dao_info.proposals_list,
             current_list,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            self.did_info.sent_recovery_transaction,
-            self.did_info.metadata,
         )
-        await self.save_info(did_info)
+        await self.save_info(dao_info)
 
     async def update_recovery_list(self, recover_list: List[bytes32], num_of_backup_ids_needed: uint64) -> bool:
         if num_of_backup_ids_needed > len(recover_list):

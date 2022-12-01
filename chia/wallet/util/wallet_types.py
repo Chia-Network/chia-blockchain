@@ -23,6 +23,7 @@ class WalletType(IntEnum):
     NFT = 10
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
+    DAO = 13
 
 
 class AmountWithPuzzlehash(TypedDict):

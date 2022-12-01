@@ -2,7 +2,7 @@
 ; Money can be sent to this via p2_singleton or by spending this coin through the "add money" spend case
 
 (mod (
-  SINGLETON_STRUCT
+  SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
   TREASURY_MOD_HASH
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
