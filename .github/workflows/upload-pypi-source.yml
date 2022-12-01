@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - uses: Chia-Network/actions/check-commit-signing@add_check_commit_signing
+    - uses: Chia-Network/actions/check-commit-signing@main
 
     - uses: Chia-Network/actions/setup-python@main
       name: Install Python
