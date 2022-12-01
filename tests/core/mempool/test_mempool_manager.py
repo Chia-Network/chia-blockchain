@@ -24,9 +24,12 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
-TEST_COIN = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(1000000000))
-TEST_HEIGHT = uint32(1)
 TEST_TIMESTAMP = uint64(1616108400)
+TEST_COIN = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(1000000000))
+TEST_COIN_ID = TEST_COIN.name()
+TEST_COIN_RECORD = CoinRecord(TEST_COIN, uint32(0), uint32(0), False, TEST_TIMESTAMP)
+TEST_COIN_RECORDS = {TEST_COIN_ID: TEST_COIN_RECORD}
+TEST_HEIGHT = uint32(1)
 TEST_BLOCK_RECORD = BlockRecord(
     IDENTITY_PUZZLE_HASH,
     IDENTITY_PUZZLE_HASH,
@@ -56,8 +59,8 @@ TEST_BLOCK_RECORD = BlockRecord(
 )
 
 
-async def get_coin_record(_: bytes32) -> Optional[CoinRecord]:
-    return None
+async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+    return TEST_COIN_RECORDS.get(coin_id)
 
 
 @pytest.fixture(scope="module")
@@ -80,20 +83,25 @@ def spend_bundle_from_conditions(conditions: List[List[Any]]) -> SpendBundle:
 
 
 @pytest.mark.asyncio
-async def test_addition_amount(mempool_manager: MempoolManager) -> None:
-    # Negative amount
+async def test_negative_addition_amount(mempool_manager: MempoolManager) -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
     sb = spend_bundle_from_conditions(conditions)
-    sb_name = sb.name()
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
-    # Big but valid amount
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+
+
+@pytest.mark.asyncio
+async def test_valid_addition_amount(mempool_manager: MempoolManager) -> None:
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount]]
     sb = spend_bundle_from_conditions(conditions)
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
     assert npc_result.error is None
-    # Too big amount
+
+
+@pytest.mark.asyncio
+async def test_too_big_addition_amount(mempool_manager: MempoolManager) -> None:
+    max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount + 1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
