@@ -1,11 +1,14 @@
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, SpendDescription, WalletAction
 from chia.wallet.puzzle_drivers import Solver
+
+
+_T_CoinInfo = TypeVar("_T_CoinInfo", bound="CoinInfo")
 
 
 @dataclass(frozen=True)
@@ -25,6 +28,15 @@ class CoinInfo:
                 "amount": str(self.coin.amount),
                 **self._description.info,
             }
+        )
+
+    @classmethod
+    def from_spend_description(cls, description: SpendDescription) -> _T_CoinInfo:
+        return cls(
+            description.coin,
+            description.get_full_description(),
+            description.outer_description.driver,
+            description.inner_description.driver,
         )
 
     def alias_actions(
@@ -51,11 +63,15 @@ class CoinInfo:
 
             return action
 
-        return map(alias_action, actions)
+        return list(map(alias_action, actions))
 
     async def create_spend_for_actions(
-        self, actions: List[Solver], default_aliases: Dict[str, ActionAlias] = {}, optimize: bool = False
-    ) -> Tuple[List[Solver], CoinSpend]:
+        self,
+        actions: List[Solver],
+        default_aliases: Dict[str, ActionAlias] = {},
+        environment: Solver = Solver({}),
+        optimize: bool = False,
+    ) -> Tuple[List[Solver], Solver, CoinSpend, SpendDescription]:
         # Get a list of the actions that each wallet supports
         supported_outer_actions = self.outer_driver.get_actions()
         supported_inner_actions = self.inner_driver.get_actions()
@@ -82,8 +98,8 @@ class CoinInfo:
                 actions_left.append(action)
 
         # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
-        new_outer_actions, new_inner_actions = await self.outer_driver.check_and_modify_actions(
-            self.coin, outer_actions, inner_actions
+        new_outer_actions, new_inner_actions, environment_addition = await self.outer_driver.check_and_modify_actions(
+            self.coin, outer_actions, inner_actions, environment
         )
 
         # Double check that the new inner actions are still okay with the inner wallet
@@ -97,12 +113,30 @@ class CoinInfo:
 
         # Create the inner puzzle and solution first
         inner_puzzle: Program = await self.inner_driver.construct_inner_puzzle()
-        inner_solution: Program = await self.inner_driver.construct_inner_solution(new_inner_actions, optimize=optimize)
+        inner_solution: Program = await self.inner_driver.construct_inner_solution(
+            new_inner_actions, environment, optimize=optimize
+        )
 
         # Then feed those to the outer wallet
         outer_puzzle: Program = await self.outer_driver.construct_outer_puzzle(inner_puzzle)
         outer_solution: Program = await self.outer_driver.construct_outer_solution(
-            new_outer_actions, inner_solution, optimize=optimize
+            new_outer_actions, inner_solution, environment, optimize=optimize
         )
 
-        return actions_left, CoinSpend(self.coin, outer_puzzle, outer_solution)
+        spend = CoinSpend(self.coin, outer_puzzle, outer_solution)
+
+        outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await self.outer_driver.match_spend(
+            spend, *outer_puzzle.uncurry()
+        )
+        assert outer_match is not None
+        outer_description: PuzzleSolutionDescription = outer_match[0]
+        inner_description: PuzzleSolutionDescription = await self.inner_driver.match_inner_puzzle_and_solution(
+            self.coin, inner_puzzle, inner_solution, *inner_puzzle.uncurry()
+        )
+
+        return (
+            actions_left,
+            Solver({**environment.info, **environment_addition.info}),
+            spend,
+            SpendDescription(self.coin, outer_description, inner_description),
+        )

@@ -46,7 +46,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.wallet_actions import Condition, Graftroot
-from chia.wallet.action_manager.protocols import ActionAlias, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription, WalletAction
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -611,42 +611,56 @@ class Wallet:
         pass
 
     @staticmethod
-    async def match_asset_types(asset_types: List[Solver]) -> bool:
-        if asset_types == []:
-            return True
-        else:
-            return False
-
-    @staticmethod
-    async def select_coins_from_spend(
-        wallet_state_manager: Any, coin_spec: Solver, previous_actions: List[CoinSpend]
+    async def select_coins_from_spend_descriptions(
+        wallet_state_manager: Any, coin_spec: Solver, previous_actions: List[SpendDescription]
     ) -> Tuple[List[CoinInfo], Optional[Solver]]:
         selected_coins: List[CoinInfo] = []
-        for coin in SpendBundle(previous_actions, G2Element()).not_ephemeral_additions():
-            wallet_info: Optional[Tuple[uint32, WalletType]] = await wallet_state_manager.get_wallet_id_for_puzzle_hash(
-                coin.puzzle_hash
-            )
-            if wallet_info is not None and wallet_info[1] == WalletType.STANDARD_WALLET:
-                selected_coins.append(
-                    CoinInfo(
-                        coin,
-                        Solver({}),
-                        OuterDriver(),
-                        # TODO: this is hacky, but works because we only have one inner wallet
-                        InnerDriver(
-                            calculate_synthetic_public_key(
-                                await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                                    coin.puzzle_hash
-                                ),
-                                DEFAULT_HIDDEN_PUZZLE_HASH,
-                            )
-                        ),
-                    )
+
+        all_parent_ids: List[bytes32] = [spend.coin.parent_coin_info for spend in previous_actions]
+        non_ephemeral_spends: List[SpendDescription] = [
+            spend for spend in previous_actions if spend.coin.name() not in all_parent_ids
+        ]
+
+        for spend in non_ephemeral_spends:
+            if isinstance(
+                spend.outer_description.driver, OuterDriver
+            ):  # There should probably be a cleaner way to do this
+                info = CoinInfo.from_spend_description(spend)
+                actions: List[WalletAction] = info.alias_actions(
+                    spend.get_all_actions(), wallet_state_manager.action_aliases
                 )
-            if sum(c.amount for c in selected_coins) >= cast_to_int(coin_spec["amount"]) and len(selected_coins) > 0:
+                new_additions: WalletAction = [action for action in actions if action.name() == DirectPayment.name()]
+                for addition in new_additions:
+                    wallet_info: Optional[
+                        Tuple[uint32, WalletType]
+                    ] = await wallet_state_manager.get_wallet_id_for_puzzle_hash(action.payment.puzzle_hash)
+                    if wallet_info is not None:
+                        selected_coins.append(
+                            CoinInfo(
+                                Coin(spend.coin.name(), action.payment.puzzle_hash, action.payment.amount),
+                                Solver({}),
+                                OuterDriver(),
+                                # TODO: this is hacky, but works because we only have one inner wallet
+                                InnerDriver(
+                                    calculate_synthetic_public_key(
+                                        await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                                            action.payment.puzzle_hash
+                                        ),
+                                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                                    )
+                                ),
+                            )
+                        )
+                    if (
+                        sum(c.coin.amount for c in selected_coins) >= cast_to_int(coin_spec["amount"])
+                        and len(selected_coins) > 0
+                    ):
+                        break
+                else:
+                    continue
                 break
 
-        remaining_balance: int = cast_to_int(coin_spec["amount"]) - sum(c.amount for c in selected_coins)
+        remaining_balance: int = cast_to_int(coin_spec["amount"]) - sum(c.coin.amount for c in selected_coins)
         return selected_coins, Solver({"amount": str(remaining_balance)}) if remaining_balance > 0 else None
 
     @staticmethod
@@ -674,49 +688,14 @@ class Wallet:
             for coin in additional_coins
         ]
 
-    @staticmethod
-    async def match_spend(
-        wallet_state_manager: Any, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[CoinInfo, List[WalletAction], List[Tuple[G1Element, bytes, bool]]]]:
-        inner_info: Optional[
-            Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
-        ] = await wallet_state_manager.match_inner_puzzle_and_solution(
-            spend.puzzle_reveal.to_program(), spend.solution.to_program(), mod, curried_args
-        )
-        if inner_info is None:
-            return None
-        inner_driver, inner_actions, inner_sigs, inner_description = inner_info
-        return CoinInfo(spend.coin, inner_description, OuterDriver(), inner_driver), inner_actions, inner_sigs
-
-    @staticmethod
-    async def match_inner_puzzle_and_solution(
-        wallet_state_manager: Any,
-        puzzle: Program,
-        solution: Program,
-        mod: Program,
-        curried_args: Program,
-    ) -> Optional[Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]]:
-        if mod != MOD:
-            return None
-
-        actions: List[WalletAction] = []
-        delegated_solution: Program = solution.at("rrf")
-        if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
-            metadata = delegated_solution.rest().as_iter()
-            actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
-            all_graftroots: List[Graftroot] = [Graftroot(*graftroot.as_iter()) for graftroot in metadata]
-            all_graftroots.reverse()
-            actions.extend(all_graftroots)
-        else:
-            actions.extend([Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()])
-
-        pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
-
-        return InnerDriver(pubkey), actions, [(pubkey, solution.at("rf").get_tree_hash(), True)], Solver({})
-
 
 @dataclass(frozen=True)
 class OuterDriver:
+    # TODO: This is not great, we should move the coin selection logic in here
+    @staticmethod
+    def get_wallet_class() -> Wallet:
+        return Wallet
+
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         return {}
 
@@ -727,7 +706,7 @@ class OuterDriver:
         return inner_puzzle
 
     async def construct_outer_solution(
-        self, actions: List[WalletAction], inner_solution: Program, optimize: bool = False
+        self, actions: List[WalletAction], inner_solution: Program, environment: Solver, optimize: bool = False
     ) -> Program:
         return inner_solution
 
@@ -736,8 +715,37 @@ class OuterDriver:
         coin: Coin,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
-    ) -> List[WalletAction]:
-        return outer_actions, inner_actions
+        environment: Solver,
+    ) -> Tuple[List[WalletAction], List[WalletAction], Solver]:
+        return outer_actions, inner_actions, Solver({})
+
+    @classmethod
+    async def match_spend(
+        cls, spend: CoinSpend, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
+
+        return (
+            PuzzleSolutionDescription(
+                OuterDriver(),
+                [],
+                [],
+                Solver({}),
+                Solver({}),
+            ),
+            spend.puzzle_reveal.to_program(),
+            spend.solution.to_program(),
+        )
+
+    @staticmethod
+    def get_asset_types(request: Solver) -> Solver:
+        return []
+
+    @staticmethod
+    async def match_asset_types(asset_types: List[Solver]) -> bool:
+        if asset_types == []:
+            return True
+        else:
+            return False
 
 
 @dataclass(frozen=True)
@@ -756,7 +764,9 @@ class InnerDriver:
     async def construct_inner_puzzle(self) -> Program:
         return puzzle_for_synthetic_public_key(self.pubkey)
 
-    async def construct_inner_solution(self, actions: List[WalletAction], optimize: bool = False) -> Program:
+    async def construct_inner_solution(
+        self, actions: List[WalletAction], environment: Solver, optimize: bool = False
+    ) -> Program:
         conditions: List[Program] = [cond.condition for cond in actions if cond.name() == Condition.name()]
         delegated_puzzle: Program = Program.to((1, conditions))
         delegated_solution: Program = Program.to(None)
@@ -774,6 +784,39 @@ class InnerDriver:
                 else metadata
             )
         return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
+
+    @classmethod
+    async def match_inner_puzzle_and_solution(
+        cls,
+        coin: Coin,
+        puzzle: Program,
+        solution: Program,
+        mod: Program,
+        curried_args: Program,
+    ) -> Optional[PuzzleSolutionDescription]:
+        if mod != MOD:
+            return None
+
+        actions: List[WalletAction] = []
+        delegated_solution: Program = solution.at("rrf")
+        if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
+            metadata = delegated_solution.rest().as_iter()
+            actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
+            all_graftroots: List[Graftroot] = [Graftroot(*graftroot.as_iter()) for graftroot in metadata]
+            all_graftroots.reverse()
+            actions.extend(all_graftroots)
+        else:
+            actions.extend([Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()])
+
+        pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
+
+        return PuzzleSolutionDescription(
+            InnerDriver(pubkey),
+            actions,
+            [(pubkey, solution.at("rf").get_tree_hash(), True)],
+            Solver({}),
+            Solver({}),
+        )
 
 
 if TYPE_CHECKING:

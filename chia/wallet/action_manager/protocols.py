@@ -1,6 +1,8 @@
-from typing import Any, Callable, Dict, List, Tuple
-
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, runtime_checkable
 from typing_extensions import Protocol
+
+from blspy import G1Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -21,6 +23,7 @@ class WalletAction(Protocol):
         ...
 
 
+@runtime_checkable
 class ActionAlias(Protocol):
     @staticmethod
     def name() -> str:
@@ -45,6 +48,10 @@ class ActionAlias(Protocol):
         ...
 
 
+_T_PuzzleSolutionDescription = TypeVar("_T_PuzzleSolutionDescription", bound="PuzzleSolutionDescription")
+
+
+@runtime_checkable
 class OuterDriver(Protocol):
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         ...
@@ -56,7 +63,7 @@ class OuterDriver(Protocol):
         ...
 
     async def construct_outer_solution(
-        self, actions: List[WalletAction], inner_solution: Program, optimize: bool = False
+        self, actions: List[WalletAction], inner_solution: Program, environment: Solver, optimize: bool = False
     ) -> Program:
         ...
 
@@ -65,10 +72,26 @@ class OuterDriver(Protocol):
         coin: Coin,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
-    ) -> List[WalletAction]:
+        environment: Solver,
+    ) -> Tuple[List[WalletAction], List[WalletAction], Solver]:
+        ...
+
+    @classmethod
+    async def match_spend(
+        cls: Any, spend: CoinSpend, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[_T_PuzzleSolutionDescription, Program, Program]]:
+        ...
+
+    @staticmethod
+    def get_asset_types(request: Solver) -> Solver:
+        ...
+
+    @staticmethod
+    async def match_asset_types(asset_types: List[Solver]) -> bool:
         ...
 
 
+@runtime_checkable
 class InnerDriver(Protocol):
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         ...
@@ -79,5 +102,52 @@ class InnerDriver(Protocol):
     async def construct_inner_puzzle(self) -> Program:
         ...
 
-    async def construct_inner_solution(self, actions: List[WalletAction], optimize: bool = False) -> Program:
+    async def construct_inner_solution(
+        self, actions: List[WalletAction], environment: Solver, optimize: bool = False
+    ) -> Program:
         ...
+
+    @staticmethod
+    async def match_inner_puzzle_and_solution(
+        cls,
+        coin: Coin,
+        puzzle: Program,
+        solution: Program,
+        mod: Program,
+        curried_args: Program,
+    ) -> Optional[_T_PuzzleSolutionDescription]:
+        ...
+
+
+@dataclass(frozen=True)
+class PuzzleSolutionDescription:
+    driver: Union[InnerDriver, OuterDriver]
+    actions: List[WalletAction]
+    signatures_required: List[Tuple[G1Element, bytes, bool]]
+    coin_description: Solver
+    environment: Solver
+
+
+@dataclass(frozen=True)
+class SpendDescription:
+    coin: Coin
+    outer_description: PuzzleSolutionDescription
+    inner_description: PuzzleSolutionDescription
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.outer_description.driver, OuterDriver):
+            raise ValueError("Spend description created with wrong driver in outer description")
+        if not isinstance(self.inner_description.driver, InnerDriver):
+            raise ValueError("Spend description created with wrong driver in inner description")
+
+    def get_all_actions(self) -> List[WalletAction]:
+        return [*self.outer_description.actions, *self.inner_description.actions]
+
+    def get_all_signatures(self) -> List[Tuple[G1Element, bytes, bool]]:
+        return [*self.outer_description.signatures_required, *self.inner_description.signatures_required]
+
+    def get_full_description(self) -> Solver:
+        return Solver({**self.inner_description.coin_description.info, **self.outer_description.coin_description.info})
+
+    def get_full_environment(self) -> Solver:
+        return Solver({**self.inner_description.environment.info, **self.outer_description.environment.info})

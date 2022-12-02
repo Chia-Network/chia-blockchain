@@ -890,8 +890,11 @@ class TradeManager:
                         unsigned_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
                             await old_request_to_new(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
                         )
+                        # TODO: We do the conversion from spend <-> offer twice because we need to make sure
+                        # that we're signing the proper thing. During an optimization pass, we should figure out
+                        # how to avoid this.
                         signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
-                            unsigned_spend
+                            offer_to_spend(Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, unsigned_spend)))
                         )
                         return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
 

@@ -8,6 +8,7 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -72,21 +73,19 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    dl_record, std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(maker_root, fee=fee)
+    dl_record, std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(maker_root)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
-    maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
 
-    dl_record, std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(taker_root, fee=fee)
+    dl_record, std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(taker_root)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
-    taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
 
@@ -96,6 +95,30 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await dl_wallet_taker.track_new_launcher_id(launcher_id_maker, peer)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
+
+    CAT_AMOUNT = uint64(2_000_000_000_000)
+
+    async with wallet_node_maker.wallet_state_manager.lock:
+        maker_cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            wsm_maker, wallet_maker, {"identifier": "genesis_by_id"}, CAT_AMOUNT
+        )
+
+    async with wallet_node_taker.wallet_state_manager.lock:
+        taker_cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
+            wsm_taker, wallet_taker, {"identifier": "genesis_by_id"}, CAT_AMOUNT
+        )
+
+    unconfirmed_txs_maker: List[TransactionRecord] = await wsm_maker.tx_store.get_all_unconfirmed()
+    unconfirmed_txs_taker: List[TransactionRecord] = await wsm_taker.tx_store.get_all_unconfirmed()
+    await full_node_api.process_transaction_records(records=[*unconfirmed_txs_maker, *unconfirmed_txs_taker])
+
+    await time_out_assert(15, maker_cat_wallet_maker.get_confirmed_balance, CAT_AMOUNT)
+    await time_out_assert(15, maker_cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
+    await time_out_assert(15, taker_cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
+    await time_out_assert(15, taker_cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
+
+    maker_funds -= CAT_AMOUNT
+    taker_funds -= CAT_AMOUNT
 
     trade_manager_maker = wsm_maker.trade_manager
     trade_manager_taker = wsm_taker.trade_manager
@@ -233,7 +256,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
 
     # Now let's test payment <-> update
-    # First XCH
     success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
         {1: -1, launcher_id_taker: 1},
         solver=Solver(
@@ -341,13 +363,13 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee - 1000000 + 1)
 
     await full_node_api.process_transaction_records(records=tx_records)
-    maker_funds -= fee
-    taker_funds -= fee
+    maker_funds = maker_funds - 1 + 1000000 - fee
+    taker_funds = taker_funds - 1000000 + 1 - fee
 
-    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds - 1 + 1000000)
-    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds - 1 + 1000000)
-    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds - 1000000 + 1)
-    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - 1000000 + 1)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds)
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
@@ -356,6 +378,228 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
 
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 4)
+
+    # Testing with some CATs in the mix and DLs on both sides
+    success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
+        {
+            bytes32.from_hexstr(maker_cat_wallet_maker.get_asset_id()): -CAT_AMOUNT,
+            launcher_id_maker: -1,
+            launcher_id_taker: 1,
+            bytes32.from_hexstr(taker_cat_wallet_taker.get_asset_id()): CAT_AMOUNT,
+        },
+        solver=Solver(
+            {
+                maker_cat_wallet_maker.get_asset_id(): {
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_taker.hex(),
+                            "values_to_prove": ["0x" + taker_branch.hex()],
+                        },
+                    ],
+                },
+                launcher_id_maker.hex(): {
+                    "new_root": "0x" + maker_root.hex(),
+                },
+            }
+        ),
+        fee=fee,
+    )
+    assert error is None
+    assert success is True
+    assert offer_maker is not None
+
+    assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
+        "offered": [
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 94 (c 2 (c (c 5 (c (sha256 52 5) (c 11 ()))) (c (a 23 47) (c 95 (c (a 46 (c 2 (c 23 ()))) (c (a 42 (c 2 (c 639 (c 1407 (c 2943 ()))))) (c -65 (c 383 (c 767 (c 1535 (c 3071 ())))))))))))) (c (q (((61 . 70) 2 51 . 60) (c . 1) 1 -53 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 124 (sha256 52 36) (sha256 124 (sha256 124 (sha256 52 44) 9) (sha256 124 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) (a (i 11 (q 2 (i (= (a 46 (c 2 (c 19 ()))) 2975) (q 2 86 (c 2 (c (a 19 (c 95 (c 23 (c 47 (c -65 (c 383 (c 27 ()))))))) (c 383 ())))) (q 8)) 1) (q 2 (i 23 (q 2 (i (not -65) (q . 383) (q 8)) 1) (q 8)) 1)) 1) 4 (c 5 39) (c (+ 11 87) 119)) ((a (i 5 (q 2 (i (= (a (i (= 17 88) (q . 89) ()) 1) (q . -113)) (q 2 38 (c 2 (c 13 (c 11 (c (c -71 377) ()))))) (q 2 122 (c 2 (c (a (i (= 17 88) (q 4 88 (c (a 118 (c 2 (c 19 (c 41 (c (sha256 52 91) (c 43 ())))))) 57)) (q 2 (i (= 17 120) (q 2 (i (not (a (i (= (q . 33) (strlen 41)) (q 2 (i (= (substr 41 () 52) 92) (q 1 . 1) ()) 1) ()) 1)) (q . 9) (q 8)) 1) (q . 9)) 1)) 1) (c (a (i (= 17 88) (q . 89) ()) 1) (c (a 38 (c 2 (c 13 (c 11 (c 23 ()))))) ())))))) 1) (q 4 () (c () 23))) 1) (a (i 5 (q 4 9 (a 86 (c 2 (c 13 (c 11 ()))))) (q . 11)) 1) 11 124 (sha256 52 40) (sha256 124 (sha256 124 (sha256 52 44) 5) (sha256 124 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) (c (c 48 (c 95 ())) (a 126 (c 2 (c (c (c 47 5) (c 95 383)) (c (a 38 (c 2 (c 11 (c 5 (q ()))))) (c 23 (c -65 (c 383 (c (a 42 (c 2 (c 1279 (c (a 118 (c 2 (c 9 (c 2815 (c (sha256 52 45) (c 21 ())))))) (c 5887 ()))))) (c 1535 (c 3071 ()))))))))))) 2 90 (c 2 (c 95 (c 59 (c (a (i 23 (q 9 45 (a 42 (c 2 (c 39 (c (a 118 (c 2 (c 41 (c 87 (c (sha256 52 -71) (c 89 ())))))) (c -73 ())))))) ()) 1) (c 23 (c 5 (c 767 (c (c (c 120 (c (concat 92 (a 46 (c 2 (c (c 47 (c 383 ())) ())))) ())) (c (c 32 (c (sha256 -65 92 (a 46 (c 2 (c (c 21 (c (+ 383 (- 735 43) 767) ())) ())))) ())) 19)) ()))))))))) 1))",
+                        "solution_template": "(1 1 0 . $)",
+                        "committed_args": f"(0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a {'0x' + maker_cat_wallet_maker.get_asset_id()} () . ())",
+                    }
+                ],
+                "amount": str(CAT_AMOUNT),
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_taker.hex(),
+                        "values_to_prove": [taker_branch.hex()],
+                    }
+                ],
+            },
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 (i (logand 47 52) (q 4 (c 32 (c 47 ())) (c (a 62 (c 2 (c 5 (c (a 42 (c 2 (c 39 (c (a (i 119 (q 2 54 (c 2 (c 9 (c 87 (c (a 46 (c 2 (c 5 ()))) ()))))) (q . 29)) 1) (c (a (i 119 (q . -73) (q . 87)) 1) ()))))) (c 119 ()))))) (a 58 (c 2 (c 5 (c (a 11 95) (q ()))))))) (q 8)) 1) (c (q (((73 . 71) 2 . 51) (c . 1) 1 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 60 (sha256 52 36) (sha256 60 (sha256 60 (sha256 52 44) 9) (sha256 60 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) 2 (i 11 (q 2 (i (a 38 (c 2 (c 19 ()))) (q 2 (i (not 23) (q 2 (i (= -77 (q . -113)) (q 2 58 (c 2 (c 5 (c 27 (c 52 ()))))) (q 4 (c 35 (c (a 54 (c 2 (c 9 (c 83 (c (a 46 (c 2 (c 5 ()))) ()))))) 115)) (a 58 (c 2 (c 5 (c 27 (c 52 ()))))))) 1) (q 8)) 1) (q 4 19 (a 58 (c 2 (c 5 (c 27 (c 23 ()))))))) 1) (q 2 (i 23 () (q 8)) 1)) 1) ((a (i (= 9 56) (q 2 (i (logand 45 (q . 1)) (q 1 . 1) ()) 1) ()) 1) 11 60 (sha256 52 40) (sha256 60 (sha256 60 (sha256 52 44) 5) (sha256 60 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i (any 23 (= 11 21)) (q 4 48 (c 11 ())) (q 8)) 1) 1))",
+                        "solution_template": "((1 . (1 . 1)) 0 . $)",
+                        "committed_args": f"((0x7faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9f . ({'0x' + launcher_id_maker.hex()} . 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)) () . ())",
+                    },
+                    {
+                        "mod": "(a (q 2 62 (c 2 (c 5 (c (a 47 95) (c () (c (c (c 11 (c 23 ())) (q ())) (q ()))))))) (c (q ((a . 51) 4 1 . 1) (a 2 (i 5 (q 2 26 (c 2 (c 13 (c (sha256 18 (sha256 44 20) (sha256 18 (sha256 18 (sha256 44 60) 9) (sha256 18 11 (sha256 44 ())))) ())))) (q . 11)) 1) (sha256 18 (sha256 44 16) (sha256 18 (sha256 18 (sha256 44 60) 5) (sha256 18 (a 26 (c 2 (c 7 (c (sha256 44 44) ())))) (sha256 44 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i 11 (q 2 (i (= 35 24) (q 2 (i (logand -77 44) (q 2 (i (not 23) (q 2 62 (c 2 (c 5 (c 27 (c 51 (c 47 (c 95 ()))))))) (q 8)) 1) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1) (q 2 (i (= 35 (q . -24)) (q 2 62 (c 2 (c 5 (c 27 (c 23 (c (a (i (all (= (a 46 (c 2 (c 83 ()))) 335) (not 95)) (q 2 83 (c -113 (c 335 (c -77 ())))) (q 8)) 1) (c 44 ()))))))) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1)) 1) (q 4 (c 24 (c (a 22 (c 2 (c 5 (c 39 (c (sha256 44 335) (c (a 46 (c 2 (c -113 ()))) (c (sha256 44 5) ()))))))) 55)) -81)) 1) 1))",
+                        "solution_template": "(1 1 1 0 . $)",
+                        "committed_args": f"(0xa04d9f57764f54a43e4030befb4d80026e870519aaa66334aef8304f5d0393c2 ({'0x' + maker_root.hex()}) 0x57bfd1cb0adda3d94315053fda723f2028320faa8338225d99f629e3d46d43a9 () . ())",
+                    },
+                ],
+                "new_root": "0x" + maker_root.hex(),
+            },
+        ],
+        "requested": [
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 94 (c 2 (c (c 5 (c (sha256 52 5) (c 11 ()))) (c (a 23 47) (c 95 (c (a 46 (c 2 (c 23 ()))) (c (a 42 (c 2 (c 639 (c 1407 (c 2943 ()))))) (c -65 (c 383 (c 767 (c 1535 (c 3071 ())))))))))))) (c (q (((61 . 70) 2 51 . 60) (c . 1) 1 -53 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 124 (sha256 52 36) (sha256 124 (sha256 124 (sha256 52 44) 9) (sha256 124 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) (a (i 11 (q 2 (i (= (a 46 (c 2 (c 19 ()))) 2975) (q 2 86 (c 2 (c (a 19 (c 95 (c 23 (c 47 (c -65 (c 383 (c 27 ()))))))) (c 383 ())))) (q 8)) 1) (q 2 (i 23 (q 2 (i (not -65) (q . 383) (q 8)) 1) (q 8)) 1)) 1) 4 (c 5 39) (c (+ 11 87) 119)) ((a (i 5 (q 2 (i (= (a (i (= 17 88) (q . 89) ()) 1) (q . -113)) (q 2 38 (c 2 (c 13 (c 11 (c (c -71 377) ()))))) (q 2 122 (c 2 (c (a (i (= 17 88) (q 4 88 (c (a 118 (c 2 (c 19 (c 41 (c (sha256 52 91) (c 43 ())))))) 57)) (q 2 (i (= 17 120) (q 2 (i (not (a (i (= (q . 33) (strlen 41)) (q 2 (i (= (substr 41 () 52) 92) (q 1 . 1) ()) 1) ()) 1)) (q . 9) (q 8)) 1) (q . 9)) 1)) 1) (c (a (i (= 17 88) (q . 89) ()) 1) (c (a 38 (c 2 (c 13 (c 11 (c 23 ()))))) ())))))) 1) (q 4 () (c () 23))) 1) (a (i 5 (q 4 9 (a 86 (c 2 (c 13 (c 11 ()))))) (q . 11)) 1) 11 124 (sha256 52 40) (sha256 124 (sha256 124 (sha256 52 44) 5) (sha256 124 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) (c (c 48 (c 95 ())) (a 126 (c 2 (c (c (c 47 5) (c 95 383)) (c (a 38 (c 2 (c 11 (c 5 (q ()))))) (c 23 (c -65 (c 383 (c (a 42 (c 2 (c 1279 (c (a 118 (c 2 (c 9 (c 2815 (c (sha256 52 45) (c 21 ())))))) (c 5887 ()))))) (c 1535 (c 3071 ()))))))))))) 2 90 (c 2 (c 95 (c 59 (c (a (i 23 (q 9 45 (a 42 (c 2 (c 39 (c (a 118 (c 2 (c 41 (c 87 (c (sha256 52 -71) (c 89 ())))))) (c -73 ())))))) ()) 1) (c 23 (c 5 (c 767 (c (c (c 120 (c (concat 92 (a 46 (c 2 (c (c 47 (c 383 ())) ())))) ())) (c (c 32 (c (sha256 -65 92 (a 46 (c 2 (c (c 21 (c (+ 383 (- 735 43) 767) ())) ())))) ())) 19)) ()))))))))) 1))",
+                        "solution_template": "(q 1 () . 36)",
+                        "committed_args": f"(0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a {'0x' + taker_cat_wallet_taker.get_asset_id()} ())",
+                    }
+                ],
+                "asset_id": taker_cat_wallet_taker.get_asset_id(),
+                "amount": str(CAT_AMOUNT),
+            }
+        ],
+    }
+
+    offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
+        Offer.from_bytes(offer_maker.offer),
+        peer,
+        solver=Solver(
+            {
+                launcher_id_taker.hex(): {
+                    "new_root": "0x" + taker_root.hex(),
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_maker.hex(),
+                            "values_to_prove": ["0x" + maker_branch.hex()],
+                        },
+                    ],
+                },
+                "proofs_of_inclusion": [
+                    [
+                        taker_root.hex(),
+                        str(taker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
+                    ],
+                    [
+                        maker_root.hex(),
+                        str(maker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
+                    ],
+                ],
+            }
+        ),
+        fee=fee,
+    )
+    assert offer_taker is not None
+    assert tx_records is not None
+
+    assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
+        "offered": [
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 94 (c 2 (c (c 5 (c (sha256 52 5) (c 11 ()))) (c (a 23 47) (c 95 (c (a 46 (c 2 (c 23 ()))) (c (a 42 (c 2 (c 639 (c 1407 (c 2943 ()))))) (c -65 (c 383 (c 767 (c 1535 (c 3071 ())))))))))))) (c (q (((61 . 70) 2 51 . 60) (c . 1) 1 -53 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 124 (sha256 52 36) (sha256 124 (sha256 124 (sha256 52 44) 9) (sha256 124 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) (a (i 11 (q 2 (i (= (a 46 (c 2 (c 19 ()))) 2975) (q 2 86 (c 2 (c (a 19 (c 95 (c 23 (c 47 (c -65 (c 383 (c 27 ()))))))) (c 383 ())))) (q 8)) 1) (q 2 (i 23 (q 2 (i (not -65) (q . 383) (q 8)) 1) (q 8)) 1)) 1) 4 (c 5 39) (c (+ 11 87) 119)) ((a (i 5 (q 2 (i (= (a (i (= 17 88) (q . 89) ()) 1) (q . -113)) (q 2 38 (c 2 (c 13 (c 11 (c (c -71 377) ()))))) (q 2 122 (c 2 (c (a (i (= 17 88) (q 4 88 (c (a 118 (c 2 (c 19 (c 41 (c (sha256 52 91) (c 43 ())))))) 57)) (q 2 (i (= 17 120) (q 2 (i (not (a (i (= (q . 33) (strlen 41)) (q 2 (i (= (substr 41 () 52) 92) (q 1 . 1) ()) 1) ()) 1)) (q . 9) (q 8)) 1) (q . 9)) 1)) 1) (c (a (i (= 17 88) (q . 89) ()) 1) (c (a 38 (c 2 (c 13 (c 11 (c 23 ()))))) ())))))) 1) (q 4 () (c () 23))) 1) (a (i 5 (q 4 9 (a 86 (c 2 (c 13 (c 11 ()))))) (q . 11)) 1) 11 124 (sha256 52 40) (sha256 124 (sha256 124 (sha256 52 44) 5) (sha256 124 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) (c (c 48 (c 95 ())) (a 126 (c 2 (c (c (c 47 5) (c 95 383)) (c (a 38 (c 2 (c 11 (c 5 (q ()))))) (c 23 (c -65 (c 383 (c (a 42 (c 2 (c 1279 (c (a 118 (c 2 (c 9 (c 2815 (c (sha256 52 45) (c 21 ())))))) (c 5887 ()))))) (c 1535 (c 3071 ()))))))))))) 2 90 (c 2 (c 95 (c 59 (c (a (i 23 (q 9 45 (a 42 (c 2 (c 39 (c (a 118 (c 2 (c 41 (c 87 (c (sha256 52 -71) (c 89 ())))))) (c -73 ())))))) ()) 1) (c 23 (c 5 (c 767 (c (c (c 120 (c (concat 92 (a 46 (c 2 (c (c 47 (c 383 ())) ())))) ())) (c (c 32 (c (sha256 -65 92 (a 46 (c 2 (c (c 21 (c (+ 383 (- 735 43) 767) ())) ())))) ())) 19)) ()))))))))) 1))",
+                        "solution_template": "(1 1 0 . $)",
+                        "committed_args": f"(0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a {'0x' + taker_cat_wallet_taker.get_asset_id()} () . ())",
+                    }
+                ],
+                "amount": str(CAT_AMOUNT),
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_maker.hex(),
+                        "values_to_prove": [maker_branch.hex()],
+                    }
+                ],
+            },
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 (i (logand 47 52) (q 4 (c 32 (c 47 ())) (c (a 62 (c 2 (c 5 (c (a 42 (c 2 (c 39 (c (a (i 119 (q 2 54 (c 2 (c 9 (c 87 (c (a 46 (c 2 (c 5 ()))) ()))))) (q . 29)) 1) (c (a (i 119 (q . -73) (q . 87)) 1) ()))))) (c 119 ()))))) (a 58 (c 2 (c 5 (c (a 11 95) (q ()))))))) (q 8)) 1) (c (q (((73 . 71) 2 . 51) (c . 1) 1 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 60 (sha256 52 36) (sha256 60 (sha256 60 (sha256 52 44) 9) (sha256 60 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) 2 (i 11 (q 2 (i (a 38 (c 2 (c 19 ()))) (q 2 (i (not 23) (q 2 (i (= -77 (q . -113)) (q 2 58 (c 2 (c 5 (c 27 (c 52 ()))))) (q 4 (c 35 (c (a 54 (c 2 (c 9 (c 83 (c (a 46 (c 2 (c 5 ()))) ()))))) 115)) (a 58 (c 2 (c 5 (c 27 (c 52 ()))))))) 1) (q 8)) 1) (q 4 19 (a 58 (c 2 (c 5 (c 27 (c 23 ()))))))) 1) (q 2 (i 23 () (q 8)) 1)) 1) ((a (i (= 9 56) (q 2 (i (logand 45 (q . 1)) (q 1 . 1) ()) 1) ()) 1) 11 60 (sha256 52 40) (sha256 60 (sha256 60 (sha256 52 44) 5) (sha256 60 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i (any 23 (= 11 21)) (q 4 48 (c 11 ())) (q 8)) 1) 1))",
+                        "solution_template": "((1 . (1 . 1)) 0 . $)",
+                        "committed_args": f"((0x7faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9f . ({'0x' + launcher_id_taker.hex()} . 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)) () . ())",
+                    },
+                    {
+                        "mod": "(a (q 2 62 (c 2 (c 5 (c (a 47 95) (c () (c (c (c 11 (c 23 ())) (q ())) (q ()))))))) (c (q ((a . 51) 4 1 . 1) (a 2 (i 5 (q 2 26 (c 2 (c 13 (c (sha256 18 (sha256 44 20) (sha256 18 (sha256 18 (sha256 44 60) 9) (sha256 18 11 (sha256 44 ())))) ())))) (q . 11)) 1) (sha256 18 (sha256 44 16) (sha256 18 (sha256 18 (sha256 44 60) 5) (sha256 18 (a 26 (c 2 (c 7 (c (sha256 44 44) ())))) (sha256 44 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i 11 (q 2 (i (= 35 24) (q 2 (i (logand -77 44) (q 2 (i (not 23) (q 2 62 (c 2 (c 5 (c 27 (c 51 (c 47 (c 95 ()))))))) (q 8)) 1) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1) (q 2 (i (= 35 (q . -24)) (q 2 62 (c 2 (c 5 (c 27 (c 23 (c (a (i (all (= (a 46 (c 2 (c 83 ()))) 335) (not 95)) (q 2 83 (c -113 (c 335 (c -77 ())))) (q 8)) 1) (c 44 ()))))))) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1)) 1) (q 4 (c 24 (c (a 22 (c 2 (c 5 (c 39 (c (sha256 44 335) (c (a 46 (c 2 (c -113 ()))) (c (sha256 44 5) ()))))))) 55)) -81)) 1) 1))",
+                        "solution_template": "(1 1 1 0 . $)",
+                        "committed_args": f"(0xa04d9f57764f54a43e4030befb4d80026e870519aaa66334aef8304f5d0393c2 ({'0x' + taker_root.hex()}) 0x57bfd1cb0adda3d94315053fda723f2028320faa8338225d99f629e3d46d43a9 () . ())",
+                    },
+                ],
+                "new_root": "0x" + taker_root.hex(),
+            },
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 94 (c 2 (c (c 5 (c (sha256 52 5) (c 11 ()))) (c (a 23 47) (c 95 (c (a 46 (c 2 (c 23 ()))) (c (a 42 (c 2 (c 639 (c 1407 (c 2943 ()))))) (c -65 (c 383 (c 767 (c 1535 (c 3071 ())))))))))))) (c (q (((61 . 70) 2 51 . 60) (c . 1) 1 -53 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 124 (sha256 52 36) (sha256 124 (sha256 124 (sha256 52 44) 9) (sha256 124 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) (a (i 11 (q 2 (i (= (a 46 (c 2 (c 19 ()))) 2975) (q 2 86 (c 2 (c (a 19 (c 95 (c 23 (c 47 (c -65 (c 383 (c 27 ()))))))) (c 383 ())))) (q 8)) 1) (q 2 (i 23 (q 2 (i (not -65) (q . 383) (q 8)) 1) (q 8)) 1)) 1) 4 (c 5 39) (c (+ 11 87) 119)) ((a (i 5 (q 2 (i (= (a (i (= 17 88) (q . 89) ()) 1) (q . -113)) (q 2 38 (c 2 (c 13 (c 11 (c (c -71 377) ()))))) (q 2 122 (c 2 (c (a (i (= 17 88) (q 4 88 (c (a 118 (c 2 (c 19 (c 41 (c (sha256 52 91) (c 43 ())))))) 57)) (q 2 (i (= 17 120) (q 2 (i (not (a (i (= (q . 33) (strlen 41)) (q 2 (i (= (substr 41 () 52) 92) (q 1 . 1) ()) 1) ()) 1)) (q . 9) (q 8)) 1) (q . 9)) 1)) 1) (c (a (i (= 17 88) (q . 89) ()) 1) (c (a 38 (c 2 (c 13 (c 11 (c 23 ()))))) ())))))) 1) (q 4 () (c () 23))) 1) (a (i 5 (q 4 9 (a 86 (c 2 (c 13 (c 11 ()))))) (q . 11)) 1) 11 124 (sha256 52 40) (sha256 124 (sha256 124 (sha256 52 44) 5) (sha256 124 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) (c (c 48 (c 95 ())) (a 126 (c 2 (c (c (c 47 5) (c 95 383)) (c (a 38 (c 2 (c 11 (c 5 (q ()))))) (c 23 (c -65 (c 383 (c (a 42 (c 2 (c 1279 (c (a 118 (c 2 (c 9 (c 2815 (c (sha256 52 45) (c 21 ())))))) (c 5887 ()))))) (c 1535 (c 3071 ()))))))))))) 2 90 (c 2 (c 95 (c 59 (c (a (i 23 (q 9 45 (a 42 (c 2 (c 39 (c (a 118 (c 2 (c 41 (c 87 (c (sha256 52 -71) (c 89 ())))))) (c -73 ())))))) ()) 1) (c 23 (c 5 (c 767 (c (c (c 120 (c (concat 92 (a 46 (c 2 (c (c 47 (c 383 ())) ())))) ())) (c (c 32 (c (sha256 -65 92 (a 46 (c 2 (c (c 21 (c (+ 383 (- 735 43) 767) ())) ())))) ())) 19)) ()))))))))) 1))",
+                        "solution_template": "(1 1 0 . $)",
+                        "committed_args": f"(0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a {'0x' + maker_cat_wallet_maker.get_asset_id()} () . ())",
+                    }
+                ],
+                "amount": str(CAT_AMOUNT),
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_taker.hex(),
+                        "values_to_prove": [taker_branch.hex()],
+                    }
+                ],
+            },
+            {
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 (i (logand 47 52) (q 4 (c 32 (c 47 ())) (c (a 62 (c 2 (c 5 (c (a 42 (c 2 (c 39 (c (a (i 119 (q 2 54 (c 2 (c 9 (c 87 (c (a 46 (c 2 (c 5 ()))) ()))))) (q . 29)) 1) (c (a (i 119 (q . -73) (q . 87)) 1) ()))))) (c 119 ()))))) (a 58 (c 2 (c 5 (c (a 11 95) (q ()))))))) (q 8)) 1) (c (q (((73 . 71) 2 . 51) (c . 1) 1 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 60 (sha256 52 36) (sha256 60 (sha256 60 (sha256 52 44) 9) (sha256 60 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) 2 (i 11 (q 2 (i (a 38 (c 2 (c 19 ()))) (q 2 (i (not 23) (q 2 (i (= -77 (q . -113)) (q 2 58 (c 2 (c 5 (c 27 (c 52 ()))))) (q 4 (c 35 (c (a 54 (c 2 (c 9 (c 83 (c (a 46 (c 2 (c 5 ()))) ()))))) 115)) (a 58 (c 2 (c 5 (c 27 (c 52 ()))))))) 1) (q 8)) 1) (q 4 19 (a 58 (c 2 (c 5 (c 27 (c 23 ()))))))) 1) (q 2 (i 23 () (q 8)) 1)) 1) ((a (i (= 9 56) (q 2 (i (logand 45 (q . 1)) (q 1 . 1) ()) 1) ()) 1) 11 60 (sha256 52 40) (sha256 60 (sha256 60 (sha256 52 44) 5) (sha256 60 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i (any 23 (= 11 21)) (q 4 48 (c 11 ())) (q 8)) 1) 1))",
+                        "solution_template": "((1 . (1 . 1)) 0 . $)",
+                        "committed_args": f"((0x7faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9f . ({'0x' + launcher_id_maker.hex()} . 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)) () . ())",
+                    },
+                    {
+                        "mod": "(a (q 2 62 (c 2 (c 5 (c (a 47 95) (c () (c (c (c 11 (c 23 ())) (q ())) (q ()))))))) (c (q ((a . 51) 4 1 . 1) (a 2 (i 5 (q 2 26 (c 2 (c 13 (c (sha256 18 (sha256 44 20) (sha256 18 (sha256 18 (sha256 44 60) 9) (sha256 18 11 (sha256 44 ())))) ())))) (q . 11)) 1) (sha256 18 (sha256 44 16) (sha256 18 (sha256 18 (sha256 44 60) 5) (sha256 18 (a 26 (c 2 (c 7 (c (sha256 44 44) ())))) (sha256 44 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) 2 (i 11 (q 2 (i (= 35 24) (q 2 (i (logand -77 44) (q 2 (i (not 23) (q 2 62 (c 2 (c 5 (c 27 (c 51 (c 47 (c 95 ()))))))) (q 8)) 1) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1) (q 2 (i (= 35 (q . -24)) (q 2 62 (c 2 (c 5 (c 27 (c 23 (c (a (i (all (= (a 46 (c 2 (c 83 ()))) 335) (not 95)) (q 2 83 (c -113 (c 335 (c -77 ())))) (q 8)) 1) (c 44 ()))))))) (q 4 19 (a 62 (c 2 (c 5 (c 27 (c 23 (c 47 (c 95 ()))))))))) 1)) 1) (q 4 (c 24 (c (a 22 (c 2 (c 5 (c 39 (c (sha256 44 335) (c (a 46 (c 2 (c -113 ()))) (c (sha256 44 5) ()))))))) 55)) -81)) 1) 1))",
+                        "solution_template": "(1 1 1 0 . $)",
+                        "committed_args": f"(0xa04d9f57764f54a43e4030befb4d80026e870519aaa66334aef8304f5d0393c2 ({'0x' + maker_root.hex()}) 0x57bfd1cb0adda3d94315053fda723f2028320faa8338225d99f629e3d46d43a9 () . ())",
+                    },
+                ],
+                "new_root": "0x" + maker_root.hex(),
+            },
+        ],
+        "requested": [
+            {
+                "asset_id": maker_cat_wallet_maker.get_asset_id(),
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 94 (c 2 (c (c 5 (c (sha256 52 5) (c 11 ()))) (c (a 23 47) (c 95 (c (a 46 (c 2 (c 23 ()))) (c (a 42 (c 2 (c 639 (c 1407 (c 2943 ()))))) (c -65 (c 383 (c 767 (c 1535 (c 3071 ())))))))))))) (c (q (((61 . 70) 2 51 . 60) (c . 1) 1 -53 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 124 (sha256 52 36) (sha256 124 (sha256 124 (sha256 52 44) 9) (sha256 124 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) (a (i 11 (q 2 (i (= (a 46 (c 2 (c 19 ()))) 2975) (q 2 86 (c 2 (c (a 19 (c 95 (c 23 (c 47 (c -65 (c 383 (c 27 ()))))))) (c 383 ())))) (q 8)) 1) (q 2 (i 23 (q 2 (i (not -65) (q . 383) (q 8)) 1) (q 8)) 1)) 1) 4 (c 5 39) (c (+ 11 87) 119)) ((a (i 5 (q 2 (i (= (a (i (= 17 88) (q . 89) ()) 1) (q . -113)) (q 2 38 (c 2 (c 13 (c 11 (c (c -71 377) ()))))) (q 2 122 (c 2 (c (a (i (= 17 88) (q 4 88 (c (a 118 (c 2 (c 19 (c 41 (c (sha256 52 91) (c 43 ())))))) 57)) (q 2 (i (= 17 120) (q 2 (i (not (a (i (= (q . 33) (strlen 41)) (q 2 (i (= (substr 41 () 52) 92) (q 1 . 1) ()) 1) ()) 1)) (q . 9) (q 8)) 1) (q . 9)) 1)) 1) (c (a (i (= 17 88) (q . 89) ()) 1) (c (a 38 (c 2 (c 13 (c 11 (c 23 ()))))) ())))))) 1) (q 4 () (c () 23))) 1) (a (i 5 (q 4 9 (a 86 (c 2 (c 13 (c 11 ()))))) (q . 11)) 1) 11 124 (sha256 52 40) (sha256 124 (sha256 124 (sha256 52 44) 5) (sha256 124 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) (c (c 48 (c 95 ())) (a 126 (c 2 (c (c (c 47 5) (c 95 383)) (c (a 38 (c 2 (c 11 (c 5 (q ()))))) (c 23 (c -65 (c 383 (c (a 42 (c 2 (c 1279 (c (a 118 (c 2 (c 9 (c 2815 (c (sha256 52 45) (c 21 ())))))) (c 5887 ()))))) (c 1535 (c 3071 ()))))))))))) 2 90 (c 2 (c 95 (c 59 (c (a (i 23 (q 9 45 (a 42 (c 2 (c 39 (c (a 118 (c 2 (c 41 (c 87 (c (sha256 52 -71) (c 89 ())))))) (c -73 ())))))) ()) 1) (c 23 (c 5 (c 767 (c (c (c 120 (c (concat 92 (a 46 (c 2 (c (c 47 (c 383 ())) ())))) ())) (c (c 32 (c (sha256 -65 92 (a 46 (c 2 (c (c 21 (c (+ 383 (- 735 43) 767) ())) ())))) ())) 19)) ()))))))))) 1))",
+                        "solution_template": "(q 1 () . 36)",
+                        "committed_args": f"(0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a {'0x' + maker_cat_wallet_maker.get_asset_id()} ())",
+                    }
+                ],
+                "amount": str(CAT_AMOUNT),
+            },
+            {
+                "asset_id": taker_cat_wallet_taker.get_asset_id(),
+                "asset_types": [
+                    {
+                        "mod": "(a (q 2 94 (c 2 (c (c 5 (c (sha256 52 5) (c 11 ()))) (c (a 23 47) (c 95 (c (a 46 (c 2 (c 23 ()))) (c (a 42 (c 2 (c 639 (c 1407 (c 2943 ()))))) (c -65 (c 383 (c 767 (c 1535 (c 3071 ())))))))))))) (c (q (((61 . 70) 2 51 . 60) (c . 1) 1 -53 . 2) ((not 2 (i 5 (q 2 50 (c 2 (c 13 (c (sha256 124 (sha256 52 36) (sha256 124 (sha256 124 (sha256 52 44) 9) (sha256 124 11 (sha256 52 ())))) ())))) (q . 11)) 1) (a (i (all (= (strlen 5) 34) (= (strlen 11) 34) (> 23 (q . -1))) (q 11 5 11 23) (q 8)) 1) (a (i 11 (q 2 (i (= (a 46 (c 2 (c 19 ()))) 2975) (q 2 86 (c 2 (c (a 19 (c 95 (c 23 (c 47 (c -65 (c 383 (c 27 ()))))))) (c 383 ())))) (q 8)) 1) (q 2 (i 23 (q 2 (i (not -65) (q . 383) (q 8)) 1) (q 8)) 1)) 1) 4 (c 5 39) (c (+ 11 87) 119)) ((a (i 5 (q 2 (i (= (a (i (= 17 88) (q . 89) ()) 1) (q . -113)) (q 2 38 (c 2 (c 13 (c 11 (c (c -71 377) ()))))) (q 2 122 (c 2 (c (a (i (= 17 88) (q 4 88 (c (a 118 (c 2 (c 19 (c 41 (c (sha256 52 91) (c 43 ())))))) 57)) (q 2 (i (= 17 120) (q 2 (i (not (a (i (= (q . 33) (strlen 41)) (q 2 (i (= (substr 41 () 52) 92) (q 1 . 1) ()) 1) ()) 1)) (q . 9) (q 8)) 1) (q . 9)) 1)) 1) (c (a (i (= 17 88) (q . 89) ()) 1) (c (a 38 (c 2 (c 13 (c 11 (c 23 ()))))) ())))))) 1) (q 4 () (c () 23))) 1) (a (i 5 (q 4 9 (a 86 (c 2 (c 13 (c 11 ()))))) (q . 11)) 1) 11 124 (sha256 52 40) (sha256 124 (sha256 124 (sha256 52 44) 5) (sha256 124 (a 50 (c 2 (c 7 (c (sha256 52 52) ())))) (sha256 52 ())))) (a (i (l 5) (q 11 (q . 2) (a 46 (c 2 (c 9 ()))) (a 46 (c 2 (c 13 ())))) (q 11 (q . 1) 5)) 1) (c (c 48 (c 95 ())) (a 126 (c 2 (c (c (c 47 5) (c 95 383)) (c (a 38 (c 2 (c 11 (c 5 (q ()))))) (c 23 (c -65 (c 383 (c (a 42 (c 2 (c 1279 (c (a 118 (c 2 (c 9 (c 2815 (c (sha256 52 45) (c 21 ())))))) (c 5887 ()))))) (c 1535 (c 3071 ()))))))))))) 2 90 (c 2 (c 95 (c 59 (c (a (i 23 (q 9 45 (a 42 (c 2 (c 39 (c (a 118 (c 2 (c 41 (c 87 (c (sha256 52 -71) (c 89 ())))))) (c -73 ())))))) ()) 1) (c 23 (c 5 (c 767 (c (c (c 120 (c (concat 92 (a 46 (c 2 (c (c 47 (c 383 ())) ())))) ())) (c (c 32 (c (sha256 -65 92 (a 46 (c 2 (c (c 21 (c (+ 383 (- 735 43) 767) ())) ())))) ())) 19)) ()))))))))) 1))",
+                        "solution_template": "(q 1 () . 36)",
+                        "committed_args": f"(0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a {'0x' + taker_cat_wallet_taker.get_asset_id()} ())",
+                    }
+                ],
+                "amount": str(CAT_AMOUNT),
+            },
+        ],
+    }
+
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
+
+    await full_node_api.process_transaction_records(records=tx_records)
+    maker_funds -= fee
+    taker_funds -= fee
+
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds)
+
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, offer_maker)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
+
+    await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 6)
 
     txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32))
     for tx in txs:

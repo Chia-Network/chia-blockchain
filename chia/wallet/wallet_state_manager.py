@@ -16,7 +16,7 @@ from blspy import G1Element, PrivateKey
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerWallet, OuterDriver as DLOuterDriver
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
@@ -42,7 +42,7 @@ from chia.util.path import path_from_root
 from chia.wallet.action_manager.action_manager import WalletActionManager
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet, OuterDriver as CATOuterDriver
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -86,7 +86,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import Wallet, InnerDriver as StdInnerDriver, OuterDriver as StdOuterDriver
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -234,8 +234,8 @@ class WalletStateManager:
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }
-        self.outer_wallets = [Wallet, DataLayerWallet]
-        self.inner_wallets = [Wallet]
+        self.outer_wallets = [StdOuterDriver, DLOuterDriver, CATOuterDriver]
+        self.inner_wallets = [StdInnerDriver]
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -1786,17 +1786,21 @@ class WalletStateManager:
                 return wallet
         return None
 
-    async def get_coin_infos_for_spec(self, coin_spec: Solver, previous_actions: List[CoinSpend]) -> List[CoinInfo]:
+    async def get_coin_infos_for_spec(
+        self, coin_spec: Solver, previous_actions: List[SpendDescription]
+    ) -> List[CoinInfo]:
         if "asset_id" in coin_spec:
-            outer_wallet = await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex()).__class__
+            outer_wallet = (await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex())).__class__
         elif "asset_types" in coin_spec:
-            outer_wallet = await self.get_wallet_for_type_spec(coin_spec["asset_types"])
+            outer_wallet = (await self.get_wallet_for_type_spec(coin_spec["asset_types"])).get_wallet_class()
         else:
             outer_wallet = Wallet
 
         coin_infos: List[CoinInfo]
         remaining_spec: Optional[Solver]
-        coin_infos, remaining_spec = await outer_wallet.select_coins_from_spend(self, coin_spec, previous_actions)
+        coin_infos, remaining_spec = await outer_wallet.select_coins_from_spend_descriptions(
+            self, coin_spec, previous_actions
+        )
         if remaining_spec is not None:
             coin_infos.extend(
                 await outer_wallet.select_new_coins(
@@ -1830,22 +1834,3 @@ class WalletStateManager:
             raise ValueError("No matching wallet found for specified asset types")
 
         return matches[0]
-
-    async def match_inner_puzzle_and_solution(
-        self, puzzle: Program, solution: Program, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]]:
-        matches: List[Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]] = []
-        for wallet in self.inner_wallets:
-            match: Optional[
-                Tuple[InnerDriver, List[WalletAction], List[Tuple[G1Element, bytes, bool]], Solver]
-            ] = await wallet.match_inner_puzzle_and_solution(self, puzzle, solution, mod, curried_args)
-            if match is not None:
-                matches.append(match)
-
-        if len(matches) > 1:
-            # QUESTION: Is there a use case for this?  Should we be returning options?
-            raise ValueError("Multiple wallets can handle the inner puzzle")
-        elif len(matches) == 0:
-            return None
-        else:
-            return matches[0]

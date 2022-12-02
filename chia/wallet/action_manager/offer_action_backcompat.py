@@ -5,24 +5,27 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from clvm_tools.binutils import disassemble
 
-from chia.data_layer.data_layer_wallet import UpdateMetadataDL
+from chia.data_layer.data_layer_wallet import OuterDriver as DLOuterDriver, UpdateMetadataDL
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import WalletAction
+from chia.wallet.action_manager.protocols import SpendDescription, WalletAction
+from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.db_wallet.db_wallet_puzzles import (
+    ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
     SINGLETON_TOP_LAYER_MOD,
     RequireDLInclusion,
     create_host_fullpuz,
 )
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver, cast_to_int
@@ -87,15 +90,21 @@ async def old_request_to_new(
             while True:
                 type_description: Dict[str, Any] = puzzle_info.info
                 if "also" in type_description:
-                    del type_description["also"]
                     puzzle_info = puzzle_info.also()
+                    del type_description["also"]
                     asset_types.append(type_description)
                 else:
                     asset_types.append(type_description)
                     break
 
         # We're passing everything in as a dictionary now instead of a single asset_id/amount pair
-        offered_asset: Dict[str, Any] = {"with": {"asset_types": asset_types, "amount": str(abs(amount))}, "do": []}
+        offered_asset: Dict[str, Any] = {
+            "with": {
+                **({} if asset_id is None else {"asset_id": "0x" + asset_id.hex()}),
+                "asset_description": asset_types,
+            },
+            "do": [],
+        }
 
         try:
             if asset_id is not None:
@@ -124,13 +133,11 @@ async def old_request_to_new(
             # Data Layer offers initially were metadata updates, so we shouldn't allow any kind of sending
             assert this_solver is not None
             offered_asset["do"] = [
-                [
-                    {
-                        "type": "update_metadata",
-                        # The request used to require "new_root" be in solver so the potential KeyError is good
-                        "new_metadata": "(0x" + this_solver["new_root"].hex() + ")",
-                    }
-                ],
+                {
+                    "type": "update_metadata",
+                    # The request used to require "new_root" be in solver so the potential KeyError is good
+                    "new_metadata": "(0x" + this_solver["new_root"].hex() + ")",
+                }
             ]
 
             additional_actions.append(
@@ -142,6 +149,7 @@ async def old_request_to_new(
                 }
             )
         else:
+            offered_asset["with"]["amount"] = str(abs(amount))
             action_batch = [
                 # This is the parallel to just specifying an amount to offer
                 OfferedAmount(abs(amount)).to_solver()
@@ -185,7 +193,7 @@ async def old_request_to_new(
     if None not in offer_dict and fee > 0:
         final_solver["actions"].append(
             {
-                "with": {"amount": fee},
+                "with": {"amount": str(fee)},
                 "do": [
                     Fee(fee).to_solver(),
                 ],
@@ -196,66 +204,48 @@ async def old_request_to_new(
     final_solver.setdefault("bundle_actions", [])
     final_solver["bundle_actions"].extend(dl_dependencies)
     for asset_id, amount in requested_assets.items():
-        if asset_id is None:
-            wallet = wallet_state_manager.main_wallet
-        else:
-            wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-
+        asset_types: List[Solver] = []
         p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
-        if wallet.type() != WalletType.DATA_LAYER:  # DL singletons are not sent as part of offers by default
-            # Asset/amount pairs are assumed to mean requested_payments
-            asset_types: List[Solver] = []
+        # DL singletons are not sent as part of offers by default
+        if asset_id is not None and not (
+            driver_dict[asset_id].check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                ]
+            )
+            and driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
+        ):
             asset_driver = driver_dict[asset_id]
-            while True:
-                if asset_driver.type() == AssetType.CAT.value:
-                    asset_types.append(
-                        Solver(
-                            {
-                                "type": AssetType.CAT.value,
-                                "asset_id": asset_driver["tail"],
-                            }
-                        )
-                    )
-                elif asset_driver.type() == AssetType.SINGLETON.value:
-                    asset_types.append(
-                        Solver(
-                            {
-                                "type": AssetType.SINGLETON.value,
-                                "launcher_id": asset_driver["launcher_id"],
-                                "launcher_ph": asset_driver["launcher_ph"],
-                            }
-                        )
-                    )
-                elif asset_driver.type() == AssetType.METADATA.value:
-                    asset_types.append(
-                        Solver(
-                            {
-                                "type": AssetType.METADATA.value,
-                                "metadata": asset_driver["metadata"],
-                                "metadata_updater_hash": asset_driver["updater_hash"],
-                            }
-                        )
-                    )
-                elif asset_driver.type() == AssetType.OWNERSHIP.value:
-                    asset_types.append(
-                        Solver(
-                            {
-                                "type": AssetType.OWNERSHIP.value,
-                                "owner": asset_driver["owner"],
-                                "transfer_program": asset_driver["transfer_program"],
-                            }
-                        )
-                    )
+            if asset_driver.type() == AssetType.CAT.value:
+                asset_types = CATOuterDriver.get_asset_types(Solver({"tail": "0x" + asset_id.hex()}))
+            elif asset_driver.check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                ]
+            ):
+                nft_dict: Dict[str, Any] = {
+                    "launcher_id": asset_driver.info["launcher_id"],
+                    "metadata": asset_driver.info["metadata"],
+                    "metadata_updater_hash": asset_driver.info["updater_hash"],
+                }
+                if asset_driver.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                        AssetType.OWNERSHIP.value,
+                    ]
+                ):
+                    nft_dict["owner"] = asset_driver.info["owner"]
+                    nft_dict["transfer_program"] = asset_driver.info["transfer_program"]
 
-                if asset_driver.also() is None:
-                    break
-                else:
-                    asset_driver = asset_driver.also()
+                asset_types = NFTWallet.get_asset_types(nft_dict)
 
-            final_solver["dependencies"].append(
+            final_solver["bundle_actions"].append(
                 {
-                    "type": "requested_payment",
+                    "type": "request_payment",
                     "asset_types": asset_types,
                     "payments": [
                         {
@@ -266,30 +256,6 @@ async def old_request_to_new(
                     ],
                 }
             )
-
-        # Also request the royalty payment as a formality
-        if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
-            final_solver["dependencies"].extend(
-                [
-                    {
-                        "type": "requested_payment",
-                        "asset_id": "0x" + asset_id.hex(),
-                        "nonce": "0x" + asset_id.hex(),
-                        "payments": [
-                            {
-                                "puzhash": "0x" + payment.address.hex(),
-                                "amount": str(payment.amount),
-                                "memos": ["0x" + memo.hex() for memo in payment.memos],
-                            }
-                        ],
-                    }
-                    for payment in calculate_royalty_payments(offered_assets, amount, driver_dict)
-                ]
-            )
-
-    # Finally, we need to special case any stuff that the solver was previously used for
-    if "solving_information" not in final_solver:
-        final_solver.setdefault("solving_information", [])
 
     return Solver(final_solver)
 
@@ -382,14 +348,26 @@ def request_payment_to_legacy_encoding(action: RequestPayment, add_nonce: Option
 
 async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
     new_spends: List[CoinSpend] = []
+    environment: Solver = Solver({})
     for spend in bundle.coin_spends:
         # Step 2: Get any wallets that claim to identify the puzzle
-        matches: List[Tuple[CoinInfo, List[WalletAction]]] = []
+        matches: List[SpendDescription] = []
         mod, curried_args = spend.puzzle_reveal.uncurry()
         for wallet in wallet_state_manager.outer_wallets:
-            match = await wallet.match_spend(wallet_state_manager, spend, mod, curried_args)
-            if match is not None:
-                matches.append(match)
+            outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await wallet.match_spend(
+                spend, mod, curried_args
+            )
+            if outer_match is not None:
+                outer_description, inner_puzzle, inner_solution = outer_match
+                mod, curried_args = inner_puzzle.uncurry()
+                for wallet in wallet_state_manager.inner_wallets:
+                    inner_description: Optional[
+                        PuzzleSolutionDescription
+                    ] = await wallet.match_inner_puzzle_and_solution(
+                        spend.coin, inner_puzzle, inner_solution, mod, curried_args
+                    )
+                    if inner_description is not None:
+                        matches.append(SpendDescription(spend.coin, outer_description, inner_description))
 
         if matches == []:
             continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -398,9 +376,9 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
         # Step 3: Attempt to find matching aliases for the actions
-        info, actions, _ = matches[0]
-        actions = info.alias_actions(actions, wallet_state_manager.action_aliases)
-
+        info = CoinInfo.from_spend_description(matches[0])
+        actions = info.alias_actions(matches[0].get_all_actions(), wallet_state_manager.action_aliases)
+        environment = Solver({**environment.info, **matches[0].get_full_environment().info})
         # Step 4: Re-order the actions so that DL graftroots are the last applied (need to be outermost)
         dl_graftroot_actions: List[Solver] = []
         all_other_actions: List[Solver] = []
@@ -429,26 +407,54 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
 
         sorted_actions: List[WalletAction] = [*all_other_actions, *dl_graftroot_actions]
 
-        remaining_actions, spend = await info.create_spend_for_actions(
+        remaining_actions, environment, new_spend, new_description = await info.create_spend_for_actions(
             sorted_actions, wallet_state_manager.action_aliases
         )
 
-        spend_solution: Program = spend.solution.to_program().at("rrf")
-        if spend_solution.atom is None and spend_solution.first() == Program.to("graftroot"):
+        inner_most_solution: Program = (
+            await info.outer_driver.match_spend(new_spend, *new_spend.puzzle_reveal.to_program().uncurry())
+        )[2]
+        delegated_solution: Program = inner_most_solution.at("rrf")
+        if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
             if dl_graftroot_actions == []:
                 new_delegated_solution = Program.to(None)
             else:
                 new_delegated_solution = Program.to([None, None, None, None, None])
-            spend = dataclasses.replace(
-                spend,
-                solution=Program.to(
-                    [spend.solution.to_program().first(), spend.solution.to_program().at("rf"), new_delegated_solution]
-                ),
+            inner_most_solution = Program.to(
+                [inner_most_solution.first(), inner_most_solution.at("rf"), new_delegated_solution]
             )
+
+        new_full_solution: Program = await info.outer_driver.construct_outer_solution(
+            new_description.outer_description.actions, inner_most_solution, environment, optimize=False
+        )
+
+        if isinstance(info.outer_driver, CATOuterDriver):
+            cat_args = list(new_full_solution.as_iter())
+            if Program.to(None) in cat_args[2:5]:
+                new_full_solution = Program.to(
+                    [
+                        cat_args[0],
+                        cat_args[1],
+                        new_spend.coin.name(),
+                        [new_spend.coin.parent_coin_info, new_spend.coin.puzzle_hash, new_spend.coin.amount],
+                        [
+                            new_spend.coin.parent_coin_info,
+                            (await info.inner_driver.construct_inner_puzzle()).get_tree_hash(),
+                            new_spend.coin.amount,
+                        ],
+                        cat_args[5],
+                        cat_args[6],
+                    ]
+                )
+
+        new_spend = dataclasses.replace(
+            new_spend,
+            solution=new_full_solution,
+        )
 
         if len(remaining_actions) > 0:
             raise ValueError("Attempting to convert the spends to an offer resulted in being unable to spend a coin")
-        new_spends.append(spend)
+        new_spends.append(new_spend)
 
     return bytes(SpendBundle(new_spends, bundle.aggregated_signature))
 
@@ -481,8 +487,8 @@ def legacy_rp_puzzle_to_asset_types(rp_puzzle: Program) -> List[Solver]:
     this_asset_type = Solver(
         {
             "mod": disassemble(mod),
-            "solution_template": "(" + solution_template.join(" ") + ")",
-            "committed_args": "(" + committed_args.join(" ") + ")",
+            "solution_template": "(" + " ".join(solution_template) + ")",
+            "committed_args": "(" + " ".join(committed_args) + ")",
         }
     )
     return [this_asset_type, *deeper_asset_types]
@@ -537,6 +543,10 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
             new_spends.append(spend)
             continue
 
+        innermost_solution: Program = Program.from_bytes(
+            solution_bytes[solution_bytes.find(bytes(delegated_puzzle)) - 3 :]
+        )
+
         metadata: Program = Program.to(None)
         for alias in [*requested_payments, *dl_inclusions]:
             graftroot = alias.de_alias()
@@ -553,9 +563,13 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
 
         metadata = Program.to("graftroot").cons(Program.to(inner_delegated_puzzle).cons(metadata))
 
-        new_spends.append(
-            CoinSpend(spend.coin, spend.puzzle_reveal, solution_for_delegated_puzzle(delegated_puzzle, metadata))
+        new_solution: SerializedProgram = SerializedProgram.from_bytes(
+            solution_bytes.replace(
+                bytes(innermost_solution), bytes(solution_for_delegated_puzzle(delegated_puzzle, metadata))
+            )
         )
+
+        new_spends.append(CoinSpend(spend.coin, spend.puzzle_reveal, new_solution))
 
     return SpendBundle(
         new_spends,
@@ -606,7 +620,7 @@ async def generate_summary_complement(
         {
             "actions": [
                 *comp_actions,
-                *([{"with": {"amount": fee}, "do": [Fee(fee).to_solver()]}] if not paid_fee else []),
+                *([{"with": {"amount": str(fee)}, "do": [Fee(fee).to_solver()]}] if not paid_fee else []),
                 *(additional_summary["actions"] if "actions" in additional_summary else []),
             ],
             "bundle_actions": [
@@ -619,7 +633,19 @@ async def generate_summary_complement(
 
 async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> Solver:
     actions: List[Solver] = []
+    bundle_actions: List[Solver] = []
     for key, solver in old_solver.info.items():
+        if "dependencies" in old_solver[key]:
+            bundle_actions.append(
+                {
+                    "type": "require_dl_inclusion",
+                    "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in old_solver[key]["dependencies"]],
+                    "values_to_prove": [
+                        ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in old_solver[key]["dependencies"]
+                    ],
+                }
+            )
+
         try:
             bytes32.from_hexstr(key)
         except ValueError:
@@ -627,7 +653,9 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
 
         wallet: WalletProtocol = await wallet_state_manager.get_wallet_for_asset_id(key)
         if wallet.type() == WalletType.DATA_LAYER:
-            asset_types = wallet.get_asset_types(Solver({"launcher_id": "0x" + key if key[0:2] != "0x" else key}))
+            asset_types = DLOuterDriver.get_asset_types(
+                Solver({"launcher_id": "0x" + key if key[0:2] != "0x" else key})
+            )
             actions.append(
                 Solver(
                     {
@@ -662,6 +690,7 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
     return Solver(
         {
             "actions": actions,
+            "bundle_actions": bundle_actions,
             "dl_inclusion_proofs": [disassemble(proof) for proof in dl_inclusion_proofs],
             **old_solver.info,
         }
@@ -707,6 +736,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
                         new_requested_descriptions.append(
                             {
                                 **({"asset_id": asset_id} if len(payment_request.asset_types) > 0 else {}),
+                                "asset_types": payment_request.asset_types,
                                 "amount": str(
                                     int(description["amount"]) + sum(p.amount for p in payment_request.payments)
                                 ),
@@ -720,6 +750,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
                     requested_descriptions.append(
                         {
                             **({"asset_id": asset_id} if len(payment_request.asset_types) > 0 else {}),
+                            "asset_types": payment_request.asset_types,
                             "amount": str(sum(p.amount for p in payment_request.payments)),
                         }
                     )
@@ -737,7 +768,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
                 )
 
         offered: Dict[str, Any] = asset_description.copy()
-        requested: Dict[str, Any] = asset_description.copy()
+        requested: Dict[str, Any] = {}
         for description in offered_descriptions:
             offered.update(description)
         for description in requested_descriptions:

@@ -433,28 +433,34 @@ class RequestPayment:
         If we're specifically requesting asset types that are fully complete, we can simplify this graftroot down to the
         condition it will invariably produce
         """
-        return not any(["-1" in typ["solution_template"] for typ in self.asset_types])
+        return not any(["-1" in typ.info["solution_template"] for typ in self.asset_types])
 
     @classmethod
     def build_environment(
-        template: Program, committed_values: Program, solved_values: Program, puzzle_reveal: Program
+        cls, template: Program, committed_values: Program, solved_values: Program, puzzle_reveal: Program
     ) -> Program:
         if template.atom is None:
             return Program.to(
                 [
                     4,
-                    RequestPayment.build_environment(committed_values.first(), template.first(), solved_values.first()),
-                    RequestPayment.build_environment(committed_values.rest(), template.rest(), solved_values.rest()),
+                    RequestPayment.build_environment(
+                        template.first(), committed_values.first(), solved_values.first(), puzzle_reveal
+                    ),
+                    RequestPayment.build_environment(
+                        template.rest(), committed_values.rest(), solved_values.rest(), puzzle_reveal
+                    ),
                 ]
             )
         elif template == Program.to(1):
-            return Program.to((1, committed_values)).get_tree_hash()
+            return Program.to((1, committed_values))
         elif template == Program.to(-1):
-            return Program.to((1, solved_values)).get_tree_hash()
+            return Program.to((1, solved_values))
         elif template == Program.to(0):
             return Program.to((1, puzzle_reveal))
         elif template == Program.to("$"):
             return Program.to(1)
+        else:
+            raise ValueError(f"Invalid atom in solution template: {template}")
 
     @staticmethod
     def action_name() -> str:

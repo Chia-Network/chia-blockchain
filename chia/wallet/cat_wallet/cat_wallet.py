@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import time
 import traceback
+from dataclasses import dataclass
 from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
@@ -26,6 +27,10 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.action_manager.coin_info import CoinInfo
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription
+from chia.wallet.action_manager.wallet_actions import Condition
+from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -40,20 +45,22 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
 )
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import InnerDriver as StdInnerDriver
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -886,6 +893,256 @@ class CATWallet:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)
 
+    ########################
+    # OuterWallet Protocol #
+    ########################
+    @staticmethod
+    async def select_coins_from_spend_descriptions(
+        wallet_state_manager: Any, coin_spec: Solver, previous_actions: List[CoinSpend]
+    ) -> Tuple[List[CoinInfo], Optional[Solver]]:
+        target_amount: int = cast_to_int(coin_spec["amount"])
+        expected_tail: bytes32
+        if "asset_id" in coin_spec:
+            expected_tail = bytes32(coin_spec["asset_id"])
+        elif "asset_description" in coin_spec:
+            expected_tail = bytes32(coin_spec["asset_description"]["tail"])
+        elif "asset_types" in coin_spec:
+            expected_tail = bytes32(coin_spec["asset_types"][0]["committed_args"].at("rf").as_python())
+        else:
+            return [], coin_spec
+
+        non_ephemeral_parents: List[bytes32] = [
+            coin.parent_coin_info for coin in SpendBundle(previous_actions, G2Element()).not_ephemeral_additions()
+        ]
+        parent_spends: List[CoinSpend] = [cs for cs in previous_actions if cs.coin.name() in non_ephemeral_parents]
+
+        selected_coins: List[Coin] = []
+        for parent_spend in parent_spends:
+            curried_args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
+            if curried_args is not None:
+                mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+                if genesis_coin_checker_hash.as_python() == expected_tail:
+                    parent_lineage = LineageProof(
+                        parent_spend.coin.parent_coin_info,
+                        inner_puzzle.get_tree_hash(),
+                        parent_spend.coin.amount,
+                    )
+                    inner_solution: Program = parent_spend.solution.to_program().at("f")
+                    for condition in inner_puzzle.run(inner_solution).as_iter():
+                        if condition.first() == 51:
+                            inner_puzzle_hash = bytes32(condition.at("rf").as_python())
+                            amount: uint64 = uint64(condition.at("rrf").as_int())
+                            selected_coin: Coin = Coin(parent_spend.coin.name(), inner_puzzle_hash, amount)
+                            selected_coins.append(
+                                CoinInfo(
+                                    selected_coin,
+                                    Solver({"tail": "0x" + expected_tail.hex()}),
+                                    OuterDriver(expected_tail, parent_lineage, selected_coin.name()),
+                                    # TODO: this is hacky, but works because we only have one inner wallet
+                                    StdInnerDriver(
+                                        calculate_synthetic_public_key(
+                                            await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                                                inner_puzzle_hash
+                                            ),
+                                            DEFAULT_HIDDEN_PUZZLE_HASH,
+                                        )
+                                    ),
+                                )
+                            )
+                            if sum(c.coin.amount for c in selected_coins) >= target_amount:
+                                break
+
+            if sum(c.coin.amount for c in selected_coins) >= target_amount and len(selected_coins) > 0:
+                break
+
+        remaining_balance: int = target_amount - sum(c.coin.amount for c in selected_coins)
+        return (
+            selected_coins,
+            Solver({"asset_id": "0x" + expected_tail.hex(), "amount": str(remaining_balance)})
+            if remaining_balance > 0
+            else None,
+        )
+
+    @staticmethod
+    async def select_new_coins(
+        wallet_state_manager: Any, coin_spec: Solver, exclude: List[Coin] = []
+    ) -> List[CoinInfo]:
+        target_amount: int = cast_to_int(coin_spec["amount"])
+        expected_tail: bytes32
+        if "asset_id" in coin_spec:
+            expected_tail = bytes32(coin_spec["asset_id"])
+        elif "asset_description" in coin_spec:
+            expected_tail = bytes32(coin_spec["asset_description"]["tail"])
+        elif "asset_types" in coin_spec:
+            expected_tail = bytes32(coin_spec["asset_types"][0]["committed_args"].at("rf").as_python())
+        else:
+            return []
+
+        wallet = await wallet_state_manager.get_wallet_for_asset_id(expected_tail.hex())
+
+        additional_coins: Set[Coin] = await wallet.select_coins(
+            cast_to_int(coin_spec["amount"]),
+            exclude=exclude,
+        )
+        return [
+            CoinInfo(
+                coin,
+                Solver({"tail": "0x" + expected_tail.hex()}),
+                OuterDriver(expected_tail, await wallet.get_lineage_proof_for_coin(coin), coin.name()),
+                # TODO: this is hacky, but works because we only have one inner wallet
+                StdInnerDriver(
+                    calculate_synthetic_public_key(
+                        await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                            (await wallet.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)).get_tree_hash()
+                        ),
+                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                    )
+                ),
+            )
+            for coin in additional_coins
+        ]
+
+
+@dataclass(frozen=True)
+class OuterDriver:
+    tail: bytes32
+    parent_lineage: LineageProof
+    my_id: bytes32
+
+    # TODO: This is not great, we should move the coin selection logic in here
+    @staticmethod
+    def get_wallet_class() -> CATWallet:
+        return CATWallet
+
+    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+        return {}
+
+    def get_aliases(self) -> Dict[str, ActionAlias]:
+        return {}  # TODO: RunTail or something should be here
+
+    async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
+        return construct_cat_puzzle(CAT_MOD, self.tail, inner_puzzle)
+
+    async def construct_outer_solution(
+        self, actions: List[WalletAction], inner_solution: Program, environment: Solver, optimize: bool = False
+    ) -> Program:
+        if optimize and "spends" in environment:
+            all_spends: List[CoinSpend] = [
+                CoinSpend(
+                    Coin(
+                        spend["coin"]["parent_coin_info"],
+                        spend["coin"]["puzzle_hash"],
+                        cast_to_int(spend["coin"]["amount"]),
+                    ),
+                    spend["puzzle_reveal"],
+                    spend["solution"],
+                )
+                for spend in environment["spends"]
+            ]
+
+            # Sort the spends deterministically so every CAT knows its role in the ring
+            all_spends.sort(key=lambda cs: cs.coin.name())
+            matched_spends: List[Optional[Iterator[Program]]] = [
+                match_cat_puzzle(uncurry_puzzle(cs.puzzle_reveal.to_program())) for cs in all_spends
+            ]
+            only_same_cat_spends: List[CoinSpend] = [
+                cs
+                for cs, args in zip(all_spends, matched_spends)
+                if args is not None and list(args)[1].as_python() == self.tail
+            ]
+            relevant_ids: List[bytes32] = [cs.coin.name() for cs in only_same_cat_spends]
+            relevant_descriptions: List[Solver] = [
+                description for description in environment["spend_descriptions"] if description["id"] in relevant_ids
+            ]
+            relevant_descriptions.sort(key=lambda description: description["id"])
+
+            my_index: int = next(i for i, cs in enumerate(only_same_cat_spends) if cs.coin.name() == self.my_id)
+            previous_index: int = my_index - 1
+            next_index: int = 0 if my_index == len(only_same_cat_spends) - 1 else my_index + 1
+
+            # Get the accounting information
+            consumed_coins: List[Coin] = [cs.coin for cs in only_same_cat_spends]
+            output_amounts: List[int] = []
+            for description in relevant_descriptions:
+                for action in description["inner"]["actions"]:
+                    if action["type"] == [Condition.name(), DirectPayment.name(), OfferedAmount.name()]:
+                        if "amount" in action:
+                            output_amounts.append(cast_to_int(action["amount"]))
+                        elif "payment" in action:
+                            output_amounts.append(cast_to_int(action["payment"]["amount"]))
+                        else:
+                            condition: Program = Condition.from_solver(action).condition
+                            if condition.first().as_int() == 51 and condition.at("rrf") > 0:
+                                output_amounts.append(condition.at("rrf").as_int())
+
+            subtotals: List[int] = []
+            for i, coin in enumerate(consumed_coins):
+                if i == 0:
+                    subtotals.append(0)
+                else:
+                    subtotals.append(subtotals[i - 1] + output_amounts[i] - coin.amount)
+
+            return Program.to(
+                [
+                    inner_solution,
+                    self.parent_lineage.to_program(),
+                    consumed_coins[previous_index].name(),
+                    [
+                        consumed_coins[my_index].parent_coin_info,
+                        consumed_coins[my_index].puzzle_hash,
+                        consumed_coins[my_index].amount,
+                    ],
+                    [
+                        consumed_coins[next_index].parent_coin_info,
+                        list(only_same_cat_spends[next_index].puzzle_reveal.to_program().uncurry()[1].as_iter())[
+                            2
+                        ].get_tree_hash(),
+                        consumed_coins[next_index].amount,
+                    ],
+                    subtotals[my_index],
+                    0,  # TODO: this could be a thing
+                ]
+            )
+        else:
+            return Program.to([inner_solution, self.parent_lineage.to_program(), *([None] * 5)])
+
+    async def check_and_modify_actions(
+        self,
+        coin: Coin,
+        outer_actions: List[WalletAction],
+        inner_actions: List[WalletAction],
+        environment: Solver,
+    ) -> Tuple[List[WalletAction], List[WalletAction], Solver]:
+        return outer_actions, inner_actions, Solver({})
+
+    @classmethod
+    async def match_spend(
+        cls, spend: CoinSpend, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
+        curried_args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))
+        if curried_args is not None:
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+            tail: bytes32 = bytes32(genesis_coin_checker_hash.as_python())
+            return (
+                PuzzleSolutionDescription(
+                    cls(tail, LineageProof.from_program(spend.solution.to_program().at("rf")), spend.coin.name()),
+                    [],
+                    [],
+                    Solver(
+                        {
+                            "tail": "0x" + tail.hex(),
+                            "asset_types": cls.get_asset_types(Solver({"tail": "0x" + tail.hex()})),
+                        }
+                    ),
+                    Solver({}),  # TODO: This should return info about the ring announcements
+                ),
+                inner_puzzle,
+                spend.solution.to_program().at("f"),
+            )
+
+        else:
+            return None
+
     @staticmethod
     def get_asset_types(request: Solver) -> Solver:
         return [
@@ -900,6 +1157,11 @@ class CATWallet:
                 }
             )
         ]
+
+    @staticmethod
+    async def match_asset_types(asset_types: List[Solver]) -> bool:
+        if len(asset_types) == 1 and asset_types[0]["mod"] == CAT_MOD:
+            return True
 
 
 if TYPE_CHECKING:

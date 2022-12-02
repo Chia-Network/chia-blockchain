@@ -1586,6 +1586,65 @@ class NFTWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
 
+    @staticmethod
+    def get_asset_types(request: Solver) -> Solver:
+        return [
+            Solver(
+                {
+                    "mod": disassemble(SINGLETON_TOP_LAYER_MOD),
+                    "solution_template": f"((1 . ({'1' if 'launcher_id' in request else '-1'} . 1)) 0 . $)",
+                    "committed_args": (
+                        "("
+                        f"({'0x' + SINGLETON_TOP_LAYER_MOD_HASH.hex()} . "
+                        f"({'0x' + request['launcher_id'].hex() if 'launcher_id' in request else '()'} . "
+                        f"{'0x' + SINGLETON_LAUNCHER_HASH.hex()})) () . ())"
+                    ),
+                }
+            ),
+            Solver(
+                {
+                    "mod": disassemble(NFT_STATE_LAYER_MOD),
+                    "solution_template": (
+                        "(1 "
+                        f"{'1' if 'metadata' in request else '-1'} "
+                        f"{'1' if 'metadata_updater_hash' in request else '-1'} "
+                        "0 . $)"
+                    ),
+                    "committed_args": (
+                        "("
+                        f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()} "
+                        f"{request.info['metadata'] if 'metadata' in request else '()'} "
+                        f"{request.info['metadata_updater_hash'] if 'metadata_updater_hash' in request else '()'} "
+                        "() . ())"
+                    ),
+                }
+            ),
+            *(
+                [
+                    Solver(
+                        {
+                            "mod": disassemble(NFT_OWNERSHIP_LAYER),
+                            "solution_template": (
+                                "(1 "
+                                f"{'1' if 'owner' in request else '-1'} "
+                                f"{'1' if 'transfer_program' in request else '-1'} "
+                                "0 . $)"
+                            ),
+                            "committed_args": (
+                                "("
+                                f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()} "
+                                f"{request.info['owner'] if 'owner' in request else '()'} "
+                                f"{request.info['transfer_program'] if 'transfer_program' in request else '()'} "
+                                "() . ())"
+                            ),
+                        }
+                    )
+                ]
+                if "owner" in request or "transfer_program" in request
+                else []
+            ),
+        ]
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
