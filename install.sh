@@ -7,7 +7,7 @@ Usage: $0 [-adlsph]
 
   -a                          automated install, no questions
   -d                          install development dependencies
-  -l                          install legacy keyring dependencies (required for linux only)
+  -l                          install legacy keyring dependencies (linux only)
   -s                          skip python package installation and just do pip install
   -p                          additional plotters installation
   -h                          display this help and exit
