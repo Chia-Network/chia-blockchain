@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from typing_extensions import final
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_requires_reply, VALID_REPLY_MESSAGE_MAP
+from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
