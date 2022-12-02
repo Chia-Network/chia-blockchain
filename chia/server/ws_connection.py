@@ -559,5 +559,5 @@ class WSChiaConnection:
         else:
             return info
 
-    def has_capability(self, Capability) -> bool:
-        return Capability in self.peer_capabilities
+    def has_capability(self, capability: Capability) -> bool:
+        return capability in self.peer_capabilities
