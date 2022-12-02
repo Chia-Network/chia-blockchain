@@ -44,6 +44,8 @@ class NotificationStore:
                 "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
             )
 
+            # This used to be an accidentally created redundant index on coin_id which is already a primary key
+            # We can remove this at some point in the future when it's unlikely this index still exists
             await conn.execute("DROP INDEX IF EXISTS coin_id_index")
 
         return self
