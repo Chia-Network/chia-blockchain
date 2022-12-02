@@ -663,7 +663,7 @@ def test_ambiguous_deserialization_program() -> None:
     class TestClassProgram(Streamable):
         a: Program
 
-    program = Program.to(binutils.assemble("()"))  # type: ignore[no-untyped-call]  # TODO, add typing in clvm_tools
+    program = Program.to(binutils.assemble("()"))
 
     TestClassProgram.from_bytes(bytes(program))
 
