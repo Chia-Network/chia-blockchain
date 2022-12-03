@@ -2317,7 +2317,7 @@ class TestMaliciousGenerators:
     def test_duplicate_coin_announces(self, request, opcode):
         condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with assert_runtime(seconds=7, label=request.node.name):
+        with assert_runtime(seconds=9, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False)
 
         assert npc_result.error is None
