@@ -260,7 +260,7 @@ jobs:
         gh release upload \
           $RELEASE_TAG \
           build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb \
-          build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}_arm64.deb
+          build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb
 
     - name: Mark installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
