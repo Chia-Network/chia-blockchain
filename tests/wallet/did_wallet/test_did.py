@@ -961,7 +961,7 @@ class TestDIDWallet:
         await wallet.push_transaction(tx)
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-        await time_out_assert(15, wallet1.get_confirmed_balance, 2000000000001)
+        await time_out_assert(30, wallet1.get_confirmed_balance, 2000000000001)
         try:
             await api_0.did_get_info({"coin_id": coin_1.name().hex()})
             # We expect a ValueError here
