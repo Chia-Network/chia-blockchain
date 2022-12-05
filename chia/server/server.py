@@ -408,7 +408,7 @@ class ChiaServer:
             self.log.debug(f"Not connecting to {target_node}")
             return True
         for connection in self.all_connections.values():
-            if connection.host == target_node.host and connection.peer_server_port == target_node.port:
+            if connection.peer_host == target_node.host and connection.peer_server_port == target_node.port:
                 self.log.debug(f"Not connecting to {target_node}, duplicate connection")
                 return True
         return False
