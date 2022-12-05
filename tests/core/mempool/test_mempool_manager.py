@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, Awaitable, Callable, List, Optional
 
 import pytest
-import pytest_asyncio
 from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
@@ -25,18 +24,16 @@ IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 TEST_TIMESTAMP = uint64(1616108400)
 TEST_COIN = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(1000000000))
-TEST_COIN_ID = TEST_COIN.name()
-TEST_COIN_RECORD = CoinRecord(TEST_COIN, uint32(0), uint32(0), False, TEST_TIMESTAMP)
-TEST_COIN_RECORDS = {TEST_COIN_ID: TEST_COIN_RECORD}
 TEST_HEIGHT = uint32(1)
 
 
-async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-    return TEST_COIN_RECORDS.get(coin_id)
+async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
+    assert False
 
 
-@pytest_asyncio.fixture(scope="function")
-async def mempool_manager() -> MempoolManager:
+async def instantiate_mempool_manager(
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+) -> MempoolManager:
     mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
     test_block_record = BlockRecord(
         IDENTITY_PUZZLE_HASH,
@@ -76,7 +73,8 @@ def spend_bundle_from_conditions(conditions: List[List[Any]]) -> SpendBundle:
 
 
 @pytest.mark.asyncio
-async def test_negative_addition_amount(mempool_manager: MempoolManager) -> None:
+async def test_negative_addition_amount() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
     sb = spend_bundle_from_conditions(conditions)
     # chia_rs currently emits this instead of Err.COIN_AMOUNT_NEGATIVE
@@ -86,7 +84,8 @@ async def test_negative_addition_amount(mempool_manager: MempoolManager) -> None
 
 
 @pytest.mark.asyncio
-async def test_valid_addition_amount(mempool_manager: MempoolManager) -> None:
+async def test_valid_addition_amount() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount]]
     sb = spend_bundle_from_conditions(conditions)
@@ -95,7 +94,8 @@ async def test_valid_addition_amount(mempool_manager: MempoolManager) -> None:
 
 
 @pytest.mark.asyncio
-async def test_too_big_addition_amount(mempool_manager: MempoolManager) -> None:
+async def test_too_big_addition_amount() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount + 1]]
     sb = spend_bundle_from_conditions(conditions)
