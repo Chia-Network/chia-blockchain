@@ -86,6 +86,8 @@ def spend_bundle_from_conditions(conditions: List[List[Any]]) -> SpendBundle:
 async def test_negative_addition_amount(mempool_manager: MempoolManager) -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
     sb = spend_bundle_from_conditions(conditions)
+    # chia_rs currently emits this instead of Err.COIN_AMOUNT_NEGATIVE
+    # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
@@ -104,5 +106,7 @@ async def test_too_big_addition_amount(mempool_manager: MempoolManager) -> None:
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount + 1]]
     sb = spend_bundle_from_conditions(conditions)
+    # chia_rs currently emits this instead of Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
+    # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
