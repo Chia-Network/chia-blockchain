@@ -82,6 +82,16 @@ def validate_clvm_and_signature(
 
 class MempoolManager:
     pool: Executor
+    constants: ConsensusConstants
+    seen_bundle_hashes: Dict[bytes32, bytes32]
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+    nonzero_fee_minimum_fpc: int
+    limit_factor: float
+    mempool_max_total_cost: int
+    potential_cache: PendingTxCache
+    seen_cache_size: int
+    peak: Optional[BlockRecord]
+    mempool: Mempool
 
     def __init__(
         self,
@@ -96,7 +106,7 @@ class MempoolManager:
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
-        self.get_coin_record = get_coin_record
+        setattr(self, "get_coin_record", get_coin_record)
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
@@ -422,7 +432,7 @@ class MempoolManager:
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
         for name in removal_names:
-            removal_record = await self.get_coin_record(name)
+            removal_record = await getattr(self, "get_coin_record")(name)
             if removal_record is None and name not in additions_dict:
                 return Err.UNKNOWN_UNSPENT, None, []
             elif name in additions_dict:
