@@ -5,7 +5,7 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
@@ -27,7 +27,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, WalletAction
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -940,7 +940,7 @@ class CATWallet:
                                     # TODO: this is hacky, but works because we only have one inner wallet
                                     StdInnerDriver(
                                         calculate_synthetic_public_key(
-                                            await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                                            await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(  # noqa
                                                 inner_puzzle_hash
                                             ),
                                             DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -980,7 +980,7 @@ class CATWallet:
         wallet = await wallet_state_manager.get_wallet_for_asset_id(expected_tail.hex())
 
         additional_coins: Set[Coin] = await wallet.select_coins(
-            cast_to_int(coin_spec["amount"]),
+            target_amount,
             exclude=exclude,
         )
         return [

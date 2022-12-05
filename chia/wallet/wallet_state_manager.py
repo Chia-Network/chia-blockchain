@@ -40,6 +40,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.action_manager.action_manager import WalletActionManager
+from chia.wallet.action_manager.protocols import SpendDescription
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet, OuterDriver as CATOuterDriver
@@ -94,7 +95,6 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore

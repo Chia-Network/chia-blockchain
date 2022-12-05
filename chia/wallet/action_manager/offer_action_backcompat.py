@@ -15,7 +15,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import PuzzleSolutionDescription, SpendDescription, WalletAction
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.db_wallet.db_wallet_puzzles import (

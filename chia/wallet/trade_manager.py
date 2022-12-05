@@ -894,7 +894,9 @@ class TradeManager:
                         # that we're signing the proper thing. During an optimization pass, we should figure out
                         # how to avoid this.
                         signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
-                            offer_to_spend(Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, unsigned_spend)))
+                            offer_to_spend(
+                                Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, unsigned_spend))
+                            )
                         )
                         return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
 

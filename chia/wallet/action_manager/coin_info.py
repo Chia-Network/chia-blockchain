@@ -1,10 +1,17 @@
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    InnerDriver,
+    OuterDriver,
+    PuzzleSolutionDescription,
+    SpendDescription,
+    WalletAction,
+)
 from chia.wallet.puzzle_drivers import Solver
 
 

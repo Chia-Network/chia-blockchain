@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
@@ -16,7 +16,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription, WalletAction
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
@@ -204,9 +204,9 @@ class WalletActionManager:
             matches: List[SpendDescription] = []
             mod, curried_args = spend.puzzle_reveal.uncurry()
             for outer_wallet in self.wallet_state_manager.outer_wallets:
-                outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await outer_wallet.match_spend(
-                    spend, mod, curried_args
-                )
+                outer_match: Optional[
+                    Tuple[PuzzleSolutionDescription, Program, Program]
+                ] = await outer_wallet.match_spend(spend, mod, curried_args)
                 if outer_match is not None:
                     outer_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
@@ -318,9 +318,9 @@ class WalletActionManager:
             matches: List[Tuple[CoinInfo, List[WalletAction]]] = []
             mod, curried_args = spend.puzzle_reveal.uncurry()
             for outer_wallet in self.wallet_state_manager.outer_wallets:
-                outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await outer_wallet.match_spend(
-                    spend, mod, curried_args
-                )
+                outer_match: Optional[
+                    Tuple[PuzzleSolutionDescription, Program, Program]
+                ] = await outer_wallet.match_spend(spend, mod, curried_args)
                 if outer_match is not None:
                     outer_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()

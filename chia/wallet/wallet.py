@@ -18,6 +18,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
