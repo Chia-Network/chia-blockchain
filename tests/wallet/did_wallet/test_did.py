@@ -956,7 +956,7 @@ class TestDIDWallet:
             1,
             ph1,
             fee,
-            exclude_coins=set([coin]),
+            exclude_coins=set([coin_1]),
         )
         await wallet.push_transaction(tx)
         for i in range(1, num_blocks):
