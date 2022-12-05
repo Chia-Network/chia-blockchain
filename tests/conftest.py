@@ -418,7 +418,7 @@ async def wallet_two_node_simulator():
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
     async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
