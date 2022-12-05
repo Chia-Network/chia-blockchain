@@ -30,7 +30,6 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.did_wallet.did_wallet_puzzles import SINGLETON_LAUNCHER
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -44,7 +43,8 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
     generate_cat_tail,
-    curry_singleton
+    curry_singleton,
+    SINGLETON_LAUNCHER
 )
 
 
@@ -1097,6 +1097,8 @@ class DAOWallet:
             cat_tail_info,
             amount_of_cats,
         )
+
+        assert new_cat_wallet is not None
 
         cat_wallet_id = new_cat_wallet.wallet_info.id
 
