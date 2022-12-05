@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from dataclasses import dataclass
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
@@ -29,7 +28,6 @@ from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import (
     ActionAlias,
-    InnerDriver as InnerDriverProtocol,
     PuzzleSolutionDescription,
     SpendDescription,
     WalletAction,
@@ -1491,7 +1489,7 @@ class DataLayerWallet:
         ]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class OuterDriver:
     launcher_id: bytes32
     root: bytes32
@@ -1661,7 +1659,7 @@ class OuterDriver:
 _T_UpdateMetadataDL = TypeVar("_T_UpdateMetadataDL", bound="UpdateMetadataDL")
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class UpdateMetadataDL(UpdateMetadata):
     metadata_updater: Program = ACS_MU
 

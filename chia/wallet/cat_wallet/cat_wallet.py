@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import time
 import traceback
-from dataclasses import dataclass
 from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
@@ -28,7 +27,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -1003,7 +1002,7 @@ class CATWallet:
         ]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class OuterDriver:
     tail: bytes32
     parent_lineage: LineageProof

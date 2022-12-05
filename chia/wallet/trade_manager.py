@@ -874,16 +874,16 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
-                for puzzle_info in driver_dict.values():
+                for info in driver_dict.values():
                     if (
                         not (
-                            puzzle_info.check_type(
+                            info.check_type(
                                 [
                                     AssetType.SINGLETON.value,
                                     AssetType.METADATA.value,
                                 ]
                             )
-                            and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                            and info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
                         )
                         or None in offer_dict
                     ):

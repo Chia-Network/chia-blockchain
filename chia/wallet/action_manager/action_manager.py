@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -38,7 +37,7 @@ def nonce_coin_list(coins: List[Coin]) -> bytes32:
     return Program.to(sorted_coin_list).get_tree_hash()
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class WalletActionManager:
     """
     This class defines methods for creating spends from user input and performing actions on those spends
@@ -204,17 +203,17 @@ class WalletActionManager:
             # Step 1: Get any wallets that claim to identify the puzzle
             matches: List[SpendDescription] = []
             mod, curried_args = spend.puzzle_reveal.uncurry()
-            for wallet in self.wallet_state_manager.outer_wallets:
-                outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await wallet.match_spend(
+            for outer_wallet in self.wallet_state_manager.outer_wallets:
+                outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await outer_wallet.match_spend(
                     spend, mod, curried_args
                 )
                 if outer_match is not None:
                     outer_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
-                    for wallet in self.wallet_state_manager.inner_wallets:
+                    for inner_wallet in self.wallet_state_manager.inner_wallets:
                         inner_description: Optional[
                             PuzzleSolutionDescription
-                        ] = await wallet.match_inner_puzzle_and_solution(
+                        ] = await inner_wallet.match_inner_puzzle_and_solution(
                             spend.coin, inner_puzzle, inner_solution, mod, curried_args
                         )
                         if inner_description is not None:
@@ -318,17 +317,17 @@ class WalletActionManager:
             # Step 2: Get any wallets that claim to identify the puzzle
             matches: List[Tuple[CoinInfo, List[WalletAction]]] = []
             mod, curried_args = spend.puzzle_reveal.uncurry()
-            for wallet in self.wallet_state_manager.outer_wallets:
-                outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await wallet.match_spend(
+            for outer_wallet in self.wallet_state_manager.outer_wallets:
+                outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await outer_wallet.match_spend(
                     spend, mod, curried_args
                 )
                 if outer_match is not None:
                     outer_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
-                    for wallet in self.wallet_state_manager.inner_wallets:
+                    for inner_wallet in self.wallet_state_manager.inner_wallets:
                         inner_description: Optional[
                             PuzzleSolutionDescription
-                        ] = await wallet.match_inner_puzzle_and_solution(
+                        ] = await inner_wallet.match_inner_puzzle_and_solution(
                             spend.coin, inner_puzzle, inner_solution, mod, curried_args
                         )
                         if inner_description is not None:

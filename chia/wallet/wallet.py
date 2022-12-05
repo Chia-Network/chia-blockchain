@@ -633,18 +633,18 @@ class Wallet:
                 for addition in new_additions:
                     wallet_info: Optional[
                         Tuple[uint32, WalletType]
-                    ] = await wallet_state_manager.get_wallet_id_for_puzzle_hash(action.payment.puzzle_hash)
+                    ] = await wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.payment.puzzle_hash)
                     if wallet_info is not None:
                         selected_coins.append(
                             CoinInfo(
-                                Coin(spend.coin.name(), action.payment.puzzle_hash, action.payment.amount),
+                                Coin(spend.coin.name(), addition.payment.puzzle_hash, addition.payment.amount),
                                 Solver({}),
                                 OuterDriver(),
                                 # TODO: this is hacky, but works because we only have one inner wallet
                                 InnerDriver(
                                     calculate_synthetic_public_key(
                                         await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                                            action.payment.puzzle_hash
+                                            addition.payment.puzzle_hash
                                         ),
                                         DEFAULT_HIDDEN_PUZZLE_HASH,
                                     )

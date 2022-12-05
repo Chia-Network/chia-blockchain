@@ -78,7 +78,7 @@ from chia.wallet.action_manager.action_aliases import (
     RequestPayment,
 )
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType

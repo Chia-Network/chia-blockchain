@@ -71,8 +71,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     maker_root, _ = build_merkle_tree(MAKER_ROWS)
     taker_root, _ = build_merkle_tree(TAKER_ROWS)
 
-    fee = uint64(1_999_999_999_999)
-
     dl_record, std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(maker_root)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
     await wsm_maker.add_pending_transaction(dl_record)
