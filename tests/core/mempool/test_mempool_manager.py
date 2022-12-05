@@ -6,7 +6,10 @@ import pytest
 from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +19,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.errors import ValidationError
+from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 
 IDENTITY_PUZZLE = Program.to(1)
@@ -72,6 +75,13 @@ def spend_bundle_from_conditions(conditions: List[List[Any]]) -> SpendBundle:
     return SpendBundle([coin_spend], G2Element())
 
 
+def get_name_puzzle_conditions_on_spendbundle(mempool_manager: MempoolManager, sb: SpendBundle) -> NPCResult:
+    program = simple_solution_generator(sb)
+    max_cost = int(mempool_manager.limit_factor * mempool_manager.constants.MAX_BLOCK_COST_CLVM)
+    cost_per_byte = mempool_manager.constants.COST_PER_BYTE
+    return get_name_puzzle_conditions(program, max_cost=max_cost, cost_per_byte=cost_per_byte, mempool_mode=True)
+
+
 @pytest.mark.asyncio
 async def test_negative_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
@@ -81,6 +91,8 @@ async def test_negative_addition_amount() -> None:
     # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    result = get_name_puzzle_conditions_on_spendbundle(mempool_manager, sb)
+    assert result.error == Err.INVALID_CONDITION.value
 
 
 @pytest.mark.asyncio
@@ -91,6 +103,8 @@ async def test_valid_addition_amount() -> None:
     sb = spend_bundle_from_conditions(conditions)
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
     assert npc_result.error is None
+    result = get_name_puzzle_conditions_on_spendbundle(mempool_manager, sb)
+    assert result.error is None
 
 
 @pytest.mark.asyncio
@@ -103,3 +117,5 @@ async def test_too_big_addition_amount() -> None:
     # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    result = get_name_puzzle_conditions_on_spendbundle(mempool_manager, sb)
+    assert result.error == Err.INVALID_CONDITION.value
