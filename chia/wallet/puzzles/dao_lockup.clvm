@@ -20,6 +20,8 @@
   new_proposal_vote_id_or_removal_id
   proposal_curry_vals
   vote_info
+  vote_amount
+  my_puzhash
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -36,22 +38,37 @@
   )
 
   ; loop through conditions and check that they aren't trying to create anything they shouldn't
-  (defun check_conditions (conditions lockup_puzhash my_amount message)
+  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
-        (if (all (= (f (r (f conditions))) lockup_puzhash) (= (f (r (r (f conditions)))) my_amount))
-          (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
+        (if (= (f (r (f conditions))) vote_added_puzhash)
+          (if seen_vote
+            (x)
+            (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
+             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
+             (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
+               (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 seen_no_vote))
+               (x)
+             )
+            )
+          )
+         (if (all (= (f (r (f conditions))) my_puzhash) (not seen_no_vote) (= (f (r (r (f conditions)))) (- my_amount vote_amount)))  ; we recreate ourselves with unused voting power
+          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote 1))
           (x)
+         )
         )
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
-            (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
+            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message))
             (x)
           )
-          (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
+          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message))
         )
       )
-      ()
+      (if (all seen_vote seen_no_vote)  ; check all value is accounted for
+        ()
+        (x)
+      )
     )
   )
 
@@ -225,44 +242,48 @@
 
   ; main
   (if my_id
-
-    (c
-      (list ASSERT_MY_AMOUNT my_amount)
+    (c (list ASSERT_MY_PUZZLEHASH my_puzhash)
       (c
-        (list ASSERT_MY_COIN_ID my_id)
+        (list ASSERT_MY_AMOUNT my_amount)
         (c
-          (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
-            SINGLETON_MOD_HASH
-            SINGLETON_LAUNCHER_PUZHASH
-            LOCKUP_MOD_HASH
-            CAT_MOD_HASH
-            CAT_TAIL
-            PROPOSAL_MOD_HASH
-            LOCKUP_TIME
-            INNERPUZ
-            my_id
-            new_proposal_vote_id_or_removal_id
-            PREVIOUS_VOTES
-            proposal_curry_vals
-          )
-          (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
-            (a INNERPUZ inner_solution)
-            (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
-              PROPOSAL_MOD_HASH
+          (list ASSERT_MY_COIN_ID my_id)
+          (c
+            (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
               CAT_MOD_HASH
               CAT_TAIL
+              PROPOSAL_MOD_HASH
               LOCKUP_TIME
-              (c new_proposal_vote_id_or_removal_id PREVIOUS_VOTES)
               INNERPUZ
+              my_id
+              new_proposal_vote_id_or_removal_id
+              PREVIOUS_VOTES
+              proposal_curry_vals
             )
-            my_amount
-            (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+            (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
+              (a INNERPUZ inner_solution)
+              (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
+                PROPOSAL_MOD_HASH
+                SINGLETON_MOD_HASH
+                SINGLETON_LAUNCHER_PUZHASH
+                LOCKUP_MOD_HASH
+                CAT_MOD_HASH
+                CAT_TAIL
+                LOCKUP_TIME
+                (c new_proposal_vote_id_or_removal_id PREVIOUS_VOTES)
+                INNERPUZ
+              )
+              my_amount
+              (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+              vote_amount
+              my_puzhash
+              0
+              0
+            )
           )
         )
-
       )
     )
 

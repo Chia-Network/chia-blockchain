@@ -278,10 +278,12 @@ def test_lockup() -> None:
             new_proposal,
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
             1,
+            20,
+            child_puzhash,
         ]
     )
     conds: Program = full_lockup_puz.run(solution)
-    assert len(conds.as_python()) == 5
+    assert len(conds.as_python()) == 6
 
     solution = Program.to(
         [
