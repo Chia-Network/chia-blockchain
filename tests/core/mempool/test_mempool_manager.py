@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-from typing import Any, Iterator, List, Optional
+from typing import Any, List, Optional
 
 import pytest
 import pytest_asyncio
@@ -30,49 +29,43 @@ TEST_COIN_ID = TEST_COIN.name()
 TEST_COIN_RECORD = CoinRecord(TEST_COIN, uint32(0), uint32(0), False, TEST_TIMESTAMP)
 TEST_COIN_RECORDS = {TEST_COIN_ID: TEST_COIN_RECORD}
 TEST_HEIGHT = uint32(1)
-TEST_BLOCK_RECORD = BlockRecord(
-    IDENTITY_PUZZLE_HASH,
-    IDENTITY_PUZZLE_HASH,
-    TEST_HEIGHT,
-    uint128(0),
-    uint128(0),
-    uint8(0),
-    ClassgroupElement(bytes100(b"0" * 100)),
-    None,
-    IDENTITY_PUZZLE_HASH,
-    IDENTITY_PUZZLE_HASH,
-    uint64(0),
-    IDENTITY_PUZZLE_HASH,
-    IDENTITY_PUZZLE_HASH,
-    uint64(0),
-    uint8(0),
-    False,
-    uint32(TEST_HEIGHT - 1),
-    TEST_TIMESTAMP,
-    None,
-    uint64(0),
-    None,
-    None,
-    None,
-    None,
-    None,
-)
 
 
 async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
     return TEST_COIN_RECORDS.get(coin_id)
 
 
-@pytest.fixture(scope="module")
-def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def mempool_manager() -> MempoolManager:
     mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
-    await mempool_manager.new_peak(TEST_BLOCK_RECORD, None)
+    test_block_record = BlockRecord(
+        IDENTITY_PUZZLE_HASH,
+        IDENTITY_PUZZLE_HASH,
+        TEST_HEIGHT,
+        uint128(0),
+        uint128(0),
+        uint8(0),
+        ClassgroupElement(bytes100(b"0" * 100)),
+        None,
+        IDENTITY_PUZZLE_HASH,
+        IDENTITY_PUZZLE_HASH,
+        uint64(0),
+        IDENTITY_PUZZLE_HASH,
+        IDENTITY_PUZZLE_HASH,
+        uint64(0),
+        uint8(0),
+        False,
+        uint32(TEST_HEIGHT - 1),
+        TEST_TIMESTAMP,
+        None,
+        uint64(0),
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+    await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
 
