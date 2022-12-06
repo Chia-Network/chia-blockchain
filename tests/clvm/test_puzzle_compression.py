@@ -1,22 +1,25 @@
-from blspy import G1Element, G2Element
+from __future__ import annotations
+
 from typing import Dict
 
+from blspy import G1Element, G2Element
+
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
-from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
-from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.util.puzzle_compression import (
-    LATEST_VERSION,
-    lowest_best_version,
-    compress_object_with_puzzles,
-    decompress_object_with_puzzles,
-)
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
+from chia.wallet.trading.offer import OFFER_MOD
+from chia.wallet.util.puzzle_compression import (
+    LATEST_VERSION,
+    compress_object_with_puzzles,
+    decompress_object_with_puzzles,
+    lowest_best_version,
+)
 
 ZERO_32 = bytes32([0] * 32)
 ONE_32 = bytes32([17] * 32)

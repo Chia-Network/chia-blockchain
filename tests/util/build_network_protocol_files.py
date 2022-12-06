@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import os
 import subprocess
 import sysconfig
-from typing import Callable, Any
 from pathlib import Path
-from tests.util.network_protocol_data import *  # noqa: F403
+from typing import Any, Callable
+
 from chia.util.ints import uint32
+from tests.util.network_protocol_data import *  # noqa: F403
 
 version = "1.0"
 
