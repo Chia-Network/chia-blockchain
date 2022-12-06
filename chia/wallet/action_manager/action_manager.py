@@ -21,20 +21,20 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
 # Using a place holder nonce to replace with the correct nonce at the end of spend construction (sha256 "bundle nonce")
-BUNDLE_NONCE: bytes32 = bytes.fromhex("bba981ec36ebb2a0df2052893646b01ffb483128626b68e70f767f48fc5fbdbb")
+BUNDLE_NONCE: bytes32 = bytes32.from_hexstr("bba981ec36ebb2a0df2052893646b01ffb483128626b68e70f767f48fc5fbdbb")
 
 
 def nonce_payments(action: Solver) -> Solver:
-    if action["type"] == RequestPayment.name():
-        if "nonce" not in action:
-            return Solver({**action.info, "nonce": "0x" + BUNDLE_NONCE.hex()})
+    if action["type"] == RequestPayment.name() and "nonce" not in action:
+        return Solver({**action.info, "nonce": "0x" + BUNDLE_NONCE.hex()})
     else:
         return action
 
 
 def nonce_coin_list(coins: List[Coin]) -> bytes32:
-    sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in coins]
-    return Program.to(sorted_coin_list).get_tree_hash()
+    sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted(coins, key=Coin.name)]
+    as_program: Program = Program.to(sorted_coin_list)
+    return as_program.get_tree_hash()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -226,11 +226,14 @@ class WalletActionManager:
                 raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
             # Step 2: Attempt to find matching aliases for the actions
-            info = CoinInfo.from_spend_description(matches[0])
-            actions = info.alias_actions(matches[0].get_all_actions(), self.wallet_state_manager.action_aliases)
+            spend_description: SpendDescription = matches[0]
+            info = CoinInfo.from_spend_description(spend_description)
+            actions = info.alias_actions(spend_description.get_all_actions(), self.wallet_state_manager.action_aliases)
 
             final_actions.append(Solver({"with": info.description, "do": [action.to_solver() for action in actions]}))
-            final_signatures.extend([(info.coin.name(), *sig) for sig in matches[0].get_all_signatures()])
+
+            all_signature_info: List[Tuple[G1Element, bytes, bool]] = spend_description.get_all_signatures()
+            final_signatures.extend([(bytes32(info.coin.name()), *sig) for sig in all_signature_info])
 
         # Step 4: Attempt to group coins in some way
         asset_types: List[List[Solver]] = []

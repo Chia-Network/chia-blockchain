@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -694,7 +694,7 @@ class Wallet:
 class OuterDriver:
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
-    def get_wallet_class() -> Wallet:
+    def get_wallet_class() -> Type[Wallet]:
         return Wallet
 
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
@@ -738,7 +738,7 @@ class OuterDriver:
         )
 
     @staticmethod
-    def get_asset_types(request: Solver) -> Solver:
+    def get_asset_types(request: Solver) -> List[Solver]:
         return []
 
     @staticmethod
@@ -810,11 +810,12 @@ class InnerDriver:
             actions.extend([Condition(condition) for condition in solution.at("rf").run(delegated_solution).as_iter()])
 
         pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
+        delegated_puzzle: Program = solution.at("rf")
 
         return PuzzleSolutionDescription(
             InnerDriver(pubkey),
             actions,
-            [(pubkey, solution.at("rf").get_tree_hash(), True)],
+            [(pubkey, delegated_puzzle.get_tree_hash(), True)],
             Solver({}),
             Solver({}),
         )

@@ -90,7 +90,7 @@ class Solver:
         else:
             return False
 
-    def __or__(self, other: object) -> "Solver":
+    def __or__(self, other: "Solver") -> "Solver":
         return Solver({**self.info, **other.info})
 
     def __eq__(self, other: object) -> bool:
@@ -134,4 +134,5 @@ def cast_to_int(num: Union[int, bytes]) -> int:
     if isinstance(num, int):
         return num
     elif isinstance(num, bytes):
-        return int_from_bytes(num)
+        deserialized_int: int = int_from_bytes(num)
+        return deserialized_int

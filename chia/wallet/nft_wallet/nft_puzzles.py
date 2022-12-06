@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
@@ -329,7 +329,7 @@ class UpdateMetadata:
         return "update_metadata"
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> _T_UpdateMetadata:
+    def from_solver(cls: Type[_T_UpdateMetadata], solver: Solver) -> _T_UpdateMetadata:
         args: List[Program] = []
         if "new_metadata" in solver:
             args.append(solver["new_metadata"])
@@ -356,7 +356,7 @@ class UpdateMetadata:
         return Condition.name()
 
     @classmethod
-    def from_action(cls, action: WalletAction) -> _T_UpdateMetadata:
+    def from_action(cls: Type[_T_UpdateMetadata], action: WalletAction) -> _T_UpdateMetadata:
         if action.name() != Condition.name():
             raise ValueError("Can only parse a UpdateMetadata from Condition")
 

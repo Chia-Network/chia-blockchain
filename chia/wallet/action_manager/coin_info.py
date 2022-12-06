@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -38,7 +38,7 @@ class CoinInfo:
         )
 
     @classmethod
-    def from_spend_description(cls, description: SpendDescription) -> _T_CoinInfo:
+    def from_spend_description(cls: Type[_T_CoinInfo], description: SpendDescription) -> _T_CoinInfo:
         return cls(
             description.coin,
             description.get_full_description(),

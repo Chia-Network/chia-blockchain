@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterator, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -128,7 +128,7 @@ class RequireDLInclusion:
         return "require_dl_inclusion"
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> _T_RequireDLInclusion:
+    def from_solver(cls: Type[_T_RequireDLInclusion], solver: Solver) -> _T_RequireDLInclusion:
         return cls(
             [bytes32(launcher_id) for launcher_id in solver["launcher_ids"]],
             [[bytes32(value) for value in values] for values in solver["values_to_prove"]],
@@ -182,10 +182,10 @@ class RequireDLInclusion:
 
     @staticmethod
     def action_name() -> str:
-        return Graftroot.name()
+        return str(Graftroot.name())
 
     @classmethod
-    def from_action(cls, action: WalletAction) -> _T_RequireDLInclusion:
+    def from_action(cls: Type[_T_RequireDLInclusion], action: WalletAction) -> _T_RequireDLInclusion:
         if action.name() != Graftroot.name():
             raise ValueError("Can only parse a RequireDLInclusion from Graftroot")
 
@@ -220,9 +220,9 @@ class RequireDLInclusion:
             for spend in all_spends:
                 matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
                 if matched:
-                    innerpuz, root, launcher_id = curried_args
-                    singleton_to_innerpuzhashs_and_roots.setdefault(bytes32(launcher_id.as_python()), [])
-                    singleton_to_innerpuzhashs_and_roots[bytes32(launcher_id.as_python())].append(
+                    innerpuz, root, id = curried_args
+                    singleton_to_innerpuzhashs_and_roots.setdefault(bytes32(id.as_python()), [])
+                    singleton_to_innerpuzhashs_and_roots[bytes32(id.as_python())].append(
                         (
                             innerpuz.get_tree_hash(),
                             bytes32(root.as_python()),
@@ -232,18 +232,18 @@ class RequireDLInclusion:
             all_proofs = []
             all_roots = []
             for launcher_id, values in zip(self.launcher_ids, self.values_to_prove):
-                acceptable_roots: List[bytes32] = [root for _, r in singleton_to_innerpuzhashs_and_roots[launcher_id]]
+                acceptable_roots: List[bytes32] = [r for _, r in singleton_to_innerpuzhashs_and_roots[launcher_id]]
                 proved_root: Optional[bytes32] = None
                 proofs_of_inclusion: List[Program] = []
                 while proved_root is None:
                     for value in values:
                         for proof in environment["dl_inclusion_proofs"]:
                             _proof = (proof.first().as_int(), proof.rest().as_python())
-                            root = _simplify_merkle_proof(value, _proof)
-                            if root in acceptable_roots:
+                            calculated_root = _simplify_merkle_proof(value, _proof)
+                            if calculated_root in acceptable_roots:
                                 if proved_root is None:
-                                    proved_root = root
-                                elif root != proved_root:
+                                    proved_root = calculated_root
+                                elif calculated_root != proved_root:
                                     continue
                                 proofs_of_inclusion.append(proof)
                                 break

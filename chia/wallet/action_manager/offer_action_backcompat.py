@@ -17,7 +17,7 @@ from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, Off
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import PuzzleSolutionDescription, SpendDescription, WalletAction
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
@@ -41,7 +41,7 @@ async def old_request_to_new(
     driver_dict: Dict[bytes32, PuzzleInfo],
     solver: Solver,
     fee: uint64,
-) -> Tuple[Solver, Dict[bytes32, PuzzleInfo]]:
+) -> Solver:
     """
     This method takes an old style offer dictionary and converts it to a new style action specification
     """
@@ -74,7 +74,7 @@ async def old_request_to_new(
             wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
 
         # We need to fill in driver dict entries that we can and raise on discrepencies
-        if callable(getattr(wallet, "get_puzzle_info", None)):
+        if asset_id is not None and callable(getattr(wallet, "get_puzzle_info", None)):
             puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
             if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
                 raise ValueError(f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}")
@@ -90,7 +90,7 @@ async def old_request_to_new(
             while True:
                 type_description: Dict[str, Any] = puzzle_info.info
                 if "also" in type_description:
-                    puzzle_info = puzzle_info.also()
+                    puzzle_info = PuzzleInfo(type_description["also"])
                     del type_description["also"]
                     asset_types.append(type_description)
                 else:
@@ -118,15 +118,17 @@ async def old_request_to_new(
             this_solver = None
 
         # Take note of of the dl dependencies if there are any
-        if "dependencies" in this_solver:
+        if this_solver is not None and "dependencies" in this_solver:
             dl_dependencies.append(
-                {
-                    "type": "require_dl_inclusion",
-                    "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
-                    "values_to_prove": [
-                        ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
-                    ],
-                }
+                Solver(
+                    {
+                        "type": "require_dl_inclusion",
+                        "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
+                        "values_to_prove": [
+                            ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
+                        ],
+                    }
+                )
             )
 
         if wallet.type() == WalletType.DATA_LAYER:
@@ -161,12 +163,6 @@ async def old_request_to_new(
                     offered_asset["with"]["amount"] = str(
                         cast_to_int(Solver(offered_asset["with"])["amount"]) + payment.amount
                     )
-
-            # The standard XCH should pay the fee
-            if asset_id is None and fee > 0:
-                action_batch.append(Fee(fee).to_solver())
-                offered_asset["with"]["amount"] = str(cast_to_int(Solver(offered_asset["with"])["amount"]) + fee)
-
             # Provenant NFTs by default clear their ownership on transfer
             elif driver_dict[asset_id].check_type(
                 [
@@ -183,6 +179,10 @@ async def old_request_to_new(
                         },
                     }
                 )
+            # The standard XCH should pay the fee
+            if asset_id is None and fee > 0:
+                action_batch.append(Fee(fee).to_solver())
+                offered_asset["with"]["amount"] = str(cast_to_int(Solver(offered_asset["with"])["amount"]) + fee)
             offered_asset["do"] = action_batch
 
         final_solver["actions"].append(offered_asset)
@@ -204,7 +204,7 @@ async def old_request_to_new(
     final_solver.setdefault("bundle_actions", [])
     final_solver["bundle_actions"].extend(dl_dependencies)
     for asset_id, amount in requested_assets.items():
-        asset_types: List[Solver] = []
+        asset_types = []
         p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
         # DL singletons are not sent as part of offers by default
@@ -219,7 +219,9 @@ async def old_request_to_new(
         ):
             asset_driver = driver_dict[asset_id]
             if asset_driver.type() == AssetType.CAT.value:
-                asset_types = CATOuterDriver.get_asset_types(Solver({"tail": "0x" + asset_id.hex()}))
+                asset_types = [
+                    solver.info for solver in CATOuterDriver.get_asset_types(Solver({"tail": "0x" + asset_id.hex()}))
+                ]
             elif asset_driver.check_type(
                 [
                     AssetType.SINGLETON.value,
@@ -241,7 +243,7 @@ async def old_request_to_new(
                     nft_dict["owner"] = asset_driver.info["owner"]
                     nft_dict["transfer_program"] = asset_driver.info["transfer_program"]
 
-                asset_types = NFTWallet.get_asset_types(nft_dict)
+                asset_types = [solver.info for solver in NFTWallet.get_asset_types(Solver(nft_dict))]
 
             final_solver["bundle_actions"].append(
                 {
@@ -346,7 +348,7 @@ def request_payment_to_legacy_encoding(action: RequestPayment, add_nonce: Option
     )
 
 
-async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
+async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -> bytes:
     new_spends: List[CoinSpend] = []
     environment: Solver = Solver({})
     for spend in bundle.coin_spends:
@@ -589,7 +591,7 @@ async def generate_summary_complement(
         for action in actions_to_loop:
             if action["type"] == OfferedAmount.name():
                 new_p2_puzhash: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
-                self_payment: Payment = Payment(new_p2_puzhash, cast_to_int(action["amount"]), [new_p2_puzhash])
+                self_payment: Payment = Payment(new_p2_puzhash, uint64(cast_to_int(action["amount"])), [new_p2_puzhash])
                 asset_types: List[Solver] = (
                     total_action["with"]["asset_types"] if "asset_types" in total_action["with"] else []
                 )
@@ -637,13 +639,15 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
     for key, solver in old_solver.info.items():
         if "dependencies" in old_solver[key]:
             bundle_actions.append(
-                {
-                    "type": "require_dl_inclusion",
-                    "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in old_solver[key]["dependencies"]],
-                    "values_to_prove": [
-                        ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in old_solver[key]["dependencies"]
-                    ],
-                }
+                Solver(
+                    {
+                        "type": "require_dl_inclusion",
+                        "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in old_solver[key]["dependencies"]],
+                        "values_to_prove": [
+                            ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in old_solver[key]["dependencies"]
+                        ],
+                    }
+                )
             )
 
         try:
@@ -652,7 +656,7 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
             continue
 
         wallet: WalletProtocol = await wallet_state_manager.get_wallet_for_asset_id(key)
-        if wallet.type() == WalletType.DATA_LAYER:
+        if WalletType(wallet.type()) == WalletType.DATA_LAYER:
             asset_types = DLOuterDriver.get_asset_types(
                 Solver({"launcher_id": "0x" + key if key[0:2] != "0x" else key})
             )
@@ -682,8 +686,9 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
                 )
             )
 
-    dl_inclusion_proofs: Optional[List[Program]] = []
+    dl_inclusion_proofs: Optional[List[Program]] = None
     if "proofs_of_inclusion" in old_solver:
+        dl_inclusion_proofs = []
         for proof in old_solver["proofs_of_inclusion"]:
             dl_inclusion_proofs.append(Program.to((proof[1], proof[2])))
 
@@ -691,7 +696,11 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
         {
             "actions": actions,
             "bundle_actions": bundle_actions,
-            "dl_inclusion_proofs": [disassemble(proof) for proof in dl_inclusion_proofs],
+            **(
+                {}
+                if dl_inclusion_proofs is None
+                else {"dl_inclusion_proofs": [disassemble(proof) for proof in dl_inclusion_proofs]}
+            ),
             **old_solver.info,
         }
     )
@@ -730,7 +739,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
                         asset_id = payment_request.asset_types[0]["committed_args"].at("frf").as_python().hex()
 
                 new_requested_descriptions: List[Dict[str, Any]] = []
-                added_amount: bool = False
+                added_amount = False
                 for description in requested_descriptions:
                     if "amount" in description:
                         new_requested_descriptions.append(
@@ -779,4 +788,6 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
         if requested_descriptions != []:
             old_summary["requested"].append(requested)
 
-    return ast.literal_eval(repr(old_summary))
+    # This is a bit hacky but it works for right now
+    old_summary_dict: Dict[str, Any] = ast.literal_eval(repr(old_summary))
+    return old_summary_dict

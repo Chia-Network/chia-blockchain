@@ -801,7 +801,7 @@ class TradeManager:
 
         self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
+        final_spend_bundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
 
@@ -946,9 +946,13 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return new_summary_to_old(
-                            await self.wallet_state_manager.action_manager.deconstruct_spend(offer_to_spend(offer))
+                        offer_as_spend: SpendBundle = offer_to_spend(offer)
+                        deconstructed_spend: Solver = await self.wallet_state_manager.action_manager.deconstruct_spend(
+                            offer_as_spend
                         )
+                        old_summary: Dict[str, Any] = new_summary_to_old(deconstructed_spend)
+                        return old_summary
+
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()
@@ -990,9 +994,9 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return (
-                            await self.wallet_state_manager.action_manager.deconstruct_spend(  # Advanced offer summary
-                                offer_to_spend(offer)
-                            )
+                        offer_as_spend: SpendBundle = offer_to_spend(offer)
+                        deconstructed_spend: Solver = await self.wallet_state_manager.action_manager.deconstruct_spend(
+                            offer_as_spend
                         )
+                        return deconstructed_spend
         return None

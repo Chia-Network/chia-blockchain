@@ -31,8 +31,8 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     create_ownership_layer_puzzle,
     get_metadata_and_phs,
     SINGLETON_TOP_LAYER_MOD,
-    SINGLETON_TOP_LAYER_MOD_HASH,
-    SINGLETON_LAUNCHER_HASH,
+    SINGLETON_MOD_HASH,
+    LAUNCHER_PUZZLE_HASH,
     NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,
     NFT_OWNERSHIP_LAYER,
@@ -1597,7 +1597,7 @@ class NFTWallet:
         raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
 
     @staticmethod
-    def get_asset_types(request: Solver) -> Solver:
+    def get_asset_types(request: Solver) -> List[Solver]:
         return [
             Solver(
                 {
@@ -1605,9 +1605,9 @@ class NFTWallet:
                     "solution_template": f"((1 . ({'1' if 'launcher_id' in request else '-1'} . 1)) 0 . $)",
                     "committed_args": (
                         "("
-                        f"({'0x' + SINGLETON_TOP_LAYER_MOD_HASH.hex()} . "
+                        f"({'0x' + SINGLETON_MOD_HASH.hex()} . "
                         f"({'0x' + request['launcher_id'].hex() if 'launcher_id' in request else '()'} . "
-                        f"{'0x' + SINGLETON_LAUNCHER_HASH.hex()})) () . ())"
+                        f"{'0x' + LAUNCHER_PUZZLE_HASH.hex()})) () . ())"
                     ),
                 }
             ),

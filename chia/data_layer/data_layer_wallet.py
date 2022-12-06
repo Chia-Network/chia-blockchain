@@ -37,7 +37,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
-    NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -54,7 +53,7 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.nft_wallet.nft_puzzles import UpdateMetadata
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, UpdateMetadata
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -1473,7 +1472,7 @@ class DataLayerWallet:
                 OuterDriver(
                     expected_launcher_id,
                     singleton_record.root,
-                    selected_coin.amount,
+                    uint64(selected_coin.amount),
                     parent_lineage,
                 ),
                 # TODO: this is hacky, but works because we only have one inner wallet
@@ -1498,7 +1497,7 @@ class OuterDriver:
 
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
-    def get_wallet_class() -> _T_DataLayerWallet:
+    def get_wallet_class() -> Type[DataLayerWallet]:
         return DataLayerWallet
 
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
@@ -1515,8 +1514,8 @@ class OuterDriver:
     async def construct_outer_solution(
         self, actions: List[WalletAction], inner_solution: Program, environment: Solver, optimize: bool = False
     ) -> Program:
-        db_layer_sol = Program.to([inner_solution])
-        full_sol = Program.to(
+        db_layer_sol: Program = Program.to([inner_solution])
+        full_sol: Program = Program.to(
             [
                 self.parent_lineage.to_program(),
                 self.amount,
@@ -1537,9 +1536,7 @@ class OuterDriver:
 
         if len(outer_actions) == 1:
             alias: UpdateMetadataDL = UpdateMetadataDL.from_action(outer_actions[0])
-            if alias.new_metadata.cons is None:
-                raise ValueError("Cannot update a DL singleton with just an atom")
-            if len(alias.new_metadata.first().as_python()) != 32:
+            if len(alias.metadata_solution.first().first().as_python()) != 32:
                 raise ValueError("The specified metadata update would not leave a valid root")
 
         new_inner_actions: List[WalletAction] = [*outer_actions, *inner_actions]
@@ -1568,7 +1565,7 @@ class OuterDriver:
             if len(current_memos) >= 3 and current_memos[:3] == expected_hints:
                 singleton_recreation: DirectPayment = DirectPayment.from_action(singleton_recreations[0])
             else:
-                singleton_recreation: DirectPayment = dataclasses.replace(
+                singleton_recreation = dataclasses.replace(
                     DirectPayment.from_action(singleton_recreations[0]),
                     hints=expected_hints,
                 )
@@ -1582,9 +1579,9 @@ class OuterDriver:
     async def match_spend(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
-        matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+        matched, args = match_dl_singleton(spend.puzzle_reveal.to_program())
         if matched:
-            innerpuz, rt, lid = curried_args
+            innerpuz, rt, lid = args
             launcher_id: bytes32 = bytes32(lid.as_python())
             root: bytes32 = bytes32(rt.as_python())
 
@@ -1593,7 +1590,7 @@ class OuterDriver:
                     cls(
                         launcher_id,
                         root,
-                        spend.coin.amount,
+                        uint64(spend.coin.amount),
                         LineageProof.from_program(spend.solution.to_program().first()),
                     ),
                     [],
@@ -1617,7 +1614,7 @@ class OuterDriver:
             return None
 
     @staticmethod
-    def get_asset_types(request: Solver) -> Solver:
+    def get_asset_types(request: Solver) -> List[Solver]:
         return [
             Solver(
                 {
@@ -1654,6 +1651,7 @@ class OuterDriver:
             and asset_types[1]["committed_args"].at("rrf") == Program.to(ACS_MU_PH)
         ):
             return True
+        return False
 
 
 _T_UpdateMetadataDL = TypeVar("_T_UpdateMetadataDL", bound="UpdateMetadataDL")
@@ -1664,10 +1662,10 @@ class UpdateMetadataDL(UpdateMetadata):
     metadata_updater: Program = ACS_MU
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> _T_UpdateMetadataDL:
+    def from_solver(cls: Type[_T_UpdateMetadataDL], solver: Solver) -> _T_UpdateMetadataDL:
         args: List[Program] = []
         if "new_metadata" in solver:
-            args.append([[solver["new_metadata"], ACS_MU_PH], None])
+            args.append(Program.to([[solver["new_metadata"], ACS_MU_PH], None]))
         elif "metadata_solution" in solver:
             args.append(solver["metadata_solution"])
         if "metadata_updater" in solver:

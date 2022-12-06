@@ -5,7 +5,7 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
@@ -915,7 +915,7 @@ class CATWallet:
         ]
         parent_spends: List[CoinSpend] = [cs for cs in previous_actions if cs.coin.name() in non_ephemeral_parents]
 
-        selected_coins: List[Coin] = []
+        selected_coins: List[CoinInfo] = []
         for parent_spend in parent_spends:
             curried_args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
             if curried_args is not None:
@@ -924,7 +924,7 @@ class CATWallet:
                     parent_lineage = LineageProof(
                         parent_spend.coin.parent_coin_info,
                         inner_puzzle.get_tree_hash(),
-                        parent_spend.coin.amount,
+                        uint64(parent_spend.coin.amount),
                     )
                     inner_solution: Program = parent_spend.solution.to_program().at("f")
                     for condition in inner_puzzle.run(inner_solution).as_iter():
@@ -1010,7 +1010,7 @@ class OuterDriver:
 
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
-    def get_wallet_class() -> CATWallet:
+    def get_wallet_class() -> Type[CATWallet]:
         return CATWallet
 
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
@@ -1053,7 +1053,7 @@ class OuterDriver:
             relevant_descriptions: List[Solver] = [
                 description for description in environment["spend_descriptions"] if description["id"] in relevant_ids
             ]
-            relevant_descriptions.sort(key=lambda description: description["id"])
+            relevant_descriptions.sort(key=lambda description: bytes32(description["id"]))
 
             my_index: int = next(i for i, cs in enumerate(only_same_cat_spends) if cs.coin.name() == self.my_id)
             previous_index: int = my_index - 1
@@ -1081,7 +1081,7 @@ class OuterDriver:
                 else:
                     subtotals.append(subtotals[i - 1] + output_amounts[i] - coin.amount)
 
-            return Program.to(
+            full_solution: Program = Program.to(
                 [
                     inner_solution,
                     self.parent_lineage.to_program(),
@@ -1102,8 +1102,10 @@ class OuterDriver:
                     0,  # TODO: this could be a thing
                 ]
             )
+            return full_solution
         else:
-            return Program.to([inner_solution, self.parent_lineage.to_program(), *([None] * 5)])
+            placeholder: Program = Program.to([inner_solution, self.parent_lineage.to_program(), *([None] * 5)])
+            return placeholder
 
     async def check_and_modify_actions(
         self,
@@ -1118,9 +1120,9 @@ class OuterDriver:
     async def match_spend(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
-        curried_args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))
-        if curried_args is not None:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
+        args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))
+        if args is not None:
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = args
             tail: bytes32 = bytes32(genesis_coin_checker_hash.as_python())
             return (
                 PuzzleSolutionDescription(
@@ -1143,7 +1145,7 @@ class OuterDriver:
             return None
 
     @staticmethod
-    def get_asset_types(request: Solver) -> Solver:
+    def get_asset_types(request: Solver) -> List[Solver]:
         return [
             Solver(
                 {
@@ -1161,6 +1163,7 @@ class OuterDriver:
     async def match_asset_types(asset_types: List[Solver]) -> bool:
         if len(asset_types) == 1 and asset_types[0]["mod"] == CAT_MOD:
             return True
+        return False
 
 
 if TYPE_CHECKING:

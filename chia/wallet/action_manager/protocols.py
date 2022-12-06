@@ -109,7 +109,7 @@ class InnerDriver(Protocol):
 
     @staticmethod
     async def match_inner_puzzle_and_solution(
-        cls,
+        cls: Any,
         coin: Coin,
         puzzle: Program,
         solution: Program,

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Type, TypeVar
 
 from clvm_tools.binutils import disassemble
 
@@ -19,7 +19,7 @@ class Condition:
         return "condition"
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> _T_Condition:
+    def from_solver(cls: Type[_T_Condition], solver: Solver) -> _T_Condition:
         return cls(Program.to(solver["condition"]))
 
     def to_solver(self) -> Solver:
@@ -32,6 +32,9 @@ class Condition:
 
     def augment(self, environment: Solver) -> WalletAction:
         return self
+
+
+_T_Graftroot = TypeVar("_T_Graftroot", bound="Graftroot")
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,7 @@ class Graftroot:
         return "graftroot"
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> _T_Condition:
+    def from_solver(cls: Type[_T_Graftroot], solver: Solver) -> _T_Graftroot:
         return cls(
             Program.to(solver["puzzle_wrapper"]), Program.to(solver["solution_wrapper"]), Program.to(solver["metadata"])
         )

@@ -40,7 +40,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.action_manager.action_manager import WalletActionManager
-from chia.wallet.action_manager.protocols import SpendDescription
+from chia.wallet.action_manager.protocols import InnerDriver, OuterDriver, SpendDescription
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet, OuterDriver as CATOuterDriver
@@ -149,6 +149,8 @@ class WalletStateManager:
     dl_store: DataLayerStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
+    outer_wallets: List[OuterDriver]
+    inner_wallets: List[InnerDriver]
     action_aliases: Dict[str, ActionAlias]
     initial_num_public_keys: int
 
@@ -1820,8 +1822,8 @@ class WalletStateManager:
             }
         )
 
-    async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> WalletProtocol:
-        matches: List[WalletProtocol] = []
+    async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> OuterDriver:
+        matches: List[OuterDriver] = []
         for wallet in self.outer_wallets:
             match = await wallet.match_asset_types(asset_types)
             if match:
