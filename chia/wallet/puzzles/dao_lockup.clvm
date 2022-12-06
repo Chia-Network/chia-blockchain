@@ -45,7 +45,10 @@
           (if seen_vote
             (x)
             (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
-             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
+              (if seen_no_vote
+                (x)
+                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
+              )
              (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 seen_no_vote))
                (x)
@@ -59,10 +62,10 @@
         )
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
-            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message))
+            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote))
             (x)
           )
-          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message))
+          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote))
         )
       )
       (if (all seen_vote seen_no_vote)  ; check all value is accounted for
@@ -82,7 +85,7 @@
     PROPOSAL_MOD_HASH
     LOCKUP_TIME
     INNERPUZ
-    my_idq
+    my_id
     new_vote_id
     previous_votes
     proposal_curry_vals
@@ -304,7 +307,7 @@
         proposal_curry_vals
         ()
       )
-      (if new_proposal_vote_id  ; this forces the new_proposal_vote_id to be 0 if you're actually exiting, allows for tricks a layer up
+      (if new_proposal_vote_id_or_removal_id  ; this forces the new_proposal_vote_id to be 0 if you're actually exiting, allows for tricks a layer up
         (x)  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
         (a INNERPUZ inner_solution)
       )
