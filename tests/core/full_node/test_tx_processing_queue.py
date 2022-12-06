@@ -59,7 +59,7 @@ async def test_local_txs() -> None:
 async def test_one_peer_and_await() -> None:
     transaction_queue = TransactionQueue(1000, log)
     num_txs = 100
-    peer_id = bytes32(token_bytes(32))
+    peer_id = get_peer_id()
 
     list_txs = [get_transaction_queue_entry(peer_id, i) for i in range(num_txs)]
     for tx in list_txs:
@@ -136,30 +136,24 @@ async def test_full_queue() -> None:
 @pytest.mark.asyncio
 async def test_queue_cleanup_and_fairness() -> None:
     transaction_queue = TransactionQueue(1000, log)
-    num_peers = 1000
-    num_txs = 100
-    total_txs = num_txs * num_peers
-    peer_ids: List[bytes32] = [get_peer_id() for _ in range(num_peers)]
+    peer_a = get_peer_id()
+    peer_b = get_peer_id()
+    peer_c = get_peer_id()
 
-    # 100 txs per peer
-    list_txs = [get_transaction_queue_entry(peer_id, i) for peer_id in peer_ids for i in range(num_txs)]
+    # 2 for a, 1 for b, 2 for c
+    peer_tx_a = [get_transaction_queue_entry(peer_a, i) for i in range(2)]
+    peer_tx_b = [get_transaction_queue_entry(peer_b, 0)]
+    peer_tx_c = [get_transaction_queue_entry(peer_c, i) for i in range(2)]
+
+    list_txs = peer_tx_a + peer_tx_b + peer_tx_c
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    # give random peers another transaction
-    peer_index = sample(range(num_peers), 10)
-    peer_index.sort()  # use a sorted list to avoid stupid complexities.
-    selected_peers = [peer_ids[i] for i in peer_index]
-    extra_txs = [get_transaction_queue_entry(peers, 100) for peers in selected_peers]
-    for tx in extra_txs:
-        await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
-
-    resulting_txs = []
-    for _ in range(total_txs):
-        resulting_txs.append(await transaction_queue.pop())
-
-    resulting_extra_txs = []
-    for _ in range(10):
-        resulting_extra_txs.append(await transaction_queue.pop())
-
-    assert extra_txs == resulting_extra_txs  # validate that the extra txs are the same as the ones we put in.
+    resulting_ids = []
+    for _ in range(3):  # we validate we get one transaction per peer
+        resulting_ids.append((await transaction_queue.pop()).peer_id)  # type: ignore[attr-defined]
+    assert [peer_a, peer_b, peer_c] == resulting_ids  # all peers have been properly included in the queue.
+    second_resulting_ids = []
+    for _ in range(2):  # we validate that we properly queue the last 2 transactions
+        second_resulting_ids.append((await transaction_queue.pop()).peer_id)  # type: ignore[attr-defined]
+    assert [peer_a, peer_c] == second_resulting_ids
