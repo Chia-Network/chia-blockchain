@@ -364,7 +364,7 @@ class WSChiaConnection:
                 # peer protocol violation
                 error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
                 f"but received {recv_message_type.name}"
-                await self.ban_peer_bad_protocol(self.error_message)
+                await self.ban_peer_bad_protocol(error_message)
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
             recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)

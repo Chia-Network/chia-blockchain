@@ -77,6 +77,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
 MAX_DERIVATION_INDEX_DELTA = 1000
+MAX_NFT_CHUNK_SIZE = 25
 
 log = logging.getLogger(__name__)
 
@@ -183,6 +184,7 @@ class WalletRpcApi:
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
             "/nft_mint_bulk": self.nft_mint_bulk,
+            "/nft_set_did_bulk": self.nft_set_bulk_nft_did,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -2210,10 +2212,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
         assert isinstance(nft_wallet, NFTWallet)
-        did_id = request.get("did_id", "")
-        if did_id == "":
-            did_id = b""
-        else:
+        did_id = request.get("did_id", b"")
+        if did_id != b"":
             did_id = decode_puzzle_hash(did_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
@@ -2223,6 +2223,85 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+
+    async def nft_set_bulk_nft_did(self, request):
+        """
+        Bulk set DID for NFTs across different wallets.
+        accepted `request` dict keys:
+         - required `nft_coin_list`: [{"nft_coin_id": COIN_ID/NFT_ID, "wallet_id": WALLET_ID},....]
+         - optional `fee`, in mojos, defaults to 0
+         - optional `did_id`, defaults to no DID, meaning it will reset the NFT's DID
+        :param request:
+        :return:
+        """
+        if len(request["nft_coin_list"]) > MAX_NFT_CHUNK_SIZE:
+            return {"success": False, "error": f"You can only set {MAX_NFT_CHUNK_SIZE} NFTs at once"}
+        did_id = request.get("did_id", b"")
+        if did_id != b"":
+            did_id = decode_puzzle_hash(did_id)
+        nft_dict: Dict[uint32, List[NFTCoinInfo]] = {}
+        tx_list: List[TransactionRecord] = []
+        coin_ids = []
+        nft_ids = []
+        fee = uint64(request.get("fee", 0))
+        for nft_coin in request["nft_coin_list"]:
+            if "nft_coin_id" not in nft_coin or "nft_coin_id" not in nft_coin:
+                log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
+                continue
+            wallet_id = uint32(nft_coin["wallet_id"])
+            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
+            assert isinstance(nft_wallet, NFTWallet)
+            nft_coin_id = nft_coin["nft_coin_id"]
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+                nft_id = decode_puzzle_hash(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft(nft_id)
+            else:
+                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            assert nft_coin_info is not None
+            if not (
+                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+            ).supports_did:
+                log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
+                continue
+            if wallet_id in nft_dict:
+                nft_dict[wallet_id].append(nft_coin_info)
+            else:
+                nft_dict[wallet_id] = [nft_coin_info]
+            nft_ids.append(nft_coin_info.nft_id)
+        first = True
+        nft_wallet = None
+        for wallet_id, nft_list in nft_dict.items():
+            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
+            assert isinstance(nft_wallet, NFTWallet)
+            if not first:
+                tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id))
+            else:
+                tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id, fee, nft_ids))
+            for coin in nft_list:
+                coin_ids.append(coin.coin.name())
+            first = False
+        spend_bundles: List[SpendBundle] = []
+        refined_tx_list: List[TransactionRecord] = []
+        for tx in tx_list:
+            if tx.spend_bundle is not None:
+                spend_bundles.append(tx.spend_bundle)
+                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+
+        if len(spend_bundles) > 0:
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            # Add all spend bundles to the first tx
+            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+
+            for tx in refined_tx_list:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            for coin in coin_ids:
+                await nft_wallet.update_coin_status(coin, True)
+            for wallet_id in nft_dict.keys():
+                self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+            return {"wallet_id": nft_dict.keys(), "success": True, "spend_bundle": spend_bundle}
+        else:
+            raise ValueError("Couldn't set DID on given NFT")
 
     async def nft_get_by_did(self, request) -> EndpointResult:
         did_id: Optional[bytes32] = None
