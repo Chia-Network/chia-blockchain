@@ -42,10 +42,10 @@
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
         (if (= (f (r (f conditions))) vote_added_puzhash)
-          (if seen_vote
+          (if seen_vote  ; assert we haven't already made a coin with the new vote included
             (x)
             (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
-              (if seen_no_vote
+              (if seen_no_vote  ; assert that we haven't already recreated ourself in some fashion
                 (x)
                 (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
               )
@@ -92,7 +92,7 @@
   )
     (if previous_votes
       (if (= new_vote_id (f previous_votes))  ; check new vote id is not equal to an existent vote id
-        (x "everywhere")
+        (x)
         (check_not_previously_voted
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
