@@ -88,7 +88,7 @@ def print_coins(
                 break
             coin, conf_height = coins[i + j]
             address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix, True)
+            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix, decimal_only=True)
             print(f"Coin ID: 0x{coin.name().hex()}")
             print(target_string.format(address, amount_str, conf_height))
 
@@ -210,11 +210,11 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     puzzle_hashes: Set[bytes32] = set()  # we use a set for speed.
     for i in range(number_of_coins):  # for readability.
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
-        if target_ph in puzzle_hashes:
+        if target_ph in puzzle_hashes:  # if this ph is used by another coin that is being created, we cant use it.
             target_ph = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=False))
-            if target_ph in puzzle_hashes:  # we need to resort to a new addr.
+            if target_ph in puzzle_hashes:  # we need to get a new address because the second address is also used.
                 target_ph = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=True))
-        puzzle_hashes.add(target_ph)
+        puzzle_hashes.add(target_ph)  # add ph to list of ph's that we are using to avoid duplicates.
         additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         str(wallet_id), additions, [removal_coin_record.coin], final_fee
