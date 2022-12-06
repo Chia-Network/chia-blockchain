@@ -26,10 +26,10 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, WalletAction
 from chia.wallet.action_manager.wallet_actions import Condition
-from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -44,7 +44,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver, cast_to_int
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -58,8 +58,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet import InnerDriver as StdInnerDriver
+from chia.wallet.wallet import InnerDriver as StdInnerDriver, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 

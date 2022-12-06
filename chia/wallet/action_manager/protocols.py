@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, runtime_checkable
-from typing_extensions import Protocol
 
 from blspy import G1Element
+from typing_extensions import Protocol
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

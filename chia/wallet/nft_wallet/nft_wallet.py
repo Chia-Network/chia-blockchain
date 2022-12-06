@@ -27,15 +27,15 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER,
-    create_ownership_layer_puzzle,
-    get_metadata_and_phs,
-    SINGLETON_TOP_LAYER_MOD,
-    SINGLETON_MOD_HASH,
     LAUNCHER_PUZZLE_HASH,
+    NFT_METADATA_UPDATER,
+    NFT_OWNERSHIP_LAYER,
     NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,
-    NFT_OWNERSHIP_LAYER,
+    SINGLETON_MOD_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+    create_ownership_layer_puzzle,
+    get_metadata_and_phs,
 )
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle

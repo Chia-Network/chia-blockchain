@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
@@ -13,7 +15,6 @@ from chia.wallet.action_manager.protocols import (
     WalletAction,
 )
 from chia.wallet.puzzle_drivers import Solver
-
 
 _T_CoinInfo = TypeVar("_T_CoinInfo", bound="CoinInfo")
 

@@ -19,13 +19,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.action_manager.action_aliases import RequestPayment
 from chia.wallet.action_manager.action_manager import nonce_coin_list
 from chia.wallet.action_manager.offer_action_backcompat import (
-    old_request_to_new,
-    old_solver_to_new,
     generate_summary_complement,
     new_summary_to_old,
     offer_to_spend,
+    old_request_to_new,
+    old_solver_to_new,
     request_payment_to_legacy_encoding,
     spend_to_offer_bytes,
 )
@@ -36,7 +37,6 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.action_manager.action_aliases import RequestPayment
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore

@@ -39,12 +39,21 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
+from chia.wallet.action_manager.action_aliases import (
+    AssertAnnouncement,
+    DirectPayment,
+    Fee,
+    MakeAnnouncement,
+    OfferedAmount,
+    RequestPayment,
+)
 from chia.wallet.action_manager.action_manager import WalletActionManager
-from chia.wallet.action_manager.protocols import InnerDriver, OuterDriver, SpendDescription
+from chia.wallet.action_manager.coin_info import CoinInfo
+from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, SpendDescription
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet, OuterDriver as CATOuterDriver
-from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH, RequireDLInclusion
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     _derive_path,
@@ -54,8 +63,6 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_unhardened,
     master_sk_to_wallet_sk_unhardened_intermediate,
 )
-from chia.wallet.wallet_protocol import WalletProtocol
-from chia.wallet.db_wallet.db_wallet_puzzles import RequireDLInclusion
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
@@ -70,16 +77,6 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
-from chia.wallet.action_manager.action_aliases import (
-    AssertAnnouncement,
-    DirectPayment,
-    Fee,
-    MakeAnnouncement,
-    OfferedAmount,
-    RequestPayment,
-)
-from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
@@ -87,7 +84,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet, InnerDriver as StdInnerDriver, OuterDriver as StdOuterDriver
+from chia.wallet.wallet import InnerDriver as StdInnerDriver, OuterDriver as StdOuterDriver, Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -95,6 +92,7 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
+from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore

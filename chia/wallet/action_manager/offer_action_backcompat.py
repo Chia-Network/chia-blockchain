@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import dataclasses
 import math
@@ -17,7 +19,6 @@ from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, Off
 from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import PuzzleSolutionDescription, SpendDescription, WalletAction
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU_PH,
     GRAFTROOT_DL_OFFERS,
@@ -29,6 +30,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver, cast_to_int
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import OFFER_MOD, Offer
 from chia.wallet.util.wallet_types import WalletType
