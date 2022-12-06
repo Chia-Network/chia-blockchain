@@ -882,7 +882,7 @@ class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_get_info(self, two_wallet_nodes, trusted):
         num_blocks = 3
-        fee = uint64(1000)
+        fee = uint64(0)
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
@@ -956,12 +956,12 @@ class TestDIDWallet:
             1,
             ph1,
             fee,
-            exclude_coins=set([coin_1]),
+            exclude_coins=set([coin]),
         )
         await wallet.push_transaction(tx)
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-        await time_out_assert(30, wallet1.get_confirmed_balance, 2000000000001)
+        await time_out_assert(15, wallet1.get_confirmed_balance, 2000000000001)
         try:
             await api_0.did_get_info({"coin_id": coin_1.name().hex()})
             # We expect a ValueError here
@@ -1111,12 +1111,10 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
-
-        await time_out_assert(15, get_parent_num, parent_num + 2, did_wallet_1)
-        assert puzhash != did_wallet_1.did_info.current_inner.get_tree_hash()
         await time_out_assert(15, wallet.get_confirmed_balance, 3999999997899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 3999999997899)
-
+        await time_out_assert(15, get_parent_num, parent_num + 2, did_wallet_1)
+        assert puzhash != did_wallet_1.did_info.current_inner.get_tree_hash()
         assert did_wallet_1.did_info.metadata.find("Twitter") > 0
 
     @pytest.mark.parametrize(
