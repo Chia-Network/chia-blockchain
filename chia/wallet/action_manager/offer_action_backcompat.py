@@ -357,17 +357,17 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         # Step 2: Get any wallets that claim to identify the puzzle
         matches: List[SpendDescription] = []
         mod, curried_args = spend.puzzle_reveal.uncurry()
-        for wallet in wallet_state_manager.outer_wallets:
-            outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await wallet.match_spend(
+        for outer_wallet in wallet_state_manager.outer_wallets:
+            outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await outer_wallet.match_spend(
                 spend, mod, curried_args
             )
             if outer_match is not None:
                 outer_description, inner_puzzle, inner_solution = outer_match
                 mod, curried_args = inner_puzzle.uncurry()
-                for wallet in wallet_state_manager.inner_wallets:
+                for inner_wallet in wallet_state_manager.inner_wallets:
                     inner_description: Optional[
                         PuzzleSolutionDescription
-                    ] = await wallet.match_inner_puzzle_and_solution(
+                    ] = await inner_wallet.match_inner_puzzle_and_solution(
                         spend.coin, inner_puzzle, inner_solution, mod, curried_args
                     )
                     if inner_description is not None:
@@ -412,7 +412,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         sorted_actions: List[WalletAction] = [*all_other_actions, *dl_graftroot_actions]
 
         remaining_actions, environment, new_spend, new_description = await info.create_spend_for_actions(
-            sorted_actions, wallet_state_manager.action_aliases
+            sorted_actions, wallet_state_manager.action_aliases, environment=environment
         )
 
         inner_most_solution: Program = (
