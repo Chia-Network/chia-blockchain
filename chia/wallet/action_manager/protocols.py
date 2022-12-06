@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, runtime_checkable
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 from blspy import G1Element
 from typing_extensions import Protocol
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.wallet.puzzle_drivers import Solver
 
@@ -25,7 +26,6 @@ class WalletAction(Protocol):
         ...
 
 
-@runtime_checkable
 class ActionAlias(Protocol):
     @staticmethod
     def name() -> str:
@@ -53,8 +53,11 @@ class ActionAlias(Protocol):
 _T_PuzzleSolutionDescription = TypeVar("_T_PuzzleSolutionDescription", bound="PuzzleSolutionDescription")
 
 
-@runtime_checkable
 class OuterDriver(Protocol):
+    @staticmethod
+    def type() -> bytes32:
+        ...
+
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         ...
 
@@ -93,8 +96,11 @@ class OuterDriver(Protocol):
         ...
 
 
-@runtime_checkable
 class InnerDriver(Protocol):
+    @staticmethod
+    def type() -> bytes32:
+        ...
+
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         ...
 
@@ -135,12 +141,6 @@ class SpendDescription:
     coin: Coin
     outer_description: PuzzleSolutionDescription
     inner_description: PuzzleSolutionDescription
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.outer_description.driver, OuterDriver):
-            raise ValueError("Spend description created with wrong driver in outer description")
-        if not isinstance(self.inner_description.driver, InnerDriver):
-            raise ValueError("Spend description created with wrong driver in inner description")
 
     def get_all_actions(self) -> List[WalletAction]:
         return [*self.outer_description.actions, *self.inner_description.actions]

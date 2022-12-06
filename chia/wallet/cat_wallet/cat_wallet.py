@@ -1012,6 +1012,11 @@ class OuterDriver:
     def get_wallet_class() -> Type[CATWallet]:
         return CATWallet
 
+    @staticmethod
+    def type() -> bytes32:
+        # placeholder tree hash. If this were a clvm plugin, it'd probably be the tree hash of that.
+        return Program.to("CAT Wallet OuterDriver").get_tree_hash()
+
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         return {}
 

@@ -1366,9 +1366,9 @@ class DataLayerWallet:
 
         for spend in non_ephemeral_spends:
             if (
-                isinstance(spend.outer_description.driver, OuterDriver)
+                spend.outer_description.driver.type() == OuterDriver.type()
                 and spend.outer_description.driver.launcher_id == expected_launcher_id
-            ):  # There should probably be a cleaner way to do this
+            ):
                 info = CoinInfo.from_spend_description(spend)
                 actions: List[WalletAction] = info.alias_actions(
                     spend.get_all_actions(), wallet_state_manager.action_aliases
@@ -1499,6 +1499,11 @@ class OuterDriver:
     @staticmethod
     def get_wallet_class() -> Type[DataLayerWallet]:
         return DataLayerWallet
+
+    @staticmethod
+    def type() -> bytes32:
+        # placeholder tree hash. If this were a clvm plugin, it'd probably be the tree hash of that.
+        return Program.to("Data Layer OuterDriver").get_tree_hash()
 
     def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         return {}
