@@ -9,7 +9,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.consensus.condition_costs import ConditionCost
-from chia.types.spend_bundle_conditions import Spend
+from chia.types.spend_bundle_conditions import Spend, ELIGIBLE_FOR_DEDUP
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
@@ -112,6 +112,7 @@ class TestROM:
             seconds_relative=0,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
+            flags=ELIGIBLE_FOR_DEDUP,
         )
 
         assert npc_result.conds.spends == [spend]

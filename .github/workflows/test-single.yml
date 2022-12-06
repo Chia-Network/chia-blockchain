@@ -197,6 +197,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.install_sh }}
           development: true
+          legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
 
       - uses: chia-network/actions/activate-venv@main
 

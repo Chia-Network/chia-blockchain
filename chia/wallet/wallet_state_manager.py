@@ -299,7 +299,6 @@ class WalletStateManager:
     async def create_more_puzzle_hashes(
         self,
         from_zero: bool = False,
-        in_transaction=False,
         mark_existing_as_used=True,
         up_to_index: Optional[uint32] = None,
         num_additional_phs: Optional[int] = None,
@@ -669,7 +668,7 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None:
-            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state)
+            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state)
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -793,33 +792,15 @@ class WalletStateManager:
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
         hint_list = compute_coin_hints(coin_spend)
-        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
-            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
-        ).get_tree_hash()
+
         derivation_record = None
-        # Hint is required, if it doesn't have any hint then it should a bugged DID
-        is_bugged = len(hint_list) == 0
-        new_p2_puzhash: Optional[bytes32] = None
         for hint in hint_list:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
             if derivation_record is not None:
-                new_p2_puzhash = hint
                 break
-            # Check if the mismatch is because of the memo bug
-            if hint == old_inner_puzhash:
-                new_p2_puzhash = hint
-                is_bugged = True
-                break
-        if is_bugged:
-            # This is a bugged DID, check if we are owner
-            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(p2_puzzle))
 
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
-            if new_p2_puzhash != old_inner_puzhash and p2_puzzle != new_p2_puzhash:
-                # We only delete DID when the p2 puzzle doesn't change
-                self.log.info(f"Not sure if the DID belong to us, {coin_state}. Waiting for next spend ...")
-                return wallet_id, wallet_type
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
             removed_wallet_ids = []
@@ -922,13 +903,14 @@ class WalletStateManager:
         return minter_did
 
     async def handle_nft(
-        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState
+        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState, coin_state: CoinState
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a NFT
         :param coin_spend: New coin spend
         :param uncurried_nft: Uncurried NFT
         :param parent_coin_state: Parent coin state
+        :param coin_state: Current coin state
         :return: Wallet ID & Wallet Type
         """
         wallet_id = None
@@ -971,7 +953,7 @@ class WalletStateManager:
             return wallet_id, wallet_type
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-            if nft_wallet_info.did_id == old_did_id:
+            if nft_wallet_info.did_id == old_did_id and old_derivation_record is not None:
                 self.log.info(
                     "Removing old NFT, NFT_ID:%s, DID_ID:%s",
                     uncurried_nft.singleton_launcher_id.hex(),
@@ -981,12 +963,21 @@ class WalletStateManager:
                 assert isinstance(nft_wallet, NFTWallet)
                 if parent_coin_state.spent_height is not None:
                     await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
-                    num = await nft_wallet.get_current_nfts()
-                    if len(num) == 0 and nft_wallet.did_id is not None and new_did_id != old_did_id:
+                    is_empty = await nft_wallet.is_empty()
+                    has_did = False
+                    for did_wallet_info in await self.get_all_wallet_info_entries(
+                        wallet_type=WalletType.DECENTRALIZED_ID
+                    ):
+                        did_wallet: DIDInfo = DIDInfo.from_json_dict(json.loads(did_wallet_info.data))
+                        assert did_wallet.origin_coin is not None
+                        if did_wallet.origin_coin.name() == old_did_id:
+                            has_did = True
+                            break
+                    if is_empty and nft_wallet.did_id is not None and not has_did:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
                         await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
                         self.wallets.pop(nft_wallet.wallet_info.id)
-            if nft_wallet_info.did_id == new_did_id:
+            if nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
                     uncurried_nft.singleton_launcher_id.hex(),
@@ -995,7 +986,7 @@ class WalletStateManager:
                 wallet_id = wallet_info.id
                 wallet_type = WalletType.NFT
 
-        if wallet_id is None and new_derivation_record:
+        if wallet_id is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",

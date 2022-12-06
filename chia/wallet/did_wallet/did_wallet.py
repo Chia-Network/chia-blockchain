@@ -26,7 +26,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
-from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
+from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -203,8 +203,14 @@ class DIDWallet:
         recovery_list: List[bytes32] = []
         backup_required: int = num_verification.as_int()
         if recovery_list_hash != Program.to([]).get_tree_hash():
-            for did in inner_solution.rest().rest().rest().rest().rest().as_python():
-                recovery_list.append(did[0])
+            try:
+                for did in inner_solution.rest().rest().rest().rest().rest().as_python():
+                    recovery_list.append(did[0])
+            except Exception:
+                self.log.warning(
+                    f"DID {launch_coin.name().hex()} has a recovery list hash but missing a reveal,"
+                    " you may need to reset the recovery info."
+                )
         self.did_info = DIDInfo(
             launch_coin,
             recovery_list,
@@ -383,6 +389,7 @@ class DIDWallet:
         assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
+
         new_info = DIDInfo(
             self.did_info.origin_coin,
             self.did_info.backup_ids,
@@ -1132,12 +1139,26 @@ class DIDWallet:
             did_hash
         )
         assert self.did_info.origin_coin is not None
+        assert self.did_info.current_inner is not None
+        uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
+        assert uncurried_args is not None
+        old_recovery_list_hash: Optional[Program] = None
+        p2_puzzle, old_recovery_list_hash, _, _, _ = uncurried_args
+        if record is None:
+            record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                p2_puzzle.get_tree_hash()
+            )
+        if not (self.did_info.num_of_backup_ids_needed > 0 and len(self.did_info.backup_ids) == 0):
+            # We have the recovery list, don't reset it
+            old_recovery_list_hash = None
+
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             puzzle_for_pk(record.pubkey),
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             self.did_info.origin_coin.name(),
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            old_recovery_list_hash,
         )
         return inner_puzzle
 

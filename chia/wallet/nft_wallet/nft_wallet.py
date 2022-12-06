@@ -23,6 +23,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
@@ -288,12 +289,25 @@ class NFTWallet:
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
+            num = await self.get_current_nfts()
+            if len(num) == 0 and self.did_id is not None:
+                # Check if the wallet owns the DID
+                for did_wallet in await self.wallet_state_manager.get_all_wallet_info_entries(
+                    wallet_type=WalletType.DECENTRALIZED_ID
+                ):
+                    did_wallet_info: DIDInfo = DIDInfo.from_json_dict(json.loads(did_wallet.data))
+                    assert did_wallet_info.origin_coin is not None
+                    if did_wallet_info.origin_coin.name() == self.did_id:
+                        return
+                self.log.info(f"No NFT, deleting wallet {self.wallet_info.name} ...")
+                await self.wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
+                self.wallet_state_manager.wallets.pop(self.wallet_info.id)
         else:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
     async def get_did_approval_info(
         self,
-        nft_id: bytes32,
+        nft_ids: List[bytes32],
         did_id: Optional[bytes32] = None,
     ) -> Tuple[bytes32, SpendBundle]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
@@ -308,8 +322,8 @@ class NFTWallet:
             if wallet.type() == WalletType.DECENTRALIZED_ID:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
-                    self.log.debug("Creating announcement from DID for nft_id: %s", nft_id)
-                    did_bundle = await wallet.create_message_spend(puzzle_announcements=[nft_id])
+                    self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
+                    did_bundle = await wallet.create_message_spend(puzzle_announcements=nft_ids)
                     self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
                     did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
                     break
@@ -402,7 +416,7 @@ class NFTWallet:
         did_inner_hash = b""
         if did_id is not None:
             if did_id != b"":
-                did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
+                did_inner_hash, did_bundle = await self.get_did_approval_info([launcher_coin.name()])
                 bundles_to_agg.append(did_bundle)
         nft_coin = NFTCoinInfo(
             nft_id=launcher_coin.name(),
@@ -494,6 +508,9 @@ class NFTWallet:
 
     async def get_nft_count(self) -> int:
         return await self.nft_store.count(wallet_id=self.id())
+
+    async def is_empty(self) -> bool:
+        return await self.nft_store.is_empty(wallet_id=self.id())
 
     async def update_coin_status(self, coin_id: bytes32, pending_transaction: bool) -> None:
         await self.nft_store.update_pending_transaction(coin_id, pending_transaction)
@@ -1043,6 +1060,56 @@ class NFTWallet:
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
         return offer
 
+    async def set_bulk_nft_did(
+        self,
+        nft_list: List[NFTCoinInfo],
+        did_id: bytes,
+        fee: uint64 = uint64(0),
+        announcement_ids: List[bytes32] = [],
+    ) -> List[TransactionRecord]:
+        self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_list, did_id)
+        did_inner_hash = b""
+        nft_ids = []
+        nft_tx_record = []
+        spend_bundles = []
+        first = True
+        for nft_coin_info in nft_list:
+            nft_ids.append(nft_coin_info.nft_id)
+        if did_id != b"":
+            did_inner_hash, did_bundle = await self.get_did_approval_info(announcement_ids, bytes32(did_id))
+            if len(announcement_ids) > 0:
+                spend_bundles.append(did_bundle)
+
+        for nft_coin_info in nft_list:
+            unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
+            assert unft is not None
+            puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
+            if not first:
+                fee = uint64(0)
+            nft_tx_record.extend(
+                await self.generate_signed_transaction(
+                    [uint64(nft_coin_info.coin.amount)],
+                    puzzle_hashes_to_sign,
+                    fee,
+                    {nft_coin_info.coin},
+                    new_owner=did_id,
+                    new_did_inner_hash=did_inner_hash,
+                )
+            )
+            first = False
+
+        refined_tx_list: List[TransactionRecord] = []
+        for tx in nft_tx_record:
+            if tx.spend_bundle is not None:
+                spend_bundles.append(tx.spend_bundle)
+                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+
+        if len(spend_bundles) > 0:
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            # Add all spend bundles to the first tx
+            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+        return refined_tx_list
+
     async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
@@ -1052,7 +1119,7 @@ class NFTWallet:
         did_inner_hash = b""
         additional_bundles = []
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_id, bytes32(did_id))
+            did_inner_hash, did_bundle = await self.get_did_approval_info([nft_id], bytes32(did_id))
             additional_bundles.append(did_bundle)
 
         nft_tx_record = await self.generate_signed_transaction(
