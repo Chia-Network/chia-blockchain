@@ -705,7 +705,7 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     return "", units["mojo"]
 
 
-def print_balance(amount: int, scale: int, address_prefix: str, decimal_only: bool = False) -> str:
+def print_balance(amount: int, scale: int, address_prefix: str, *, decimal_only: bool = False) -> str:
     if decimal_only:
         final_amount = f"{amount / scale:.12f}"
     else:
