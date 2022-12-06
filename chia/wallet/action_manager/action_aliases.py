@@ -80,7 +80,7 @@ class DirectPayment:
 
     @classmethod
     def from_action(cls: Type[_T_DirectPayment], action: WalletAction) -> _T_DirectPayment:
-        if action.name() != Condition.name():
+        if not isinstance(action, Condition):
             raise ValueError("Can only parse a DirectPayment from Condition")
 
         puzzle_hash: bytes32 = bytes32(action.condition.at("rf").as_python())
@@ -132,7 +132,7 @@ class OfferedAmount:
 
     @classmethod
     def from_action(cls: Type[_T_OfferedAmount], action: WalletAction) -> _T_OfferedAmount:
-        if action.name() != Condition.name():
+        if not isinstance(action, Condition):
             raise ValueError("Can only parse a OfferedAmount from Condition")
 
         puzzle_hash: bytes32 = bytes32(action.condition.at("rf").as_python())
@@ -177,7 +177,7 @@ class Fee:
 
     @classmethod
     def from_action(cls: Type[_T_Fee], action: WalletAction) -> _T_Fee:
-        if action.name() != Condition.name():
+        if not isinstance(action, Condition):
             raise ValueError("Can only parse a Fee from Condition")
 
         if action.condition.first() != Program.to(52):
@@ -232,7 +232,7 @@ class MakeAnnouncement:
 
     @classmethod
     def from_action(cls: Type[_T_MakeAnnouncement], action: WalletAction) -> _T_MakeAnnouncement:
-        if action.name() != Condition.name():
+        if not isinstance(action, Condition):
             raise ValueError("Can only parse a MakeAnnouncement from Condition")
 
         if action.condition.first() not in (Program.to(60), Program.to(62)):
@@ -304,7 +304,7 @@ class AssertAnnouncement:
 
     @classmethod
     def from_action(cls: Type[_T_AssertAnnouncement], action: WalletAction) -> _T_AssertAnnouncement:
-        if action.name() != Condition.name():
+        if not isinstance(action, Condition):
             raise ValueError("Can only parse a AssertAnnouncement from Condition")
 
         if action.condition.first() not in (Program.to(61), Program.to(63)):
@@ -356,7 +356,7 @@ class RequestPayment:
             solver_dict["nonce"] = "0x" + self.nonce.hex()
         return Solver(solver_dict)
 
-    def de_alias(self) -> WalletAction:
+    def de_alias(self) -> Graftroot:
         return Graftroot(
             self.construct_puzzle_wrapper(),
             Program.to(None),
@@ -480,7 +480,7 @@ class RequestPayment:
 
     @classmethod
     def from_action(cls: Type[_T_RequestPayment], action: WalletAction) -> _T_RequestPayment:
-        if action.name() != Graftroot.name():
+        if not isinstance(action, Graftroot):
             raise ValueError("Can only parse a RequestPayment from Graftroot")
 
         nonce_and_payments = action.metadata.first()
@@ -506,7 +506,7 @@ class RequestPayment:
 
         return cls(asset_types, nonce, payments)
 
-    def augment(self, environment: Solver) -> WalletAction:
+    def augment(self, environment: Solver) -> Graftroot:
         if "payment_types" in environment:
             for payment_type in environment["payment_types"]:
                 nonce: Optional[bytes32] = (

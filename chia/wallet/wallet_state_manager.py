@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -147,9 +147,9 @@ class WalletStateManager:
     dl_store: DataLayerStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
-    outer_wallets: List[OuterDriver]
-    inner_wallets: List[InnerDriver]
-    action_aliases: Dict[str, ActionAlias]
+    outer_wallets: List[Type[OuterDriver]]
+    inner_wallets: List[Type[InnerDriver]]
+    action_aliases: Dict[str, Type[ActionAlias]]
     initial_num_public_keys: int
 
     @staticmethod
@@ -1811,8 +1811,8 @@ class WalletStateManager:
             }
         )
 
-    async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> OuterDriver:
-        matches: List[OuterDriver] = []
+    async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> Type[OuterDriver]:
+        matches: List[Type[OuterDriver]] = []
         for wallet in self.outer_wallets:
             match = await wallet.match_asset_types(asset_types)
             if match:

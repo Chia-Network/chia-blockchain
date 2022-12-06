@@ -357,7 +357,7 @@ class UpdateMetadata:
 
     @classmethod
     def from_action(cls: Type[_T_UpdateMetadata], action: WalletAction) -> _T_UpdateMetadata:
-        if action.name() != Condition.name():
+        if not isinstance(action, Condition):
             raise ValueError("Can only parse a UpdateMetadata from Condition")
 
         if action.condition.first() != Program.to(-24):

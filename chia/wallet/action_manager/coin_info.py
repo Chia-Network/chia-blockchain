@@ -43,29 +43,31 @@ class CoinInfo:
         return cls(
             description.coin,
             description.get_full_description(),
-            description.outer_description.driver,
-            description.inner_description.driver,
+            # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
+            description.outer_description.driver,  # type: ignore
+            description.inner_description.driver,  # type: ignore
         )
 
     def alias_actions(
-        self, actions: List[WalletAction], default_aliases: Dict[str, ActionAlias] = {}
+        self, actions: List[WalletAction], default_aliases: Dict[str, Type[ActionAlias]] = {}
     ) -> List[WalletAction]:
-        action_aliases = [
+        action_aliases: List[Type[ActionAlias]] = [
             *default_aliases.values(),
             *self.inner_driver.get_aliases().values(),
             *self.outer_driver.get_aliases().values(),
         ]
 
-        action_to_potential_alias: Dict[str, ActionAlias] = {}
+        action_to_potential_alias: Dict[str, List[Type[ActionAlias]]] = {}
         for alias in action_aliases:
             action_to_potential_alias.setdefault(alias.action_name(), [])
             action_to_potential_alias[alias.action_name()].append(alias)
 
         def alias_action(action: WalletAction) -> WalletAction:
             if action.name() in action_to_potential_alias:
-                for alias in action_to_potential_alias[action.name()]:
+                for potential_alias in action_to_potential_alias[action.name()]:
                     try:
-                        return alias.from_action(action)
+                        alias: ActionAlias = potential_alias.from_action(action)
+                        return alias
                     except Exception:
                         pass
 
@@ -76,7 +78,7 @@ class CoinInfo:
     async def create_spend_for_actions(
         self,
         actions: List[Solver],
-        default_aliases: Dict[str, ActionAlias] = {},
+        default_aliases: Dict[str, Type[ActionAlias]] = {},
         environment: Solver = Solver({}),
         optimize: bool = False,
     ) -> Tuple[List[Solver], Solver, CoinSpend, SpendDescription]:
@@ -138,9 +140,12 @@ class CoinInfo:
         )
         assert outer_match is not None
         outer_description: PuzzleSolutionDescription = outer_match[0]
-        inner_description: PuzzleSolutionDescription = await self.inner_driver.match_inner_puzzle_and_solution(
+        inner_description: Optional[
+            PuzzleSolutionDescription
+        ] = await self.inner_driver.match_inner_puzzle_and_solution(
             self.coin, inner_puzzle, inner_solution, *inner_puzzle.uncurry()
         )
+        assert inner_description is not None
 
         return (
             actions_left,

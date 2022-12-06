@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element
 from typing_extensions import Protocol
@@ -11,6 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.wallet_protocol import WalletProtocol
 
 
 class WalletAction(Protocol):
@@ -23,6 +24,9 @@ class WalletAction(Protocol):
         ...
 
     def to_solver(self) -> Solver:
+        ...
+
+    def augment(self, environment: Solver) -> "WalletAction":
         ...
 
 
@@ -49,19 +53,27 @@ class ActionAlias(Protocol):
     def from_action(cls, action: WalletAction) -> "ActionAlias":
         ...
 
+    def augment(self, environment: Solver) -> WalletAction:
+        ...
+
 
 _T_PuzzleSolutionDescription = TypeVar("_T_PuzzleSolutionDescription", bound="PuzzleSolutionDescription")
 
 
 class OuterDriver(Protocol):
+    # TODO: This is not great, we should move the coin selection logic in here
+    @staticmethod
+    def get_wallet_class() -> Type[WalletProtocol]:
+        ...
+
     @staticmethod
     def type() -> bytes32:
         ...
 
-    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+    def get_actions(self) -> Dict[str, Type[WalletAction]]:
         ...
 
-    def get_aliases(self) -> Dict[str, ActionAlias]:
+    def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         ...
 
     async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
@@ -83,12 +95,12 @@ class OuterDriver(Protocol):
 
     @classmethod
     async def match_spend(
-        cls: Any, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[_T_PuzzleSolutionDescription, Program, Program]]:
+        cls: Type["OuterDriver"], spend: CoinSpend, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
         ...
 
     @staticmethod
-    def get_asset_types(request: Solver) -> Solver:
+    def get_asset_types(request: Solver) -> List[Solver]:
         ...
 
     @staticmethod
@@ -101,10 +113,10 @@ class InnerDriver(Protocol):
     def type() -> bytes32:
         ...
 
-    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+    def get_actions(self) -> Dict[str, Type[WalletAction]]:
         ...
 
-    def get_aliases(self) -> Dict[str, ActionAlias]:
+    def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         ...
 
     async def construct_inner_puzzle(self) -> Program:
@@ -115,15 +127,15 @@ class InnerDriver(Protocol):
     ) -> Program:
         ...
 
-    @staticmethod
+    @classmethod
     async def match_inner_puzzle_and_solution(
-        cls: Any,
+        cls: Type["InnerDriver"],
         coin: Coin,
         puzzle: Program,
         solution: Program,
         mod: Program,
         curried_args: Program,
-    ) -> Optional[_T_PuzzleSolutionDescription]:
+    ) -> Optional[PuzzleSolutionDescription]:
         ...
 
 

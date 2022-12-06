@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
@@ -1366,15 +1366,15 @@ class DataLayerWallet:
 
         for spend in non_ephemeral_spends:
             if (
-                spend.outer_description.driver.type() == OuterDriver.type()
+                isinstance(spend.outer_description.driver, OuterDriver)
                 and spend.outer_description.driver.launcher_id == expected_launcher_id
             ):
                 info = CoinInfo.from_spend_description(spend)
                 actions: List[WalletAction] = info.alias_actions(
                     spend.get_all_actions(), wallet_state_manager.action_aliases
                 )
-                metadata_updates: List[WalletAction] = [
-                    action for action in actions if action.name() == UpdateMetadataDL.name()
+                metadata_updates: List[UpdateMetadataDL] = [
+                    action for action in actions if isinstance(action, UpdateMetadataDL)
                 ]
                 if len(metadata_updates) > 1:
                     raise ValueError("Too many metadata_updates in a spend")
@@ -1384,12 +1384,11 @@ class DataLayerWallet:
                     root = bytes32(metadata_updates[0].metadata_solution.at("fff").as_python())
 
                 inner_puzzle_hash: bytes32 = (
-                    await spend.inner_description.driver.construct_inner_puzzle()
+                    # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
+                    await spend.inner_description.driver.construct_inner_puzzle()  # type: ignore
                 ).get_tree_hash()
-                singleton_recreation: WalletAction = next(
-                    action
-                    for action in actions
-                    if action.name() == DirectPayment.name() and action.payment.amount % 2 == 1
+                singleton_recreation: DirectPayment = next(
+                    action for action in actions if isinstance(action, DirectPayment) and action.payment.amount % 2 == 1
                 )
 
                 return [
@@ -1413,7 +1412,7 @@ class DataLayerWallet:
                                 create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash_precalc(
                                     inner_puzzle_hash
                                 ),
-                                spend.coin.amount,
+                                uint64(spend.coin.amount),
                             ),
                         ),
                         # TODO: this is hacky, but works because we only have one inner wallet
@@ -1497,18 +1496,18 @@ class OuterDriver:
 
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
-    def get_wallet_class() -> Type[DataLayerWallet]:
+    def get_wallet_class() -> Type[WalletProtocol]:
         return DataLayerWallet
 
     @staticmethod
     def type() -> bytes32:
         # placeholder tree hash. If this were a clvm plugin, it'd probably be the tree hash of that.
-        return Program.to("Data Layer OuterDriver").get_tree_hash()
+        return bytes32(Program.to("Data Layer OuterDriver").get_tree_hash())
 
-    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+    def get_actions(self) -> Dict[str, Type[WalletAction]]:
         return {}
 
-    def get_aliases(self) -> Dict[str, ActionAlias]:
+    def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {
             UpdateMetadataDL.name(): UpdateMetadataDL,
         }
@@ -1550,12 +1549,12 @@ class OuterDriver:
             if len(outer_actions) == 0
             else bytes32(UpdateMetadataDL.from_action(outer_actions[0]).metadata_solution.at("ff").as_python())
         )
-        direct_payments: List[WalletAction] = [
+        direct_payments: List[Condition] = [
             action
             for action in inner_actions
-            if action.name() == Condition.name() and action.condition.first() == Program.to(51)
+            if isinstance(action, Condition) and action.condition.first() == Program.to(51)
         ]
-        singleton_recreations: List[WalletAction] = [
+        singleton_recreations: List[Condition] = [
             action for action in direct_payments if action.condition.at("rrf").as_int() % 2 == 1
         ]
         if len(singleton_recreations) > 1:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Type, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
@@ -16,7 +16,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
@@ -53,7 +53,7 @@ class WalletActionManager:
         bundle_actions: List[Solver],
         infos: List[CoinInfo],
         coin_specific_actions: Dict[Coin, List[Solver]],
-        default_aliases: Dict[str, ActionAlias] = {},
+        default_aliases: Dict[str, Type[ActionAlias]] = {},
         environment: Solver = Solver({}),
     ) -> Tuple[List[Solver], List[CoinSpend], List[SpendDescription]]:
         """
@@ -318,7 +318,7 @@ class WalletActionManager:
         spend_descriptions: List[SpendDescription] = []
         for spend in bundle.coin_spends:
             # Step 2: Get any wallets that claim to identify the puzzle
-            matches: List[Tuple[CoinInfo, List[WalletAction]]] = []
+            matches: List[SpendDescription] = []
             mod, curried_args = spend.puzzle_reveal.uncurry()
             for outer_wallet in self.wallet_state_manager.outer_wallets:
                 outer_match: Optional[

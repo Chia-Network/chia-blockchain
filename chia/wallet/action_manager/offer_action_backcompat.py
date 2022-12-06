@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import dataclasses
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from clvm_tools.binutils import disassemble
 
@@ -17,7 +17,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import PuzzleSolutionDescription, SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import PuzzleSolutionDescription, SpendDescription
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU_PH,
@@ -174,12 +174,14 @@ async def old_request_to_new(
                 ]
             ):
                 action_batch.append(
-                    {
-                        "type": "update_state",
-                        "update": {
-                            "new_owner": "()",
-                        },
-                    }
+                    Solver(
+                        {
+                            "type": "update_state",
+                            "update": {
+                                "new_owner": "()",
+                            },
+                        }
+                    )
                 )
             # The standard XCH should pay the fee
             if asset_id is None and fee > 0:
@@ -388,6 +390,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         all_other_actions: List[Solver] = []
         for action in actions:
             if action.name() == RequireDLInclusion.name():
+                assert isinstance(action, RequireDLInclusion)
                 dl_graftroot_actions.append(action.to_solver())
                 # Step 5: Add the dummy spend that used to encode the requested payment
                 for launcher_id in action.launcher_ids:
@@ -402,6 +405,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
                     )
             else:
                 if action.name() == RequestPayment.name():
+                    assert isinstance(action, RequestPayment)
                     # Step 5: Add the dummy spend that used to encode the requested payment
                     new_spends.append(request_payment_to_legacy_encoding(action))
                 all_other_actions.append(action.to_solver())
@@ -409,15 +413,18 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         if len(dl_graftroot_actions) > 1:
             raise ValueError("Legacy offers only support one graftroot for dl inclusions")
 
-        sorted_actions: List[WalletAction] = [*all_other_actions, *dl_graftroot_actions]
+        sorted_actions: List[Solver] = [*all_other_actions, *dl_graftroot_actions]
 
         remaining_actions, environment, new_spend, new_description = await info.create_spend_for_actions(
             sorted_actions, wallet_state_manager.action_aliases, environment=environment
         )
 
-        inner_most_solution: Program = (
-            await info.outer_driver.match_spend(new_spend, *new_spend.puzzle_reveal.to_program().uncurry())
-        )[2]
+        re_matched_spend: Optional[
+            Tuple[PuzzleSolutionDescription, Program, Program]
+        ] = await info.outer_driver.match_spend(new_spend, *new_spend.puzzle_reveal.to_program().uncurry())
+        if re_matched_spend is None:
+            raise RuntimeError("Internal logic error, spend could not be rematched")
+        inner_most_solution: Program = re_matched_spend[2]
         delegated_solution: Program = inner_most_solution.at("rrf")
         if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
             if dl_graftroot_actions == []:
@@ -552,7 +559,8 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
         )
 
         metadata: Program = Program.to(None)
-        for alias in [*requested_payments, *dl_inclusions]:
+        ordered_aliases: List[Union[RequestPayment, RequireDLInclusion]] = [*requested_payments, *dl_inclusions]
+        for alias in ordered_aliases:
             graftroot = alias.de_alias()
             metadata = Program.to([graftroot.puzzle_wrapper, graftroot.solution_wrapper, graftroot.metadata]).cons(
                 metadata

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -631,7 +631,7 @@ class Wallet:
                 actions: List[WalletAction] = info.alias_actions(
                     spend.get_all_actions(), wallet_state_manager.action_aliases
                 )
-                new_additions: WalletAction = [action for action in actions if action.name() == DirectPayment.name()]
+                new_additions: List[DirectPayment] = [action for action in actions if isinstance(action, DirectPayment)]
                 for addition in new_additions:
                     wallet_info: Optional[
                         Tuple[uint32, WalletType]
@@ -695,7 +695,7 @@ class Wallet:
 class OuterDriver:
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
-    def get_wallet_class() -> Type[Wallet]:
+    def get_wallet_class() -> Type[WalletProtocol]:
         return Wallet
 
     @staticmethod
@@ -703,10 +703,10 @@ class OuterDriver:
         # placeholder tree hash. If this were a clvm plugin, it'd probably be the tree hash of that.
         return Program.to("Standard OuterDriver").get_tree_hash()
 
-    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+    def get_actions(self) -> Dict[str, Type[WalletAction]]:
         return {}
 
-    def get_aliases(self) -> Dict[str, ActionAlias]:
+    def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {}
 
     async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
@@ -759,13 +759,17 @@ class OuterDriver:
 class InnerDriver:
     pubkey: G1Element
 
-    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+    @staticmethod
+    def type() -> bytes32:
+        return bytes32(Program.to("Standard InnerDriver").get_tree_hash())
+
+    def get_actions(self) -> Dict[str, Type[WalletAction]]:
         return {
             Condition.name(): Condition,
             Graftroot.name(): Graftroot,
         }
 
-    def get_aliases(self) -> Dict[str, ActionAlias]:
+    def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {}
 
     async def construct_inner_puzzle(self) -> Program:
@@ -774,12 +778,12 @@ class InnerDriver:
     async def construct_inner_solution(
         self, actions: List[WalletAction], environment: Solver, optimize: bool = False
     ) -> Program:
-        conditions: List[Program] = [cond.condition for cond in actions if cond.name() == Condition.name()]
+        conditions: List[Program] = [cond.condition for cond in actions if isinstance(cond, Condition)]
         delegated_puzzle: Program = Program.to((1, conditions))
         delegated_solution: Program = Program.to(None)
         metadata: Program = Program.to(None)
         for action in actions:
-            if action.name() == Graftroot.name():
+            if isinstance(action, Graftroot):
                 delegated_puzzle = action.puzzle_wrapper.run([delegated_puzzle])
                 metadata = Program.to([action.puzzle_wrapper, action.solution_wrapper, action.metadata]).cons(metadata)
                 if optimize:

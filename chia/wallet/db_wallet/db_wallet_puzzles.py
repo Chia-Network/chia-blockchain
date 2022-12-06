@@ -147,7 +147,7 @@ class RequireDLInclusion:
             }
         )
 
-    def de_alias(self) -> WalletAction:
+    def de_alias(self) -> Graftroot:
         return Graftroot(
             self.construct_puzzle_wrapper(),
             Program.to(
@@ -186,7 +186,7 @@ class RequireDLInclusion:
 
     @classmethod
     def from_action(cls: Type[_T_RequireDLInclusion], action: WalletAction) -> _T_RequireDLInclusion:
-        if action.name() != Graftroot.name():
+        if not isinstance(action, Graftroot):
             raise ValueError("Can only parse a RequireDLInclusion from Graftroot")
 
         curry_mod, curried_args = action.puzzle_wrapper.uncurry()
@@ -201,7 +201,7 @@ class RequireDLInclusion:
             ],
         )
 
-    def augment(self, environment: Solver) -> WalletAction:
+    def augment(self, environment: Solver) -> Graftroot:
         if "dl_inclusion_proofs" in environment:
             all_spends: List[CoinSpend] = [
                 CoinSpend(
@@ -249,7 +249,7 @@ class RequireDLInclusion:
                                 break
                         else:
                             if proved_root is None:
-                                return self  # The proofs of inclusion were not good enough so don't do anything
+                                return self.de_alias()  # The inclusion proofs were not good enough so don't do anything
                             else:
                                 acceptable_roots.remove(proved_root)
                                 proved_root = None
@@ -293,3 +293,5 @@ class RequireDLInclusion:
                 ),
                 Program.to(None),
             )
+
+        return self.de_alias()

@@ -5,7 +5,7 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Set, Tuple, Type
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
@@ -1009,18 +1009,18 @@ class OuterDriver:
 
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
-    def get_wallet_class() -> Type[CATWallet]:
+    def get_wallet_class() -> Type[WalletProtocol]:
         return CATWallet
 
     @staticmethod
     def type() -> bytes32:
         # placeholder tree hash. If this were a clvm plugin, it'd probably be the tree hash of that.
-        return Program.to("CAT Wallet OuterDriver").get_tree_hash()
+        return bytes32(Program.to("CAT Wallet OuterDriver").get_tree_hash())
 
-    def get_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+    def get_actions(self) -> Dict[str, Type[WalletAction]]:
         return {}
 
-    def get_aliases(self) -> Dict[str, ActionAlias]:
+    def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {}  # TODO: RunTail or something should be here
 
     async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
