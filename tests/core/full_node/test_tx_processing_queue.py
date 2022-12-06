@@ -37,8 +37,6 @@ async def test_local_txs() -> None:
     first_tx = get_transaction_queue_entry(None, 0)
     await transaction_queue.put(first_tx, None)
 
-    assert transaction_queue._index_to_peer_map == []
-
     result1 = await transaction_queue.pop()
 
     assert result1 == first_tx
@@ -48,8 +46,6 @@ async def test_local_txs() -> None:
     list_txs = [get_transaction_queue_entry(get_peer_id(), i) for i in range(num_txs)]
     for tx in list_txs:
         await transaction_queue.put(tx, None)
-
-    assert transaction_queue._index_to_peer_map == []  # sanity checking
 
     resulting_txs = []
     for _ in range(num_txs):
@@ -68,8 +64,6 @@ async def test_one_peer_and_await() -> None:
     list_txs = [get_transaction_queue_entry(peer_id, i) for i in range(num_txs)]
     for tx in list_txs:
         await transaction_queue.put(tx, peer_id)
-
-    assert transaction_queue._index_to_peer_map == [peer_id]  # sanity checking
 
     # test transaction priority
     local_txs = [get_transaction_queue_entry(None, i) for i in range(int(num_txs / 5))]  # 20 txs
@@ -108,13 +102,10 @@ async def test_lots_of_peers() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    assert transaction_queue._index_to_peer_map == peer_ids  # make sure all peers are in the map
-
     resulting_txs = []
     for _ in range(total_txs):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._index_to_peer_map == []  # we should have removed all the peer ids
     # There are 1000 peers, so each peer will have one transaction processed every 1000 iterations.
     for i in range(num_txs):
         assert list_txs[i] == resulting_txs[i * 1000]
@@ -133,8 +124,6 @@ async def test_full_queue() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    assert transaction_queue._index_to_peer_map == peer_ids  # make sure all peers are in the map
-
     # test failure case.
     with pytest.raises(TransactionQueueFull):
         await transaction_queue.put(get_transaction_queue_entry(peer_ids[0], 1001), peer_ids[0])
@@ -142,8 +131,6 @@ async def test_full_queue() -> None:
     resulting_txs = []
     for _ in range(total_txs):
         resulting_txs.append(await transaction_queue.pop())
-
-    assert transaction_queue._index_to_peer_map == []  # we should have removed all the peer ids
 
 
 @pytest.mark.asyncio
@@ -159,8 +146,6 @@ async def test_queue_cleanup_and_fairness() -> None:
     for tx in list_txs:
         await transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    assert transaction_queue._index_to_peer_map == peer_ids  # check that all peers are in the map
-
     # give random peers another transaction
     peer_index = sample(range(num_peers), 10)
     peer_index.sort()  # use a sorted list to avoid stupid complexities.
@@ -173,12 +158,8 @@ async def test_queue_cleanup_and_fairness() -> None:
     for _ in range(total_txs):
         resulting_txs.append(await transaction_queue.pop())
 
-    assert transaction_queue._index_to_peer_map == selected_peers  # only peers with 2 tx's.
-
     resulting_extra_txs = []
     for _ in range(10):
         resulting_extra_txs.append(await transaction_queue.pop())
 
     assert extra_txs == resulting_extra_txs  # validate that the extra txs are the same as the ones we put in.
-
-    assert transaction_queue._index_to_peer_map == []  # now there should be no peers in the map
