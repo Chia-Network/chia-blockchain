@@ -106,7 +106,7 @@ class MempoolManager:
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
-        setattr(self, "get_coin_record", get_coin_record)
+        self.get_coin_record = get_coin_record
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
         # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
@@ -432,7 +432,7 @@ class MempoolManager:
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
         for name in removal_names:
-            removal_record = await getattr(self, "get_coin_record")(name)
+            removal_record = await self.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
                 return Err.UNKNOWN_UNSPENT, None, []
             elif name in additions_dict:
