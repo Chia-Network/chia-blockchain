@@ -727,7 +727,7 @@ class OuterDriver:
         return outer_actions, inner_actions, Solver({})
 
     @classmethod
-    async def match_spend(
+    async def match_puzzle_and_solution(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
 
@@ -797,7 +797,7 @@ class InnerDriver:
         return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
     @classmethod
-    async def match_inner_puzzle_and_solution(
+    async def match_puzzle_and_solution(
         cls,
         coin: Coin,
         puzzle: Program,

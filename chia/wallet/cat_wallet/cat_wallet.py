@@ -1122,7 +1122,7 @@ class OuterDriver:
         return outer_actions, inner_actions, Solver({})
 
     @classmethod
-    async def match_spend(
+    async def match_puzzle_and_solution(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
         args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))

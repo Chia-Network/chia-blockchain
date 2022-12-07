@@ -94,7 +94,7 @@ class OuterDriver(Protocol):
         ...
 
     @classmethod
-    async def match_spend(
+    async def match_puzzle_and_solution(
         cls: Type["OuterDriver"], spend: CoinSpend, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
         ...
@@ -128,7 +128,7 @@ class InnerDriver(Protocol):
         ...
 
     @classmethod
-    async def match_inner_puzzle_and_solution(
+    async def match_puzzle_and_solution(
         cls: Type["InnerDriver"],
         coin: Coin,
         puzzle: Program,

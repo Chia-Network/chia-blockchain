@@ -1575,7 +1575,7 @@ class OuterDriver:
         return [], new_inner_actions, Solver({})
 
     @classmethod
-    async def match_spend(
+    async def match_puzzle_and_solution(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
         matched, args = match_dl_singleton(spend.puzzle_reveal.to_program())

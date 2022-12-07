@@ -206,14 +206,14 @@ class WalletActionManager:
             for outer_wallet in self.wallet_state_manager.outer_wallets:
                 outer_match: Optional[
                     Tuple[PuzzleSolutionDescription, Program, Program]
-                ] = await outer_wallet.match_spend(spend, mod, curried_args)
+                ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
                 if outer_match is not None:
                     outer_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
                     for inner_wallet in self.wallet_state_manager.inner_wallets:
                         inner_description: Optional[
                             PuzzleSolutionDescription
-                        ] = await inner_wallet.match_inner_puzzle_and_solution(
+                        ] = await inner_wallet.match_puzzle_and_solution(
                             spend.coin, inner_puzzle, inner_solution, mod, curried_args
                         )
                         if inner_description is not None:
@@ -323,14 +323,14 @@ class WalletActionManager:
             for outer_wallet in self.wallet_state_manager.outer_wallets:
                 outer_match: Optional[
                     Tuple[PuzzleSolutionDescription, Program, Program]
-                ] = await outer_wallet.match_spend(spend, mod, curried_args)
+                ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
                 if outer_match is not None:
                     outer_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
                     for inner_wallet in self.wallet_state_manager.inner_wallets:
                         inner_description: Optional[
                             PuzzleSolutionDescription
-                        ] = await inner_wallet.match_inner_puzzle_and_solution(
+                        ] = await inner_wallet.match_puzzle_and_solution(
                             spend.coin, inner_puzzle, inner_solution, mod, curried_args
                         )
                         if inner_description is not None:

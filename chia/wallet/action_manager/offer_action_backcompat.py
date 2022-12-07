@@ -361,16 +361,16 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         matches: List[SpendDescription] = []
         mod, curried_args = spend.puzzle_reveal.uncurry()
         for outer_wallet in wallet_state_manager.outer_wallets:
-            outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await outer_wallet.match_spend(
-                spend, mod, curried_args
-            )
+            outer_match: Optional[
+                Tuple[PuzzleSolutionDescription, Program, Program]
+            ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
             if outer_match is not None:
                 outer_description, inner_puzzle, inner_solution = outer_match
                 mod, curried_args = inner_puzzle.uncurry()
                 for inner_wallet in wallet_state_manager.inner_wallets:
                     inner_description: Optional[
                         PuzzleSolutionDescription
-                    ] = await inner_wallet.match_inner_puzzle_and_solution(
+                    ] = await inner_wallet.match_puzzle_and_solution(
                         spend.coin, inner_puzzle, inner_solution, mod, curried_args
                     )
                     if inner_description is not None:
@@ -422,7 +422,9 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
 
         re_matched_spend: Optional[
             Tuple[PuzzleSolutionDescription, Program, Program]
-        ] = await info.outer_driver.match_spend(new_spend, *new_spend.puzzle_reveal.to_program().uncurry())
+        ] = await info.outer_driver.match_puzzle_and_solution(
+            new_spend, *new_spend.puzzle_reveal.to_program().uncurry()
+        )
         if re_matched_spend is None:
             raise RuntimeError("Internal logic error, spend could not be rematched")
         inner_most_solution: Program = re_matched_spend[2]

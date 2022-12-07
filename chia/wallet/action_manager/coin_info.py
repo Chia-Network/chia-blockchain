@@ -138,14 +138,12 @@ class CoinInfo:
 
         spend = CoinSpend(self.coin, outer_puzzle, outer_solution)
 
-        outer_match: Optional[Tuple[PuzzleSolutionDescription, Program, Program]] = await self.outer_driver.match_spend(
-            spend, *outer_puzzle.uncurry()
-        )
+        outer_match: Optional[
+            Tuple[PuzzleSolutionDescription, Program, Program]
+        ] = await self.outer_driver.match_puzzle_and_solution(spend, *outer_puzzle.uncurry())
         assert outer_match is not None
         outer_description: PuzzleSolutionDescription = outer_match[0]
-        inner_description: Optional[
-            PuzzleSolutionDescription
-        ] = await self.inner_driver.match_inner_puzzle_and_solution(
+        inner_description: Optional[PuzzleSolutionDescription] = await self.inner_driver.match_puzzle_and_solution(
             self.coin, inner_puzzle, inner_solution, *inner_puzzle.uncurry()
         )
         assert inner_description is not None
