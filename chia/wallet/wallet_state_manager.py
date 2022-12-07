@@ -16,7 +16,8 @@ from blspy import G1Element, PrivateKey
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.data_layer.data_layer_wallet import DataLayerWallet, OuterDriver as DLOuterDriver
+from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import OuterDriver as DLOuterDriver
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
@@ -52,7 +53,8 @@ from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, SpendDescription
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
-from chia.wallet.cat_wallet.cat_wallet import CATWallet, OuterDriver as CATOuterDriver
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH, RequireDLInclusion
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -84,7 +86,9 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import InnerDriver as StdInnerDriver, OuterDriver as StdOuterDriver, Wallet
+from chia.wallet.wallet import InnerDriver as StdInnerDriver
+from chia.wallet.wallet import OuterDriver as StdOuterDriver
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore

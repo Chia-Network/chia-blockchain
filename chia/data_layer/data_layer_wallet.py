@@ -26,12 +26,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import (
-    ActionAlias,
-    PuzzleSolutionDescription,
-    SpendDescription,
-    WalletAction,
-)
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription, WalletAction
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,

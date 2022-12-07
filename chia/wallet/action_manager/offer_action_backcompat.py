@@ -7,7 +7,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from clvm_tools.binutils import disassemble
 
-from chia.data_layer.data_layer_wallet import OuterDriver as DLOuterDriver, UpdateMetadataDL
+from chia.data_layer.data_layer_wallet import OuterDriver as DLOuterDriver
+from chia.data_layer.data_layer_wallet import UpdateMetadataDL
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
