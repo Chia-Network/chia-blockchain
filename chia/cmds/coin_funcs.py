@@ -207,7 +207,7 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
         print("Try using a smaller fee or amount.")
         return
     additions: List[Dict[str, Union[uint64, bytes32]]] = []
-    puzzle_hashes: Set[bytes32] = set()  # we use a set for speed.
+    puzzle_hashes: Set[bytes32] = set()  # use a set for fast membership checks
     for i in range(number_of_coins):  # for readability.
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
         if target_ph in puzzle_hashes:  # if this ph is used by another coin that is being created, we cant use it.
