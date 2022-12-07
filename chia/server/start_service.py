@@ -193,7 +193,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             raise ServiceException(f"Peer {peer} already added")
 
         self._reconnect_tasks[peer] = start_reconnect_task(
-            self._server, peer, self._log, self.config.get("prefer_ipv6")
+            self._server, peer, self._log, self.config.get("prefer_ipv6", False)
         )
 
     async def setup_process_global_state(self) -> None:

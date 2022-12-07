@@ -4,7 +4,7 @@ import pathlib
 import signal
 import time
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import pkg_resources
 
@@ -39,7 +39,7 @@ def find_vdf_client() -> pathlib.Path:
     raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(host: str, port: int, counter: int, lock: asyncio.Lock, prefer_ipv6: Optional[bool]):
+async def spawn_process(host: str, port: int, counter: int, lock: asyncio.Lock, prefer_ipv6: bool):
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()
@@ -85,7 +85,9 @@ async def spawn_all_processes(config: Dict, net_config: Dict, lock: asyncio.Lock
     if process_count == 0:
         log.info("Process_count set to 0, stopping TLauncher.")
         return
-    awaitables = [spawn_process(hostname, port, i, lock, net_config.get("prefer_ipv6")) for i in range(process_count)]
+    awaitables = [
+        spawn_process(hostname, port, i, lock, net_config.get("prefer_ipv6", False)) for i in range(process_count)
+    ]
     await asyncio.gather(*awaitables)
 
 

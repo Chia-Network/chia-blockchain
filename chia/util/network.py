@@ -5,7 +5,7 @@ import logging
 import socket
 import ssl
 from dataclasses import dataclass
-from ipaddress import IPv4Network, IPv6Network, ip_address
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from aiohttp import web
@@ -14,8 +14,9 @@ from typing_extensions import final
 
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+
+IPAddress = Union[IPv4Address, IPv6Address]
 
 
 @final
@@ -108,32 +109,25 @@ def class_for_type(type: NodeType) -> Any:
     raise ValueError("No class for type")
 
 
-def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> str:
-    # If there was no preference passed in (from config), set the system-wise
+def get_host_addr(host: str, prefer_ipv6: bool = False) -> IPAddress:
+    # If there was no preference passed in (from config), set the system-wide
     # default here.  Not a great place to locate a default value, and we should
     # probably do something to write it into the config, but.  For now...
-    if prefer_ipv6 is None:
-        prefer_ipv6 = False
-    # Use PeerInfo.is_valid() to see if it's already an address
-    if isinstance(host, PeerInfo):
-        hoststr = host.host
-        if host.is_valid(True):
-            return hoststr
-    else:
-        hoststr = host
-        if PeerInfo(hoststr, uint16(0)).is_valid(True):
-            return hoststr
+    try:
+        return ip_address(host)
+    except ValueError:
+        pass
     addrset: List[
         Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
-    ] = socket.getaddrinfo(hoststr, None)
+    ] = socket.getaddrinfo(host, None)
     # Addrset is never empty, an exception is thrown or data is returned.
     for t in addrset:
         if prefer_ipv6 and t[0] == socket.AF_INET6:
-            return t[4][0]
+            return ip_address(t[4][0])
         if not prefer_ipv6 and t[0] == socket.AF_INET:
-            return t[4][0]
+            return ip_address(t[4][0])
     # If neither matched preference, just return the first available
-    return addrset[0][4][0]
+    return ip_address(addrset[0][4][0])
 
 
 def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict, testing: bool) -> bool:
