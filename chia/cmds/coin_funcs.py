@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -179,7 +179,6 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     fee = Decimal(args["fee"])
     # new args
     amount_per_coin = Decimal(args["amount_per_coin"])
-    unique_addresses = bool(args["unique_addresses"])
     target_coin_id: bytes32 = bytes32.from_hexstr(args["target_coin_id"])
     if number_of_coins > 500:
         print(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
@@ -207,12 +206,9 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
         print("Try using a smaller fee or amount.")
         return
     additions: List[Dict[str, Union[uint64, bytes32]]] = []
-    puzzle_hashes: Set[bytes32] = set()  # use a set for fast duplicate checks
     for i in range(number_of_coins):  # for readability.
-        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
-        if target_ph in puzzle_hashes:  # if this ph is used by another coin that is being created, we get a new addr.
-            target_ph = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=True))
-        puzzle_hashes.add(target_ph)  # add ph to list of ph's that we are using to avoid duplicates.
+        # we always use new addresses
+        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=True))
         additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         str(wallet_id), additions, [removal_coin_record.coin], final_fee
