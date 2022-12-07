@@ -152,7 +152,7 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             timestamped_peer_info = TimestampedPeerInfo(
-                peer.peer_host,
+                peer.peer_info.host,
                 peer.peer_server_port,
                 uint64(int(time.time())),
             )

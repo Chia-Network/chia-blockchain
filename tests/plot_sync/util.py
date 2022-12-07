@@ -14,15 +14,14 @@ from chia.server.start_service import Service
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64
+from chia.util.ints import uint16, uint64
 
 
 @dataclass
 class WSChiaConnectionDummy:
     connection_type: NodeType
     peer_node_id: bytes32
-    peer_host: str = "localhost"
-    peer_port: int = 0
+    peer_info: PeerInfo = PeerInfo("127.0.0.1", uint16(0))
     last_sent_message: Optional[Message] = None
 
     async def send_message(self, message: Message) -> None:
