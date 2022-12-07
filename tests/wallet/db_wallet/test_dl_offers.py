@@ -59,6 +59,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     wsm_maker = wallet_node_maker.wallet_state_manager
     wsm_taker = wallet_node_taker.wallet_state_manager
 
+    wsm_maker.config["automatically_add_unknown_cats"] = True
+
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
 
@@ -381,10 +383,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     # Testing with some CATs in the mix and DLs on both sides
     success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
         {
-            bytes32.from_hexstr(maker_cat_wallet_maker.get_asset_id()): -CAT_AMOUNT,
+            bytes32.from_hexstr(maker_cat_wallet_maker.get_asset_id()): -(CAT_AMOUNT - 1),
             launcher_id_maker: -1,
             launcher_id_taker: 1,
-            bytes32.from_hexstr(taker_cat_wallet_taker.get_asset_id()): CAT_AMOUNT,
+            bytes32.from_hexstr(taker_cat_wallet_taker.get_asset_id()): CAT_AMOUNT - 1,
         },
         solver=Solver(
             {
@@ -420,7 +422,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         ),
                     }
                 ],
-                "amount": str(CAT_AMOUNT),
+                "amount": str(CAT_AMOUNT - 1),
                 "dependencies": [
                     {
                         "launcher_id": launcher_id_taker.hex(),
@@ -465,7 +467,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     }
                 ],
                 "asset_id": taker_cat_wallet_taker.get_asset_id(),
-                "amount": str(CAT_AMOUNT),
+                "amount": str(CAT_AMOUNT - 1),
             }
         ],
     }
@@ -516,7 +518,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         ),
                     }
                 ],
-                "amount": str(CAT_AMOUNT),
+                "amount": str(CAT_AMOUNT - 1),
                 "dependencies": [
                     {
                         "launcher_id": launcher_id_maker.hex(),
@@ -559,7 +561,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         ),
                     }
                 ],
-                "amount": str(CAT_AMOUNT),
+                "amount": str(CAT_AMOUNT - 1),
                 "dependencies": [
                     {
                         "launcher_id": launcher_id_taker.hex(),
@@ -604,7 +606,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         ),
                     }
                 ],
-                "amount": str(CAT_AMOUNT),
+                "amount": str(CAT_AMOUNT - 1),
             },
             {
                 "asset_id": taker_cat_wallet_taker.get_asset_id(),
@@ -618,13 +620,14 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         ),
                     }
                 ],
-                "amount": str(CAT_AMOUNT),
+                "amount": str(CAT_AMOUNT - 1),
             },
         ],
     }
 
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
+    await time_out_assert(15, taker_cat_wallet_taker.get_unconfirmed_balance, 1)
 
     await full_node_api.process_transaction_records(records=tx_records)
     maker_funds -= fee
@@ -634,6 +637,19 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds)
+
+    await time_out_assert(15, maker_cat_wallet_maker.get_confirmed_balance, 1)
+    await time_out_assert(15, maker_cat_wallet_maker.get_unconfirmed_balance, 1)
+    await time_out_assert(15, taker_cat_wallet_taker.get_confirmed_balance, 1)
+    await time_out_assert(15, taker_cat_wallet_taker.get_unconfirmed_balance, 1)
+
+    maker_cat_wallet_taker = await wsm_taker.get_wallet_for_asset_id(maker_cat_wallet_maker.get_asset_id())
+    taker_cat_wallet_maker = await wsm_maker.get_wallet_for_asset_id(taker_cat_wallet_taker.get_asset_id())
+
+    await time_out_assert(15, maker_cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT - 1)
+    await time_out_assert(15, maker_cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT - 1)
+    await time_out_assert(15, taker_cat_wallet_maker.get_confirmed_balance, CAT_AMOUNT - 1)
+    await time_out_assert(15, taker_cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT - 1)
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
