@@ -21,15 +21,8 @@ from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
-from chia.types.borderlands import (
-    BlockRecordHeaderHash,
-    CoinID,
-    SpendBundleID,
-    bytes_to_CoinID,
-    bytes_to_PublicKeyBytes,
-    bytes_to_SpendBundleID,
-)
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PublicKeyBytes, bytes_to_PublicKeyBytes
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
@@ -68,7 +61,7 @@ def validate_clvm_and_signature(
         if result.error is not None:
             return Err(result.error), b"", {}
 
-        pks: List[bytes48] = []
+        pks: List[PublicKeyBytes] = []
         msgs: List[bytes] = []
         assert result.conds is not None
         pks, msgs = pkm_pairs(result.conds, additional_data)
@@ -94,7 +87,7 @@ class MempoolManager:
 
     def __init__(
         self,
-        get_coin_record: Callable[[CoinID], Awaitable[Optional[CoinRecord]]],
+        get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
         consensus_constants: ConsensusConstants,
         multiprocessing_context: Optional[BaseContext] = None,
         *,
@@ -103,7 +96,7 @@ class MempoolManager:
         self.constants: ConsensusConstants = consensus_constants
 
         # Keep track of seen spend_bundles
-        self.seen_bundle_hashes: Dict[SpendBundleID, SpendBundleID] = {}
+        self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
         self.get_coin_record = get_coin_record
 
@@ -141,7 +134,7 @@ class MempoolManager:
 
     async def create_bundle_from_mempool(
         self,
-        last_tb_header_hash: BlockRecordHeaderHash,
+        last_tb_header_hash: bytes32,
         item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
     ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
@@ -195,7 +188,7 @@ class MempoolManager:
             return None
 
     def get_filter(self) -> bytes:
-        all_transactions: Set[SpendBundleID] = set()
+        all_transactions: Set[bytes32] = set()
         byte_array_list = []
         for key, _ in self.mempool.spends.items():
             if key not in all_transactions:
@@ -219,17 +212,17 @@ class MempoolManager:
             return True
         return False
 
-    def add_and_maybe_pop_seen(self, spend_name: SpendBundleID) -> None:
+    def add_and_maybe_pop_seen(self, spend_name: bytes32) -> None:
         self.seen_bundle_hashes[spend_name] = spend_name
         while len(self.seen_bundle_hashes) > self.seen_cache_size:
             first_in = list(self.seen_bundle_hashes.keys())[0]
             self.seen_bundle_hashes.pop(first_in)
 
-    def seen(self, bundle_hash: SpendBundleID) -> bool:
+    def seen(self, bundle_hash: bytes32) -> bool:
         """Return true if we saw this spendbundle recently"""
         return bundle_hash in self.seen_bundle_hashes
 
-    def remove_seen(self, bundle_hash: SpendBundleID) -> None:
+    def remove_seen(self, bundle_hash: bytes32) -> None:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
@@ -240,8 +233,8 @@ class MempoolManager:
 
     def can_replace(
         self,
-        conflicting_items: Dict[SpendBundleID, MempoolItem],
-        removals: Dict[CoinID, CoinRecord],
+        conflicting_items: Dict[bytes32, MempoolItem],
+        removals: Dict[bytes32, CoinRecord],
         fees: uint64,
         fees_per_cost: float,
     ) -> bool:
@@ -280,7 +273,7 @@ class MempoolManager:
         return True
 
     async def pre_validate_spendbundle(
-        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: SpendBundleID
+        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
     ) -> NPCResult:
         """
         Errors are included within the cached_result.
@@ -313,7 +306,7 @@ class MempoolManager:
         return ret
 
     async def add_spend_bundle(
-        self, new_spend: SpendBundle, npc_result: NPCResult, spend_name: SpendBundleID, first_added_height: uint32
+        self, new_spend: SpendBundle, npc_result: NPCResult, spend_name: bytes32, first_added_height: uint32
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
         Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
@@ -359,9 +352,9 @@ class MempoolManager:
         self,
         new_spend: SpendBundle,
         npc_result: NPCResult,
-        spend_name: SpendBundleID,
+        spend_name: bytes32,
         first_added_height: uint32,
-    ) -> Tuple[Optional[Err], Optional[MempoolItem], List[SpendBundleID]]:
+    ) -> Tuple[Optional[Err], Optional[MempoolItem], List[bytes32]]:
         """
         Validates new_spend with the given NPCResult, and spend_name, and the current mempool. The mempool should
         be locked during this call (blockchain lock).
@@ -377,7 +370,7 @@ class MempoolManager:
         Returns:
             Optional[Err]: Err is set if we cannot add to the mempool, None if we will immediately add to mempool
             Optional[MempoolItem]: the item to add (to mempool or pending pool)
-            List[SpendBundleID]: conflicting mempool items to remove, if no Err
+            List[bytes32]: conflicting mempool items to remove, if no Err
         """
         start_time = time.time()
         if self.peak is None:
@@ -398,16 +391,16 @@ class MempoolManager:
 
         assert npc_result.conds is not None
         # build removal list
-        removal_names: List[CoinID] = [bytes_to_CoinID(spend.coin_id) for spend in npc_result.conds.spends]
+        removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         additions: List[Coin] = additions_for_npc(npc_result)
 
-        additions_dict: Dict[CoinID, Coin] = {}
+        additions_dict: Dict[bytes32, Coin] = {}
         for add in additions:
-            additions_dict[CoinID(add.name())] = add
+            additions_dict[add.name()] = add
 
         addition_amount: int = 0
         # Check additions for max coin amount
@@ -428,7 +421,7 @@ class MempoolManager:
             if v > 1:
                 return Err.DOUBLE_SPEND, None, []
 
-        removal_record_dict: Dict[CoinID, CoinRecord] = {}
+        removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
         for name in removal_names:
             removal_record = await self.get_coin_record(name)
@@ -478,7 +471,7 @@ class MempoolManager:
         # Use this information later when constructing a block
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
-        conflicting_pool_items: Dict[SpendBundleID, MempoolItem] = {}
+        conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -486,7 +479,7 @@ class MempoolManager:
 
         # Verify conditions, create hash_key list for aggsig check
         for spend in npc_result.conds.spends:
-            coin_record: CoinRecord = removal_record_dict[bytes_to_CoinID(spend.coin_id)]
+            coin_record: CoinRecord = removal_record_dict[bytes32(spend.coin_id)]
             # Check that the revealed removal puzzles actually match the puzzle hash
             if spend.puzzle_hash != coin_record.coin.puzzle_hash:
                 log.warning("Mempool rejecting transaction because of wrong puzzle_hash")
@@ -515,7 +508,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                for c_sb_id in self.mempool.removals[bytes_to_CoinID(conflicting.name())]:
+                for c_sb_id in self.mempool.removals[conflicting.name()]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
             log.warning(f"Conflicting pool items: {len(conflicting_pool_items)}")
@@ -532,7 +525,7 @@ class MempoolManager:
 
         return None, potential, list(conflicting_pool_items.keys())
 
-    async def check_removals(self, removals: Dict[CoinID, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
+    async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
@@ -556,15 +549,13 @@ class MempoolManager:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, []
 
-    def get_spendbundle(self, bundle_id: bytes32 | SpendBundleID) -> Optional[SpendBundle]:
+    def get_spendbundle(self, spend_bundle_id: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
-        bundle_hash = bytes32(bundle_id)
-        if bundle_hash in self.mempool.spends:
-            spend_bundle_id = bytes_to_SpendBundleID(bundle_hash)
+        if spend_bundle_id in self.mempool.spends:
             return self.mempool.spends[spend_bundle_id].spend_bundle
         return None
 
-    def get_mempool_item(self, spend_bundle_id: SpendBundleID, include_pending: bool = False) -> Optional[MempoolItem]:
+    def get_mempool_item(self, spend_bundle_id: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
         """
         Returns a MempoolItem if it's inside one the mempools.
 
@@ -578,7 +569,7 @@ class MempoolManager:
 
     async def new_peak(
         self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]
-    ) -> List[Tuple[SpendBundle, NPCResult, SpendBundleID]]:
+    ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
@@ -599,7 +590,7 @@ class MempoolManager:
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
-                        spendbundle_ids: List[SpendBundleID] = self.mempool.removals[bytes_to_CoinID(spend.coin_id)]
+                        spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
                         self.mempool.remove_from_pool(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
                             self.remove_seen(spendbundle_id)

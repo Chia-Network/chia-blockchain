@@ -19,8 +19,8 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
-from chia.types.borderlands import CoinID, bytes_to_CoinID
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PublicKeyBytes
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -348,7 +348,7 @@ async def validate_block_body(
             curr = reorg_blocks[uint32(curr.height - 1)]
             assert curr is not None
 
-    removal_coin_records: Dict[CoinID, CoinRecord] = {}
+    removal_coin_records: Dict[bytes32, CoinRecord] = {}
     # the removed coins we need to look up from the DB
     # i.e. all non-ephemeral coins
     removals_from_db: List[bytes32] = []
@@ -363,7 +363,7 @@ async def validate_block_body(
                 False,
                 block.foliage_transaction_block.timestamp,
             )
-            removal_coin_records[bytes_to_CoinID(new_unspent.name)] = new_unspent
+            removal_coin_records[new_unspent.name] = new_unspent
         else:
             # This check applies to both coins created before fork (pulled from coin_store),
             # and coins created after fork (additions_since_fork)
@@ -384,7 +384,7 @@ async def validate_block_body(
             if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                 # Check for coins spent in an ancestor block
                 return Err.DOUBLE_SPEND, None
-            removal_coin_records[bytes_to_CoinID(unspent.name)] = unspent
+            removal_coin_records[unspent.name] = unspent
         else:
             look_in_fork.append(unspent.name)
 
@@ -411,7 +411,7 @@ async def validate_block_body(
             False,
             confirmed_timestamp,
         )
-        removal_coin_records[bytes_to_CoinID(new_coin_record.name)] = new_coin_record
+        removal_coin_records[new_coin_record.name] = new_coin_record
 
     removed = 0
     for unspent in removal_coin_records.values():
@@ -466,7 +466,7 @@ async def validate_block_body(
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks: List[bytes48] = []
+    pairs_pks: List[PublicKeyBytes] = []
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None

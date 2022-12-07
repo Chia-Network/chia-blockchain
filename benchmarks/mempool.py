@@ -18,7 +18,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
-from chia.types.borderlands import bytes_to_BlockRecordHeaderHash, bytes_to_SpendBundleID
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
@@ -147,7 +146,7 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
         async def add_spend_bundles(spend_bundles: List[SpendBundle]) -> None:
             for tx in spend_bundles:
-                spend_bundle_id = bytes_to_SpendBundleID(tx.name())
+                spend_bundle_id = tx.name()
                 npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)
                 assert npc is not None
                 _, status, error = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
@@ -169,7 +168,7 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
             for i in range(2000):
-                last_block_hash = bytes_to_BlockRecordHeaderHash(bytes32(b"a" * 32))
+                last_block_hash = bytes32(b"a" * 32)
                 await mempool.create_bundle_from_mempool(last_block_hash)
             stop = monotonic()
         print(f"create_bundle_from_mempool time: {stop - start:0.4f}s")

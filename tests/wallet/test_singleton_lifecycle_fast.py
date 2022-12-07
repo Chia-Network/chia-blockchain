@@ -10,7 +10,6 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_CoinID
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
@@ -390,7 +389,7 @@ def create_throwaway_pubkey(seed: bytes) -> G1Element:
 
 
 def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent=True):
-    coin_record = coin_store.coin_record(bytes_to_CoinID(coin.name()))
+    coin_record = coin_store.coin_record(coin.name())
     assert coin_record is not None
     assert coin_record.spent is is_spent
 

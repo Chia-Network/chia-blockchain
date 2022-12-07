@@ -22,7 +22,6 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
@@ -87,7 +86,7 @@ async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: Wallet
         20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
     )
     await farm_transaction_block(full_node_api, wallet_node)
-    assert full_node_api.full_node.mempool_manager.get_spendbundle(bytes_to_SpendBundleID(spend_bundle.name())) is None
+    assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
 
 
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1):

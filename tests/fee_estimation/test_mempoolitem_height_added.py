@@ -14,7 +14,6 @@ from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_SpendBundleID
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -87,7 +86,7 @@ async def test_mempool_inclusion_filter_basic() -> None:
     assert len(sim.mempool_manager.mempool.spends) == 1
     assert error is None
 
-    mempool_item = sim.mempool_manager.get_mempool_item(bytes_to_SpendBundleID(spend_bundle.name()))
+    mempool_item = sim.mempool_manager.get_mempool_item(spend_bundle.name())
     assert mempool_item
 
     def include_none(mm: MempoolManager, mi: MempoolItem) -> bool:
@@ -119,7 +118,7 @@ async def test_mempoolitem_height_added(db_version: int) -> None:
     assert len(sim.mempool_manager.mempool.spends) == 1
     log.warning(f"{status, error} = cli.push_tx({spend_bundle.name()})")
 
-    mempool_item = sim.mempool_manager.get_mempool_item(bytes_to_SpendBundleID(spend_bundle.name()))
+    mempool_item = sim.mempool_manager.get_mempool_item(spend_bundle.name())
     assert mempool_item
     heights = {sim.get_height(): mempool_item.height_added_to_mempool}
 
@@ -131,7 +130,7 @@ async def test_mempoolitem_height_added(db_version: int) -> None:
     removal_ids = [c.name() for c in removals]
     assert mempool_item.name not in removal_ids
 
-    mempool_item2 = sim.mempool_manager.get_mempool_item(bytes_to_SpendBundleID(spend_bundle.name()))
+    mempool_item2 = sim.mempool_manager.get_mempool_item(spend_bundle.name())
     assert len(sim.mempool_manager.mempool.spends) == 1
     assert mempool_item2
 

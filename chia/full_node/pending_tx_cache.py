@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Dict
 
-from chia.types.borderlands import SpendBundleID
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import MempoolItem
 
 
 class PendingTxCache:
     _cache_max_total_cost: int
     _cache_cost: int
-    _txs: Dict[SpendBundleID, MempoolItem]
+    _txs: Dict[bytes32, MempoolItem]
 
     def __init__(self, cost_limit: int):
         self._cache_max_total_cost = cost_limit
@@ -32,7 +32,7 @@ class PendingTxCache:
             self._cache_cost -= self._txs[first_in].cost
             self._txs.pop(first_in)
 
-    def drain(self) -> Dict[SpendBundleID, MempoolItem]:
+    def drain(self) -> Dict[bytes32, MempoolItem]:
         ret = self._txs
         self._txs = {}
         self._cache_cost = 0

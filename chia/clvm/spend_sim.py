@@ -6,7 +6,6 @@ from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar, Callable
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.borderlands import bytes_to_SpendBundleID, bytes_to_BlockRecordHeaderHash, SpendBundleID
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
@@ -212,9 +211,7 @@ class SpendSim:
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = await self.mempool_manager.create_bundle_from_mempool(
-                    bytes_to_BlockRecordHeaderHash(peak.header_hash), item_inclusion_filter
-                )
+                result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
                 if result is not None:
                     bundle, additions, removals = result
                     generator_bundle = bundle
@@ -272,7 +269,7 @@ class SimClient:
         self.service = service
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
-        spend_bundle_id = bytes_to_SpendBundleID(spend_bundle.name())
+        spend_bundle_id = spend_bundle.name()
         try:
             cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_bundle_id
@@ -390,14 +387,14 @@ class SimClient:
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         return list(self.service.mempool_manager.mempool.spends.keys())
 
-    async def get_all_mempool_items(self) -> Dict[SpendBundleID, MempoolItem]:
+    async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
         spends = {}
         for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id] = item
         return spends
 
     async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict[str, Any]]:
-        item = self.service.mempool_manager.get_mempool_item(bytes_to_SpendBundleID(tx_id))
+        item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
             return None
         else:

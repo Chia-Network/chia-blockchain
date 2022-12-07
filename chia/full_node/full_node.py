@@ -50,7 +50,6 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
-from chia.types.borderlands import SpendBundleID, bytes_to_SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -79,9 +78,7 @@ from chia.util.safe_cancel_task import cancel_task_safe
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: List[
-        Tuple[SpendBundle, NPCResult, SpendBundleID]
-    ]  # The result of calling MempoolManager.new_peak
+    mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]  # The result of calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
@@ -1513,9 +1510,7 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
-        mempool_new_peak_result: List[
-            Tuple[SpendBundle, NPCResult, SpendBundleID]
-        ] = await self.mempool_manager.new_peak(
+        mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
             self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
         )
 
@@ -2221,48 +2216,45 @@ class FullNode:
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
-        spend_bundle_id = bytes_to_SpendBundleID(spend_name)
         if self.mempool_manager.get_spendbundle(spend_name) is not None:
-            self.mempool_manager.remove_seen(spend_bundle_id)
+            self.mempool_manager.remove_seen(spend_name)
             return MempoolInclusionStatus.SUCCESS, None
-        if self.mempool_manager.seen(spend_bundle_id):
+        if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
-        self.mempool_manager.add_and_maybe_pop_seen(spend_bundle_id)
-        self.log.debug(f"Processing transaction: {spend_bundle_id}")
+        self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+        self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
-            self.mempool_manager.remove_seen(spend_bundle_id)
+            self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(
-                    transaction, tx_bytes, spend_bundle_id
-                )
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
             except ValidationError as e:
-                self.mempool_manager.remove_seen(spend_bundle_id)
+                self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code
             except Exception:
-                self.mempool_manager.remove_seen(spend_bundle_id)
+                self.mempool_manager.remove_seen(spend_name)
                 raise
             async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
-                    self.mempool_manager.remove_seen(spend_bundle_id)
+                    self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
                 assert self.mempool_manager.peak
                 cost, status, error = await self.mempool_manager.add_spend_bundle(
-                    transaction, cost_result, spend_bundle_id, self.mempool_manager.peak.height
+                    transaction, cost_result, spend_name, self.mempool_manager.peak.height
                 )
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(
-                    f"Added transaction to mempool: {spend_bundle_id} mempool size: "
+                    f"Added transaction to mempool: {spend_name} mempool size: "
                     f"{self.mempool_manager.mempool.total_mempool_cost} normalized "
                     f"{self.mempool_manager.mempool.total_mempool_cost / 5000000}"
                 )
 
                 # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                 # vector.
-                mempool_item = self.mempool_manager.get_mempool_item(spend_bundle_id)
+                mempool_item = self.mempool_manager.get_mempool_item(spend_name)
                 assert mempool_item is not None
                 fees = mempool_item.fee
                 assert fees >= 0
@@ -2280,7 +2272,7 @@ class FullNode:
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
-                self.mempool_manager.remove_seen(spend_bundle_id)
+                self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
                     f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
                 )
