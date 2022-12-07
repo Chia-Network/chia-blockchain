@@ -152,7 +152,7 @@ if [ "$(uname)" = "Linux" ]; then
     #Arch Linux
     if ! nodejs_is_installed; then
       echo "Installing nodejs on Arch Linux"
-      sudo pacman -Sy nodejs npm
+      sudo pacman -S nodejs npm
     fi
     do_install_npm_locally
   fi
