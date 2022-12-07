@@ -198,6 +198,7 @@ def combine_cmd(
     "--number-of-coins",
     type=int,
     help="The number of coins we are creating.",
+    required=True,
 )
 @click.option(
     "-m",
