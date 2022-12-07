@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 from blspy import G1Element
 from typing_extensions import Protocol
@@ -57,9 +57,6 @@ class ActionAlias(Protocol):
         ...
 
 
-_T_PuzzleSolutionDescription = TypeVar("_T_PuzzleSolutionDescription", bound="PuzzleSolutionDescription")
-
-
 class OuterDriver(Protocol):
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
@@ -96,7 +93,7 @@ class OuterDriver(Protocol):
     @classmethod
     async def match_puzzle_and_solution(
         cls: Type["OuterDriver"], spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
+    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
         ...
 
     @staticmethod
@@ -135,33 +132,49 @@ class InnerDriver(Protocol):
         solution: Program,
         mod: Program,
         curried_args: Program,
-    ) -> Optional[PuzzleSolutionDescription]:
+    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription]]:
         ...
 
 
 @dataclass(frozen=True)
-class PuzzleSolutionDescription:
+class PuzzleDescription:
     driver: Union[InnerDriver, OuterDriver]
+    coin_description: Solver
+
+
+@dataclass(frozen=True)
+class SolutionDescription:
     actions: List[WalletAction]
     signatures_required: List[Tuple[G1Element, bytes, bool]]
-    coin_description: Solver
     environment: Solver
 
 
 @dataclass(frozen=True)
 class SpendDescription:
     coin: Coin
-    outer_description: PuzzleSolutionDescription
-    inner_description: PuzzleSolutionDescription
+    outer_puzzle_description: PuzzleDescription
+    outer_solution_description: SolutionDescription
+    inner_puzzle_description: PuzzleDescription
+    inner_solution_description: SolutionDescription
 
     def get_all_actions(self) -> List[WalletAction]:
-        return [*self.outer_description.actions, *self.inner_description.actions]
+        return [*self.outer_solution_description.actions, *self.inner_solution_description.actions]
 
     def get_all_signatures(self) -> List[Tuple[G1Element, bytes, bool]]:
-        return [*self.outer_description.signatures_required, *self.inner_description.signatures_required]
+        return [
+            *self.outer_solution_description.signatures_required,
+            *self.inner_solution_description.signatures_required,
+        ]
 
     def get_full_description(self) -> Solver:
-        return Solver({**self.inner_description.coin_description.info, **self.outer_description.coin_description.info})
+        return Solver(
+            {
+                **self.inner_puzzle_description.coin_description.info,
+                **self.outer_puzzle_description.coin_description.info,
+            }
+        )
 
     def get_full_environment(self) -> Solver:
-        return Solver({**self.inner_description.environment.info, **self.outer_description.environment.info})
+        return Solver(
+            {**self.inner_solution_description.environment.info, **self.outer_solution_description.environment.info}
+        )

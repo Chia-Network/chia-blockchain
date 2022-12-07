@@ -16,7 +16,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleDescription, SolutionDescription, SpendDescription
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
@@ -205,19 +205,28 @@ class WalletActionManager:
             mod, curried_args = spend.puzzle_reveal.uncurry()
             for outer_wallet in self.wallet_state_manager.outer_wallets:
                 outer_match: Optional[
-                    Tuple[PuzzleSolutionDescription, Program, Program]
+                    Tuple[PuzzleDescription, SolutionDescription, Program, Program]
                 ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
                 if outer_match is not None:
-                    outer_description, inner_puzzle, inner_solution = outer_match
+                    outer_puzzle_description, outer_solution_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
                     for inner_wallet in self.wallet_state_manager.inner_wallets:
-                        inner_description: Optional[
-                            PuzzleSolutionDescription
+                        inner_match: Optional[
+                            Tuple[PuzzleDescription, SolutionDescription]
                         ] = await inner_wallet.match_puzzle_and_solution(
                             spend.coin, inner_puzzle, inner_solution, mod, curried_args
                         )
-                        if inner_description is not None:
-                            matches.append(SpendDescription(spend.coin, outer_description, inner_description))
+                        if inner_match is not None:
+                            inner_puzzle_description, inner_solution_description = inner_match
+                            matches.append(
+                                SpendDescription(
+                                    spend.coin,
+                                    outer_puzzle_description,
+                                    outer_solution_description,
+                                    inner_puzzle_description,
+                                    inner_solution_description,
+                                )
+                            )
 
             if matches == []:
                 continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -322,19 +331,28 @@ class WalletActionManager:
             mod, curried_args = spend.puzzle_reveal.uncurry()
             for outer_wallet in self.wallet_state_manager.outer_wallets:
                 outer_match: Optional[
-                    Tuple[PuzzleSolutionDescription, Program, Program]
+                    Tuple[PuzzleDescription, SolutionDescription, Program, Program]
                 ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
                 if outer_match is not None:
-                    outer_description, inner_puzzle, inner_solution = outer_match
+                    outer_puzzle_description, outer_solution_description, inner_puzzle, inner_solution = outer_match
                     mod, curried_args = inner_puzzle.uncurry()
                     for inner_wallet in self.wallet_state_manager.inner_wallets:
-                        inner_description: Optional[
-                            PuzzleSolutionDescription
+                        inner_match: Optional[
+                            Tuple[PuzzleDescription, SolutionDescription]
                         ] = await inner_wallet.match_puzzle_and_solution(
                             spend.coin, inner_puzzle, inner_solution, mod, curried_args
                         )
-                        if inner_description is not None:
-                            matches.append(SpendDescription(spend.coin, outer_description, inner_description))
+                        if inner_match is not None:
+                            inner_puzzle_description, inner_solution_description = inner_match
+                            matches.append(
+                                SpendDescription(
+                                    spend.coin,
+                                    outer_puzzle_description,
+                                    outer_solution_description,
+                                    inner_puzzle_description,
+                                    inner_solution_description,
+                                )
+                            )
 
             if matches == []:
                 continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -351,30 +369,30 @@ class WalletActionManager:
                     {
                         "id": "0x" + spend.coin.name().hex(),
                         "outer": {
-                            "actions": [action.to_solver() for action in spend.outer_description.actions],
+                            "actions": [action.to_solver() for action in spend.outer_solution_description.actions],
                             "signatures_required": [
                                 {
                                     "pubkey": "0x" + bytes(pubkey).hex(),
                                     "data": "0x" + data.hex(),
                                     "me": "1" if me else "()",
                                 }
-                                for pubkey, data, me in spend.outer_description.signatures_required
+                                for pubkey, data, me in spend.outer_solution_description.signatures_required
                             ],
-                            "coin_description": spend.outer_description.coin_description,
-                            "environment": spend.outer_description.environment,
+                            "coin_description": spend.outer_puzzle_description.coin_description,
+                            "environment": spend.outer_solution_description.environment,
                         },
                         "inner": {
-                            "actions": [action.to_solver() for action in spend.inner_description.actions],
+                            "actions": [action.to_solver() for action in spend.inner_solution_description.actions],
                             "signatures_required": [
                                 {
                                     "pubkey": "0x" + bytes(pubkey).hex(),
                                     "data": "0x" + data.hex(),
                                     "me": "1" if me else "()",
                                 }
-                                for pubkey, data, me in spend.inner_description.signatures_required
+                                for pubkey, data, me in spend.inner_solution_description.signatures_required
                             ],
-                            "coin_description": spend.inner_description.coin_description,
-                            "environment": spend.inner_description.environment,
+                            "coin_description": spend.inner_puzzle_description.coin_description,
+                            "environment": spend.inner_solution_description.environment,
                         },
                     }
                     for spend in spend_descriptions

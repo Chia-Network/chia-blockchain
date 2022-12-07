@@ -28,7 +28,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, WalletAction
+from chia.wallet.action_manager.protocols import ActionAlias, PuzzleDescription, SolutionDescription, WalletAction
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
@@ -1124,23 +1124,25 @@ class OuterDriver:
     @classmethod
     async def match_puzzle_and_solution(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
+    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
         args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))
         if args is not None:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = args
             tail: bytes32 = bytes32(genesis_coin_checker_hash.as_python())
             return (
-                PuzzleSolutionDescription(
+                PuzzleDescription(
                     cls(tail, LineageProof.from_program(spend.solution.to_program().at("rf")), spend.coin.name()),
-                    [],
-                    [],
                     Solver(
                         {
                             "tail": "0x" + tail.hex(),
                             "asset_types": cls.get_asset_types(Solver({"tail": "0x" + tail.hex()})),
                         }
                     ),
-                    Solver({}),  # TODO: This should return info about the ring announcements
+                ),
+                SolutionDescription(
+                    [],
+                    [],
+                    Solver({}),
                 ),
                 inner_puzzle,
                 spend.solution.to_program().at("f"),

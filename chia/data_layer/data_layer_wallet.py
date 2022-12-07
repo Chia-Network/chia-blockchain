@@ -26,7 +26,13 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    PuzzleDescription,
+    SolutionDescription,
+    SpendDescription,
+    WalletAction,
+)
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
@@ -1361,8 +1367,8 @@ class DataLayerWallet:
 
         for spend in non_ephemeral_spends:
             if (
-                isinstance(spend.outer_description.driver, OuterDriver)
-                and spend.outer_description.driver.launcher_id == expected_launcher_id
+                isinstance(spend.outer_puzzle_description.driver, OuterDriver)
+                and spend.outer_puzzle_description.driver.launcher_id == expected_launcher_id
             ):
                 info = CoinInfo.from_spend_description(spend)
                 actions: List[WalletAction] = info.alias_actions(
@@ -1374,13 +1380,13 @@ class DataLayerWallet:
                 if len(metadata_updates) > 1:
                     raise ValueError("Too many metadata_updates in a spend")
                 elif len(metadata_updates) == 0:
-                    root: bytes32 = spend.outer_description.driver.root
+                    root: bytes32 = spend.outer_puzzle_description.driver.root
                 else:
                     root = bytes32(metadata_updates[0].metadata_solution.at("fff").as_python())
 
                 inner_puzzle_hash: bytes32 = (
                     # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
-                    await spend.inner_description.driver.construct_inner_puzzle()  # type: ignore
+                    await spend.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore
                 ).get_tree_hash()
                 singleton_recreation: DirectPayment = next(
                     action for action in actions if isinstance(action, DirectPayment) and action.payment.amount % 2 == 1
@@ -1577,7 +1583,7 @@ class OuterDriver:
     @classmethod
     async def match_puzzle_and_solution(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
+    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
         matched, args = match_dl_singleton(spend.puzzle_reveal.to_program())
         if matched:
             innerpuz, rt, lid = args
@@ -1585,15 +1591,13 @@ class OuterDriver:
             root: bytes32 = bytes32(rt.as_python())
 
             return (
-                PuzzleSolutionDescription(
+                PuzzleDescription(
                     cls(
                         launcher_id,
                         root,
                         uint64(spend.coin.amount),
                         LineageProof.from_program(spend.solution.to_program().first()),
                     ),
-                    [],
-                    [],
                     Solver(
                         {
                             "launcher_id": "0x" + launcher_id.hex(),
@@ -1603,6 +1607,10 @@ class OuterDriver:
                             ),
                         }
                     ),
+                ),
+                SolutionDescription(
+                    [],
+                    [],
                     Solver({}),
                 ),
                 innerpuz,

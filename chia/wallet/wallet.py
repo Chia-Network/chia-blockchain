@@ -21,7 +21,13 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleSolutionDescription, SpendDescription, WalletAction
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    PuzzleDescription,
+    SolutionDescription,
+    SpendDescription,
+    WalletAction,
+)
 from chia.wallet.action_manager.wallet_actions import Condition, Graftroot
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
@@ -625,7 +631,7 @@ class Wallet:
 
         for spend in non_ephemeral_spends:
             if isinstance(
-                spend.outer_description.driver, OuterDriver
+                spend.outer_puzzle_description.driver, OuterDriver
             ):  # There should probably be a cleaner way to do this
                 info = CoinInfo.from_spend_description(spend)
                 actions: List[WalletAction] = info.alias_actions(
@@ -729,14 +735,16 @@ class OuterDriver:
     @classmethod
     async def match_puzzle_and_solution(
         cls, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleSolutionDescription, Program, Program]]:
+    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
 
         return (
-            PuzzleSolutionDescription(
+            PuzzleDescription(
                 OuterDriver(),
-                [],
-                [],
                 Solver({}),
+            ),
+            SolutionDescription(
+                [],
+                [],
                 Solver({}),
             ),
             spend.puzzle_reveal.to_program(),
@@ -804,7 +812,7 @@ class InnerDriver:
         solution: Program,
         mod: Program,
         curried_args: Program,
-    ) -> Optional[PuzzleSolutionDescription]:
+    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription]]:
         if mod != MOD:
             return None
 
@@ -822,11 +830,9 @@ class InnerDriver:
         pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
         delegated_puzzle: Program = solution.at("rf")
 
-        return PuzzleSolutionDescription(
-            InnerDriver(pubkey),
+        return PuzzleDescription(InnerDriver(pubkey), Solver({}),), SolutionDescription(
             actions,
             [(pubkey, delegated_puzzle.get_tree_hash(), True)],
-            Solver({}),
             Solver({}),
         )
 

@@ -18,7 +18,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
 from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import PuzzleSolutionDescription, SpendDescription
+from chia.wallet.action_manager.protocols import PuzzleDescription, SolutionDescription, SpendDescription
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU_PH,
@@ -362,19 +362,28 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         mod, curried_args = spend.puzzle_reveal.uncurry()
         for outer_wallet in wallet_state_manager.outer_wallets:
             outer_match: Optional[
-                Tuple[PuzzleSolutionDescription, Program, Program]
+                Tuple[PuzzleDescription, SolutionDescription, Program, Program]
             ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
             if outer_match is not None:
-                outer_description, inner_puzzle, inner_solution = outer_match
+                outer_puzzle_description, outer_solution_description, inner_puzzle, inner_solution = outer_match
                 mod, curried_args = inner_puzzle.uncurry()
                 for inner_wallet in wallet_state_manager.inner_wallets:
-                    inner_description: Optional[
-                        PuzzleSolutionDescription
+                    inner_match: Optional[
+                        Tuple[PuzzleDescription, SolutionDescription]
                     ] = await inner_wallet.match_puzzle_and_solution(
                         spend.coin, inner_puzzle, inner_solution, mod, curried_args
                     )
-                    if inner_description is not None:
-                        matches.append(SpendDescription(spend.coin, outer_description, inner_description))
+                    if inner_match is not None:
+                        inner_puzzle_description, inner_solution_description = inner_match
+                        matches.append(
+                            SpendDescription(
+                                spend.coin,
+                                outer_puzzle_description,
+                                outer_solution_description,
+                                inner_puzzle_description,
+                                inner_solution_description,
+                            )
+                        )
 
         if matches == []:
             continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -421,13 +430,13 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         )
 
         re_matched_spend: Optional[
-            Tuple[PuzzleSolutionDescription, Program, Program]
+            Tuple[PuzzleDescription, SolutionDescription, Program, Program]
         ] = await info.outer_driver.match_puzzle_and_solution(
             new_spend, *new_spend.puzzle_reveal.to_program().uncurry()
         )
         if re_matched_spend is None:
             raise RuntimeError("Internal logic error, spend could not be rematched")
-        inner_most_solution: Program = re_matched_spend[2]
+        inner_most_solution: Program = re_matched_spend[3]
         delegated_solution: Program = inner_most_solution.at("rrf")
         if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
             if dl_graftroot_actions == []:
@@ -439,7 +448,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             )
 
         new_full_solution: Program = await info.outer_driver.construct_outer_solution(
-            new_description.outer_description.actions, inner_most_solution, environment, optimize=False
+            new_description.outer_solution_description.actions, inner_most_solution, environment, optimize=False
         )
 
         if isinstance(info.outer_driver, CATOuterDriver):

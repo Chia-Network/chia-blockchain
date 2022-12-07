@@ -10,7 +10,8 @@ from chia.wallet.action_manager.protocols import (
     ActionAlias,
     InnerDriver,
     OuterDriver,
-    PuzzleSolutionDescription,
+    PuzzleDescription,
+    SolutionDescription,
     SpendDescription,
     WalletAction,
 )
@@ -44,8 +45,8 @@ class CoinInfo:
             description.coin,
             description.get_full_description(),
             # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
-            description.outer_description.driver,  # type: ignore
-            description.inner_description.driver,  # type: ignore
+            description.outer_puzzle_description.driver,  # type: ignore
+            description.inner_puzzle_description.driver,  # type: ignore
         )
 
     def alias_actions(
@@ -139,18 +140,19 @@ class CoinInfo:
         spend = CoinSpend(self.coin, outer_puzzle, outer_solution)
 
         outer_match: Optional[
-            Tuple[PuzzleSolutionDescription, Program, Program]
+            Tuple[PuzzleDescription, SolutionDescription, Program, Program]
         ] = await self.outer_driver.match_puzzle_and_solution(spend, *outer_puzzle.uncurry())
         assert outer_match is not None
-        outer_description: PuzzleSolutionDescription = outer_match[0]
-        inner_description: Optional[PuzzleSolutionDescription] = await self.inner_driver.match_puzzle_and_solution(
+        inner_match: Optional[
+            Tuple[PuzzleDescription, SolutionDescription]
+        ] = await self.inner_driver.match_puzzle_and_solution(
             self.coin, inner_puzzle, inner_solution, *inner_puzzle.uncurry()
         )
-        assert inner_description is not None
+        assert inner_match is not None
 
         return (
             actions_left,
             Solver({**environment.info, **environment_addition.info}),
             spend,
-            SpendDescription(self.coin, outer_description, inner_description),
+            SpendDescription(self.coin, *outer_match[0:2], *inner_match),
         )
