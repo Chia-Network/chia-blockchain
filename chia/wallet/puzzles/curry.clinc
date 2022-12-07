@@ -1,0 +1,68 @@
+(
+  ;; The code below is used to calculate of the tree hash of a curried function
+  ;; without actually doing the curry, and using other optimization tricks
+  ;; like unrolling `sha256tree`.
+
+  (defconstant ONE 1)
+  (defconstant TWO 2)
+  (defconstant A_KW #a)
+  (defconstant Q_KW #q)
+  (defconstant C_KW #c)
+  (defconstant sha256_one 0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a)
+
+  ;; Given the tree hash `environment-hash` of an environment tree E
+  ;; and the tree hash `parameter-hash` of a constant parameter P
+  ;; return the tree hash of the tree corresponding to
+  ;; `(c (q . P) E)`
+  ;; This is the new environment tree with the addition parameter P curried in.
+  ;;
+  ;; Note that `(c (q . P) E)` = `(c . ((q . P) . (E . 0)))`
+
+  (defun-inline update-hash-for-parameter-hash (parameter-hash environment-hash)
+     (sha256 TWO (sha256 ONE C_KW)
+                 (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) parameter-hash)
+                             (sha256 TWO environment-hash sha256_one)))
+  )
+
+  ;; Given the tree hash `environment-hash` of an environment tree E
+  ;; and the tree hash `mod-hash` of a mod M
+  ;; return the tree hash of the tree corresponding to
+  ;; `(a (q . M) E)`
+  ;; This is the hash of a new function that adopts the new environment E.
+  ;; This is used to build of the tree hash of a curried function.
+  ;;
+  ;; Note that `(a (q . M) E)` = `(a . ((q . M)  . (E . 0)))`
+
+  (defun-inline tree-hash-of-apply (mod-hash environment-hash)
+     (sha256 TWO (sha256 ONE A_KW)
+                 (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) mod-hash)
+                             (sha256 TWO environment-hash sha256_one)))
+  )
+
+  ;; This function recursively calls `update-hash-for-parameter-hash`
+
+  (defun calculate-hash-of-curried-parameters (curry-parameter-hashes)
+     (if curry-parameter-hashes
+         (update-hash-for-parameter-hash (f curry-parameter-hashes) (calculate-hash-of-curried-parameters (r curry-parameter-hashes)))
+         (sha256 ONE ONE)
+     )
+  )
+  ;; mod-hash:
+  ;;   the hash of a puzzle function, ie. a `mod`
+  ;;
+  ;; curry-parameter-hashes:
+  ;;   a list of pre-hashed trees representing parameters to be curried into the puzzle.
+  ;;
+  ;; we return the hash of the curried expression
+  ;;   (a (q . mod-hash) (c (cp1 (c cp2 (c ... 1)...))))
+  ;;
+  ;; Note that from a user's perspective the hashes passed in here aren't simply
+  ;; the hashes of the desired parameters, but their treehash representation since
+  ;; that's the form we're assuming they take in the acutal curried program.
+
+  (defun-inline curry (mod-hash . curry-parameter-hashes)
+     (tree-hash-of-apply mod-hash
+                         (calculate-hash-of-curried-parameters curry-parameter-hashes))
+  )
+
+)
