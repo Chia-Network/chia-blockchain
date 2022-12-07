@@ -302,7 +302,7 @@ class MempoolManager:
         if err is not None:
             raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():
-            LOCAL_CACHE.put(cache_entry_key, GTElement.bytes_to__unchecked(cached_entry_value))
+            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes_unchecked(cached_entry_value))
         ret: NPCResult = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
         duration = end_time - start_time
