@@ -337,7 +337,12 @@ class UpdateMetadata:
             args.append(solver["metadata_solution"])
         if "metadata_updater" in solver:
             args.append(solver["metadata_updater"])
+        if len(args) < 1:
+            raise ValueError(f"Malformatted update metadata action {solver}")
+        # Pylint apparently isn't smart enough to know that this will always have enough args if it gets here
+        # pylint: disable=no-value-for-parameter
         return cls(*args)
+        # pylint: enable=no-value-for-parameter
 
     def to_solver(self) -> Solver:
         return Solver(

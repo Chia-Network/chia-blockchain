@@ -83,8 +83,8 @@ class CoinInfo:
         optimize: bool = False,
     ) -> Tuple[List[Solver], Solver, CoinSpend, SpendDescription]:
         # Get a list of the actions that each wallet supports
-        supported_outer_actions = self.outer_driver.get_actions()
-        supported_inner_actions = self.inner_driver.get_actions()
+        supported_outer_actions: Dict[str, Type[WalletAction]] = self.outer_driver.get_actions()
+        supported_inner_actions: Dict[str, Type[WalletAction]] = self.inner_driver.get_actions()
 
         action_aliases = {
             **default_aliases,
@@ -96,6 +96,8 @@ class CoinInfo:
         actions_left: List[Solver] = []
         outer_actions: List[WalletAction] = []
         inner_actions: List[WalletAction] = []
+        # I'm not sure why pylint fails to recognize supported_*_actions as dicts (maybe not familiar w/ protocols?)
+        # pylint: disable=unsupported-membership-test,unsubscriptable-object
         for action in actions:
             if action["type"] in action_aliases:
                 alias = action_aliases[action["type"]].from_solver(action)
@@ -120,6 +122,7 @@ class CoinInfo:
                 new_outer_actions = []
                 new_inner_actions = []
                 break
+        # pylint: enable=unsupported-membership-test,unsubscriptable-object
 
         # Create the inner puzzle and solution first
         inner_puzzle: Program = await self.inner_driver.construct_inner_puzzle()
