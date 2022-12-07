@@ -44,6 +44,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.borderlands import bytes_to_BlockRecordHeaderHash, bytes_to_SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -146,7 +147,7 @@ class FullNodeAPI:
             return None
 
         # Ignore if already seen
-        if self.full_node.mempool_manager.seen(transaction.transaction_id):
+        if self.full_node.mempool_manager.seen(bytes_to_SpendBundleID(transaction.transaction_id)):
             return None
 
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
@@ -171,6 +172,7 @@ class FullNodeAPI:
 
             async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
                 counter = 0
+                spend_bundle_id = bytes_to_SpendBundleID(transaction_id)
                 try:
                     while True:
                         # Limit to asking a few peers, it's possible that this tx got included on chain already
@@ -193,7 +195,7 @@ class FullNodeAPI:
                         await random_peer.send_message(msg)
                         await asyncio.sleep(5)
                         counter += 1
-                        if full_node.mempool_manager.seen(transaction_id):
+                        if full_node.mempool_manager.seen(spend_bundle_id):
                             break
                 except asyncio.CancelledError:
                     pass
@@ -220,7 +222,8 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
-        spend_bundle = self.full_node.mempool_manager.get_spendbundle(request.transaction_id)
+        spend_bundle_id = bytes_to_SpendBundleID(request.transaction_id)
+        spend_bundle = self.full_node.mempool_manager.get_spendbundle(spend_bundle_id)
         if spend_bundle is None:
             return None
 
@@ -741,7 +744,7 @@ class FullNodeAPI:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                            curr_l_tb.header_hash
+                            bytes_to_BlockRecordHeaderHash(curr_l_tb.header_hash)
                         )
                     except Exception as e:
                         self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -1241,7 +1244,7 @@ class FullNodeAPI:
     async def send_transaction(
         self, request: wallet_protocol.SendTransaction, *, test: bool = False
     ) -> Optional[Message]:
-        spend_name = request.transaction.name()
+        spend_name = bytes_to_SpendBundleID(request.transaction.name())
         if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
             self.full_node.mempool_manager.remove_seen(spend_name)
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)

@@ -15,6 +15,7 @@ from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.borderlands import bytes_to_SpendBundleID
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets, setup_full_system
@@ -338,7 +339,8 @@ class TestSimulation:
 
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
             assert tx.spend_bundle is not None
-            assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
+            bundle_id = bytes_to_SpendBundleID(tx.spend_bundle.name())
+            assert full_node_api.full_node.mempool_manager.get_spendbundle(bundle_id) is not None
             # TODO: this fails but it seems like it shouldn't when above passes
             # assert tx.is_in_mempool()
 

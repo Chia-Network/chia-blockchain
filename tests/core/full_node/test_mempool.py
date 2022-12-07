@@ -84,7 +84,7 @@ class TestPendingTxCache:
         item = make_item(1)
         c.add(item)
         tx = c.drain()
-        assert tx == {item.spend_bundle_name: item}
+        assert tx == {item.name: item}
 
     def test_fifo_limit(self):
         c = PendingTxCache(200)
@@ -95,14 +95,14 @@ class TestPendingTxCache:
         # the max cost is 200, only two transactions will fit
         # we evict items FIFO, so the to most recently added will be left
         tx = c.drain()
-        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+        assert tx == {items[-2].name: items[-2], items[-1].name: items[-1]}
 
     def test_drain(self):
         c = PendingTxCache(100)
         item = make_item(1)
         c.add(item)
         tx = c.drain()
-        assert tx == {item.spend_bundle_name: item}
+        assert tx == {item.name: item}
 
         # drain will clear the cache, so a second call will be empty
         tx = c.drain()
@@ -126,7 +126,7 @@ class TestPendingTxCache:
         assert c.cost() == 160
 
         tx = c.drain()
-        assert tx == {item2.spend_bundle_name: item2, item3.spend_bundle_name: item3}
+        assert tx == {item2.name: item2, item3.name: item3}
 
         assert c.cost() == 0
         item4 = make_item(4)
@@ -134,7 +134,7 @@ class TestPendingTxCache:
         assert c.cost() == 80
 
         tx = c.drain()
-        assert tx == {item4.spend_bundle_name: item4}
+        assert tx == {item4.name: item4}
 
 
 class TestMempool:

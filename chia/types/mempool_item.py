@@ -6,6 +6,7 @@ from typing import List
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID, bytes_to_SpendBundleID
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
@@ -18,7 +19,7 @@ class MempoolItem(Streamable):
     fee: uint64
     npc_result: NPCResult
     cost: uint64
-    spend_bundle_name: bytes32
+    spend_bundle_name: bytes32  # SpendBundleID, but Streamable requires bytes32
     additions: List[Coin]
     height_added_to_mempool: uint32
 
@@ -30,8 +31,8 @@ class MempoolItem(Streamable):
         return int(self.fee) / int(self.cost)
 
     @property
-    def name(self) -> bytes32:
-        return self.spend_bundle_name
+    def name(self) -> SpendBundleID:
+        return bytes_to_SpendBundleID(self.spend_bundle_name)
 
     @property
     def removals(self) -> List[Coin]:

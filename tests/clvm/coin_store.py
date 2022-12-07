@@ -5,6 +5,7 @@ from typing import Dict, Iterator, Optional
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks, get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
@@ -69,12 +70,15 @@ class CoinStore:
         if result.error is not None:
             raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")
 
-        ephemeral_db = dict(self._db)
+        ephemeral_db = {}
+        for k, v in self._db.items():
+            ephemeral_db[bytes_to_CoinID(k)] = v
+
         assert result.conds is not None
         for spend in result.conds.spends:
             for puzzle_hash, amount, hint in spend.create_coin:
                 coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                name = coin.name()
+                name = bytes_to_CoinID(coin.name())
                 ephemeral_db[name] = CoinRecord(
                     coin,
                     uint32(now.height),
