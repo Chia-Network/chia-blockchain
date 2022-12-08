@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.blockchain import StateChangeSummary
@@ -9,17 +10,23 @@ from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.util.ints import uint64
 
 
+@dataclasses.dataclass(frozen=True)
+class Hint:
+    coin_id: CoinID
+    hint_bytes: bytes
+
+
 def get_hints_and_subscription_coin_ids(
     state_change_summary: StateChangeSummary,
     coin_subscriptions: Dict[bytes32, Set[bytes32]],
     ph_subscriptions: Dict[bytes32, Set[bytes32]],
-) -> Tuple[List[Tuple[CoinID, bytes]], List[CoinID]]:
+) -> Tuple[List[Hint], List[CoinID]]:
     # Precondition: all hints passed in are max 32 bytes long
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
 
     # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
     hint: Optional[bytes]
-    hints_to_add: List[Tuple[CoinID, bytes]] = []
+    hints_to_add: List[Hint] = []
 
     # Goes through additions and removals for each block and flattens to a map and a set
     lookup_coin_ids: Set[CoinID] = set()
@@ -51,7 +58,7 @@ def get_hints_and_subscription_coin_ids(
 
                     if len(hint) > 0:
                         assert len(hint) <= 32
-                        hints_to_add.append((addition_coin_name, hint))
+                        hints_to_add.append(Hint(addition_coin_name, hint))
 
     # Goes through all new reward coins
     for reward_coin in state_change_summary.new_rewards:

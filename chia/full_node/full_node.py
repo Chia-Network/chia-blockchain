@@ -29,7 +29,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
-from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
+from chia.full_node.hint_management import Hint, get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.lock_queue import LockClient, LockQueue
 from chia.full_node.mempool_manager import MempoolManager
@@ -84,7 +84,7 @@ class PeakPostProcessingResult:
         Tuple[SpendBundle, NPCResult, SpendBundleID]
     ]  # The result of calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
-    hints: List[Tuple[CoinID, bytes]]  # The hints added to the DB
+    hints: List[Hint]  # The hints added to the DB
     lookup_coin_ids: List[CoinID]  # The coin IDs that we need to look up to notify wallets of changes
 
 
@@ -1194,7 +1194,7 @@ class FullNode:
     async def update_wallets(
         self,
         state_change_summary: StateChangeSummary,
-        hints: List[Tuple[CoinID, bytes]],
+        hints: List[Hint],
         lookup_coin_ids: List[CoinID],
     ) -> None:
         # Looks up coin records in DB for the coins that wallets are interested in
@@ -1202,7 +1202,7 @@ class FullNode:
 
         # Re-arrange to a map, and filter out any non-ph sized hint
         coin_id_to_ph_hint: Dict[CoinID, bytes32] = {
-            coin_id: bytes32(hint) for coin_id, hint in hints if len(hint) == 32
+            h.coin_id: bytes32(h.hint_bytes) for h in hints if len(h.hint_bytes) == 32
         }
 
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import List, Tuple
+from typing import List
 
 import typing_extensions
 
+from chia.full_node.hint_management import Hint
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.util.db_wrapper import DBWrapper2
@@ -44,11 +45,11 @@ class HintStore:
             coin_ids.append(row[0])
         return [bytes_to_CoinID(c_id) for c_id in coin_ids]
 
-    async def add_hints(self, coin_id_hint_list: List[Tuple[CoinID, bytes]]) -> None:
+    async def add_hints(self, coin_id_hint_list: List[Hint]) -> None:
         if len(coin_id_hint_list) == 0:
             return None
 
-        coin_hint_list = [(bytes32(h[0]), 1) for h in coin_id_hint_list]
+        coin_hint_list = [(bytes32(h.coin_id), 1) for h in coin_id_hint_list]
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             if self.db_wrapper.db_version == 2:

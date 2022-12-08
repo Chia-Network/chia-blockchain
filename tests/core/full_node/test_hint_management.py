@@ -7,10 +7,11 @@ import pytest
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, StateChangeSummary
 from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
+from chia.full_node.hint_management import Hint, get_hints_and_subscription_coin_ids
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -73,10 +74,14 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, {}, {})
     assert len(lookup_coin_ids) == 0
 
-    first_coin_id: bytes32 = Coin(bytes32(spends[0].coin_id), bytes32(phs[4]), uint64(3)).name()
-    second_coin_id: bytes32 = Coin(bytes32(spends[2].coin_id), bytes32(phs[6]), uint64(5)).name()
-    third_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), bytes32(phs[9]), uint64(123)).name()
-    assert set(hints_to_add) == {(first_coin_id, b"1" * 32), (second_coin_id, b"1" * 3), (third_coin_id, b"1" * 32)}
+    first_coin_id: CoinID = CoinID(Coin(bytes32(spends[0].coin_id), bytes32(phs[4]), uint64(3)).name())
+    second_coin_id: CoinID = CoinID(Coin(bytes32(spends[2].coin_id), bytes32(phs[6]), uint64(5)).name())
+    third_coin_id: CoinID = CoinID(Coin(bytes32(spends[1].coin_id), bytes32(phs[9]), uint64(123)).name())
+    assert set(hints_to_add) == {
+        Hint(first_coin_id, b"1" * 32),
+        Hint(second_coin_id, b"1" * 3),
+        Hint(third_coin_id, b"1" * 32),
+    }
 
 
 @pytest.mark.asyncio
