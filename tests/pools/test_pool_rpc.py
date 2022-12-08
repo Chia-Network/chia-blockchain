@@ -17,6 +17,7 @@ from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.pools.pool_config import load_pool_config
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -124,6 +125,7 @@ async def setup(two_wallet_nodes_services, self_hostname):
     )
 
     return (
+        bt,
         full_node_apis,
         [wallet_node_0, wallet_node_1],
         [our_ph, pool_ph],
@@ -807,7 +809,7 @@ class TestPoolWalletRpc:
         trusted, fee = trusted_and_fee
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallet_nodes, receive_address, client = setup
+        _, full_nodes, wallet_nodes, receive_address, client = setup
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
         wallet_node_0 = wallet_nodes[0]
         our_ph = receive_address[0]
@@ -928,7 +930,7 @@ class TestPoolWalletRpc:
     async def test_leave_pool(self, setup, trusted_and_fee, self_hostname):
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
         trusted, fee = trusted_and_fee
-        full_nodes, wallet_nodes, receive_address, client = setup
+        _, full_nodes, wallet_nodes, receive_address, client = setup
         our_ph = receive_address[0]
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
         pool_ph = receive_address[1]
@@ -1062,7 +1064,7 @@ class TestPoolWalletRpc:
     async def test_change_pools(self, setup, trusted_and_fee, self_hostname):
         """This tests Pool A -> escaping -> Pool B"""
         trusted, fee = trusted_and_fee
-        full_nodes, wallet_nodes, receive_address, client = setup
+        bt, full_nodes, wallet_nodes, receive_address, client = setup
         our_ph = receive_address[0]
         pool_a_ph = receive_address[1]
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
@@ -1152,7 +1154,17 @@ class TestPoolWalletRpc:
             assert pw_info.current.pool_url == "https://pool-b.org"
             assert pw_info.current.relative_lock_height == 10
             assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
-
+            pool_config_list = load_pool_config(bt.root_path)
+            current_pool_config = None
+            for pool_config in pool_config_list:
+                if pool_config.launcher_id == pw_info.launcher_id:
+                    current_pool_config = pool_config
+            assert current_pool_config is not None
+            assert current_pool_config.launcher_id == pw_info.launcher_id
+            assert current_pool_config.pool_url == pw_info.current.pool_url
+            assert current_pool_config.target_puzzle_hash == pw_info.current.target_puzzle_hash
+            assert current_pool_config.p2_singleton_puzzle_hash == pw_info.p2_singleton_puzzle_hash
+            assert current_pool_config.owner_public_key == pw_info.current.owner_pubkey
         finally:
             client.close()
             await client.await_closed()
@@ -1162,7 +1174,7 @@ class TestPoolWalletRpc:
     async def test_change_pools_reorg(self, setup, trusted_and_fee, self_hostname):
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         trusted, fee = trusted_and_fee
-        full_nodes, wallet_nodes, receive_address, client = setup
+        _, full_nodes, wallet_nodes, receive_address, client = setup
         our_ph = receive_address[0]
         pool_a_ph = receive_address[1]
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
