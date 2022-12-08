@@ -17,7 +17,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_SpendBundleID
+from chia.types.borderlands import TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import BlockGenerator
@@ -166,7 +166,7 @@ class CATWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes_to_SpendBundleID(bytes32(token_bytes())),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=[],
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
@@ -814,7 +814,7 @@ class CATWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
+                name=TransactionRecordID(spend_bundle.name()),
                 memos=list(compute_memos(spend_bundle).items()),
             )
         ]

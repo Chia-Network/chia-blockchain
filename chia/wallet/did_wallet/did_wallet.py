@@ -17,7 +17,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_SpendBundleID
+from chia.types.borderlands import TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -652,7 +652,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes_to_SpendBundleID(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -746,7 +746,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes_to_SpendBundleID(bytes32(token_bytes())),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -857,7 +857,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes_to_SpendBundleID(bytes32(token_bytes())),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -938,7 +938,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes_to_SpendBundleID(bytes32(token_bytes())),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
@@ -1066,7 +1066,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes_to_SpendBundleID(bytes32(token_bytes())),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -1298,7 +1298,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes_to_SpendBundleID(bytes32(token_bytes())),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=[],
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)

@@ -13,6 +13,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
@@ -533,7 +534,7 @@ class Wallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
+            name=TransactionRecordID(spend_bundle.name()),
             memos=list(compute_memos(spend_bundle).items()),
         )
 

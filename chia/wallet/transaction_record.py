@@ -6,6 +6,7 @@ from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import TransactionRecordID
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -48,7 +49,7 @@ class TransactionRecord(Streamable):
     type: uint32  # TransactionType
 
     # name is also called bundle_id and tx_id
-    name: bytes32
+    name: TransactionRecordID
     memos: List[Tuple[bytes32, List[bytes]]]
 
     def is_in_mempool(self) -> bool:
