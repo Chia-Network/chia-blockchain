@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, NewType, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
@@ -11,6 +11,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
+
+BlockRecordHeaderHash = NewType("BlockRecordHeaderHash", bytes32)
 
 
 @streamable
@@ -22,8 +24,8 @@ class BlockRecord(Streamable):
     difficulty adjustments, etc, without saving the whole header block in memory.
     """
 
-    header_hash: bytes32
-    prev_hash: bytes32  # Header hash of the previous block
+    header_hash: BlockRecordHeaderHash
+    prev_hash: BlockRecordHeaderHash  # Header hash of the previous block
     height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this block

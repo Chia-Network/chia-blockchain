@@ -20,7 +20,7 @@ from utils import (
 )
 
 from benchmarks.utils import clvm_generator
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_record import BlockRecord, BlockRecordHeaderHash
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -188,8 +188,8 @@ async def run_add_block_benchmark(version: int):
             header_hash = full_block.header_hash
 
             record = BlockRecord(
-                header_hash,
-                prev_block,
+                BlockRecordHeaderHash(header_hash),
+                BlockRecordHeaderHash(prev_block),
                 uint32(height),
                 weight,
                 iters,
