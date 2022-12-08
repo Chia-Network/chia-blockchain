@@ -88,7 +88,7 @@ def print_coins(
                 break
             coin, conf_height = coins[i + j]
             address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix)
+            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix, decimal_only=True)
             print(f"Coin ID: 0x{coin.name().hex()}")
             print(target_string.format(address, amount_str, conf_height))
 
@@ -179,7 +179,6 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     fee = Decimal(args["fee"])
     # new args
     amount_per_coin = Decimal(args["amount_per_coin"])
-    unique_addresses = bool(args["unique_addresses"])
     target_coin_id: bytes32 = bytes32.from_hexstr(args["target_coin_id"])
     if number_of_coins > 500:
         print(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
@@ -208,7 +207,8 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
         return
     additions: List[Dict[str, Union[uint64, bytes32]]] = []
     for i in range(number_of_coins):  # for readability.
-        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
+        # we always use new addresses
+        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=True))
         additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         str(wallet_id), additions, [removal_coin_record.coin], final_fee
