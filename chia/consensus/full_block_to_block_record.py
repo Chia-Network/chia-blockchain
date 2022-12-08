@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Union
 
-from chia.consensus.block_record import BlockRecord, BlockRecordHeaderHash
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
@@ -145,8 +145,8 @@ def header_block_to_sub_block_record(
     fees = block.transactions_info.fees if block.transactions_info is not None else None
 
     return BlockRecord(
-        BlockRecordHeaderHash(block.header_hash),
-        BlockRecordHeaderHash(block.prev_header_hash),
+        block.header_hash,
+        block.prev_header_hash,
         block.height,
         block.weight,
         block.total_iters,
