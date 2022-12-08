@@ -314,10 +314,10 @@ class PoolWallet:
         if self._update_pool_config_after_sync_task is None or self._update_pool_config_after_sync_task.done():
 
             async def update_pool_config_after_sync_task():
-                synced = await self.wallet_state_manager.synced()
+                synced = self.wallet_state_manager.synced()
                 while not synced:
                     await asyncio.sleep(5)  # we sync pretty quickly, so I think this is ok.
-                    synced = await self.wallet_state_manager.synced()
+                    synced = self.wallet_state_manager.synced()
                 await self.update_pool_config()
                 self.log.info("Updated pool config after syncing finished.")
 
