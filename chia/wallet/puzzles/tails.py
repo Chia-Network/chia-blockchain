@@ -14,6 +14,11 @@ from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
 )
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.dao_wallet.dao_utils import (
+    SINGLETON_MOD,
+    SINGLETON_LAUNCHER,
+    DAO_PROPOSAL_MOD,
+)
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.transaction_record import TransactionRecord
 
@@ -21,6 +26,7 @@ GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clvm")
 GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clvm")
 DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clvm")
+GENESIS_BY_ID_OR_PROPOSAL_MOD = load_clvm_maybe_recompile("genesis_by_coin_id_or_proposal.clvm")
 
 
 class LimitationsProgram:
@@ -189,6 +195,92 @@ class DelegatedLimitations(LimitationsProgram):
         )
 
 
+class GenesisByIdOrProposal(LimitationsProgram):
+    """
+    This TAIL allows for another TAIL to be used, as long as a signature of that TAIL's puzzlehash is included.
+    """
+    @staticmethod
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+        if uncurried_mod == GENESIS_BY_ID_OR_PROPOSAL_MOD:
+            genesis_id = curried_args.first()
+            return True, [genesis_id]
+        else:
+            return False, []
+
+    @staticmethod
+    def construct(args: List[Program]) -> Program:
+        return GENESIS_BY_ID_OR_PROPOSAL_MOD.curry(
+            args[0],
+            args[1],
+            args[2],
+            args[3],
+            args[4],
+        )
+
+    @staticmethod
+    def solve(args: List[Program], solution_dict: Dict) -> Program:
+        pid = hexstr_to_bytes(solution_dict["parent_coin_info"])
+        return Program.to([pid, solution_dict["amount"]])
+
+    @classmethod
+    async def generate_issuance_bundle(cls, wallet, tail_info: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
+        coins = await wallet.standard_wallet.select_coins(amount)
+
+        origin = coins.copy().pop()
+        origin_id = origin.name()
+
+        cat_inner: Program = await wallet.get_new_inner_puzzle()
+        # GENESIS_ID
+        # DAO_TREASURY_ID
+        # SINGLETON_MOD_HASH
+        # SINGLETON_LAUNCHER_PUZHASH
+        # DAO_PROPOSAL_MOD_HASH
+        tail: Program = cls.construct([
+            origin_id,
+            tail_info["treasury_id"],
+            SINGLETON_MOD.get_tree_hash(),
+            SINGLETON_LAUNCHER.get_tree_hash(),
+            DAO_PROPOSAL_MOD.get_tree_hash(),
+        ])
+
+        wallet.lineage_store = await CATLineageStore.create(
+            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+        )
+        await wallet.add_lineage(origin_id, LineageProof())
+
+        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
+
+        tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
+            amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
+        )
+        assert tx_record.spend_bundle is not None
+
+        inner_solution = wallet.standard_wallet.add_condition_to_solution(
+            Program.to([51, 0, -113, tail, []]),
+            wallet.standard_wallet.make_solution(
+                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
+            ),
+        )
+        eve_spend = unsigned_spend_bundle_for_spendable_cats(
+            CAT_MOD,
+            [
+                SpendableCAT(
+                    list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
+                    tail.get_tree_hash(),
+                    cat_inner,
+                    inner_solution,
+                    limitations_program_reveal=tail,
+                )
+            ],
+        )
+        signed_eve_spend = await wallet.sign(eve_spend)
+
+        if wallet.cat_info.my_tail is None:
+            await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
+
+        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
+
+
 # This should probably be much more elegant than just a dictionary with strings as identifiers
 # Right now this is small and experimental so it can stay like this
 ALL_LIMITATIONS_PROGRAMS: Dict[str, Any] = {
@@ -196,6 +288,7 @@ ALL_LIMITATIONS_PROGRAMS: Dict[str, Any] = {
     "genesis_by_puzhash": GenesisByPuzhash,
     "everything_with_signature": EverythingWithSig,
     "delegated_limitations": DelegatedLimitations,
+    "genesis_by_id_or_proposal": GenesisByIdOrProposal,
 }
 
 

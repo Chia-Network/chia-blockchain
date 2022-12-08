@@ -55,10 +55,10 @@ class TestDAOWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
         await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
-        dao_wallet = DAOWallet.generate_new_dao(
+        dao_wallet = await DAOWallet.create_new_dao_and_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
             200,
-            1000,  # divide by 100 to get true percentage
-            100,
         )
         breakpoint()
         assert dao_wallet is not None

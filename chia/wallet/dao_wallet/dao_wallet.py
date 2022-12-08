@@ -7,7 +7,9 @@ import re
 from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL, G1Element, G2Element
 from secrets import token_bytes
-
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
+from chia.util.streamable import Streamable, streamable
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -48,17 +50,21 @@ from chia.wallet.dao_wallet.dao_utils import (
 )
 
 
-class ProposalInfo:
+@streamable
+@dataclass(frozen=True)
+class ProposalInfo(Streamable):
     proposal_id: bytes32
     inner_puzzle: Program
     voted: bool
 
 
-class DAOInfo:
+@streamable
+@dataclass(frozen=True)
+class DAOInfo(Streamable):
     teasury_id: bytes32
-    cat_wallet_id: int
+    cat_wallet_id: uint64
     proposals_list: List[ProposalInfo]
-    parent_info: List[LineageProof]
+    parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
 
 
 class DAOWallet:
@@ -74,7 +80,7 @@ class DAOWallet:
     async def create_new_dao_and_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
-        amount: uint64,
+        amount_of_cats: uint64,
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ):
@@ -83,7 +89,7 @@ class DAOWallet:
         This must be called under the wallet state manager lock
         :param wallet_state_manager: Wallet state manager
         :param wallet: Standard wallet
-        :param amount: Amount of the DID coin
+        :param amount_of_cats: Amount of the DID coin
         :param backups_ids: A list of DIDs used for recovery this DID
         :param num_of_backup_ids_needed: Needs how many recovery DIDs at least
         :param metadata: Metadata saved in the DID
@@ -102,13 +108,11 @@ class DAOWallet:
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
-        if amount > bal:
+        if amount_of_cats > bal:
             raise ValueError("Not enough balance")
-        if amount & 1 == 0:
-            raise ValueError("DAO Treasury amount must be odd number")
 
         self.dao_info = DAOInfo(
-            0, 0, [],
+            bytes32([0] * 32), 0, [], [],
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -117,11 +121,11 @@ class DAOWallet:
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
-        if amount > bal:
-            raise ValueError("Not enough balance")
 
+        proposal_pass_percentage = 10
+        proposal_timelock = 10
         try:
-            spend_bundle = await self.generate_new_dao(amount, fee)
+            spend_bundle = await self.generate_new_dao(amount_of_cats, proposal_pass_percentage, proposal_timelock, fee)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -1088,7 +1092,18 @@ class DAOWallet:
             cat_tail = generate_cat_tail(origin.name(), launcher_coin.name())
 
         assert cat_tail is not None
-        cat_tail_info = {"identifier": cat_tail.get_tree_hash()}
+        cat_tail_info = {
+            "identifier": "genesis_by_id_or_proposal",
+            "treasury_id": launcher_coin.name(),
+        }
+
+        dao_info: DAOInfo = DAOInfo(
+            launcher_coin.name(),
+            self.dao_info.cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+        )
+        await self.save_info(dao_info)
 
         # This will also mint the coins
         new_cat_wallet = await CATWallet.create_new_cat_wallet(
@@ -1137,15 +1152,15 @@ class DAOWallet:
         eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, 1)
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
-            dao_treasury_puzzle,
+            dao_treasury_puzzle.get_tree_hash(),
             uint64(eve_coin.amount),
         )
         eve_parent = LineageProof(
-            launcher_coin.parent_coin_info,
-            launcher_coin.puzzle_hash,
+            bytes32(launcher_coin.parent_coin_info),
+            bytes32(launcher_coin.puzzle_hash),
             uint64(launcher_coin.amount),
         )
-        await self.add_parent(eve_coin.parent_coin_info, eve_parent)
+        await self.add_parent(bytes32(eve_coin.parent_coin_info), eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
 
         if tx_record is None or tx_record.spend_bundle is None:
@@ -1202,7 +1217,7 @@ class DAOWallet:
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return await self.sign(unsigned_spend_bundle)
+        return unsigned_spend_bundle
 
     async def get_frozen_amount(self) -> uint64:
         # return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
@@ -1222,7 +1237,7 @@ class DAOWallet:
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]):
         self.log.info(f"Adding parent {name}: {parent}")
-        current_list = self.did_info.parent_info.copy()
+        current_list = self.dao_info.parent_info.copy()
         current_list.append((name, parent))
         dao_info: DAOInfo = DAOInfo(
             self.dao_info.teasury_id,
@@ -1231,42 +1246,6 @@ class DAOWallet:
             current_list,
         )
         await self.save_info(dao_info)
-
-    async def update_recovery_list(self, recover_list: List[bytes32], num_of_backup_ids_needed: uint64) -> bool:
-        if num_of_backup_ids_needed > len(recover_list):
-            return False
-        did_info: DIDInfo = DIDInfo(
-            self.did_info.origin_coin,
-            recover_list,
-            num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            self.did_info.sent_recovery_transaction,
-            self.did_info.metadata,
-        )
-        await self.save_info(did_info)
-        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return True
-
-    async def update_metadata(self, metadata: Dict[str, str]) -> bool:
-        did_info: DIDInfo = DIDInfo(
-            self.did_info.origin_coin,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
-            self.did_info.parent_info,
-            self.did_info.current_inner,
-            self.did_info.temp_coin,
-            self.did_info.temp_puzhash,
-            self.did_info.temp_pubkey,
-            self.did_info.sent_recovery_transaction,
-            json.dumps(metadata),
-        )
-        await self.save_info(did_info)
-        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        return True
 
     async def save_info(self, dao_info: DIDInfo):
         self.dao_info = dao_info
@@ -1283,21 +1262,11 @@ class DAOWallet:
         """
         max_num = 0
         for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DECENTRALIZED_ID:
+            if wallet.type() == WalletType.DAO:
                 matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)
                 if matched and int(matched.group(1)) > max_num:
                     max_num = int(matched.group(1))
         return f"Profile {max_num + 1}"
 
-    def check_existed_did(self):
-        """
-        Check if the current DID is existed
-        :return: None
-        """
-        for wallet in self.wallet_state_manager.wallets.values():
-            if (
-                wallet.type() == WalletType.DECENTRALIZED_ID
-                and self.did_info.origin_coin.name() == wallet.did_info.origin_coin.name()
-            ):
-                self.log.warning(f"DID {self.did_info.origin_coin} already existed, ignore the wallet creation.")
-                raise ValueError("Wallet already exists")
+    def require_derivation_paths(self) -> bool:
+        return True
