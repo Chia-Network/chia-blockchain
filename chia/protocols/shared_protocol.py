@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Tuple
+from typing import Iterable, List, Set, Tuple
 
 from chia.util.ints import uint8, uint16
 from chia.util.streamable import Streamable, streamable
@@ -45,3 +45,24 @@ capabilities = [
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
 ]
+
+
+_capability_values = {int(capability) for capability in Capability}
+
+
+def known_active_capabilities(values: Iterable[Tuple[uint16, str]]) -> List[Capability]:
+    # NOTE: order is not guaranteed
+    # TODO: what if there's a claim for both supporting and not?
+    #       presently it considers it supported
+    filtered: Set[uint16] = set()
+    for value, state in values:
+        if state != "1":
+            continue
+
+        if value not in _capability_values:
+            continue
+
+        filtered.add(value)
+
+    # TODO: consider changing all uses to sets instead of lists
+    return [Capability(value) for value in filtered]
