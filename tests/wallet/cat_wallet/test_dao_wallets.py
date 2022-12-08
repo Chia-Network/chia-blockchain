@@ -60,5 +60,4 @@ class TestDAOWallet:
             wallet,
             200,
         )
-        breakpoint()
         assert dao_wallet is not None

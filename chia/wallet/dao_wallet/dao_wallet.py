@@ -445,18 +445,10 @@ class DAOWallet:
         return chia_tx
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        if self.did_info.origin_coin is not None:
-            innerpuz = did_wallet_puzzles.create_innerpuz(
-                puzzle_for_pk(pubkey),
-                self.did_info.backup_ids,
-                self.did_info.num_of_backup_ids_needed,
-                self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-            )
-            return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
-        else:
-            innerpuz = Program.to((8, 0))
-            return did_wallet_puzzles.create_fullpuz(innerpuz, bytes32([0] * 32))
+        return(Program.to(0))
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> Program:
+        return(Program.to(0).get_tree_hash())
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
