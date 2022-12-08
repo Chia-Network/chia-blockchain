@@ -81,4 +81,4 @@ class SmartFeeEstimator:
             return FeeEstimate("Not enough data", r.requested_time, FeeRate(uint64(0)))
         else:
             # convert from mojo / 1000 clvm_cost to mojo / 1 clvm_cost
-            return FeeEstimate(None, r.requested_time, FeeRate(uint64(fee / 1000)))
+            return FeeEstimate(None, r.requested_time, FeeRate(uint64(fee / 1000)))  # XXX

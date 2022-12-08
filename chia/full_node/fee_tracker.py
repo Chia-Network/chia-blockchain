@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -98,6 +99,14 @@ class FeeStat:  # TxConfirmStats
     max_confirms: int
     fee_store: FeeStore
 
+    def __repr__(self) -> str:
+        from copy import copy
+
+        d = copy(self.__dict__)
+        del d["log"]
+        del d["fee_store"]
+        return json.dumps(d)  # , indent=4)
+
     def __init__(
         self,
         buckets: List[float],
@@ -144,12 +153,12 @@ class FeeStat:  # TxConfirmStats
         return int(bucket_index)
 
     def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItem) -> None:
-        if blocks_to_confirm < 1:
+        if blocks_to_confirm < 1:  # todo breakpoint and check here
             raise ValueError("tx_confirmed called with < 1 block to confirm")
 
         periods_to_confirm = int((blocks_to_confirm + self.scale - 1) / self.scale)
 
-        fee_rate = item.fee_per_cost * 1000
+        fee_rate = item.fee_per_cost * 1000  # XXX
         bucket_index = self.get_bucket_index(fee_rate)
 
         for i in range(periods_to_confirm, len(self.confirmed_average)):
@@ -178,6 +187,7 @@ class FeeStat:  # TxConfirmStats
         self.unconfirmed_txs[block_index][bucket_index] += 1
         return bucket_index
 
+    # Remove tx from mempool
     def remove_tx(self, latest_seen_height: uint32, item: MempoolItem, bucket_index: int) -> None:
         if item.height_added_to_mempool is None:
             return
@@ -411,8 +421,8 @@ class FeeTracker:
     fee_store: FeeStore
     buckets: List[float]
 
-    def __init__(self, log: logging.Logger, fee_store: FeeStore):
-        self.log = log
+    def __init__(self, fee_store: FeeStore):
+        self.log: logging.Logger = logging.getLogger(__name__)
         self.sorted_buckets = SortedDict()
         self.buckets = []
         self.latest_seen_height = uint32(0)
@@ -526,6 +536,11 @@ class FeeTracker:
 
         return int(bucket_index)
 
+    def add_tx(self, item: MempoolItem) -> None:
+        self.short_horizon.new_mempool_tx(self.latest_seen_height, item.fee_per_cost)
+        self.med_horizon.new_mempool_tx(self.latest_seen_height, item.fee_per_cost)
+        self.long_horizon.new_mempool_tx(self.latest_seen_height, item.fee_per_cost)
+
     def remove_tx(self, item: MempoolItem) -> None:
         bucket_index = self.get_bucket_index(item.fee_per_cost * 1000)
         self.short_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
@@ -533,7 +548,7 @@ class FeeTracker:
         self.long_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
 
     def estimate_fee_for_block(self, target_block: uint32) -> EstimateResult:
-        return self.med_horizon.estimate_median_val(
+        return self.short_horizon.estimate_median_val(
             conf_target=target_block,
             sufficient_tx_val=SUFFICIENT_FEE_TXS,
             success_break_point=SUCCESS_PCT,

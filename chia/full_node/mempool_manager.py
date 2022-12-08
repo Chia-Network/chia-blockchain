@@ -15,8 +15,10 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
@@ -121,10 +123,15 @@ class MempoolManager:
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
+
+        max_block_cost_clvm = uint64(self.constants.MAX_BLOCK_COST_CLVM)
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm)
+
         self.mempool: Mempool = Mempool(
             self.mempool_max_total_cost,
             uint64(self.nonzero_fee_minimum_fpc),
             uint64(self.constants.MAX_BLOCK_COST_CLVM),
+            self.fee_estimator,
         )
 
     def shut_down(self) -> None:
@@ -599,6 +606,7 @@ class MempoolManager:
                 self.mempool_max_total_cost,
                 uint64(self.nonzero_fee_minimum_fpc),
                 uint64(self.constants.MAX_BLOCK_COST_CLVM),
+                self.fee_estimator,
             )
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
