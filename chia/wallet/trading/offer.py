@@ -10,6 +10,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
@@ -34,8 +35,8 @@ from chia.wallet.util.puzzle_compression import (
 
 OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
-OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
-OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
+OFFER_MOD_OLD_HASH = PuzzleHash(OFFER_MOD_OLD.get_tree_hash())
+OFFER_MOD_HASH = PuzzleHash(OFFER_MOD.get_tree_hash())
 ZERO_32 = bytes32([0] * 32)
 
 
@@ -73,7 +74,7 @@ class Offer:
     driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
 
     @staticmethod
-    def ph() -> bytes32:
+    def ph() -> PuzzleHash:
         return OFFER_MOD_HASH
 
     @staticmethod
@@ -403,7 +404,7 @@ class Offer:
 
     # A "valid" spend means that this bundle can be pushed to the network and will succeed
     # This differs from the `to_spend_bundle` method which deliberately creates an invalid SpendBundle
-    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None) -> SpendBundle:
+    def to_valid_spend(self, arbitrage_ph: Optional[PuzzleHash] = None) -> SpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 

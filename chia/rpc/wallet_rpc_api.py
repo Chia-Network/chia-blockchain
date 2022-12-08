@@ -21,6 +21,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -919,7 +920,7 @@ class WalletRpcApi:
         expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
         if address[0 : len(expected_prefix)] != expected_prefix:
             raise ValueError("Unexpected Address Prefix")
-        puzzle_hash: bytes32 = decode_puzzle_hash(address)
+        puzzle_hash: PuzzleHash = decode_puzzle_hash(address)
 
         memos: List[bytes] = []
         if "memos" in request:
@@ -1350,7 +1351,7 @@ class WalletRpcApi:
         assert isinstance(wallet, CATWallet)
 
         amounts: List[uint64] = []
-        puzzle_hashes: List[bytes32] = []
+        puzzle_hashes: List[PuzzleHash] = []
         memos: List[List[bytes]] = []
         additions: Optional[List[Dict]] = request.get("additions")
         if not isinstance(request["fee"], int) or (additions is None and not isinstance(request["amount"], int)):
@@ -1364,7 +1365,7 @@ class WalletRpcApi:
                 if amount > self.service.constants.MAX_COIN_AMOUNT:
                     raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
                 amounts.append(amount)
-                puzzle_hashes.append(receiver_ph)
+                puzzle_hashes.append(PuzzleHash(receiver_ph))
                 if "memos" in addition:
                     memos.append([mem.encode("utf-8") for mem in addition["memos"]])
         else:
@@ -2508,9 +2509,9 @@ class WalletRpcApi:
         if isinstance(royalty_address, str) and royalty_address != "":
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address in [None, ""]:
-            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+            royalty_puzhash = PuzzleHash(await nft_wallet.standard_wallet.get_new_puzzlehash())
         else:
-            royalty_puzhash = bytes32.from_hexstr(royalty_address)
+            royalty_puzhash = PuzzleHash(bytes32.from_hexstr(royalty_address))
         royalty_percentage = request.get("royalty_percentage", None)
         if royalty_percentage is None:
             royalty_percentage = uint16(0)
@@ -2561,7 +2562,7 @@ class WalletRpcApi:
             if xch_change_target[:2] == "xch":
                 xch_change_ph = decode_puzzle_hash(xch_change_target)
             else:
-                xch_change_ph = bytes32(hexstr_to_bytes(xch_change_target))
+                xch_change_ph = PuzzleHash(bytes32(hexstr_to_bytes(xch_change_target)))
         else:
             xch_change_ph = None
         new_innerpuzhash = request.get("new_innerpuzhash", None)
@@ -2666,7 +2667,7 @@ class WalletRpcApi:
         additions: List[Dict] = request["additions"]
         amount_0: uint64 = uint64(additions[0]["amount"])
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
-        puzzle_hash_0 = bytes32.from_hexstr(additions[0]["puzzle_hash"])
+        puzzle_hash_0 = PuzzleHash(bytes32.from_hexstr(additions[0]["puzzle_hash"]))
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
@@ -2674,7 +2675,7 @@ class WalletRpcApi:
 
         additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
-            receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
+            receiver_ph = PuzzleHash(bytes32.from_hexstr(addition["puzzle_hash"]))
             if len(receiver_ph) != 32:
                 raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
             amount = uint64(addition["amount"])
@@ -2738,7 +2739,7 @@ class WalletRpcApi:
             if isinstance(wallet, Wallet):
                 tx = await wallet.generate_signed_transaction(
                     amount_0,
-                    bytes32(puzzle_hash_0),
+                    puzzle_hash_0,
                     fee,
                     coins=coins,
                     exclude_coins=exclude_coins,
@@ -2760,7 +2761,7 @@ class WalletRpcApi:
 
                 txs = await wallet.generate_signed_transaction(
                     [amount_0] + [output["amount"] for output in additional_outputs],
-                    [bytes32(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
+                    [PuzzleHash(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
                     fee,
                     coins=coins,
                     exclude_cat_coins=exclude_coins,

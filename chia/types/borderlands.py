@@ -6,6 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 
 CoinID = NewType("CoinID", bytes32)
 PublicKeyBytes = NewType("PublicKeyBytes", bytes48)
+PuzzleHash = NewType("PuzzleHash", bytes32)
 SpendBundleID = NewType("SpendBundleID", bytes32)
 TransactionRecordID = NewType("TransactionRecordID", bytes32)
 

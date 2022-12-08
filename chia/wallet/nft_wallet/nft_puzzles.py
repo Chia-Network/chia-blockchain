@@ -8,6 +8,7 @@ from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
 NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clvm")
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
+LAUNCHER_PUZZLE_HASH = PuzzleHash(LAUNCHER_PUZZLE.get_tree_hash())
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 NFT_METADATA_UPDATER = load_clvm_maybe_recompile("nft_metadata_updater_default.clvm")

@@ -4,6 +4,7 @@ from typing import Iterator, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
@@ -27,7 +28,7 @@ def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer)
 
 
-def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: bytes32) -> Program:
+def create_host_layer_puzzle(innerpuz: Union[Program, bytes32, PuzzleHash], current_root: bytes32) -> Program:
     # some hard coded metadata formatting and metadata updater for now
     return create_nft_layer_puzzle_with_curry_params(
         Program.to((current_root, None)),
@@ -53,13 +54,13 @@ def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     return False, iter(())
 
 
-def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32, uint64, bytes32, bytes32]:
+def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[PuzzleHash, uint64, bytes32, PuzzleHash]:
     solution = launch_solution.as_python()
     try:
-        full_puzzle_hash = bytes32(solution[0])
+        full_puzzle_hash = PuzzleHash(bytes32(solution[0]))
         amount = uint64(int.from_bytes(solution[1], "big"))
         root = bytes32(solution[2][0])
-        inner_puzzle_hash = bytes32(solution[2][1])
+        inner_puzzle_hash = PuzzleHash(bytes32(solution[2][1]))
     except (IndexError, TypeError):
         raise ValueError("Launcher is not a data layer launcher")
 

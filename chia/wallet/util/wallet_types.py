@@ -5,7 +5,7 @@ from typing import List
 
 from typing_extensions import TypedDict
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.util.ints import uint64
 
 
@@ -27,5 +27,5 @@ class WalletType(IntEnum):
 
 class AmountWithPuzzlehash(TypedDict):
     amount: uint64
-    puzzlehash: bytes32
+    puzzlehash: PuzzleHash
     memos: List[bytes]

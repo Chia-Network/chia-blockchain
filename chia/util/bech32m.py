@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+from chia.types.borderlands import PuzzleHash
+
 # Based on this specification from Pieter Wuille:
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
 """Reference implementation for Bech32m and segwit addresses."""
@@ -112,10 +114,10 @@ def encode_puzzle_hash(puzzle_hash: bytes32, prefix: str) -> str:
     return encoded
 
 
-def decode_puzzle_hash(address: str) -> bytes32:
+def decode_puzzle_hash(address: str) -> PuzzleHash:
     hrpgot, data = bech32_decode(address)
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)
     decoded_bytes = bytes32(decoded)
-    return decoded_bytes
+    return PuzzleHash(decoded_bytes)

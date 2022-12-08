@@ -25,7 +25,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.borderlands import TransactionRecordID
+from chia.types.borderlands import TransactionRecordID, PuzzleHash
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -698,7 +698,7 @@ class PoolWallet:
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
-            genesis_launcher_puz.get_tree_hash(),
+            PuzzleHash(genesis_launcher_puz.get_tree_hash()),
             fee,
             launcher_parent.name(),
             coins,

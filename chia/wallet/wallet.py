@@ -13,7 +13,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import TransactionRecordID
+from chia.types.borderlands import PuzzleHash, TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
@@ -82,7 +82,7 @@ class Wallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             tx = await self.generate_signed_transaction(
-                uint64(coin.amount), coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
+                uint64(coin.amount), PuzzleHash(coin.puzzle_hash), coins={coin}, ignore_max_send_amount=True
             )
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
@@ -190,7 +190,7 @@ class Wallet:
         for coin_spend in coin_spends:
             await self.hack_populate_secret_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
 
-    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+    async def puzzle_for_puzzle_hash(self, puzzle_hash: PuzzleHash) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(public_key)
 
@@ -211,10 +211,10 @@ class Wallet:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
 
-    async def get_new_puzzlehash(self) -> bytes32:
+    async def get_new_puzzlehash(self) -> PuzzleHash:
         puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
         await self.hack_populate_secret_key_for_puzzle_hash(puzhash)
-        return puzhash
+        return PuzzleHash(puzhash)
 
     def make_solution(
         self,
@@ -304,7 +304,7 @@ class Wallet:
     async def _generate_unsigned_transaction(
         self,
         amount: uint64,
-        newpuzzlehash: bytes32,
+        newpuzzlehash: PuzzleHash,
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
@@ -396,13 +396,13 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
+                    change_puzzle_hash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+                puzzle: Program = await self.puzzle_for_puzzle_hash(PuzzleHash(coin.puzzle_hash))
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
@@ -426,7 +426,7 @@ class Wallet:
             if coin.name() == origin_id:
                 continue
 
-            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            puzzle = await self.puzzle_for_puzzle_hash(PuzzleHash(coin.puzzle_hash))
             solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
             spends.append(
                 CoinSpend(
@@ -455,7 +455,7 @@ class Wallet:
     async def generate_signed_transaction(
         self,
         amount: uint64,
-        puzzle_hash: bytes32,
+        puzzle_hash: PuzzleHash,
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
@@ -564,7 +564,7 @@ class Wallet:
         # Create coin solutions for each utxo
         output_created = None
         for coin in utxos:
-            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            puzzle = await self.puzzle_for_puzzle_hash(PuzzleHash(coin.puzzle_hash))
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
                 primaries: List[AmountWithPuzzlehash] = [

@@ -5,13 +5,14 @@ from typing import List
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.util.ints import uint64
 
 
 # This class is supposed to correspond to a CREATE_COIN condition
 @dataclass(frozen=True)
 class Payment:
-    puzzle_hash: bytes32
+    puzzle_hash: PuzzleHash
     amount: uint64
     memos: List[bytes]
 
@@ -31,4 +32,4 @@ class Payment:
         memos: List[bytes] = []
         if len(python_condition) > 3:
             memos = python_condition[3]
-        return cls(bytes32(puzzle_hash), uint64(int.from_bytes(amount, "big")), memos)
+        return cls(PuzzleHash(bytes32(puzzle_hash)), uint64(int.from_bytes(amount, "big")), memos)

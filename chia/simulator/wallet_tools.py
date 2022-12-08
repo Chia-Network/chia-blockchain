@@ -10,6 +10,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -50,7 +51,7 @@ class WalletTool:
         self.next_address = uint32(self.next_address + 1)
         return self.next_address
 
-    def get_private_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> PrivateKey:
+    def get_private_key_for_puzzle_hash(self, puzzle_hash: PuzzleHash) -> PrivateKey:
         sk = self.puzzle_pk_cache.get(puzzle_hash)
         if sk:
             return sk
@@ -74,9 +75,9 @@ class WalletTool:
         self.puzzle_pk_cache[puzzle.get_tree_hash()] = sk
         return puzzle
 
-    def get_new_puzzlehash(self) -> bytes32:
+    def get_new_puzzlehash(self) -> PuzzleHash:
         puzzle = self.get_new_puzzle()
-        return puzzle.get_tree_hash()
+        return PuzzleHash(puzzle.get_tree_hash())
 
     def sign(self, value: bytes, pubkey: bytes) -> G2Element:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
@@ -136,7 +137,7 @@ class WalletTool:
         secondary_coins_cond_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = dict()
         secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT] = []
         for n, coin in enumerate(coins):
-            puzzle_hash = coin.puzzle_hash
+            puzzle_hash = PuzzleHash(coin.puzzle_hash)
             if secret_key is None:
                 secret_key = self.get_private_key_for_puzzle_hash(puzzle_hash)
             pubkey = secret_key.get_g1()
@@ -177,7 +178,7 @@ class WalletTool:
     def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
         signatures = []
         for coin_spend in coin_spends:  # noqa
-            secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
+            secret_key = self.get_private_key_for_puzzle_hash(PuzzleHash(coin_spend.coin.puzzle_hash))
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
             err, con, cost = conditions_for_solution(
                 coin_spend.puzzle_reveal, coin_spend.solution, self.constants.MAX_BLOCK_COST_CLVM

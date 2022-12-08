@@ -14,7 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import TransactionRecordID
+from chia.types.borderlands import PuzzleHash, TransactionRecordID
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
@@ -473,7 +473,7 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
-                    requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
+                    requested_payments[asset_id] = [Payment(PuzzleHash(p2_ph), uint64(amount), memos)]
                 elif amount < 0:
                     # this is what we are sending in the trade
                     if isinstance(id, int):

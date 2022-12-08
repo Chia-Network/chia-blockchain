@@ -18,7 +18,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import TransactionRecordID, bytes_to_CoinID
+from chia.types.borderlands import PuzzleHash, TransactionRecordID, bytes_to_CoinID
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
@@ -261,7 +261,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            uint64(10), bytes32(32 * b"0"), uint64(0)
+            uint64(10), PuzzleHash(bytes32(32 * b"0")), uint64(0)
         )
         assert tx.spend_bundle is not None
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)

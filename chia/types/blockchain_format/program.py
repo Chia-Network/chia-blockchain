@@ -14,6 +14,7 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 
+from ..borderlands import PuzzleHash
 from .tree_hash import sha256_treehash
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
@@ -102,12 +103,12 @@ class Program(SExp):
         """
         return _sexp_replace(self, self.to, **kwargs)
 
-    def get_tree_hash_precalc(self, *args: bytes32) -> bytes32:
+    def get_tree_hash_precalc(self, *args: PuzzleHash) -> PuzzleHash:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
         """
-        return sha256_treehash(self, set(args))
+        return PuzzleHash(sha256_treehash(self, set(args)))
 
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))

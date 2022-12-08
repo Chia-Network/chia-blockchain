@@ -12,9 +12,9 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclass(frozen=True)
 class LineageProof(Streamable):
-    parent_name: Optional[bytes32] = None
-    inner_puzzle_hash: Optional[bytes32] = None
-    amount: Optional[uint64] = None
+    parent_name: Optional[bytes32] = None  # CoinID
+    inner_puzzle_hash: Optional[bytes32] = None  # PuzzleHash
+    amount: Optional[uint64] = None  # Mojos
 
     def to_program(self) -> Program:
         final_list: List[Any] = []
