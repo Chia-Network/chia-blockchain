@@ -28,7 +28,7 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -37,7 +37,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
+from chia.util.ints import uint8, uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
@@ -640,6 +640,16 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.send_message(response_message)
+                    # check that this call needs a reply
+
+                    elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and connection.has_capability(
+                        Capability.NONE_RESPONSE
+                    ):
+                        # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
+                        response_message = Message(
+                            uint8(ProtocolMessageTypes.none_response.value), full_message.id, b""
+                        )
+                        await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
@@ -817,3 +827,6 @@ class ChiaServer:
             return False
 
         return True
+
+    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]) -> None:
+        self._local_capabilities_for_handshake = capabilities

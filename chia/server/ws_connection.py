@@ -356,7 +356,7 @@ class WSChiaConnection:
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
                 f"None? {response is None}"
             )
-            if response is None:
+            if response is None or response.type == ProtocolMessageTypes.none_response.value:
                 return None
             sent_message_type = ProtocolMessageTypes(request.type)
             recv_message_type = ProtocolMessageTypes(response.type)
@@ -558,3 +558,6 @@ class WSChiaConnection:
             return PeerInfo(self.peer_host, port)
         else:
             return info
+
+    def has_capability(self, capability: Capability) -> bool:
+        return capability in self.peer_capabilities
