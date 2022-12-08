@@ -1,6 +1,6 @@
 ;;
 ;; THIS FILE IS DEPRECATED and is only for legacy contracts.
-;; Please use `curry.clinc` going forward. It has a less stupid API.
+;; Please use `curry.clib` going forward. It has a less stupid API.
 ;;
 
 (
