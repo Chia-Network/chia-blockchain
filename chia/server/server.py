@@ -28,7 +28,7 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -37,7 +37,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
+from chia.util.ints import uint8, uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
@@ -309,7 +309,6 @@ class ChiaServer:
             raise web.HTTPForbidden(reason=reason)
         ws = web.WebSocketResponse(max_msg_size=max_message_size)
         await ws.prepare(request)
-        close_event = asyncio.Event()
         ssl_object = request.get_extra_info("ssl_object")
         if ssl_object is None:
             reason = f"ssl_object is None for request {request}"
@@ -335,7 +334,6 @@ class ChiaServer:
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
                 self._local_capabilities_for_handshake,
-                close_event,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -348,7 +346,6 @@ class ChiaServer:
                     f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
                 )
                 await connection.close()
-                close_event.set()
             else:
                 await self.connection_added(connection, self.on_connect)
                 if self.introducer_peers is not None and connection.connection_type is NodeType.FULL_NODE:
@@ -358,29 +355,24 @@ class ChiaServer:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
-                close_event.set()
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
                 self.log.warning("Incompatible network ID. Maybe the peer is on another network")
-                close_event.set()
-            elif e.code == Err.SELF_CONNECTION:
-                close_event.set()
             else:
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
-                close_event.set()
         except ValueError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
             self.log.warning(f"{e} - closing connection")
-            close_event.set()
         except Exception as e:
             if connection is not None:
                 await connection.close(ws_close_code=WSCloseCode.PROTOCOL_ERROR, error=Err.UNKNOWN)
             error_stack = traceback.format_exc()
             self.log.error(f"Exception {e}, exception Stack: {error_stack}")
-            close_event.set()
 
-        await close_event.wait()
+        if connection is not None:
+            await connection.wait_until_closed()
+
         return ws
 
     async def connection_added(
@@ -408,7 +400,7 @@ class ChiaServer:
             self.log.debug(f"Not connecting to {target_node}")
             return True
         for connection in self.all_connections.values():
-            if connection.host == target_node.host and connection.peer_server_port == target_node.port:
+            if connection.peer_host == target_node.host and connection.peer_server_port == target_node.port:
                 self.log.debug(f"Not connecting to {target_node}, duplicate connection")
                 return True
         return False
@@ -640,6 +632,16 @@ class ChiaServer:
                     if response is not None:
                         response_message = Message(response.type, full_message.id, response.data)
                         await connection.send_message(response_message)
+                    # check that this call needs a reply
+
+                    elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and connection.has_capability(
+                        Capability.NONE_RESPONSE
+                    ):
+                        # this peer can accept None reply's, send empty msg back so he doesn't wait for timeout
+                        response_message = Message(
+                            uint8(ProtocolMessageTypes.none_response.value), full_message.id, b""
+                        )
+                        await connection.send_message(response_message)
                 except TimeoutError:
                     connection.log.error(f"Timeout error for: {message_type}")
                 except Exception as e:
@@ -817,3 +819,6 @@ class ChiaServer:
             return False
 
         return True
+
+    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]) -> None:
+        self._local_capabilities_for_handshake = capabilities

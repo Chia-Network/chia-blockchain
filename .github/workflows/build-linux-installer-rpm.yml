@@ -259,7 +259,8 @@ jobs:
       run: |
         gh release upload \
           $RELEASE_TAG \
-          build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm
+          build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm \
+          build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm
 
 
     - name: Mark installer complete

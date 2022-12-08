@@ -432,7 +432,8 @@ class WalletStateManager:
             record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(
                 unused, wallet_id, hardened
             )
-            assert record is not None
+            if record is None:
+                raise ValueError(f"Missing derivation '{unused}' for wallet id '{wallet_id}' (hardened={hardened})")
 
             # Set this key to used so we never use it again
             await self.puzzle_store.set_used_up_to(record.index)
