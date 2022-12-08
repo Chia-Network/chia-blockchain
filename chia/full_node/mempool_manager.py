@@ -394,12 +394,8 @@ class MempoolManager:
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
-        additions: List[Coin] = additions_for_npc(npc_result)
-
-        additions_dict: Dict[bytes32, Coin] = {}
-        for add in additions:
-            additions_dict[add.name()] = add
-
+        additions_dict: Dict[bytes32, Coin] = additions_for_npc(npc_result)
+        additions: List[Coin] = list(additions_dict.values())
         addition_amount: int = 0
         # Check additions for max coin amount
         for coin in additions:
@@ -409,7 +405,7 @@ class MempoolManager:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None, []
             addition_amount = addition_amount + coin.amount
         # Check for duplicate outputs
-        addition_counter = collections.Counter(_.name() for _ in additions)
+        addition_counter = collections.Counter(additions_dict.keys())
         for k, v in addition_counter.items():
             if v > 1:
                 return Err.DUPLICATE_OUTPUT, None, []

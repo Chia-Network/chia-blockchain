@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from chiabip158 import PyBIP158
 
@@ -41,15 +41,16 @@ def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_n
     )
 
 
-def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
-    additions: List[Coin] = []
+def additions_for_npc(npc_result: NPCResult) -> Dict[bytes32, Coin]:
+    additions: Dict[bytes32, Coin] = {}
 
     if npc_result.conds is None:
-        return []
+        return {}
     for spend in npc_result.conds.spends:
         for puzzle_hash, amount, _ in spend.create_coin:
             coin = Coin(spend.coin_id, puzzle_hash, amount)
-            additions.append(coin)
+            coin_id = coin.name()
+            additions[coin_id] = coin
 
     return additions
 
