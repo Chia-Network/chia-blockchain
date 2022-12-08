@@ -236,7 +236,7 @@ class PoolWallet:
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
 
-    async def update_pool_config(self) -> None:
+    async def _create_current_pool_wallet_dict(self) -> Dict[bytes32, PoolWalletConfig]:
         current_state: PoolWalletInfo = await self.get_current_state()
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
         pool_config_dict: Dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
@@ -256,6 +256,10 @@ class PoolWallet:
             current_state.current.owner_pubkey,
         )
         pool_config_dict[new_config.launcher_id] = new_config
+        return pool_config_dict
+
+    async def update_pool_config(self) -> None:
+        pool_config_dict = await self._create_current_pool_wallet_dict()
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
     @staticmethod
@@ -310,16 +314,18 @@ class PoolWallet:
         Updates the pool config file with the current state after sync is complete.
         If the wallet crashes, the config file will be auto updated on restart.
         """
-        # we only need one task running at a time.
-        if self._update_pool_config_after_sync_task is None or self._update_pool_config_after_sync_task.done():
+        if self._update_pool_config_after_sync_task is not None:
+            self._update_pool_config_after_sync_task.cancel()
 
-            async def update_pool_config_after_sync_task():
-                while not await self.wallet_state_manager.synced():
-                    await asyncio.sleep(5)
-                await self.update_pool_config()
-                self.log.info("Updated pool config after syncing finished.")
+        pool_config_dict = await self._create_current_pool_wallet_dict()
 
-            self._update_pool_config_after_sync_task = asyncio.create_task(update_pool_config_after_sync_task())
+        async def update_pool_config_after_sync_task():
+            while not await self.wallet_state_manager.synced():
+                await asyncio.sleep(5)
+            await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
+            self.log.info("Updated pool config after syncing finished.")
+
+        self._update_pool_config_after_sync_task = asyncio.create_task(update_pool_config_after_sync_task())
 
     async def rewind(self, block_height: int) -> bool:
         """
