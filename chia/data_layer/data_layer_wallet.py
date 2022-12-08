@@ -18,6 +18,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
@@ -609,7 +610,7 @@ class DataLayerWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=singleton_record.coin_id,
+            name=SpendBundleID(singleton_record.coin_id),  # TODO: could do with a comment here
         )
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(

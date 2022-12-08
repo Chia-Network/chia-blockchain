@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar, Callable
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.borderlands import CoinID, bytes_to_CoinID
+from chia.types.borderlands import CoinID, bytes_to_CoinID, SpendBundleID
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
@@ -272,11 +272,9 @@ class SimClient:
         self.service = service
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
-        spend_bundle_id = spend_bundle.name()
+        spend_bundle_id = SpendBundleID(spend_bundle.name())
         try:
-            cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle_id
-            )
+            cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, None)
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak
@@ -387,16 +385,16 @@ class SimClient:
             assert solution is not None
             return CoinSpend(coin_record.coin, puzzle, solution)
 
-    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+    async def get_all_mempool_tx_ids(self) -> List[SpendBundleID]:
         return list(self.service.mempool_manager.mempool.spends.keys())
 
-    async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
+    async def get_all_mempool_items(self) -> Dict[SpendBundleID, MempoolItem]:
         spends = {}
         for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id] = item
         return spends
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict[str, Any]]:
+    async def get_mempool_item_by_tx_id(self, tx_id: SpendBundleID) -> Optional[Dict[str, Any]]:
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
             return None

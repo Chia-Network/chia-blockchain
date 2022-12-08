@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, Optional, List
+from typing import Dict, Iterator, List, Optional
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_CoinID, CoinID
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err

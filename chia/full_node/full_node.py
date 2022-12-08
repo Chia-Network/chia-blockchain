@@ -51,7 +51,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
-from chia.types.borderlands import CoinID, bytes_to_CoinID
+from chia.types.borderlands import CoinID, SpendBundleID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -80,7 +80,9 @@ from chia.util.safe_cancel_task import cancel_task_safe
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]  # The result of calling MempoolManager.new_peak
+    mempool_peak_result: List[
+        Tuple[SpendBundle, NPCResult, SpendBundleID]
+    ]  # The result of calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: List[Tuple[CoinID, bytes]]  # The hints added to the DB
     lookup_coin_ids: List[CoinID]  # The coin IDs that we need to look up to notify wallets of changes
@@ -1512,7 +1514,7 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
-        mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
+        mempool_new_peak_result = await self.mempool_manager.new_peak(
             self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
         )
 
@@ -2212,7 +2214,7 @@ class FullNode:
     async def respond_transaction(
         self,
         transaction: SpendBundle,
-        spend_name: bytes32,
+        spend_name_bytes: bytes32,
         peer: Optional[WSChiaConnection] = None,
         test: bool = False,
         tx_bytes: Optional[bytes] = None,
@@ -2222,6 +2224,7 @@ class FullNode:
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
+        spend_name = SpendBundleID(spend_name_bytes)
         if self.mempool_manager.get_spendbundle(spend_name) is not None:
             self.mempool_manager.remove_seen(spend_name)
             return MempoolInclusionStatus.SUCCESS, None
@@ -2236,7 +2239,9 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(
+                    transaction, tx_bytes, spend_bundle_id=spend_name
+                )
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code

@@ -6,7 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 
 CoinID = NewType("CoinID", bytes32)
 PublicKeyBytes = NewType("PublicKeyBytes", bytes48)
-
+SpendBundleID = NewType("SpendBundleID", bytes32)
 
 """
 These conversion functions should be used at the border between native code (eg. Rust and C++) and Python
@@ -31,3 +31,7 @@ def bytes_to_PublicKeyBytes(input_bytes: bytes) -> PublicKeyBytes:
 
 def bytes_to_CoinID(input_bytes: bytes) -> CoinID:
     return CoinID(bytes32(input_bytes))
+
+
+def bytes_to_SpendBundleID(input_bytes: bytes) -> SpendBundleID:
+    return SpendBundleID(bytes32(input_bytes))

@@ -16,7 +16,7 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import CoinID
+from chia.types.borderlands import CoinID, SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
@@ -671,14 +671,15 @@ class FullNodeRpcApi:
 
         spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
+        spend_bundle_id = SpendBundleID(spend_name)
 
-        if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
+        if self.service.mempool_manager.get_spendbundle(spend_bundle_id) is not None:
             status = MempoolInclusionStatus.SUCCESS
             error = None
         else:
             status, error = await self.service.respond_transaction(spend_bundle, spend_name)
             if status != MempoolInclusionStatus.SUCCESS:
-                if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
+                if self.service.mempool_manager.get_spendbundle(spend_bundle_id) is not None:
                     # Already in mempool
                     status = MempoolInclusionStatus.SUCCESS
                     error = None
@@ -750,7 +751,7 @@ class FullNodeRpcApi:
             raise ValueError("No tx_id in request")
         include_pending: bool = request.get("include_pending", False)
         tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
-        spend_bundle_id = tx_id
+        spend_bundle_id = SpendBundleID(tx_id)
         item = self.service.mempool_manager.get_mempool_item(spend_bundle_id, include_pending)
         if item is None:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
@@ -770,9 +771,7 @@ class FullNodeRpcApi:
         cost = 0
         if "spend_bundle" in request:
             spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
-            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle.name()
-            )
+            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, None)
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
             cost = npc_result.cost

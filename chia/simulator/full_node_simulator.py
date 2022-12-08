@@ -17,7 +17,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_CoinID
+from chia.types.borderlands import SpendBundleID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -391,7 +391,7 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to wait for.
         """
-        ids_to_check: Set[bytes32] = set()
+        ids_to_check: Set[SpendBundleID] = set()
         for record in records:
             if record.spend_bundle is None:
                 continue
@@ -532,7 +532,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         return coins_to_receive
 
-    def tx_id_in_mempool(self, tx_id: bytes32) -> bool:
+    def tx_id_in_mempool(self, tx_id: SpendBundleID) -> bool:
         spendbundle = self.full_node.mempool_manager.get_spendbundle(spend_bundle_id=tx_id)
         return spendbundle is not None
 

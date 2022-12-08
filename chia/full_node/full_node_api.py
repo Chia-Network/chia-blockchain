@@ -45,7 +45,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.borderlands import CoinID, bytes_to_CoinID
+from chia.types.borderlands import CoinID, SpendBundleID, bytes_to_CoinID, bytes_to_SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -222,7 +222,7 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
-        spend_bundle = self.full_node.mempool_manager.get_spendbundle(request.transaction_id)
+        spend_bundle = self.full_node.mempool_manager.get_spendbundle(SpendBundleID(request.transaction_id))
         if spend_bundle is None:
             return None
 
@@ -253,7 +253,8 @@ class FullNodeAPI:
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
             await self.full_node.transaction_queue.put(
-                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+                TransactionQueueEntry(tx.transaction, tx_bytes, SpendBundleID(spend_name), peer, test),
+                peer.peer_node_id,
             )
         except TransactionQueueFull:
             pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
@@ -1241,7 +1242,7 @@ class FullNodeAPI:
     async def send_transaction(
         self, request: wallet_protocol.SendTransaction, *, test: bool = False
     ) -> Optional[Message]:
-        spend_name = request.transaction.name()
+        spend_name = bytes_to_SpendBundleID(request.transaction.name())
         if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
             self.full_node.mempool_manager.remove_seen(spend_name)
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)

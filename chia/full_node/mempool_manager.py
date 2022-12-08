@@ -22,7 +22,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import CoinID, PublicKeyBytes, bytes_to_CoinID, bytes_to_PublicKeyBytes
+from chia.types.borderlands import CoinID, PublicKeyBytes, SpendBundleID, bytes_to_CoinID, bytes_to_PublicKeyBytes
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
@@ -233,14 +233,14 @@ class MempoolManager:
 
     def can_replace(
         self,
-        conflicting_items: Dict[bytes32, MempoolItem],
+        conflicting_items: List[MempoolItem],
         removals: Dict[CoinID, CoinRecord],
         fees: uint64,
         fees_per_cost: float,
     ) -> bool:
         conflicting_fees = 0
         conflicting_cost = 0
-        for item in conflicting_items.values():
+        for item in conflicting_items:
             conflicting_fees += item.fee
             conflicting_cost += item.cost
 
@@ -273,12 +273,19 @@ class MempoolManager:
         return True
 
     async def pre_validate_spendbundle(
-        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
+        self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], *, spend_bundle_id: Optional[bytes32] = None
     ) -> NPCResult:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
+        if spend_bundle_id and spend_bundle_id != new_spend.name():
+            raise (
+                AssertionError(
+                    f"pre_validate_spendbundle given incompatible arguments: {spend_bundle_id} != {new_spend.name()}"
+                )
+            )
+
         start_time = time.time()
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
@@ -301,12 +308,12 @@ class MempoolManager:
         duration = end_time - start_time
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
-            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
+            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {new_spend.name()}",
         )
         return ret
 
     async def add_spend_bundle(
-        self, new_spend: SpendBundle, npc_result: NPCResult, spend_name: bytes32, first_added_height: uint32
+        self, new_spend: SpendBundle, npc_result: NPCResult, spend_name: SpendBundleID, first_added_height: uint32
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
         Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
@@ -352,9 +359,9 @@ class MempoolManager:
         self,
         new_spend: SpendBundle,
         npc_result: NPCResult,
-        spend_name: bytes32,
+        spend_name: SpendBundleID,
         first_added_height: uint32,
-    ) -> Tuple[Optional[Err], Optional[MempoolItem], List[bytes32]]:
+    ) -> Tuple[Optional[Err], Optional[MempoolItem], List[SpendBundleID]]:
         """
         Validates new_spend with the given NPCResult, and spend_name, and the current mempool. The mempool should
         be locked during this call (blockchain lock).
@@ -464,7 +471,7 @@ class MempoolManager:
         # Use this information later when constructing a block
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
-        conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
+        conflicting_pool_items: Dict[SpendBundleID, MempoolItem] = {}
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -501,11 +508,11 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                for c_sb_id in self.mempool.removals[conflicting.name()]:
+                for c_sb_id in self.mempool.removals[CoinID(conflicting.name())]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
             log.warning(f"Conflicting pool items: {len(conflicting_pool_items)}")
-            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+            if not self.can_replace(list(conflicting_pool_items.values()), removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
@@ -542,13 +549,13 @@ class MempoolManager:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, []
 
-    def get_spendbundle(self, spend_bundle_id: bytes32) -> Optional[SpendBundle]:
+    def get_spendbundle(self, spend_bundle_id: SpendBundleID) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
         if spend_bundle_id in self.mempool.spends:
             return self.mempool.spends[spend_bundle_id].spend_bundle
         return None
 
-    def get_mempool_item(self, spend_bundle_id: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
+    def get_mempool_item(self, spend_bundle_id: SpendBundleID, include_pending: bool = False) -> Optional[MempoolItem]:
         """
         Returns a MempoolItem if it's inside one the mempools.
 
@@ -562,7 +569,7 @@ class MempoolManager:
 
     async def new_peak(
         self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]
-    ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
+    ) -> List[Tuple[SpendBundle, NPCResult, SpendBundleID]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
@@ -583,7 +590,7 @@ class MempoolManager:
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
-                        spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
+                        spendbundle_ids: List[SpendBundleID] = self.mempool.removals[bytes_to_CoinID(spend.coin_id)]
                         self.mempool.remove_from_pool(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
                             self.remove_seen(spendbundle_id)

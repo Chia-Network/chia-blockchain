@@ -26,7 +26,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import bytes_to_PublicKeyBytes
+from chia.types.borderlands import SpendBundleID, bytes_to_PublicKeyBytes
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -73,7 +73,7 @@ def generate_test_spend_bundle(
 
 
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
-    spend_bundle_name = bytes32([idx] * 32)
+    spend_bundle_name = SpendBundleID(bytes32([idx] * 32))
     return MempoolItem(
         SpendBundle([], G2Element()), uint64(0), NPCResult(None, None, cost), cost, spend_bundle_name, [], uint32(0)
     )

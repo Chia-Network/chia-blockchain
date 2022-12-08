@@ -8,10 +8,10 @@ from blspy import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
+from .borderlands import SpendBundleID
 from .coin_spend import CoinSpend
 
 
@@ -59,8 +59,8 @@ class SpendBundle(Streamable):
 
         return amount_in - amount_out
 
-    def name(self) -> bytes32:
-        return self.get_hash()
+    def name(self) -> SpendBundleID:
+        return SpendBundleID(self.get_hash())
 
     def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
         debug_spend_bundle(self, agg_sig_additional_data)

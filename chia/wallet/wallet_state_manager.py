@@ -28,6 +28,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
@@ -1132,7 +1133,7 @@ class WalletStateManager:
                                     sent_to=[],
                                     trade_id=None,
                                     type=uint32(tx_type),
-                                    name=bytes32(token_bytes()),
+                                    name=SpendBundleID(bytes32(token_bytes())),
                                     memos=[],
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
@@ -1192,7 +1193,7 @@ class WalletStateManager:
                                         sent_to=[],
                                         trade_id=None,
                                         type=uint32(TransactionType.OUTGOING_TX.value),
-                                        name=bytes32(token_bytes()),
+                                        name=SpendBundleID(bytes32(token_bytes())),
                                         memos=[],
                                     )
 
@@ -1474,7 +1475,7 @@ class WalletStateManager:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(tx_type),
-                name=coin_name,
+                name=SpendBundleID(coin_name),
                 memos=[],
             )
             await self.tx_store.add_transaction_record(tx_record)
@@ -1506,7 +1507,7 @@ class WalletStateManager:
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
-                    name=coin_name,
+                    name=SpendBundleID(coin_name),
                     memos=[],
                 )
                 if coin.amount > 0:

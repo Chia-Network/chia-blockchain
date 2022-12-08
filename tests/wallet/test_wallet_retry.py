@@ -9,7 +9,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
@@ -23,12 +23,12 @@ def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
 
 
-def assert_sb_not_in_pool(node: FullNodeAPI, bundle_id: bytes32) -> None:
+def assert_sb_not_in_pool(node: FullNodeAPI, bundle_id: SpendBundleID) -> None:
     assert node.full_node.mempool_manager.get_spendbundle(bundle_id) is None
     assert not node.full_node.mempool_manager.seen(bundle_id)
 
 
-def evict_from_pool(node: FullNodeAPI, bundle_id: bytes32) -> None:
+def evict_from_pool(node: FullNodeAPI, bundle_id: SpendBundleID) -> None:
     mempool_item = node.full_node.mempool_manager.mempool.spends[bundle_id]
     node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name])
     node.full_node.mempool_manager.remove_seen(bundle_id)
@@ -60,7 +60,10 @@ async def test_wallet_tx_retry(
     await wallet_1.push_transaction(transaction)
 
     async def sb_in_mempool() -> bool:
-        return full_node_1.full_node.mempool_manager.get_spendbundle(transaction.name) == transaction.spend_bundle
+        return (
+            full_node_1.full_node.mempool_manager.get_spendbundle(SpendBundleID(transaction.name))
+            == transaction.spend_bundle
+        )
 
     # SpendBundle is accepted by peer
     await time_out_assert(wait_secs, sb_in_mempool)
@@ -83,7 +86,7 @@ async def test_wallet_tx_retry(
         assert txn is not None
         sb = txn.spend_bundle
         assert sb is not None
-        bundle_id = sb.name()
+        bundle_id = SpendBundleID(sb.name())
         full_node_sb = full_node_1.full_node.mempool_manager.get_spendbundle(bundle_id)
         if full_node_sb is None:
             return False
