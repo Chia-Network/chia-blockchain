@@ -1879,7 +1879,11 @@ class FullNode:
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
                 raise ConsensusError(header_error)
-            self.log.warning(f"Time for header validate: {time.time() - start_header_time}")
+            validate_time = time.time() - start_header_time
+            self.log.log(
+                logging.WARNING if validate_time > 2 else logging.DEBUG,
+                f"Time for header validate: {validate_time:0.3f}s",
+            )
 
         if block.transactions_generator is not None:
             pre_validation_start = time.time()
