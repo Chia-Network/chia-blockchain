@@ -12,6 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
+from .borderlands import SpendBundleID, bytes_to_SpendBundleID
 from .coin_spend import CoinSpend
 
 
@@ -58,6 +59,10 @@ class SpendBundle(Streamable):
         amount_out = sum(_.amount for _ in self.additions())
 
         return amount_in - amount_out
+
+    @property
+    def id(self) -> SpendBundleID:
+        return bytes_to_SpendBundleID(self.get_hash())
 
     def name(self) -> bytes32:
         return self.get_hash()

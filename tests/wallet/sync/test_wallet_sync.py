@@ -23,6 +23,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
@@ -1278,7 +1279,7 @@ class TestWalletSync:
             tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
             await wallet_node.wallet_state_manager.add_pending_transaction(tx)
 
-            async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
+            async def tx_in_pool(mempool: MempoolManager, tx_id: SpendBundleID):
                 tx = mempool.get_spendbundle(tx_id)
                 if tx is None:
                     return False

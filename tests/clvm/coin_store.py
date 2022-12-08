@@ -9,6 +9,7 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
@@ -29,7 +30,7 @@ class CoinTimestamp:
 
 class CoinStore:
     def __init__(self, reward_mask: int = 0):
-        self._db: Dict[bytes32, CoinRecord] = dict()
+        self._db: Dict[CoinID, CoinRecord] = dict()
         self._ph_index: Dict = defaultdict(list)
         self._reward_mask = reward_mask
 
@@ -70,12 +71,13 @@ class CoinStore:
         if result.error is not None:
             raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")
 
-        ephemeral_db = dict(self._db)
+        ephemeral_db = {bytes_to_CoinID(k): v for k, v in self._db.items()}
+
         assert result.conds is not None
         for spend in result.conds.spends:
             for puzzle_hash, amount, hint in spend.create_coin:
                 coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                name = coin.name()
+                name = bytes_to_CoinID(coin.name())
                 ephemeral_db[name] = CoinRecord(
                     coin,
                     uint32(now.height),
@@ -111,9 +113,9 @@ class CoinStore:
         for new_coin in additions:
             self._add_coin_entry(new_coin, now)
         for spent_coin in removals:
-            coin_name = spent_coin.name()
+            coin_name = bytes_to_CoinID(spent_coin.name())
             coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=now.height)
+            self._db[coin_name] = replace(coin_record, spent_block_index=uint32(now.height))
         return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
@@ -132,7 +134,7 @@ class CoinStore:
                 yield coin_entry.coin
 
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
-        name = coin.name()
+        name = bytes_to_CoinID(coin.name())
         # assert name not in self._db
         self._db[name] = CoinRecord(
             coin,
@@ -143,5 +145,5 @@ class CoinStore:
         )
         self._ph_index[coin.puzzle_hash].append(name)
 
-    def coin_record(self, coin_id: bytes32) -> Optional[CoinRecord]:
+    def coin_record(self, coin_id: CoinID) -> Optional[CoinRecord]:
         return self._db.get(coin_id)

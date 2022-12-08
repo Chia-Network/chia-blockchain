@@ -17,6 +17,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import bytes_to_BlockRecordHeaderHash, bytes_to_SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -192,7 +193,9 @@ class FullNodeSimulator(FullNodeAPI):
                 else:
                     current_time = False
                     time_per_block = 1
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                bytes_to_BlockRecordHeaderHash(curr.header_hash)
+            )
             if mempool_bundle is None:
                 spend_bundle = None
             else:
@@ -243,7 +246,9 @@ class FullNodeSimulator(FullNodeAPI):
                 else:
                     current_time = False
                     time_per_block = 1
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                bytes_to_BlockRecordHeaderHash(curr.header_hash)
+            )
             if mempool_bundle is None:
                 spend_bundle = None
             else:
@@ -399,7 +404,7 @@ class FullNodeSimulator(FullNodeAPI):
         while True:
             found = set()
             for spend_bundle_name in ids_to_check:
-                tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
+                tx = self.full_node.mempool_manager.get_spendbundle(bytes_to_SpendBundleID(spend_bundle_name))
                 if tx is not None:
                     found.add(spend_bundle_name)
             ids_to_check = ids_to_check.difference(found)
@@ -444,7 +449,7 @@ class FullNodeSimulator(FullNodeAPI):
         block.
 
         Arguments:
-            coin_names: The coin names to process.
+            coins: The coins to process.
         """
 
         coin_set = set(coins)
@@ -531,7 +536,7 @@ class FullNodeSimulator(FullNodeAPI):
         return coins_to_receive
 
     def tx_id_in_mempool(self, tx_id: bytes32) -> bool:
-        spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_hash=tx_id)
+        spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_id=bytes_to_SpendBundleID(tx_id))
         return spendbundle is not None
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
