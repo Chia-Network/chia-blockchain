@@ -35,6 +35,7 @@ from chia.full_node.lock_queue import LockClient, LockQueue
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
+from chia.full_node.tx_processing_queue import TransactionQueue
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
@@ -118,7 +119,7 @@ class FullNode:
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
-    _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
+    _transaction_queue: Optional[TransactionQueue]
     _compact_vdf_sem: Optional[LimitedSemaphore]
     _new_peak_sem: Optional[LimitedSemaphore]
     _respond_transaction_semaphore: Optional[asyncio.Semaphore]
@@ -246,7 +247,7 @@ class FullNode:
         return self._respond_transaction_semaphore
 
     @property
-    def transaction_queue(self) -> asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]:
+    def transaction_queue(self) -> TransactionQueue:
         assert self._transaction_queue is not None
         return self._transaction_queue
 
@@ -380,7 +381,7 @@ class FullNode:
         )
 
         self._mempool_manager = MempoolManager(
-            coin_store=self.coin_store,
+            get_coin_record=self.coin_store.get_coin_record,
             consensus_constants=self.constants,
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
@@ -394,7 +395,7 @@ class FullNode:
         self._maybe_blockchain_lock_low_priority = LockClient(1, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = asyncio.PriorityQueue(10000)
+        self._transaction_queue = TransactionQueue(1000, self.log)
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
@@ -474,7 +475,7 @@ class FullNode:
                 # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
                 # However, doing them one at a time would be slow, because they get sent to other processes.
                 await self.respond_transaction_semaphore.acquire()
-                item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
+                item: TransactionQueueEntry = await self.transaction_queue.pop()
                 asyncio.create_task(self._handle_one_transaction(item))
         except asyncio.CancelledError:
             raise
@@ -506,7 +507,6 @@ class FullNode:
         try:
             self.full_node_peers = FullNodePeers(
                 self.server,
-                self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
                 self.config["target_outbound_peer_count"],
                 PeerStoreResolver(
                     self.root_path,
@@ -1879,7 +1879,11 @@ class FullNode:
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
                 raise ConsensusError(header_error)
-            self.log.warning(f"Time for header validate: {time.time() - start_header_time}")
+            validate_time = time.time() - start_header_time
+            self.log.log(
+                logging.WARNING if validate_time > 2 else logging.DEBUG,
+                f"Time for header validate: {validate_time:0.3f}s",
+            )
 
         if block.transactions_generator is not None:
             pre_validation_start = time.time()
@@ -2242,7 +2246,10 @@ class FullNode:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
-                cost, status, error = await self.mempool_manager.add_spend_bundle(transaction, cost_result, spend_name)
+                assert self.mempool_manager.peak
+                cost, status, error = await self.mempool_manager.add_spend_bundle(
+                    transaction, cost_result, spend_name, self.mempool_manager.peak.height
+                )
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(
                     f"Added transaction to mempool: {spend_name} mempool size: "

@@ -49,8 +49,8 @@ from chia.wallet.transaction_record import TransactionRecord
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
-from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
+from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
 from tests.util.wallet_is_synced import wallet_is_synced
 

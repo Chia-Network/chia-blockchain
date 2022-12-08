@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import random
 import time
-from typing import Set, List, Optional
 from dataclasses import dataclass
+from typing import List, Optional, Set
 
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64, uint16
+from chia.util.ints import uint16, uint64
 
 
 @dataclass(frozen=False)
@@ -28,10 +30,10 @@ class VettedPeer:
         self.host = h
         self.port = p
 
-    def __eq__(self, rhs):
-        return self.host == rhs.host and self.port == rhs.port
+    def __eq__(self, rhs: object) -> bool:
+        return self.host == rhs.host and self.port == rhs.port  # type: ignore[no-any-return, attr-defined]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.host, self.port))
 
 
@@ -66,8 +68,10 @@ class IntroducerPeers:
         except ValueError:
             return False
 
-    def get_peers(self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999) -> List[VettedPeer]:
-        target_peers = [peer for peer in self._peers if time.time() - peer.time_added < recent_threshold]
+    def get_peers(
+        self, max_peers: int = 0, randomize: bool = False, recent_threshold: float = 9999999
+    ) -> List[VettedPeer]:
+        target_peers = [peer for peer in self._peers if time.time() - float(peer.time_added) < recent_threshold]
         if not max_peers or max_peers > len(target_peers):
             max_peers = len(target_peers)
         if randomize:

@@ -1,4 +1,6 @@
-from typing import List, Tuple, Optional
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2

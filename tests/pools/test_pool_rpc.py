@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
-from typing import Any, Optional, List, Dict, Tuple, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -17,7 +19,10 @@ from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.block_tools import BlockTools, get_plot_dir
+from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
@@ -27,10 +32,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from chia.simulator.block_tools import BlockTools, get_plot_dir
 from tests.util.wallet_is_synced import wallet_is_synced
-from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -94,7 +96,7 @@ async def one_wallet_node_and_rpc(
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
         await farm_blocks(full_node_api, our_ph, PREFARMED_BLOCKS)
-
+        assert wallet_service.rpc_server is not None
         client = await WalletRpcClient.create(
             self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
         )

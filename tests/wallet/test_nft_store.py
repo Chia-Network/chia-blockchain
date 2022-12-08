@@ -38,8 +38,10 @@ class TestNftStore:
                 None,
                 uint32(10),
             )
+            assert await db.is_empty()
             # Test save
             await db.save_nft(uint32(1), a_bytes32, nft)
+            assert not await db.is_empty()
             await db.save_nft(uint32(1), a_bytes32, nft)  # test for duplicates
             await db.save_nft(uint32(1), b_bytes32, nft2)
             # Test get nft
@@ -74,9 +76,11 @@ class TestNftStore:
             )
             # Test save
             await db.save_nft(uint32(1), a_bytes32, nft)
+            assert not await db.is_empty()
             # Test delete by nft id
             await db.delete_nft_by_nft_id(a_bytes32, uint32(11))
             assert await db.get_nft_by_id(a_bytes32) is None
+            assert await db.is_empty(wallet_id=uint32(1))
 
             # Test delete by coin id
             await db.save_nft(uint32(1), a_bytes32, nft)
@@ -127,3 +131,7 @@ class TestNftStore:
             assert not (await db.get_nft_by_coin_id(coin_id_2))
             assert not (await db.get_nft_by_coin_id(nft_id_1))
             assert not await db.exists(coin_id_2)
+
+            await db.rollback_to_block(-1)
+            assert await db.count(wallet_id=uint32(1)) == 0
+            assert await db.is_empty(wallet_id=uint32(1))

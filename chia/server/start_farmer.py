@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -25,8 +25,8 @@ SERVICE_NAME = "farmer"
 
 def create_farmer_service(
     root_path: pathlib.Path,
-    config: Dict,
-    config_pool: Dict,
+    config: Dict[str, Any],
+    config_pool: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,

@@ -1,10 +1,12 @@
-from typing import List, Tuple, Optional, Dict
+from __future__ import annotations
+
+from typing import Dict, List, Optional, Tuple
 
 import pytest
-from blspy import PrivateKey, AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
-from chia.clvm.spend_sim import SpendSim, SimClient
+from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -18,14 +20,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.tails import (
-    GenesisById,
-    GenesisByPuzhash,
-    EverythingWithSig,
-    DelegatedLimitations,
-)
+from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.clvm.test_puzzles import secret_exponent_for_index
 

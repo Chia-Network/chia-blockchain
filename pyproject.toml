@@ -45,7 +45,7 @@ bitstring = "3.1.9"  # Binary data management library
 blspy = "1.0.16"  # Signature library
 chiabip158 = "1.1"  # bip158-style wallet filters
 chiapos = "1.0.11"  # proof of space
-chia_rs = "0.1.14"
+chia_rs = "0.1.16"
 # TODO: presuming that https://github.com/Chia-Network/chia-blockchain/pull/13805 gets merged
 chiavdf = "1.0.8"  # timelord and vdf verification
 click = "8.1.3"  # For the CLI
@@ -78,6 +78,8 @@ diff-cover = { version = "^7.0.1", optional = true }
 flake8 = { version = "^5.0.4", optional = true }
 ipython = { version = "^8.6.0", python = ">=3.8", optional = true }
 isort = { version = "^5.10.1", optional = true }
+# TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
+"keyrings.cryptfile" = { version = "1.3.9", optional = true }
 mypy = { version = "^0.982", optional = true }
 pre-commit = { version = "^2.20.0", optional = true }
 py3createtorrent = { version = "^1.1.0", optional = true }
@@ -100,6 +102,7 @@ miniupnpc = { version = "2.2.2", source = "chia", optional = true }
 [tool.poetry.extras]
 dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
 upnp = ["miniupnpc"]
+legacy_keyring = ["keyrings.cryptfile"]
 
 [tool.poetry-dynamic-versioning]
 enable = true
