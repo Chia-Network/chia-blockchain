@@ -306,7 +306,11 @@ class PoolWallet:
                     self.next_transaction_fee = uint64(0)
                 break
 
-        await self.update_pool_config_after_sync()  # Update pool config after we finish syncing.
+        if self.wallet_state_manager.synced():
+            await self.update_pool_config()
+        else:
+            await self.update_pool_config_after_sync()
+
         return True
 
     async def update_pool_config_after_sync(self) -> None:
