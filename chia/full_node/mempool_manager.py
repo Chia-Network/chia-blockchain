@@ -22,7 +22,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import PublicKeyBytes, bytes_to_PublicKeyBytes
+from chia.types.borderlands import CoinID, PublicKeyBytes, bytes_to_CoinID, bytes_to_PublicKeyBytes
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
@@ -87,7 +87,7 @@ class MempoolManager:
 
     def __init__(
         self,
-        get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
+        get_coin_record: Callable[[CoinID], Awaitable[Optional[CoinRecord]]],
         consensus_constants: ConsensusConstants,
         multiprocessing_context: Optional[BaseContext] = None,
         *,
@@ -234,7 +234,7 @@ class MempoolManager:
     def can_replace(
         self,
         conflicting_items: Dict[bytes32, MempoolItem],
-        removals: Dict[bytes32, CoinRecord],
+        removals: Dict[CoinID, CoinRecord],
         fees: uint64,
         fees_per_cost: float,
     ) -> bool:
@@ -391,16 +391,16 @@ class MempoolManager:
 
         assert npc_result.conds is not None
         # build removal list
-        removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
+        removal_names: List[CoinID] = [bytes_to_CoinID(spend.coin_id) for spend in npc_result.conds.spends]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         additions: List[Coin] = additions_for_npc(npc_result)
 
-        additions_dict: Dict[bytes32, Coin] = {}
+        additions_dict: Dict[CoinID, Coin] = {}
         for add in additions:
-            additions_dict[add.name()] = add
+            additions_dict[bytes_to_CoinID(add.name())] = add
 
         addition_amount: int = 0
         # Check additions for max coin amount
@@ -421,7 +421,7 @@ class MempoolManager:
             if v > 1:
                 return Err.DOUBLE_SPEND, None, []
 
-        removal_record_dict: Dict[bytes32, CoinRecord] = {}
+        removal_record_dict: Dict[CoinID, CoinRecord] = {}
         removal_amount: int = 0
         for name in removal_names:
             removal_record = await self.get_coin_record(name)
@@ -479,7 +479,7 @@ class MempoolManager:
 
         # Verify conditions, create hash_key list for aggsig check
         for spend in npc_result.conds.spends:
-            coin_record: CoinRecord = removal_record_dict[bytes32(spend.coin_id)]
+            coin_record: CoinRecord = removal_record_dict[bytes_to_CoinID(spend.coin_id)]
             # Check that the revealed removal puzzles actually match the puzzle hash
             if spend.puzzle_hash != coin_record.coin.puzzle_hash:
                 log.warning("Mempool rejecting transaction because of wrong puzzle_hash")
@@ -525,7 +525,7 @@ class MempoolManager:
 
         return None, potential, list(conflicting_pool_items.keys())
 
-    async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
+    async def check_removals(self, removals: Dict[CoinID, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).

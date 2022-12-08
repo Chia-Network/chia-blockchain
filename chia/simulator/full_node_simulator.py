@@ -17,6 +17,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -457,7 +458,7 @@ class FullNodeSimulator(FullNodeAPI):
             found: Set[Coin] = set()
             for coin in coin_set:
                 # TODO: is this the proper check?
-                if await coin_store.get_coin_record(coin.name()) is not None:
+                if await coin_store.get_coin_record(bytes_to_CoinID(coin.name())) is not None:
                     found.add(coin)
 
             coin_set = coin_set.difference(found)

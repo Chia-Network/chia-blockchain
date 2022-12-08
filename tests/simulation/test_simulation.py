@@ -15,6 +15,7 @@ from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.borderlands import bytes_to_CoinID
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets, setup_full_system
@@ -403,7 +404,7 @@ class TestSimulation:
             else:
                 raise Exception("unexpected parametrization")
             for coin in coins:
-                coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
+                coin_record = await full_node_api.full_node.coin_store.get_coin_record(bytes_to_CoinID(coin.name()))
                 assert coin_record is not None
 
     @pytest.mark.asyncio

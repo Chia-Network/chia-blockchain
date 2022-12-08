@@ -16,6 +16,7 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
@@ -583,7 +584,7 @@ class FullNodeRpcApi:
         """
         if "name" not in request:
             raise ValueError("Name not in request")
-        name = bytes32.from_hexstr(request["name"])
+        name = CoinID(bytes32.from_hexstr(request["name"]))
 
         coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
         if coin_record is None:
@@ -645,7 +646,7 @@ class FullNodeRpcApi:
         if self.service.hint_store is None:
             return {"coin_records": []}
 
-        names: List[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
+        names: List[CoinID] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
 
         kwargs: Dict[str, Any] = {
             "include_spent_coins": False,
@@ -690,7 +691,7 @@ class FullNodeRpcApi:
         }
 
     async def get_puzzle_and_solution(self, request: Dict) -> EndpointResult:
-        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
+        coin_name = CoinID(bytes32.from_hexstr(request["coin_id"]))
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:

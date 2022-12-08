@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import NewType
 
-from chia.types.blockchain_format.sized_bytes import bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 
+CoinID = NewType("CoinID", bytes32)
 PublicKeyBytes = NewType("PublicKeyBytes", bytes48)
 
 
@@ -26,3 +27,7 @@ from those libraries.
 
 def bytes_to_PublicKeyBytes(input_bytes: bytes) -> PublicKeyBytes:
     return PublicKeyBytes(bytes48(input_bytes))
+
+
+def bytes_to_CoinID(input_bytes: bytes) -> CoinID:
+    return CoinID(bytes32(input_bytes))
