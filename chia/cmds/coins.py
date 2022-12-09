@@ -40,6 +40,7 @@ def coins_cmd(ctx: click.Context) -> None:
 )
 @click.option(
     "--exclude-id",
+    "excluded_ids",
     multiple=True,
     help="prevent this coin from being included.",
 )
