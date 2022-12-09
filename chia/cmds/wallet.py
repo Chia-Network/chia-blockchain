@@ -174,7 +174,7 @@ def get_transactions_cmd(
 )
 @click.option(
     "--exclude-coin",
-    "exclude_coins",
+    "coins_to_exclude",
     multiple=True,
     help="Exclude this coin from being spent.",
 )
