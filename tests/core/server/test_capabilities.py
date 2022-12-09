@@ -5,7 +5,7 @@ from typing import List, Tuple
 import pytest
 
 from chia.protocols.shared_protocol import Capability
-from chia.server.server import known_active_capabilities
+from chia.server.capabilities import known_active_capabilities
 from chia.util.ints import uint16
 
 
