@@ -63,8 +63,8 @@ def list_cmd(
     show_unconfirmed: bool,
     min_amount: str,
     max_amount: str,
-    exclude_id: Tuple[str],
-    exclude_amount: Tuple[int],
+    excluded_ids: Tuple[str],
+    excluded_amounts: Tuple[int],
     paginate: Optional[bool],
 ) -> None:
     config = load_config(ctx.obj["root_path"], "config.yaml", "wallet")
