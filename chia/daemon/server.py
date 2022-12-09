@@ -15,7 +15,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple
+from typing import Any, Dict, List, Optional, TextIO, Tuple, Union, cast
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
@@ -1264,37 +1264,54 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
 
 async def kill_process(
-    process: subprocess.Popen, root_path: Path, service_name: str, id: str, delay_before_kill: int = 15
+    process: Union[subprocess.Popen, List[subprocess.Popen]],
+    root_path: Path,
+    service_name: str,
+    id: str,
+    delay_before_kill: int = 15,
 ) -> bool:
     pid_path = pid_path_for_service(root_path, service_name, id)
 
+    processes: List[subprocess.Popen]
+    if service_name == service_plotter:
+        # WebSocketServer.services has process values for every service but the
+        # plotter which has a list of processes.
+        processes = cast(List[subprocess.Popen], process)
+    else:
+        processes = [cast(subprocess.Popen, process)]
+
     if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
-        # pylint: disable=E1101
-        kill(process.pid, signal.SIGBREAK)
 
+        for process in processes:
+            kill(process.pid, signal.SIGBREAK)
     else:
         log.info("sending term signal to %s", service_name)
-        process.terminate()
+        for process in processes:
+            process.terminate()
 
     count: float = 0
     while count < delay_before_kill:
-        if process.poll() is not None:
+        if all(process.poll() is not None for process in processes):
             break
         await asyncio.sleep(0.5)
         count += 0.5
     else:
-        process.kill()
+        for process in processes:
+            process.kill()
         log.info("sending kill signal to %s", service_name)
-    r = process.wait()
-    log.info("process %s returned %d", service_name, r)
-    try:
-        pid_path_killed = pid_path.with_suffix(".pid-killed")
-        if pid_path_killed.exists():
-            pid_path_killed.unlink()
-        os.rename(pid_path, pid_path_killed)
-    except Exception:
-        pass
+    for process in processes:
+        r = process.wait()
+        log.info("process %s returned %d", service_name, r)
+
+    if service_name != service_plotter:
+        try:
+            pid_path_killed = pid_path.with_suffix(".pid-killed")
+            if pid_path_killed.exists():
+                pid_path_killed.unlink()
+            os.rename(pid_path, pid_path_killed)
+        except Exception:
+            pass
 
     return True
 
