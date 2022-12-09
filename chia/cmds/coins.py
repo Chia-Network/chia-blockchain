@@ -46,6 +46,7 @@ def coins_cmd(ctx: click.Context) -> None:
 )
 @click.option(
     "--exclude-amount",
+    "excluded_amounts",
     multiple=True,
     help="Exclude any coins with this amount from being included.",
 )
