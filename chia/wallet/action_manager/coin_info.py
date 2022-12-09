@@ -139,20 +139,36 @@ class CoinInfo:
 
         spend = CoinSpend(self.coin, outer_puzzle, outer_solution)
 
-        outer_match: Optional[
-            Tuple[PuzzleDescription, SolutionDescription, Program, Program]
-        ] = await self.outer_driver.match_puzzle_and_solution(spend, *outer_puzzle.uncurry())
-        assert outer_match is not None
-        inner_match: Optional[
-            Tuple[PuzzleDescription, SolutionDescription]
-        ] = await self.inner_driver.match_puzzle_and_solution(
-            self.coin, inner_puzzle, inner_solution, *inner_puzzle.uncurry()
+        outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await self.outer_driver.match_puzzle(
+            outer_puzzle, *outer_puzzle.uncurry()
         )
-        assert inner_match is not None
+        assert outer_puzzle_match is not None
+        outer_solution_match: Optional[Tuple[SolutionDescription, Program]] = await self.outer_driver.match_solution(
+            outer_solution
+        )
+        assert outer_solution_match is not None
+        outer_puzzle_description, _ = outer_puzzle_match
+        outer_solution_description, _ = outer_solution_match
+        inner_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await self.inner_driver.match_puzzle(
+            inner_puzzle, *inner_puzzle.uncurry()
+        )
+        assert inner_puzzle_match is not None
+        inner_solution_match: Optional[Tuple[SolutionDescription, Program]] = await self.inner_driver.match_solution(
+            inner_solution
+        )
+        assert inner_solution_match is not None
+        inner_puzzle_description = inner_puzzle_match
+        inner_solution_description = inner_solution_match
 
         return (
             actions_left,
             Solver({**environment.info, **environment_addition.info}),
             spend,
-            SpendDescription(self.coin, *outer_match[0:2], *inner_match),
+            SpendDescription(
+                self.coin,
+                outer_puzzle_description,
+                outer_solution_description,
+                inner_puzzle_description,
+                inner_solution_description,
+            ),
         )

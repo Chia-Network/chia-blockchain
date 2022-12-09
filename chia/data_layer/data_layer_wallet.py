@@ -1492,8 +1492,6 @@ class DataLayerWallet:
 class OuterDriver:
     launcher_id: bytes32
     root: bytes32
-    amount: uint64
-    parent_lineage: LineageProof
 
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
@@ -1581,10 +1579,10 @@ class OuterDriver:
         return [], new_inner_actions, Solver({})
 
     @classmethod
-    async def match_puzzle_and_solution(
-        cls, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
-        matched, args = match_dl_singleton(spend.puzzle_reveal.to_program())
+    async def match_puzzle(
+        cls, puzzle: Program, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleDescription, Program]]:
+        matched, args = match_dl_singleton(puzzle.to_program())
         if matched:
             innerpuz, rt, lid = args
             launcher_id: bytes32 = bytes32(lid.as_python())
@@ -1592,12 +1590,7 @@ class OuterDriver:
 
             return (
                 PuzzleDescription(
-                    cls(
-                        launcher_id,
-                        root,
-                        uint64(spend.coin.amount),
-                        LineageProof.from_program(spend.solution.to_program().first()),
-                    ),
+                    cls(launcher_id, root),
                     Solver(
                         {
                             "launcher_id": "0x" + launcher_id.hex(),
@@ -1608,17 +1601,18 @@ class OuterDriver:
                         }
                     ),
                 ),
-                SolutionDescription(
-                    [],
-                    [],
-                    Solver({}),
-                ),
                 innerpuz,
-                spend.solution.to_program().at("rrff"),
             )
 
-        else:
-            return None
+        return None
+
+    @classmethod
+    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+        return SolutionDescription(
+            [],
+            [],
+            Solver({"amount": str(solution.at("rf").as_int()), "lineage_proof": disassemble(solution.at("f"))}),
+        ), solution.at("rrff")
 
     @staticmethod
     def get_asset_types(request: Solver) -> List[Solver]:

@@ -733,22 +733,26 @@ class OuterDriver:
         return outer_actions, inner_actions, Solver({})
 
     @classmethod
-    async def match_puzzle_and_solution(
-        cls, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
-
+    async def match_puzzle(
+        cls, puzzle: Program, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleDescription, Program]]:
         return (
             PuzzleDescription(
                 OuterDriver(),
                 Solver({}),
             ),
+            puzzle,
+        )
+
+    @classmethod
+    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+        return (
             SolutionDescription(
                 [],
                 [],
                 Solver({}),
             ),
-            spend.puzzle_reveal.to_program(),
-            spend.solution.to_program(),
+            solution,
         )
 
     @staticmethod
@@ -805,17 +809,18 @@ class InnerDriver:
         return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
     @classmethod
-    async def match_puzzle_and_solution(
-        cls,
-        coin: Coin,
-        puzzle: Program,
-        solution: Program,
-        mod: Program,
-        curried_args: Program,
-    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription]]:
+    async def match_puzzle(
+        cls, puzzle: Program, mod: Program, curried_args: Program
+    ) -> Optional[PuzzleDescription]:
         if mod != MOD:
             return None
 
+        pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
+
+        return PuzzleDescription(InnerDriver(pubkey), Solver({}))
+
+    @classmethod
+    async def match_solution(cls, solution: Program) -> Optional[SolutionDescription]:
         actions: List[WalletAction] = []
         delegated_solution: Program = solution.at("rrf")
         if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
@@ -830,7 +835,7 @@ class InnerDriver:
         pubkey: G1Element = G1Element.from_bytes(curried_args.first().as_python())
         delegated_puzzle: Program = solution.at("rf")
 
-        return PuzzleDescription(InnerDriver(pubkey), Solver({}),), SolutionDescription(
+        return SolutionDescription(
             actions,
             [(pubkey, delegated_puzzle.get_tree_hash(), True)],
             Solver({}),

@@ -34,6 +34,9 @@ class Condition:
     def augment(self, environment: Solver) -> "Condition":
         return Condition(self.condition)
 
+    def de_alias(self) -> "Condition":
+        return Condition(self.condition)
+
 
 _T_Graftroot = TypeVar("_T_Graftroot", bound="Graftroot")
 
@@ -74,4 +77,7 @@ class Graftroot:
                 if edit["puzzle_wrapper"] == self.puzzle_wrapper:
                     return Graftroot.from_solver(edit)
 
+        return Graftroot(self.puzzle_wrapper, self.solution_wrapper, self.metadata)
+
+    def de_alias(self) -> "Graftroot":
         return Graftroot(self.puzzle_wrapper, self.solution_wrapper, self.metadata)

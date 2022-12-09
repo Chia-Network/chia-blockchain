@@ -1005,8 +1005,6 @@ class CATWallet:
 @dataclasses.dataclass(frozen=True)
 class OuterDriver:
     tail: bytes32
-    parent_lineage: LineageProof
-    my_id: bytes32
 
     # TODO: This is not great, we should move the coin selection logic in here
     @staticmethod
@@ -1122,16 +1120,16 @@ class OuterDriver:
         return outer_actions, inner_actions, Solver({})
 
     @classmethod
-    async def match_puzzle_and_solution(
-        cls, spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
+    async def match_puzzle(
+        cls, puzzle: Program, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleDescription, Program]]:
         args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))
         if args is not None:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = args
             tail: bytes32 = bytes32(genesis_coin_checker_hash.as_python())
             return (
                 PuzzleDescription(
-                    cls(tail, LineageProof.from_program(spend.solution.to_program().at("rf")), spend.coin.name()),
+                    cls(tail),
                     Solver(
                         {
                             "tail": "0x" + tail.hex(),
@@ -1139,17 +1137,32 @@ class OuterDriver:
                         }
                     ),
                 ),
-                SolutionDescription(
-                    [],
-                    [],
-                    Solver({}),
-                ),
                 inner_puzzle,
-                spend.solution.to_program().at("f"),
             )
 
-        else:
-            return None
+        return None
+
+    @classmethod
+    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+        parent_id, puzzle_hash, amount = solution.at("rrrf").as_iter()
+        return (
+            SolutionDescription(
+                [],
+                [],
+                Solver(
+                    {
+                        "lineage_proof": disassemble(solution.at("rf")),
+                        "my_id": "0x"
+                        + Coin(
+                            bytes32(parent_id.as_python()), bytes32(puzzle_hash.as_python()), uint64(amount.as_int())
+                        )
+                        .name()
+                        .hex(),
+                    }
+                ),
+            ),
+            solution.first(),
+        )
 
     @staticmethod
     def get_asset_types(request: Solver) -> List[Solver]:

@@ -359,31 +359,37 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
     for spend in bundle.coin_spends:
         # Step 2: Get any wallets that claim to identify the puzzle
         matches: List[SpendDescription] = []
-        mod, curried_args = spend.puzzle_reveal.uncurry()
         for outer_wallet in wallet_state_manager.outer_wallets:
-            outer_match: Optional[
-                Tuple[PuzzleDescription, SolutionDescription, Program, Program]
-            ] = await outer_wallet.match_puzzle_and_solution(spend, mod, curried_args)
-            if outer_match is not None:
-                outer_puzzle_description, outer_solution_description, inner_puzzle, inner_solution = outer_match
-                mod, curried_args = inner_puzzle.uncurry()
-                for inner_wallet in wallet_state_manager.inner_wallets:
-                    inner_match: Optional[
-                        Tuple[PuzzleDescription, SolutionDescription]
-                    ] = await inner_wallet.match_puzzle_and_solution(
-                        spend.coin, inner_puzzle, inner_solution, mod, curried_args
-                    )
-                    if inner_match is not None:
-                        inner_puzzle_description, inner_solution_description = inner_match
-                        matches.append(
-                            SpendDescription(
-                                spend.coin,
-                                outer_puzzle_description,
-                                outer_solution_description,
-                                inner_puzzle_description,
-                                inner_solution_description,
-                            )
+            puzzle_reveal: Program = spend.puzzle_reveal.to_program()
+            outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await outer_wallet.match_puzzle(
+                puzzle_reveal, *puzzle_reveal.uncurry()
+            )
+            if outer_puzzle_match is not None:
+                solution: Program = spend.solution.to_program()
+                outer_solution_match: Optional[Tuple[SolutionDescription, Program]] = await outer_wallet.match_solution(
+                    solution
+                )
+                if outer_solution_match is not None:
+                    outer_puzzle_description, inner_puzzle = outer_puzzle_match
+                    outer_solution_description, inner_solution = outer_solution_match
+                    for inner_wallet in wallet_state_manager.inner_wallets:
+                        inner_puzzle_description: Optional[PuzzleDescription] = await inner_wallet.match_puzzle(
+                            inner_puzzle, *inner_puzzle.uncurry()
                         )
+                        if inner_puzzle_description is not None:
+                            inner_solution_description: Optional[SolutionDescription] = await inner_wallet.match_puzzle(
+                                inner_solution
+                            )
+                            if inner_solution_description is not None:
+                                matches.append(
+                                    SpendDescription(
+                                        spend.coin,
+                                        outer_puzzle_description,
+                                        outer_solution_description,
+                                        inner_puzzle_description,
+                                        inner_solution_description,
+                                    )
+                                )
 
         if matches == []:
             continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -429,14 +435,12 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             sorted_actions, wallet_state_manager.action_aliases, environment=environment
         )
 
-        re_matched_spend: Optional[
-            Tuple[PuzzleDescription, SolutionDescription, Program, Program]
-        ] = await info.outer_driver.match_puzzle_and_solution(
-            new_spend, *new_spend.puzzle_reveal.to_program().uncurry()
+        re_matched_spend: Optional[Tuple[SolutionDescription, Program]] = await info.outer_driver.match_solution(
+            new_spend.solution.to_program()
         )
         if re_matched_spend is None:
             raise RuntimeError("Internal logic error, spend could not be rematched")
-        inner_most_solution: Program = re_matched_spend[3]
+        inner_most_solution: Program = re_matched_spend[1]
         delegated_solution: Program = inner_most_solution.at("rrf")
         if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):
             if dl_graftroot_actions == []:

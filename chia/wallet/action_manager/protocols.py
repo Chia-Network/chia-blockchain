@@ -29,6 +29,9 @@ class WalletAction(Protocol):
     def augment(self, environment: Solver) -> "WalletAction":
         ...
 
+    def de_alias(self) -> "WalletAction":
+        ...
+
 
 class ActionAlias(Protocol):
     @staticmethod
@@ -91,9 +94,13 @@ class OuterDriver(Protocol):
         ...
 
     @classmethod
-    async def match_puzzle_and_solution(
-        cls: Type["OuterDriver"], spend: CoinSpend, mod: Program, curried_args: Program
-    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription, Program, Program]]:
+    async def match_puzzle(
+        cls, puzzle: Program, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[PuzzleDescription, Program]]:
+        ...
+
+    @classmethod
+    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
         ...
 
     @staticmethod
@@ -125,16 +132,14 @@ class InnerDriver(Protocol):
         ...
 
     @classmethod
-    async def match_puzzle_and_solution(
-        cls: Type["InnerDriver"],
-        coin: Coin,
-        puzzle: Program,
-        solution: Program,
-        mod: Program,
-        curried_args: Program,
-    ) -> Optional[Tuple[PuzzleDescription, SolutionDescription]]:
+    async def match_puzzle(
+        cls, puzzle: Program, mod: Program, curried_args: Program
+    ) -> Optional[PuzzleDescription]:
         ...
 
+    @classmethod
+    async def match_solution(cls, solution: Program) -> Optional[SolutionDescription]:
+        ...
 
 @dataclass(frozen=True)
 class PuzzleDescription:
