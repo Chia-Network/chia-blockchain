@@ -189,7 +189,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    exclude_coins: Tuple[str],
+    coins_to_exclude: Tuple[str],
 ) -> None:
     extra_params = {
         "id": id,
@@ -200,7 +200,7 @@ def send_cmd(
         "override": override,
         "min_coin_amount": min_coin_amount,
         "max_coin_amount": max_coin_amount,
-        "exclude_coin_ids": list(exclude_coins),
+        "exclude_coin_ids": list(coins_to_exclude),
     }
     import asyncio
 
