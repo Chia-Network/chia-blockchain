@@ -1,14 +1,15 @@
-from typing import Dict, List, Optional, Tuple, Set
+from __future__ import annotations
 
-from blspy import G1Element
+from typing import Dict, List, Optional, Tuple
 
-from chia.types.announcement import Announcement
+from clvm.casts import int_from_bytes
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.clvm import int_from_bytes
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 
@@ -27,12 +28,7 @@ def parse_sexp_to_condition(
     if len(as_atoms) < 1:
         return Err.INVALID_CONDITION, None
     opcode = as_atoms[0]
-    try:
-        opcode = ConditionOpcode(opcode)
-    except ValueError:
-        # TODO: this remapping is bad, and should probably not happen
-        # it's simple enough to just store the opcode as a byte
-        opcode = ConditionOpcode.UNKNOWN
+    opcode = ConditionOpcode(opcode)
     return None, ConditionWithArgs(opcode, as_atoms[1:])
 
 
@@ -70,23 +66,37 @@ def conditions_by_opcode(
     return d
 
 
+def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
+    ret: Tuple[List[bytes48], List[bytes]] = ([], [])
+
+    for pk, msg in conditions.agg_sig_unsafe:
+        ret[0].append(bytes48(pk))
+        ret[1].append(msg)
+
+    for spend in conditions.spends:
+        for pk, msg in spend.agg_sig_me:
+            ret[0].append(bytes48(pk))
+            ret[1].append(msg + spend.coin_id + additional_data)
+    return ret
+
+
 def pkm_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]], coin_name: bytes32, additional_data: bytes
-) -> List[Tuple[G1Element, bytes]]:
+) -> List[Tuple[bytes48, bytes]]:
     assert coin_name is not None
-    ret: List[Tuple[G1Element, bytes]] = []
+    ret: List[Tuple[bytes48, bytes]] = []
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
         assert len(cwa.vars) == 2
         assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
-        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1]))
+        ret.append((bytes48(cwa.vars[0]), cwa.vars[1]))
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
         assert len(cwa.vars) == 2
         assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
-        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
+        ret.append((bytes48(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
     return ret
 
 
@@ -96,83 +106,11 @@ def created_outputs_for_conditions_dict(
 ) -> List[Coin]:
     output_coins = []
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
-        # TODO: check condition very carefully
-        # (ensure there are the correct number and type of parameters)
-        # maybe write a type-checking framework for conditions
-        # and don't just fail with asserts
         puzzle_hash, amount_bin = cvp.vars[0], cvp.vars[1]
         amount = int_from_bytes(amount_bin)
-        coin = Coin(input_coin_name, puzzle_hash, amount)
+        coin = Coin(input_coin_name, bytes32(puzzle_hash), uint64(amount))
         output_coins.append(coin)
     return output_coins
-
-
-def coin_announcements_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin: Coin,
-) -> Set[Announcement]:
-    output_announcements: Set[Announcement] = set()
-    for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, []):
-        message = cvp.vars[0]
-        assert len(message) <= 1024
-        announcement = Announcement(input_coin.name(), message)
-        output_announcements.add(announcement)
-    return output_announcements
-
-
-def puzzle_announcements_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin: Coin,
-) -> Set[Announcement]:
-    output_announcements: Set[Announcement] = set()
-    for cvp in conditions_dict.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, []):
-        message = cvp.vars[0]
-        assert len(message) <= 1024
-        announcement = Announcement(input_coin.puzzle_hash, message)
-        output_announcements.add(announcement)
-    return output_announcements
-
-
-def coin_announcements_names_for_npc(npc_list) -> Set[bytes32]:
-    output_announcements: Set[bytes32] = set()
-    for npc in npc_list:
-        for condition, cvp_list in npc.conditions:
-            if condition == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
-                for cvp in cvp_list:
-                    message = cvp.vars[0]
-                    assert len(message) <= 1024
-                    announcement = Announcement(npc.coin_name, message)
-                    output_announcements.add(announcement.name())
-    return output_announcements
-
-
-def puzzle_announcements_names_for_npc(npc_list) -> Set[bytes32]:
-    output_announcements: Set[bytes32] = set()
-    for npc in npc_list:
-        for condition, cvp_list in npc.conditions:
-            if condition == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
-                for cvp in cvp_list:
-                    message = cvp.vars[0]
-                    assert len(message) <= 1024
-                    announcement = Announcement(npc.puzzle_hash, message)
-                    output_announcements.add(announcement.name())
-    return output_announcements
-
-
-def coin_announcement_names_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin: Coin,
-) -> List[bytes32]:
-    output = [an.name() for an in coin_announcements_for_conditions_dict(conditions_dict, input_coin)]
-    return output
-
-
-def puzzle_announcement_names_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin: Coin,
-) -> List[bytes32]:
-    output = [an.name() for an in puzzle_announcements_for_conditions_dict(conditions_dict, input_coin)]
-    return output
 
 
 def conditions_dict_for_solution(

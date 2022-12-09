@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import logging
 import multiprocessing
+import traceback
+from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple, Union
+from multiprocessing.context import BaseContext
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.block_body_validation import validate_block_body
-from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
@@ -15,26 +21,35 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import (
+    PreValidationResult,
+    _run_generator,
+    pre_validate_blocks_multiprocessing,
+)
+from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, GeneratorArg
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.errors import Err
+from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
+from chia.util.hash import std_hash
+from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.util.streamable import recurse_jsonify
+from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -53,9 +68,17 @@ class ReceiveBlockResult(Enum):
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
+@dataclasses.dataclass
+class StateChangeSummary:
+    peak: BlockRecord
+    fork_height: uint32
+    rolled_back_records: List[CoinRecord]
+    new_npc_results: List[NPCResult]
+    new_rewards: List[Coin]
+
+
 class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
-    constants_json: Dict
 
     # peak of the blockchain
     _peak_height: Optional[uint32]
@@ -63,17 +86,15 @@ class Blockchain(BlockchainInterface):
     __block_records: Dict[bytes32, BlockRecord]
     # all hashes of blocks in block_record by height, used for garbage collection
     __heights_in_cache: Dict[uint32, Set[bytes32]]
-    # Defines the path from genesis to the peak, no orphan blocks
-    __height_to_hash: Dict[uint32, bytes32]
-    # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
-    # (height_included, SubEpochSummary). Note: ONLY for the blocks in the path to the peak
-    __sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
+    # maps block height (of the current heaviest chain) to block hash and sub
+    # epoch summaries
+    __height_map: BlockHeightMap
     # Unspent Store
     coin_store: CoinStore
     # Store
     block_store: BlockStore
     # Used to verify blocks in parallel
-    pool: ProcessPoolExecutor
+    pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
     _seen_compact_proofs: Set[Tuple[VDFInfo, uint32]]
 
@@ -82,13 +103,19 @@ class Blockchain(BlockchainInterface):
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
+    compact_proof_lock: asyncio.Lock
 
     @staticmethod
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
         consensus_constants: ConsensusConstants,
-    ):
+        blockchain_dir: Path,
+        reserved_cores: int,
+        multiprocessing_context: Optional[BaseContext] = None,
+        *,
+        single_threaded: bool = False,
+    ) -> "Blockchain":
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
@@ -96,33 +123,39 @@ class Blockchain(BlockchainInterface):
         """
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
-        cpu_count = multiprocessing.cpu_count()
-        if cpu_count > 61:
-            cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        num_workers = max(cpu_count - 2, 1)
-        self.pool = ProcessPoolExecutor(max_workers=num_workers)
-        log.info(f"Started {num_workers} processes for block validation")
+        self.compact_proof_lock = asyncio.Lock()
+        if single_threaded:
+            self.pool = InlineExecutor()
+        else:
+            cpu_count = multiprocessing.cpu_count()
+            if cpu_count > 61:
+                cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
+            num_workers = max(cpu_count - reserved_cores, 1)
+            self.pool = ProcessPoolExecutor(
+                max_workers=num_workers,
+                mp_context=multiprocessing_context,
+                initializer=setproctitle,
+                initargs=(f"{getproctitle()}_worker",),
+            )
+            log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
-        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
-        await self._load_chain_from_store()
+        await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
         return self
 
-    def shut_down(self):
+    def shut_down(self) -> None:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self) -> None:
+    async def _load_chain_from_store(self, blockchain_dir: Path) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        height_to_hash, sub_epoch_summaries = await self.block_store.get_peak_height_dicts()
-        self.__height_to_hash = height_to_hash
-        self.__sub_epoch_summaries = sub_epoch_summaries
+        self.__height_map = await BlockHeightMap.create(blockchain_dir, self.block_store.db_wrapper)
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -136,7 +169,8 @@ class Blockchain(BlockchainInterface):
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
-        assert len(self.__height_to_hash) == self._peak_height + 1
+        assert self.__height_map.contains_height(self._peak_height)
+        assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
     def get_peak(self) -> Optional[BlockRecord]:
         """
@@ -150,7 +184,9 @@ class Blockchain(BlockchainInterface):
         if self._peak_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_full_block(self.height_to_hash(self._peak_height))
+        peak_hash: Optional[bytes32] = self.height_to_hash(self._peak_height)
+        assert peak_hash is not None  # Since we must have the peak block
+        block = await self.block_store.get_full_block(peak_hash)
         assert block is not None
         return block
 
@@ -160,76 +196,47 @@ class Blockchain(BlockchainInterface):
     async def receive_block(
         self,
         block: FullBlock,
-        pre_validation_result: Optional[PreValidationResult] = None,
+        pre_validation_result: PreValidationResult,
         fork_point_with_peak: Optional[uint32] = None,
-        summaries_to_check: List[SubEpochSummary] = None,  # passed only on long sync
-    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
+    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
         Returns a header if block is added to head. Returns an error if the block is
         invalid. Also returns the fork height, in the case of a new peak.
-        """
-        genesis: bool = block.height == 0
 
+        Args:
+            block: The FullBlock to be validated.
+            pre_validation_result: A result of successful pre validation
+            fork_point_with_peak: The fork point, for efficiency reasons, if None, it will be recomputed
+
+        Returns:
+            The result of adding the block to the blockchain (NEW_PEAK, ADDED_AS_ORPHAN, INVALID_BLOCK,
+                DISCONNECTED_BLOCK, ALREDY_HAVE_BLOCK)
+            An optional error if the result is not NEW_PEAK or ADDED_AS_ORPHAN
+            A StateChangeSumamry iff NEW_PEAK, with:
+                - A fork point if the result is NEW_PEAK
+                - A list of coin changes as a result of rollback
+                - A list of NPCResult for any new transaction block added to the chain
+        """
+
+        genesis: bool = block.height == 0
         if self.contains_block(block.header_hash):
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if not self.contains_block(block.prev_header_hash) and not genesis:
-            return (
-                ReceiveBlockResult.DISCONNECTED_BLOCK,
-                Err.INVALID_PREV_BLOCK_HASH,
-                None,
-            )
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
         if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
             return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
-        npc_result: Optional[NPCResult] = None
-        if pre_validation_result is None:
-            if block.height == 0:
-                prev_b: Optional[BlockRecord] = None
-            else:
-                prev_b = self.block_record(block.prev_header_hash)
-            sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-                self.constants, len(block.finished_sub_slots) > 0, prev_b, self
-            )
-
-            if block.is_transaction_block():
-                if block.transactions_generator is not None:
-                    try:
-                        block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-                    except ValueError:
-                        return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None
-                    assert block_generator is not None and block.transactions_info is not None
-                    npc_result = get_name_puzzle_conditions(
-                        block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
-                    )
-                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
-                else:
-                    removals, tx_additions = [], []
-                header_block = get_block_header(block, tx_additions, removals)
-            else:
-                npc_result = None
-                header_block = get_block_header(block, [], [])
-
-            required_iters, error = validate_finished_header_block(
-                self.constants,
-                self,
-                header_block,
-                False,
-                difficulty,
-                sub_slot_iters,
-            )
-
-            if error is not None:
-                return ReceiveBlockResult.INVALID_BLOCK, error.code, None
-        else:
-            npc_result = pre_validation_result.npc_result
-            required_iters = pre_validation_result.required_iters
-            assert pre_validation_result.error is None
+        npc_result: Optional[NPCResult] = pre_validation_result.npc_result
+        required_iters = pre_validation_result.required_iters
+        if pre_validation_result.error is not None:
+            return ReceiveBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None
         assert required_iters is not None
+
         error_code, _ = await validate_block_body(
             self.constants,
             self,
@@ -241,6 +248,8 @@ class Blockchain(BlockchainInterface):
             npc_result,
             fork_point_with_peak,
             self.get_block_generator,
+            # If we did not already validate the signature, validate it now
+            validate_signature=not pre_validation_result.validated_signature,
         )
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
@@ -253,32 +262,45 @@ class Blockchain(BlockchainInterface):
             None,
         )
         # Always add the block to the database
-        async with self.block_store.db_wrapper.lock:
+        async with self.block_store.db_wrapper.writer():
             try:
+                header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
-                await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_full_block(block, block_record)
-                fork_height, peak_height, records = await self._reconsider_peak(
+                await self.block_store.add_full_block(header_hash, block, block_record)
+                records, state_change_summary = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
-                await self.block_store.db_wrapper.commit_transaction()
 
-                # Then update the memory cache. It is important that this task is not cancelled and does not throw
+                # Then update the memory cache. It is important that this is not cancelled and does not throw
+                # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
+                if state_change_summary is not None:
+                    self.__height_map.rollback(state_change_summary.fork_height)
                 for fetched_block_record in records:
-                    self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
-                    if fetched_block_record.sub_epoch_summary_included is not None:
-                        self.__sub_epoch_summaries[
-                            fetched_block_record.height
-                        ] = fetched_block_record.sub_epoch_summary_included
-                if peak_height is not None:
-                    self._peak_height = peak_height
-                self.block_store.cache_block(block)
-            except BaseException:
-                await self.block_store.db_wrapper.rollback_transaction()
+                    self.__height_map.update_height(
+                        fetched_block_record.height,
+                        fetched_block_record.header_hash,
+                        fetched_block_record.sub_epoch_summary_included,
+                    )
+            except BaseException as e:
+                self.block_store.rollback_cache_block(header_hash)
+                log.error(
+                    f"Error while adding block {block.header_hash} height {block.height},"
+                    f" rolling back: {traceback.format_exc()} {e}"
+                )
                 raise
-        if fork_height is not None:
-            return ReceiveBlockResult.NEW_PEAK, None, fork_height
+
+        # make sure to update _peak_height after the transaction is committed,
+        # otherwise other tasks may go look for this block before it's available
+        if state_change_summary is not None:
+            self._peak_height = block_record.height
+
+        # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
+        await self.__height_map.maybe_flush()
+
+        if state_change_summary is not None:
+            # new coin records added
+            return ReceiveBlockResult.NEW_PEAK, None, state_change_summary
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
@@ -288,99 +310,142 @@ class Blockchain(BlockchainInterface):
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
         npc_result: Optional[NPCResult],
-    ) -> Tuple[Optional[uint32], Optional[uint32], List[BlockRecord]]:
+    ) -> Tuple[List[BlockRecord], Optional[StateChangeSummary]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
-        It returns the height of the fork between the previous chain and the new chain, or returns
-        None if there was no update to the heaviest chain.
+        It returns the summary of the applied changes, including the height of the fork between the previous chain
+        and the new chain, or returns None if there was no update to the heaviest chain.
         """
+
         peak = self.get_peak()
+        rolled_back_state: Dict[bytes32, CoinRecord] = {}
+
         if genesis:
             if peak is None:
                 block: Optional[FullBlock] = await self.block_store.get_full_block(block_record.header_hash)
                 assert block is not None
 
                 if npc_result is not None:
-                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 else:
                     tx_removals, tx_additions = [], []
-                await self.coin_store.new_block(block, tx_additions, tx_removals)
-                await self.block_store.set_peak(block.header_hash)
-                return uint32(0), uint32(0), [block_record]
-            return None, None, []
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    await self.coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        tx_additions,
+                        tx_removals,
+                    )
+                await self.block_store.set_in_chain([(block_record.header_hash,)])
+                await self.block_store.set_peak(block_record.header_hash)
+                return [block_record], StateChangeSummary(
+                    block_record, uint32(0), [], [], list(block.get_included_reward_coins())
+                )
+            return [], None
 
         assert peak is not None
-        if block_record.weight > peak.weight:
-            # Find the fork. if the block is just being appended, it will return the peak
-            # If no blocks in common, returns -1, and reverts all blocks
-            if block_record.prev_hash == peak.header_hash:
-                fork_height: int = peak.height
-            elif fork_point_with_peak is not None:
-                fork_height = fork_point_with_peak
+        if block_record.weight <= peak.weight:
+            # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+            return [], None
+
+        # Finds the fork. if the block is just being appended, it will return the peak
+        # If no blocks in common, returns -1, and reverts all blocks
+        if block_record.prev_hash == peak.header_hash:
+            fork_height: int = peak.height
+        elif fork_point_with_peak is not None:
+            fork_height = fork_point_with_peak
+        else:
+            fork_height = find_fork_point_in_chain(self, block_record, peak)
+
+        if block_record.prev_hash != peak.header_hash:
+            for coin_record in await self.coin_store.rollback_to_block(fork_height):
+                rolled_back_state[coin_record.name] = coin_record
+
+        # Collects all blocks from fork point to new peak
+        blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
+        curr = block_record.header_hash
+
+        # Backtracks up to the fork point, pulling all the required blocks from DB (that will soon be in the chain)
+        while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
+            fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
+            fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
+            assert fetched_full_block is not None
+            assert fetched_block_record is not None
+            blocks_to_add.append((fetched_full_block, fetched_block_record))
+            if fetched_full_block.height == 0:
+                # Doing a full reorg, starting at height 0
+                break
+            curr = fetched_block_record.prev_hash
+
+        records_to_add: List[BlockRecord] = []
+        npc_results: List[NPCResult] = []
+        reward_coins: List[Coin] = []
+        for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
+            records_to_add.append(fetched_block_record)
+            if not fetched_full_block.is_transaction_block():
+                # Coins are only created in TX blocks so there are no state updates for this block
+                continue
+
+            # We need to recompute the additions and removals, since they are not stored on DB (only generator is).
+            if fetched_block_record.header_hash == block_record.header_hash:
+                tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
+                    fetched_full_block, npc_result
+                )
             else:
-                fork_height = find_fork_point_in_chain(self, block_record, peak)
+                tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(fetched_full_block, None)
 
-            if block_record.prev_hash != peak.header_hash:
-                await self.coin_store.rollback_to_block(fork_height)
-            # Rollback sub_epoch_summaries
-            heights_to_delete = []
-            for ses_included_height in self.__sub_epoch_summaries.keys():
-                if ses_included_height > fork_height:
-                    heights_to_delete.append(ses_included_height)
-            for height in heights_to_delete:
-                log.info(f"delete ses at height {height}")
-                del self.__sub_epoch_summaries[height]
+            # Collect the NPC results for later post-processing
+            if npc_res is not None:
+                npc_results.append(npc_res)
 
-            # Collect all blocks from fork point to new peak
-            blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
-            curr = block_record.header_hash
+            # Apply the coin store changes for each block that is now in the blockchain
+            assert fetched_full_block.foliage_transaction_block is not None
+            await self.coin_store.new_block(
+                fetched_full_block.height,
+                fetched_full_block.foliage_transaction_block.timestamp,
+                fetched_full_block.get_included_reward_coins(),
+                tx_additions,
+                tx_removals,
+            )
+            # Collect the new reward coins for later post-processing
+            reward_coins.extend(fetched_full_block.get_included_reward_coins())
 
-            while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
-                fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
-                fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
-                assert fetched_full_block is not None
-                assert fetched_block_record is not None
-                blocks_to_add.append((fetched_full_block, fetched_block_record))
-                if fetched_full_block.height == 0:
-                    # Doing a full reorg, starting at height 0
-                    break
-                curr = fetched_block_record.prev_hash
+        # we made it to the end successfully
+        # Rollback sub_epoch_summaries
+        await self.block_store.rollback(fork_height)
+        await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
-            records_to_add = []
-            for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
-                records_to_add.append(fetched_block_record)
-                if fetched_block_record.is_transaction_block:
-                    if fetched_block_record.header_hash == block_record.header_hash:
-                        tx_removals, tx_additions = await self.get_tx_removals_and_additions(
-                            fetched_full_block, npc_result
-                        )
-                    else:
-                        tx_removals, tx_additions = await self.get_tx_removals_and_additions(fetched_full_block, None)
-                    await self.coin_store.new_block(fetched_full_block, tx_additions, tx_removals)
+        # Changes the peak to be the new peak
+        await self.block_store.set_peak(block_record.header_hash)
 
-            # Changes the peak to be the new peak
-            await self.block_store.set_peak(block_record.header_hash)
-            return uint32(max(fork_height, 0)), block_record.height, records_to_add
-
-        # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-        return None, None, []
+        return records_to_add, StateChangeSummary(
+            block_record, uint32(max(fork_height, 0)), list(rolled_back_state.values()), npc_results, reward_coins
+        )
 
     async def get_tx_removals_and_additions(
         self, block: FullBlock, npc_result: Optional[NPCResult] = None
-    ) -> Tuple[List[bytes32], List[Coin]]:
-        if block.is_transaction_block():
-            if block.transactions_generator is not None:
-                if npc_result is None:
-                    block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-                    assert block_generator is not None
-                    npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
-                tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
-                return tx_removals, tx_additions
-            else:
-                return [], []
-        else:
-            return [], []
+    ) -> Tuple[List[bytes32], List[Coin], Optional[NPCResult]]:
+
+        if not block.is_transaction_block():
+            return [], [], None
+
+        if block.transactions_generator is None:
+            return [], [], None
+
+        if npc_result is None:
+            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+            assert block_generator is not None
+            npc_result = get_name_puzzle_conditions(
+                block_generator,
+                self.constants.MAX_BLOCK_COST_CLVM,
+                cost_per_byte=self.constants.COST_PER_BYTE,
+                mempool_mode=False,
+            )
+        tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
+        return tx_removals, tx_additions, npc_result
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_block(header_hash)
@@ -464,19 +529,41 @@ class Blockchain(BlockchainInterface):
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
                 # Start from the most recent
                 for rc in reversed(curr.finished_reward_slot_hashes):
+                    if sub_slot_total_iters < curr.sub_slot_iters:
+                        break
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
             curr = self.try_block_record(curr.prev_hash)
         return list(reversed(recent_rc))
 
-    async def validate_unfinished_block(
-        self, block: UnfinishedBlock, skip_overflow_ss_validation=True
-    ) -> PreValidationResult:
+    async def validate_unfinished_block_header(
+        self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
+    ) -> Tuple[Optional[uint64], Optional[Err]]:
         if (
             not self.contains_block(block.prev_header_hash)
-            and not block.prev_header_hash == self.constants.GENESIS_CHALLENGE
+            and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
-            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)
+            return None, Err.INVALID_PREV_BLOCK_HASH
+
+        if block.transactions_info is not None:
+            if block.transactions_generator is not None:
+                if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+                    return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+            else:
+                if block.transactions_info.generator_root != bytes([0] * 32):
+                    return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+            if (
+                block.foliage_transaction_block is None
+                or block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash()
+            ):
+                return None, Err.INVALID_TRANSACTIONS_INFO_HASH
+        else:
+            # make sure non-tx blocks don't have these fields
+            if block.transactions_generator is not None:
+                return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+            if block.foliage_transaction_block is not None:
+                return None, Err.INVALID_TRANSACTIONS_INFO_HASH
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
@@ -500,9 +587,17 @@ class Blockchain(BlockchainInterface):
             sub_slot_iters,
             skip_overflow_ss_validation,
         )
+        if error is not None:
+            return required_iters, error.code
+        return required_iters, None
+
+    async def validate_unfinished_block(
+        self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation: bool = True
+    ) -> PreValidationResult:
+        required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.code.value), None, None)
+            return PreValidationResult(uint16(error.value), None, None, False)
 
         prev_height = (
             -1
@@ -510,18 +605,6 @@ class Blockchain(BlockchainInterface):
             else self.block_record(block.prev_header_hash).height
         )
 
-        npc_result = None
-        if block.transactions_generator is not None:
-            assert block.transactions_info is not None
-            try:
-                block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-            except ValueError:
-                return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
-            if block_generator is None:
-                return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
-            npc_result = get_name_puzzle_conditions(
-                block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
-            )
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
@@ -533,19 +616,25 @@ class Blockchain(BlockchainInterface):
             npc_result,
             None,
             self.get_block_generator,
+            validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None)
+            return PreValidationResult(uint16(error_code.value), None, None, False)
 
-        return PreValidationResult(None, required_iters, cost_result)
+        return PreValidationResult(None, required_iters, cost_result, False)
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock], npc_results: Dict[uint32, NPCResult], batch_size: int = 4
-    ) -> Optional[List[PreValidationResult]]:
+        self,
+        blocks: List[FullBlock],
+        npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
+        batch_size: int = 4,
+        wp_summaries: Optional[List[SubEpochSummary]] = None,
+        *,
+        validate_signatures: bool,
+    ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
-            self.constants_json,
             self,
             blocks,
             self.pool,
@@ -553,7 +642,25 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            wp_summaries,
+            validate_signatures=validate_signatures,
         )
+
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
+        task = asyncio.get_running_loop().run_in_executor(
+            self.pool,
+            _run_generator,
+            self.constants,
+            unfinished_block,
+            bytes(generator),
+        )
+        npc_result_bytes = await task
+        if npc_result_bytes is None:
+            raise ConsensusError(Err.UNKNOWN)
+        ret: NPCResult = NPCResult.from_bytes(npc_result_bytes)
+        if ret.error is not None:
+            raise ConsensusError(Err(ret.error))
+        return ret
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
@@ -566,25 +673,30 @@ class Blockchain(BlockchainInterface):
         return self.__block_records[header_hash]
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
-        header_hash = self.height_to_hash(height)
+        # Precondition: height is in the blockchain
+        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        if header_hash is None:
+            raise ValueError(f"Height is not in blockchain: {height}")
         return self.block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
-        return sorted(self.__sub_epoch_summaries.keys())
+        return self.__height_map.get_ses_heights()
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
-        return self.__sub_epoch_summaries[height]
+        return self.__height_map.get_ses(height)
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        return self.__height_to_hash[height]
+        if not self.__height_map.contains_height(height):
+            return None
+        return self.__height_map.get_hash(height)
 
     def contains_height(self, height: uint32) -> bool:
-        return height in self.__height_to_hash
+        return self.__height_map.contains_height(height)
 
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height
 
-    async def warmup(self, fork_point: uint32):
+    async def warmup(self, fork_point: uint32) -> None:
         """
         Loads blocks into the cache. The blocks loaded include all blocks from
         fork point - BLOCKS_CACHE_SIZE up to and including the fork_point.
@@ -594,31 +706,33 @@ class Blockchain(BlockchainInterface):
 
         """
         if self._peak_height is None:
-            return
+            return None
         block_records = await self.block_store.get_block_records_in_range(
             max(fork_point - self.constants.BLOCKS_CACHE_SIZE, uint32(0)), fork_point
         )
         for block_record in block_records.values():
             self.add_block_record(block_record)
 
-    def clean_block_record(self, height: int):
+    def clean_block_record(self, height: int) -> None:
         """
         Clears all block records in the cache which have block_record < height.
         Args:
             height: Minimum height that we need to keep in the cache
         """
         if height < 0:
-            return
+            return None
         blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
         while blocks_to_remove is not None and height >= 0:
             for header_hash in blocks_to_remove:
                 del self.__block_records[header_hash]  # remove from blocks
             del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
 
+            if height == 0:
+                break
             height = height - 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
-    def clean_block_records(self):
+    def clean_block_records(self) -> None:
         """
         Cleans the cache so that we only maintain relevant blocks. This removes
         block records that have height < peak - BLOCKS_CACHE_SIZE.
@@ -626,22 +740,23 @@ class Blockchain(BlockchainInterface):
         """
 
         if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:
-            return
+            return None
 
-        peak = self.get_peak()
-        assert peak is not None
-        if peak.height - self.constants.BLOCKS_CACHE_SIZE < 0:
-            return
-        self.clean_block_record(peak.height - self.constants.BLOCKS_CACHE_SIZE)
+        assert self._peak_height is not None
+        if self._peak_height - self.constants.BLOCKS_CACHE_SIZE < 0:
+            return None
+        self.clean_block_record(self._peak_height - self.constants.BLOCKS_CACHE_SIZE)
 
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
         return await self.block_store.get_block_records_in_range(start, stop)
 
-    async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
+    async def get_header_blocks_in_range(
+        self, start: int, stop: int, tx_filter: bool = True
+    ) -> Dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
-            if self.contains_height(uint32(height)):
-                header_hash: bytes32 = self.height_to_hash(uint32(height))
+            header_hash: Optional[bytes32] = self.height_to_hash(uint32(height))
+            if header_hash is not None:
                 hashes.append(header_hash)
 
         blocks: List[FullBlock] = []
@@ -657,45 +772,63 @@ class Blockchain(BlockchainInterface):
         for block in blocks:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
-            tx_additions: List[CoinRecord] = [
-                c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
-            ]
-            removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
-            header = get_block_header(
-                block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
-            )
+            if tx_filter is False:
+                header = get_block_header(block, [], [])
+            else:
+                tx_additions: List[CoinRecord] = [
+                    c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
+                ]
+                removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
+                header = get_block_header(
+                    block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
+                )
             header_blocks[header.header_hash] = header
 
         return header_blocks
 
-    async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
-        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height)
+    async def get_header_block_by_height(
+        self, height: int, header_hash: bytes32, tx_filter: bool = True
+    ) -> Optional[HeaderBlock]:
+        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height, tx_filter)
         if len(header_dict) == 0:
             return None
         if header_hash not in header_dict:
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size: int = 900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
-        hashes = []
+        records: List[BlockRecord] = []
+        hashes: List[bytes32] = []
+        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
         for height in heights:
-            hashes.append(self.height_to_hash(height))
-        return await self.block_store.get_block_records_by_hash(hashes)
+            header_hash: Optional[bytes32] = self.height_to_hash(height)
+            if header_hash is None:
+                raise ValueError(f"Do not have block at height {height}")
+            hashes.append(header_hash)
+            if len(hashes) > batch_size:
+                res = await self.block_store.get_block_records_by_hash(hashes)
+                records.extend(res)
+                hashes = []
+
+        if len(hashes) > 0:
+            res = await self.block_store.get_block_records_by_hash(hashes)
+            records.extend(res)
+        return records
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:
             return self.__block_records[header_hash]
         return await self.block_store.get_block_record(header_hash)
 
-    def remove_block_record(self, header_hash: bytes32):
+    def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
         self.__heights_in_cache[sbr.height].remove(header_hash)
 
-    def add_block_record(self, block_record: BlockRecord):
+    def add_block_record(self, block_record: BlockRecord) -> None:
         """
         Adds a block record to the cache.
         """
@@ -707,8 +840,8 @@ class Blockchain(BlockchainInterface):
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
-    ):
-        return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
+    ) -> None:
+        await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
@@ -733,7 +866,7 @@ class Blockchain(BlockchainInterface):
         return False
 
     async def get_block_generator(
-        self, block: Union[FullBlock, UnfinishedBlock], additional_blocks=None
+        self, block: BlockInfo, additional_blocks: Optional[Dict[bytes32, FullBlock]] = None
     ) -> Optional[BlockGenerator]:
         if additional_blocks is None:
             additional_blocks = {}
@@ -742,26 +875,36 @@ class Blockchain(BlockchainInterface):
             assert len(ref_list) == 0
             return None
         if len(ref_list) == 0:
-            return BlockGenerator(block.transactions_generator, [])
+            return BlockGenerator(block.transactions_generator, [], [])
 
-        result: List[GeneratorArg] = []
+        result: List[SerializedProgram] = []
         previous_block_hash = block.prev_header_hash
         if (
             self.try_block_record(previous_block_hash)
             and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
         ):
-            # We are not in a reorg, no need to look up alternate header hashes (we can get them from height_to_hash)
-            for ref_height in block.transactions_generator_ref_list:
-                header_hash = self.height_to_hash(ref_height)
-                ref_block = await self.get_full_block(header_hash)
-                assert ref_block is not None
-                if ref_block.transactions_generator is None:
-                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
+            # We are not in a reorg, no need to look up alternate header hashes
+            # (we can get them from height_to_hash)
+            if self.block_store.db_wrapper.db_version == 2:
+                # in the v2 database, we can look up blocks by height directly
+                # (as long as we're in the main chain)
+                result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
+            else:
+                for ref_height in block.transactions_generator_ref_list:
+                    header_hash = self.height_to_hash(ref_height)
+
+                    # if ref_height is invalid, this block should have failed with
+                    # FUTURE_GENERATOR_REFS before getting here
+                    assert header_hash is not None
+
+                    ref_gen = await self.block_store.get_generator(header_hash)
+                    if ref_gen is None:
+                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                    result.append(ref_gen)
         else:
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
-            curr: Union[FullBlock, UnfinishedBlock] = block
+            curr = block
             additional_height_dict = {}
             while curr.prev_header_hash in additional_blocks:
                 prev: FullBlock = additional_blocks[curr.prev_header_hash]
@@ -794,16 +937,21 @@ class Blockchain(BlockchainInterface):
                     assert ref_block is not None
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
+                    result.append(ref_block.transactions_generator)
                 else:
                     if ref_height in additional_height_dict:
                         ref_block = additional_height_dict[ref_height]
+                        assert ref_block is not None
+                        if ref_block.transactions_generator is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        result.append(ref_block.transactions_generator)
                     else:
                         header_hash = self.height_to_hash(ref_height)
-                        ref_block = await self.get_full_block(header_hash)
-                    assert ref_block is not None
-                    if ref_block.transactions_generator is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
+                        if header_hash is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        gen = await self.block_store.get_generator(header_hash)
+                        if gen is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        result.append(gen)
         assert len(result) == len(ref_list)
-        return BlockGenerator(block.transactions_generator, result)
+        return BlockGenerator(block.transactions_generator, result, [])

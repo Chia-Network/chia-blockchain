@@ -1,0 +1,37 @@
+name: 'Close stale issues'
+on:
+  schedule:
+    - cron: '0 11 * * *'
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: chia-network/stale@main
+        with:
+          operations-per-run: 10000
+          ascending: true
+          days-before-issue-stale: 14
+          days-before-issue-close: 7
+          days-before-pr-stale: 45
+          days-before-pr-close: -1
+          exempt-all-pr-milestones: true
+          exempt-all-issue-milestones: true
+          exempt-all-assignees: true
+          stale-issue-label: stale-issue
+          stale-pr-label: stale-pr
+          remove-stale-when-updated: true
+          stale-issue-message: >-
+            This issue has not been updated in 14 days and is now flagged
+            as stale. If this issue is still affecting you and in need
+            of further review, please comment on it with an update to
+            keep it from auto closing in 7 days.
+          close-issue-message: >-
+            This issue was automatically closed because it has been
+            flagged as stale, and subsequently passed 7 days with no
+            further activity from the submitter or watchers.
+          stale-pr-message: >-
+            This PR has been flagged as stale due to no activity for over
+            60 days. It will not be automatically closed, but it has been
+            given a stale-pr label and should be manually reviewed by the
+            relevant parties.

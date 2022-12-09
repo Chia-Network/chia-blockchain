@@ -1,0 +1,92 @@
+(
+  ;; The code below is used to calculate of the tree hash of a curried function
+  ;; without actually doing the curry, and using other optimization tricks
+  ;; like unrolling `sha256tree`.
+
+  (defconstant ONE 1)
+  (defconstant TWO 2)
+  (defconstant A_KW #a)
+  (defconstant Q_KW #q)
+  (defconstant C_KW #c)
+
+  ;; Given the tree hash `environment-hash` of an environment tree E
+  ;; and the tree hash `parameter-hash` of a constant parameter P
+  ;; return the tree hash of the tree corresponding to
+  ;; `(c (q . P) E)`
+  ;; This is the new environment tree with the addition parameter P curried in.
+  ;;
+  ;; Note that `(c (q . P) E)` = `(c . ((q . P) . (E . 0)))`
+
+  (defun-inline update-hash-for-parameter-hash (parameter-hash environment-hash)
+     (sha256 TWO (sha256 ONE C_KW)
+                 (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) parameter-hash)
+                             (sha256 TWO environment-hash (sha256 ONE 0))))
+  )
+
+  ;; This function recursively calls `update-hash-for-parameter-hash`, updating `environment-hash`
+  ;; along the way.
+
+  (defun build-curry-list (reversed-curry-parameter-hashes environment-hash)
+     (if reversed-curry-parameter-hashes
+         (build-curry-list (r reversed-curry-parameter-hashes)
+                           (update-hash-for-parameter-hash (f reversed-curry-parameter-hashes) environment-hash))
+         environment-hash
+     )
+  )
+
+  ;; Given the tree hash `environment-hash` of an environment tree E
+  ;; and the tree hash `function-hash` of a function tree F
+  ;; return the tree hash of the tree corresponding to
+  ;; `(a (q . F) E)`
+  ;; This is the hash of a new function that adopts the new environment E.
+  ;; This is used to build of the tree hash of a curried function.
+  ;;
+  ;; Note that `(a (q . F) E)` = `(a . ((q . F)  . (E . 0)))`
+
+  (defun-inline tree-hash-of-apply (function-hash environment-hash)
+     (sha256 TWO (sha256 ONE A_KW)
+                 (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) function-hash)
+                             (sha256 TWO environment-hash (sha256 ONE 0))))
+  )
+
+  ;; function-hash:
+  ;;   the hash of a puzzle function, ie. a `mod`
+  ;;
+  ;; reversed-curry-parameter-hashes:
+  ;;   a list of pre-hashed trees representing parameters to be curried into the puzzle.
+  ;;   Note that this must be applied in REVERSED order. This may seem strange, but it greatly simplifies
+  ;;   the underlying code, since we calculate the tree hash from the bottom nodes up, and the last
+  ;;   parameters curried must have their hashes calculated first.
+  ;;
+  ;; we return the hash of the curried expression
+  ;;   (a (q . function-hash) (c (cp1 (c cp2 (c ... 1)...))))
+  ;;
+  ;; Note that from a user's perspective the hashes passed in here aren't simply
+  ;; the hashes of the desired parameters, but their treehash representation since
+  ;; that's the form we're assuming they take in the actual curried program.
+
+  (defun puzzle-hash-of-curried-function (function-hash . reversed-curry-parameter-hashes)
+     (tree-hash-of-apply function-hash
+                         (build-curry-list reversed-curry-parameter-hashes (sha256 ONE ONE)))
+  )
+
+  (defconstant b32 32)
+
+  (defun-inline size_b32 (var)
+    (= (strlen var) b32)
+  )
+
+  (defun calculate_coin_id (parent puzzlehash amount)
+    (if (all (size_b32 parent) (size_b32 puzzlehash) (> amount -1))
+      (sha256 parent puzzlehash amount)
+      (x)
+    )
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+            (sha256 1 TREE)))
+
+)

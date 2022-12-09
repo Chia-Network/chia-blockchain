@@ -1,0 +1,22 @@
+# Starts a release for the given ref on the Glue API
+name: Start Release
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  start_release:
+    name: Starts release process in Glue API
+    runs-on: [glue-notify]
+    steps:
+      - name: Get tag name
+        if: "!github.event.release.prerelease"
+        id: tag-name
+        run: |
+          echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >> $GITHUB_OUTPUT
+          echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >> $GITHUB_OUTPUT
+      - name: Start release
+        if: "!github.event.release.prerelease"
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/start

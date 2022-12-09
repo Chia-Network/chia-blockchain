@@ -1,0 +1,107 @@
+(mod (SINGLETON_STRUCT INNER_PUZZLE lineage_proof my_amount inner_solution)
+
+;; SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+
+; SINGLETON_STRUCT, INNER_PUZZLE are curried in by the wallet
+
+; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
+
+
+; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
+; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)  ; also imports the constant ONE == 1
+  (include singleton_truths.clib)
+  (include utility_macros.clib)
+
+  (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
+  (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
+  (defun-inline launcher_puzzle_hash_for_singleton_struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree SINGLETON_STRUCT)
+     )
+  )
+
+  (defun-inline morph_condition (condition SINGLETON_STRUCT)
+    (c (f condition) (c (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r condition))) (r (r condition))))
+  )
+
+  (defun is_odd_create_coin (condition)
+    (and (= (f condition) CREATE_COIN) (logand (f (r (r condition))) 1))
+  )
+
+  ; Assert exactly one output with odd value exists - ignore it if value is -113
+
+  ;; this function iterates over the output conditions from the inner puzzle & solution
+  ;; and both checks that exactly one unique singleton child is created (with odd valued output),
+  ;; and wraps the inner puzzle with this same singleton wrapper puzzle
+  ;;
+  ;; The special case where the output value is -113 means a child singleton is intentionally
+  ;; *NOT* being created, thus forever ending this singleton's existence
+
+  (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions has_odd_output_been_found)
+    (if conditions
+        ; check if it's an odd create coin
+        (if (is_odd_create_coin (f conditions))
+            ; check that we haven't already found one
+            (assert (not has_odd_output_been_found)
+              ; then
+              (if (= (f (r (r (f conditions)))) -113)
+                  ; If it's the melt condition we don't bother prepending this condition
+                  (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) ONE)
+                  ; If it isn't the melt condition, we morph it and prepend it
+                  (c (morph_condition (f conditions) SINGLETON_STRUCT) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) ONE))
+              )
+            )
+            (c (f conditions) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) has_odd_output_been_found))
+        )
+        (assert has_odd_output_been_found ())
+    )
+   )
+
+ ; assert that either the lineage proof is for a parent singleton, or, if it's for the launcher, verify it matched our launcher ID
+ ; then return a condition asserting it actually is our parent ID
+ (defun verify_lineage_proof (SINGLETON_STRUCT parent_id is_not_launcher)
+    (assert (any is_not_launcher (= parent_id (launcher_id_for_singleton_struct SINGLETON_STRUCT)))
+      ; then
+      (list ASSERT_MY_PARENT_ID parent_id)
+    )
+ )
+
+  ; main
+
+  ; if our value is not an odd amount then we are invalid
+  (assert (logand my_amount ONE)
+    ; then
+    (c
+      (list ASSERT_MY_AMOUNT my_amount)
+      (c
+        ; Verify the lineage proof by asserting our parent's ID
+        (verify_lineage_proof
+          SINGLETON_STRUCT
+          ; calculate our parent's ID
+          (calculate_coin_id
+            (parent_info_for_lineage_proof lineage_proof)
+            (if (is_not_eve_proof lineage_proof)  ; The PH calculation changes based on the lineage proof
+              (calculate_full_puzzle_hash SINGLETON_STRUCT (puzzle_hash_for_lineage_proof lineage_proof))  ; wrap the innerpuz in a singleton
+              (launcher_puzzle_hash_for_singleton_struct SINGLETON_STRUCT) ; Use the static launcher puzzle hash
+            )
+            (if (is_not_eve_proof lineage_proof)  ; The position of "amount" changes based on the type on lineage proof
+              (amount_for_lineage_proof lineage_proof)
+              (amount_for_eve_proof lineage_proof)
+            )
+          )
+          (is_not_eve_proof lineage_proof)
+        )
+        ; finally check all of the conditions for a single odd output to wrap
+        (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (a INNER_PUZZLE inner_solution) 0)
+      )
+    )
+  )
+)

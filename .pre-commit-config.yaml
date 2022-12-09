@@ -1,0 +1,69 @@
+repos:
+-   repo: local
+    hooks:
+    -   id: check-sql
+        name: Validate SQL statements
+        entry: python3 -m tests.check_sql_statements
+        language: python
+        pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: init_py_files
+        name: __init__.py files
+        entry: python3 tests/build-init-files.py -v --root .
+        language: python
+        pass_filenames: false
+        additional_dependencies: [click~=7.1]
+-   repo: https://github.com/psf/black
+    rev: 22.10.0
+    hooks:
+    -   id: black
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+        exclude: ".*?(.hex|.clvm|.clib)"
+    -   id: trailing-whitespace
+    -   id: check-merge-conflict
+    -   id: check-ast
+    -   id: debug-statements
+-   repo: local
+    hooks:
+    -   id: clvm_hex
+        name: .clvm.hex files
+        entry: ./activated.py python tools/manage_clvm.py check
+        language: python
+        pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: ./activated.py mypy
+        language: system
+        pass_filenames: false
+# The following, commented hook is the usual way to add isort. However, it doesn't work in some environments.
+# See https://github.com/PyCQA/isort/issues/1874#issuecomment-1002212936
+# -----------------------------------------------------
+# - repo: https://github.com/pycqa/isort
+#   rev: 5.9.3
+#   hooks:
+#   - id: isort
+# -----------------------------------------------------
+#  The hook below is the workaround for the issue above.
+-   repo: local
+    hooks:
+    -   id: isort
+        name: isort
+        entry: isort
+        require_serial: true
+        language: python
+        language_version: python3
+        types_or: [cython, pyi, python]
+        args: ['--filter-files']
+        minimum_pre_commit_version: '2.9.2'
+        additional_dependencies: [isort==5.10.1]
+-   repo: https://github.com/pycqa/flake8
+    rev: 5.0.4
+    hooks:
+    - id: flake8

@@ -1,58 +1,26 @@
-# flake8: noqa: F811, F401
-import asyncio
+from __future__ import annotations
+
 import sys
 from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 import pytest
 
-from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.server.start_full_node import SERVICE_NAME
+from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
+from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.util.block_cache import BlockCache
-from chia.util.block_tools import test_constants
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.generator_tools import get_block_header
-from tests.setup_nodes import bt
-
-try:
-    from reprlib import repr
-except ImportError:
-    pass
-
-
-from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (  # type: ignore
-    WeightProofHandler,
-    _map_sub_epoch_summaries,
-    _validate_sub_epoch_segments,
-    _validate_summaries_weight,
-)
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
+from chia.util.block_cache import BlockCache
+from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint32, uint64
-from tests.core.fixtures import (
-    default_400_blocks,
-    default_1000_blocks,
-    default_10000_blocks,
-    default_10000_blocks_compact,
-    pre_genesis_empty_slots_1000_blocks,
-)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def count_sub_epochs(blockchain, last_hash) -> int:
@@ -85,12 +53,12 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
 async def load_blocks_dont_validate(
     blocks,
 ) -> Tuple[
-    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[bytes32, SubEpochSummary]
+    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[uint32, SubEpochSummary]
 ]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, BlockRecord] = {}
-    sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = {}
+    sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
     block: FullBlock
@@ -105,7 +73,8 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
+        quality_string: Optional[bytes32] = verify_and_get_quality_string(
+            block.reward_chain_block.proof_of_space,
             test_constants,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,
@@ -121,7 +90,11 @@ async def load_blocks_dont_validate(
         )
 
         sub_block = block_to_block_record(
-            test_constants, BlockCache(sub_blocks, height_to_hash), required_iters, block, None
+            test_constants,
+            BlockCache(sub_blocks, height_to_hash=height_to_hash),
+            required_iters,
+            block,
+            None,
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
@@ -201,7 +174,7 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_edge_cases(self, default_400_blocks):
+    async def test_weight_proof_edge_cases(self, bt, default_400_blocks):
         blocks: List[FullBlock] = default_400_blocks
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
@@ -377,7 +350,7 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof1000_partial_blocks_compact(self, default_10000_blocks_compact):
+    async def test_weight_proof1000_partial_blocks_compact(self, bt, default_10000_blocks_compact):
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             100,
             block_list_input=default_10000_blocks_compact,
@@ -505,7 +478,8 @@ class TestWeightProof:
     async def test_weight_proof_from_database(self):
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
-        blocks, peak = await block_store.get_block_records()
+        blocks = await block_store.get_block_records_in_range(0, 0xFFFFFFFF)
+        peak = len(blocks) - 1
         peak_height = blocks[peak].height
         headers = await block_store.get_header_blocks_in_range(0, peak_height)
         sub_height_to_hash = {}

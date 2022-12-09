@@ -1,21 +1,20 @@
-from unittest import TestCase
+from __future__ import annotations
 
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
-from chia.full_node.generator import run_generator
+from chia.consensus.condition_costs import ConditionCost
+from chia.full_node.generator import run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.name_puzzle_condition import NPC
-from chia.types.generator_types import BlockGenerator, GeneratorArg
-from chia.util.clvm import int_to_bytes
-from chia.util.condition_tools import ConditionOpcode
+from chia.types.generator_types import BlockGenerator
+from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
+COST_PER_BYTE = int(12000)
 
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -69,8 +68,9 @@ def to_sp(sexp) -> SerializedProgram:
 
 
 def block_generator() -> BlockGenerator:
-    generator_args = [GeneratorArg(uint32(0), to_sp(FIRST_GENERATOR)), GeneratorArg(uint32(1), to_sp(SECOND_GENERATOR))]
-    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_args)
+    generator_list = [to_sp(FIRST_GENERATOR), to_sp(SECOND_GENERATOR)]
+    generator_heights = [uint32(0), uint32(1)]
+    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list, generator_heights)
 
 
 EXPECTED_ABBREVIATED_COST = 108379
@@ -83,7 +83,7 @@ EXPECTED_OUTPUT = (
 )
 
 
-class TestROM(TestCase):
+class TestROM:
     def test_rom_inputs(self):
         # this test checks that the generator just works
         # It's useful for debugging the generator prior to having the ROM invoke it.
@@ -98,39 +98,41 @@ class TestROM(TestCase):
         # this tests that extra block or coin data doesn't confuse `get_name_puzzle_conditions`
 
         gen = block_generator()
-        cost, r = run_generator(gen, max_cost=MAX_COST)
+        cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, safe_mode=False)
+        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False)
         assert npc_result.error is None
-        assert npc_result.clvm_cost == EXPECTED_COST
-        cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500)])
-        CONDITIONS = [
-            (ConditionOpcode.CREATE_COIN, [cond_1]),
-        ]
-
-        npc = NPC(
-            coin_name=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
-            puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
-            conditions=CONDITIONS,
+        assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
+            len(bytes(gen.program)) * COST_PER_BYTE
         )
 
-        assert npc_result.npc_list == [npc]
+        spend = Spend(
+            coin_id=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
+            puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
+            height_relative=None,
+            seconds_relative=0,
+            create_coin=[(bytes([0] * 31 + [1]), 500, None)],
+            agg_sig_me=[],
+            flags=ELIGIBLE_FOR_DEDUP,
+        )
+
+        assert npc_result.conds.spends == [spend]
 
     def test_coin_extras(self):
         # the ROM supports extra data after a coin. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator(gen, max_cost=MAX_COST)
+        cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
-            self.assertEqual(extra_data.as_atom_list(), b"extra data for coin".split())
+            assert extra_data.as_atom_list() == b"extra data for coin".split()
 
     def test_block_extras(self):
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator(gen, max_cost=MAX_COST)
+        cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         extra_block_data = r.rest()
-        self.assertEqual(extra_block_data.as_atom_list(), b"extra data for block".split())
+        assert extra_block_data.as_atom_list() == b"extra data for block".split()

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -97,14 +99,17 @@ class LastState:
                 self.passed_ses_height_but_not_yet_included = False
             else:
                 self.infused_ses = False
-                self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
+                # Since we have a new sub slot which is not an end of subepoch,
+                # we will use the last value that we saw for
+                # passed_ses_height_but_not_yet_included
             self.last_challenge_sb_or_eos_total_iters = self.total_iters
         else:
-            self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
-            self.new_epoch = False
+            assert False
 
-        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
-        log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
+        reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
+        assert reward_challenge is not None  # Reward chain always has VDFs
+        self.reward_challenge_cache.append((reward_challenge, self.total_iters))
+        log.info(f"Updated timelord peak to {reward_challenge}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 

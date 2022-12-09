@@ -1,3 +1,11 @@
+;; this code is included in the ROM. Unfortunately, it has a problem that limits
+;; its usefulness: it is incapable of deserializing atoms with length longer than
+;; 8191 = 0x1fff.
+;;
+;; Because this code is included in the ROM, fixing the bug would be a hard fork
+;; so we're rather stuck with this bug. We recommend simply using a local version
+;; of this code when necessary.
+
 (mod (input)
 
   (defconstant MAX_SINGLE_BYTE 0x7F)
@@ -36,7 +44,7 @@
   ; Note that we reject any serialized atom here with more than 3 bytes of
   ; encoded length prefix, even though the Rust and Python CLVM interpreters
   ; and deserializers support more.
-  ; This allows 4 + 8 + 8 = 20 bits = 1MB atoms
+  ; This allows 5 + 8 = 13 bits = 8191-byte atoms
   ; Also note that this does not limit intermediate atom length. Those limits
   ; are implemented in the clvm interpreters theselves
   (defun-inline get_bitcount (input_bits input_file)

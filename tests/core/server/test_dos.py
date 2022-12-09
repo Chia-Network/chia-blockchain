@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import asyncio
 import logging
 
@@ -8,14 +10,14 @@ from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSClo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.protocols.shared_protocol import Handshake
+from chia.server.outbound_message import Message, make_msg
 from chia.server.rate_limits import RateLimiter
-from chia.server.server import ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
+from chia.util.errors import Err
 from chia.util.ints import uint16, uint64
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
-from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -30,27 +32,15 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest.fixture(scope="function")
-async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
-        yield _
-
-
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg):
+    def process_msg_and_check(self, msg, capa, capb):
         return True
 
 
 class TestDos:
     @pytest.mark.asyncio
-    async def test_large_message_disconnect_and_ban(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_large_message_disconnect_and_ban(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -59,9 +49,7 @@ class TestDos:
         session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
 
-        ssl_context = ssl_context_for_client(
-            server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
-        )
+        ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
             url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
@@ -97,8 +85,8 @@ class TestDos:
         await session.close()
 
     @pytest.mark.asyncio
-    async def test_bad_handshake_and_ban(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -108,9 +96,7 @@ class TestDos:
         session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
 
-        ssl_context = ssl_context_for_client(
-            server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
-        )
+        ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
             url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
@@ -143,8 +129,39 @@ class TestDos:
         await session.close()
 
     @pytest.mark.asyncio
-    async def test_spam_tx(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        server_1.invalid_protocol_ban_seconds = 10
+        # Use the server_2 ssl information to connect to server_1
+        timeout = ClientTimeout(total=10)
+        session = ClientSession(timeout=timeout)
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+
+        ssl_context = server_2.ssl_client_context
+        ws = await session.ws_connect(
+            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+        )
+
+        # Construct an otherwise valid handshake message
+        handshake: Handshake = Handshake("test", "0.0.32", "1.0.0.0", 3456, 1, [(1, "1")])
+        outbound_handshake: Message = Message(2, None, bytes(handshake))  # 2 is an invalid ProtocolType
+        await ws.send_bytes(bytes(outbound_handshake))
+
+        response: WSMessage = await ws.receive()
+        print(response)
+        assert response.type == WSMsgType.CLOSE
+        assert response.data == WSCloseCode.PROTOCOL_ERROR
+        assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))  # We want INVALID_HANDSHAKE and not UNKNOWN
+        await ws.close()
+        await session.close()
+        await asyncio.sleep(1)  # give some time for cleanup to work
+
+    @pytest.mark.asyncio
+    async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -179,8 +196,10 @@ class TestDos:
         # Remove outbound rate limiter to test inbound limits
         ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
-        for i in range(6000):
-            await ws_con._send_message(new_tx_message)
+        with pytest.raises(ConnectionResetError):
+            for i in range(6000):
+                await ws_con._send_message(new_tx_message)
+                await asyncio.sleep(0)
         await asyncio.sleep(1)
 
         def is_closed():
@@ -196,8 +215,8 @@ class TestDos:
         await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
-    async def test_spam_message_non_tx(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -245,8 +264,8 @@ class TestDos:
         await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
-    async def test_spam_message_too_large(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server

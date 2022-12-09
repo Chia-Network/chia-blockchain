@@ -1,0 +1,80 @@
+name: ⚡️ Benchmarks
+
+on:
+  push:
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
+  release:
+    types: [published]
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Benchmarks
+    runs-on: benchmark
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [ 3.9 ]
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+
+    steps:
+      - name: Clean workspace
+        uses: Chia-Network/actions/clean-workspace@main
+
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python environment
+        uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Get pip cache dir
+        id: pip-cache
+        shell: bash
+        run: |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Checkout test blocks and plots
+        uses: actions/checkout@v3
+        with:
+          repository: 'Chia-Network/test-cache'
+          path: '.chia'
+          ref: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
+          fetch-depth: 1
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python-version }}
+          development: true
+          legacy_keyring: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: pytest
+        run: |
+          pytest -n 0 --capture no -m benchmark tests

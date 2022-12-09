@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from hashlib import sha256
 from typing import Any, Dict, List, Tuple
@@ -40,9 +42,9 @@ TERMINAL = bytes([1])
 MIDDLE = bytes([2])
 TRUNCATED = bytes([3])
 
-BLANK = bytes([0] * 32)
+BLANK = bytes32([0] * 32)
 
-prehashed: Dict = {}
+prehashed: Dict[bytes, Any] = {}
 
 
 def init_prehashed():
@@ -54,24 +56,24 @@ def init_prehashed():
 init_prehashed()
 
 
-def hashdown(mystr: bytes):
+def hashdown(mystr: bytes) -> bytes:
     assert len(mystr) == 66
     h = prehashed[bytes(mystr[0:1] + mystr[33:34])].copy()
     h.update(mystr[1:33] + mystr[34:])
     return h.digest()[:32]
 
 
-def compress_root(mystr: bytes):
+def compress_root(mystr: bytes) -> bytes32:
     assert len(mystr) == 33
     if mystr[0:1] == MIDDLE:
-        return mystr[1:]
+        return bytes32(mystr[1:])
     if mystr[0:1] == EMPTY:
         assert mystr[1:] == BLANK
         return BLANK
-    return sha256(mystr).digest()[:32]
+    return bytes32(sha256(mystr).digest()[:32])
 
 
-def get_bit(mybytes: bytes, pos: int):
+def get_bit(mybytes: bytes, pos: int) -> int:
     assert len(mybytes) == 32
     return (mybytes[pos // 8] >> (7 - (pos % 8))) & 1
 
@@ -100,11 +102,7 @@ class Node(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def remove(self, toremove: bytes, depth: int):
-        pass
-
-    @abstractmethod
-    def is_included(self, tocheck: bytes, depth: int, p: List[bytes]):
+    def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         pass
 
     @abstractmethod
@@ -125,14 +123,11 @@ class MerkleSet:
         else:
             self.root = root
 
-    def get_root(self) -> Node:
+    def get_root(self) -> bytes32:
         return compress_root(self.root.get_hash())
 
     def add_already_hashed(self, toadd: bytes):
         self.root = self.root.add(toadd, 0)
-
-    def remove_already_hashed(self, toremove: bytes):
-        self.root = self.root.remove(toremove, 0)
 
     def is_included_already_hashed(self, tocheck: bytes) -> Tuple[bool, bytes]:
         proof: List = []
@@ -164,9 +159,6 @@ class EmptyNode(Node):
     def add(self, toadd: bytes, depth: int) -> Node:
         return TerminalNode(toadd)
 
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        return self
-
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(EMPTY)
         return False
@@ -179,6 +171,16 @@ class EmptyNode(Node):
 
 
 _empty = EmptyNode()
+
+
+def _make_middle(children: Any, depth: int) -> Node:
+    cbits = [get_bit(child.hash, depth) for child in children]
+    if cbits[0] != cbits[1]:
+        return MiddleNode(children)
+    nextvals: List[Node] = [_empty, _empty]
+    nextvals[cbits[0] ^ 1] = _empty
+    nextvals[cbits[0]] = _make_middle(children, depth + 1)
+    return MiddleNode(nextvals)
 
 
 class TerminalNode(Node):
@@ -204,23 +206,9 @@ class TerminalNode(Node):
         if toadd == self.hash:
             return self
         if toadd > self.hash:
-            return self._make_middle([self, TerminalNode(toadd)], depth)
+            return _make_middle([self, TerminalNode(toadd)], depth)
         else:
-            return self._make_middle([TerminalNode(toadd), self], depth)
-
-    def _make_middle(self, children: Any, depth: int) -> Node:
-        cbits = [get_bit(child.hash, depth) for child in children]
-        if cbits[0] != cbits[1]:
-            return MiddleNode(children)
-        nextvals: List[Node] = [_empty, _empty]
-        nextvals[cbits[0] ^ 1] = _empty  # type: ignore
-        nextvals[cbits[0]] = self._make_middle(children, depth + 1)
-        return MiddleNode(nextvals)
-
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        if toremove == self.hash:
-            return _empty
-        return self
+            return _make_middle([TerminalNode(toadd), self], depth)
 
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(TERMINAL + self.hash)
@@ -277,21 +265,6 @@ class MiddleNode(Node):
         newvals[bit] = newchild
         return MiddleNode(newvals)
 
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        bit = get_bit(toremove, depth)
-        child = self.children[bit]
-        newchild = child.remove(toremove, depth + 1)
-        if newchild is child:
-            return self
-        otherchild = self.children[bit ^ 1]
-        if newchild.is_empty() and otherchild.is_terminal():
-            return otherchild
-        if newchild.is_terminal() and otherchild.is_empty():
-            return newchild
-        newvals = [x for x in self.children]
-        newvals[bit] = newchild
-        return MiddleNode(newvals)
-
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(MIDDLE)
         if get_bit(tocheck, depth) == 0:
@@ -332,9 +305,6 @@ class TruncatedNode(Node):
     def add(self, toadd: bytes, depth: int) -> Node:
         return self
 
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        return self
-
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         raise SetError()
 
@@ -349,23 +319,15 @@ class SetError(Exception):
     pass
 
 
-def confirm_included(root: Node, val: bytes, proof: bytes32) -> bool:
-    return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
-
-
-def confirm_included_already_hashed(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, True)
 
 
-def confirm_not_included(root: Node, val: bytes, proof: bytes32) -> bool:
-    return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
-
-
-def confirm_not_included_already_hashed(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_not_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, False)
 
 
-def _confirm(root: Node, val: bytes, proof: bytes32, expected: bool) -> bool:
+def _confirm(root: bytes32, val: bytes, proof: bytes, expected: bool) -> bool:
     try:
         p = deserialize_proof(proof)
         if p.get_root() != root:
@@ -376,7 +338,7 @@ def _confirm(root: Node, val: bytes, proof: bytes32, expected: bool) -> bool:
         return False
 
 
-def deserialize_proof(proof: bytes32) -> MerkleSet:
+def deserialize_proof(proof: bytes) -> MerkleSet:
     try:
         r, pos = _deserialize(proof, 0, [])
         if pos != len(proof):
@@ -386,7 +348,7 @@ def deserialize_proof(proof: bytes32) -> MerkleSet:
         raise SetError()
 
 
-def _deserialize(proof: bytes32, pos: int, bits: List[int]) -> Tuple[Node, int]:
+def _deserialize(proof: bytes, pos: int, bits: List[int]) -> Tuple[Node, int]:
     t = proof[pos : pos + 1]  # flake8: noqa
     if t == EMPTY:
         return _empty, pos + 1

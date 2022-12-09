@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from enum import Enum
+from pathlib import Path
 from typing import Any, List
 
 
@@ -7,7 +10,7 @@ class Err(Enum):
     DOES_NOT_EXTEND = -1
     BAD_HEADER_SIGNATURE = -2
     MISSING_FROM_STORAGE = -3
-    INVALID_PROTOCOL_MESSAGE = -4
+    INVALID_PROTOCOL_MESSAGE = -4  # We WILL ban for a protocol violation.
     SELF_CONNECTION = -5
     INVALID_HANDSHAKE = -6
     INVALID_ACK = -7
@@ -129,7 +132,8 @@ class Err(Enum):
     INVALID_PREFARM = 104
     ASSERT_SECONDS_RELATIVE_FAILED = 105
     BAD_COINBASE_SIGNATURE = 106
-    INITIAL_TRANSACTION_FREEZE = 107
+
+    # INITIAL_TRANSACTION_FREEZE = 107      # removed
     NO_TRANSACTIONS_WHILE_SYNCING = 108
     ALREADY_INCLUDING_TRANSACTION = 109
     INCOMPATIBLE_NETWORK_ID = 110
@@ -149,6 +153,10 @@ class Err(Enum):
     DOUBLE_SPEND_IN_FORK = 122
 
     INVALID_FEE_TOO_CLOSE_TO_ZERO = 123
+    COIN_AMOUNT_NEGATIVE = 124
+    INTERNAL_PROTOCOL_ERROR = 125
+    INVALID_SPEND_BUNDLE = 126
+    FAILED_GETTING_GENERATOR_MULTIPROCESSING = 127
 
 
 class ValidationError(Exception):
@@ -168,3 +176,117 @@ class ProtocolError(Exception):
         super(ProtocolError, self).__init__(f"Error code: {code.name}")
         self.code = code
         self.errors = errors
+
+
+##
+#  Keychain errors
+##
+
+
+class KeychainException(Exception):
+    pass
+
+
+class KeychainKeyDataMismatch(KeychainException):
+    def __init__(self, data_type: str):
+        super().__init__(f"KeyData mismatch for: {data_type}")
+
+
+class KeychainIsLocked(KeychainException):
+    pass
+
+
+class KeychainSecretsMissing(KeychainException):
+    pass
+
+
+class KeychainCurrentPassphraseIsInvalid(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Invalid current passphrase")
+
+
+class KeychainMaxUnlockAttempts(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("maximum passphrase attempts reached")
+
+
+class KeychainNotSet(KeychainException):
+    pass
+
+
+class KeychainIsEmpty(KeychainException):
+    pass
+
+
+class KeychainKeyNotFound(KeychainException):
+    pass
+
+
+class KeychainMalformedRequest(KeychainException):
+    pass
+
+
+class KeychainMalformedResponse(KeychainException):
+    pass
+
+
+class KeychainProxyConnectionFailure(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Failed to connect to keychain service")
+
+
+class KeychainLockTimeout(KeychainException):
+    pass
+
+
+class KeychainProxyConnectionTimeout(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Could not reconnect to keychain service in 30 seconds.")
+
+
+class KeychainUserNotFound(KeychainException):
+    def __init__(self, service: str, user: str) -> None:
+        super().__init__(f"user {user!r} not found for service {service!r}")
+
+
+class KeychainFingerprintError(KeychainException):
+    def __init__(self, fingerprint: int, message: str) -> None:
+        self.fingerprint = fingerprint
+        super().__init__(f"fingerprint {str(fingerprint)!r} {message}")
+
+
+class KeychainFingerprintNotFound(KeychainFingerprintError):
+    def __init__(self, fingerprint: int) -> None:
+        super().__init__(fingerprint, "not found")
+
+
+class KeychainFingerprintExists(KeychainFingerprintError):
+    def __init__(self, fingerprint: int) -> None:
+        super().__init__(fingerprint, "already exists")
+
+
+class KeychainLabelError(KeychainException):
+    def __init__(self, label: str, error: str):
+        super().__init__(error)
+        self.label = label
+
+
+class KeychainLabelInvalid(KeychainLabelError):
+    pass
+
+
+class KeychainLabelExists(KeychainLabelError):
+    def __init__(self, label: str, fingerprint: int) -> None:
+        super().__init__(label, f"label {label!r} already exists for fingerprint {str(fingerprint)!r}")
+        self.fingerprint = fingerprint
+
+
+##
+#  Miscellaneous errors
+##
+
+
+class InvalidPathError(Exception):
+    def __init__(self, path: Path, error_message: str):
+        super().__init__(f"{error_message}: {str(path)!r}")
+        self.path = path

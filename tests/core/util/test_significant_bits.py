@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import unittest
 
 from chia.util.significant_bits import count_significant_bits, truncate_to_significant_bits
@@ -16,6 +18,8 @@ class TestSignificantBits(unittest.TestCase):
         a = 0b1000000111
         assert truncate_to_significant_bits(a, 0) == 0b0
         a = 0b1000000111
+        assert truncate_to_significant_bits(a, 500) == a
+        a = -0b1000000111
         assert truncate_to_significant_bits(a, 500) == a
         a = 0b10101
         assert truncate_to_significant_bits(a, 5) == a

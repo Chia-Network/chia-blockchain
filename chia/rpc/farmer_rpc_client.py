@@ -1,7 +1,11 @@
-from typing import Dict, List, Optional
+from __future__ import annotations
 
+from typing import Any, Dict, List, Optional
+
+from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.misc import dataclass_to_json_dict
 
 
 class FarmerRpcClient(RpcClient):
@@ -22,8 +26,11 @@ class FarmerRpcClient(RpcClient):
     async def get_signage_points(self) -> List[Dict]:
         return (await self.fetch("get_signage_points", {}))["signage_points"]
 
-    async def get_reward_targets(self, search_for_private_key: bool) -> Dict:
-        response = await self.fetch("get_reward_targets", {"search_for_private_key": search_for_private_key})
+    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict:
+        response = await self.fetch(
+            "get_reward_targets",
+            {"search_for_private_key": search_for_private_key, "max_ph_to_search": max_ph_to_search},
+        )
         return_dict = {
             "farmer_target": response["farmer_target"],
             "pool_target": response["pool_target"],
@@ -41,3 +48,34 @@ class FarmerRpcClient(RpcClient):
         if pool_target is not None:
             request["pool_target"] = pool_target
         return await self.fetch("set_reward_targets", request)
+
+    async def get_pool_state(self) -> Dict:
+        return await self.fetch("get_pool_state", {})
+
+    async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str) -> Dict:
+        request = {"launcher_id": launcher_id.hex(), "payout_instructions": payout_instructions}
+        return await self.fetch("set_payout_instructions", request)
+
+    async def get_harvesters(self) -> Dict[str, Any]:
+        return await self.fetch("get_harvesters", {})
+
+    async def get_harvesters_summary(self) -> Dict[str, object]:
+        return await self.fetch("get_harvesters_summary", {})
+
+    async def get_harvester_plots_valid(self, request: PlotInfoRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_valid", dataclass_to_json_dict(request))
+
+    async def get_harvester_plots_invalid(self, request: PlotPathRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_invalid", dataclass_to_json_dict(request))
+
+    async def get_harvester_plots_keys_missing(self, request: PlotPathRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_keys_missing", dataclass_to_json_dict(request))
+
+    async def get_harvester_plots_duplicates(self, request: PlotPathRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_duplicates", dataclass_to_json_dict(request))
+
+    async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:
+        try:
+            return (await self.fetch("get_pool_login_link", {"launcher_id": launcher_id.hex()}))["login_link"]
+        except ValueError:
+            return None

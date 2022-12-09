@@ -1,17 +1,21 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional, Set
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class FullBlock(Streamable):
     # All the information required to validate a block
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
@@ -30,11 +34,11 @@ class FullBlock(Streamable):
     ]  # List of block heights of previous generators referenced in this block
 
     @property
-    def prev_header_hash(self):
+    def prev_header_hash(self) -> bytes32:
         return self.foliage.prev_block_hash
 
     @property
-    def height(self):
+    def height(self) -> uint32:
         return self.reward_chain_block.height
 
     @property
@@ -46,7 +50,7 @@ class FullBlock(Streamable):
         return self.reward_chain_block.total_iters
 
     @property
-    def header_hash(self):
+    def header_hash(self) -> bytes32:
         return self.foliage.get_hash()
 
     def is_transaction_block(self) -> bool:

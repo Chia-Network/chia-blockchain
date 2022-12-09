@@ -1,13 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 import importlib
+import os
 import pathlib
 import platform
+import sysconfig
 
 from pkg_resources import get_distribution
 
 from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 THIS_IS_WINDOWS = platform.system().lower().startswith("win")
+THIS_IS_MAC = platform.system().lower().startswith("darwin")
 
 ROOT = pathlib.Path(importlib.import_module("chia").__file__).absolute().parent.parent
 
@@ -53,6 +56,7 @@ version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 block_cipher = None
 
 SERVERS = [
+    "data_layer",
     "wallet",
     "full_node",
     "harvester",
@@ -71,6 +75,29 @@ hiddenimports.extend(keyring_imports)
 
 binaries = []
 
+if os.path.exists(f"{ROOT}/madmax/chia_plot"):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/chia_plot",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/madmax/chia_plot_k34",):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/chia_plot_k34",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/bladebit/bladebit"):
+    binaries.extend([
+        (
+            f"{ROOT}/bladebit/bladebit",
+            "bladebit"
+        )
+    ])
 
 if THIS_IS_WINDOWS:
     hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
@@ -81,7 +108,7 @@ if THIS_IS_WINDOWS:
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
-    dll_paths = ROOT / "*.dll"
+    dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "*.dll"
 
     binaries = [
         (
@@ -95,6 +122,18 @@ if THIS_IS_WINDOWS:
         (
             "C:\\Windows\\System32\\vcruntime140_1.dll",
             ".",
+        ),
+        (
+            f"{ROOT}\\madmax\\chia_plot.exe",
+            "madmax"
+        ),
+        (
+            f"{ROOT}\\madmax\\chia_plot_k34.exe",
+            "madmax"
+        ),
+        (
+            f"{ROOT}\\bladebit\\bladebit.exe",
+            "bladebit"
         ),
     ]
 
@@ -159,6 +198,10 @@ add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 
 for server in SERVERS:
     add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
+
+add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
+add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
+add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,

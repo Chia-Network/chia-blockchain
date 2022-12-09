@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.util.ints import uint64
 
 # The actual space in bytes of a plot, is _expected_plot_size(k) * UI_ACTUAL_SPACE_CONSTANT_FACTO
@@ -14,4 +16,4 @@ def _expected_plot_size(k: int) -> uint64:
     is necessary to store the entries in the plot.
     """
 
-    return ((2 * k) + 1) * (2 ** (k - 1))
+    return uint64(((2 * k) + 1) * (2 ** (k - 1)))

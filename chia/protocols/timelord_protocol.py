@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -16,8 +18,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewPeakTimelord(Streamable):
     reward_chain_block: RewardChainBlock
     difficulty: uint64
@@ -31,8 +33,8 @@ class NewPeakTimelord(Streamable):
     passes_ses_height_but_not_yet_included: bool
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewUnfinishedBlockTimelord(Streamable):
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
     difficulty: uint64
@@ -44,8 +46,8 @@ class NewUnfinishedBlockTimelord(Streamable):
     rc_prev: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewInfusionPointVDF(Streamable):
     unfinished_reward_hash: bytes32
     challenge_chain_ip_vdf: VDFInfo
@@ -56,8 +58,8 @@ class NewInfusionPointVDF(Streamable):
     infused_challenge_chain_ip_proof: Optional[VDFProof]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewSignagePointVDF(Streamable):
     index_from_challenge: uint8
     challenge_chain_sp_vdf: VDFInfo
@@ -66,14 +68,14 @@ class NewSignagePointVDF(Streamable):
     reward_chain_sp_proof: VDFProof
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewEndOfSubSlotVDF(Streamable):
     end_of_sub_slot_bundle: EndOfSubSlotBundle
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestCompactProofOfTime(Streamable):
     new_proof_of_time: VDFInfo
     header_hash: bytes32
@@ -81,8 +83,8 @@ class RequestCompactProofOfTime(Streamable):
     field_vdf: uint8
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondCompactProofOfTime(Streamable):
     vdf_info: VDFInfo
     vdf_proof: VDFProof

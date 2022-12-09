@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 import time
@@ -21,6 +23,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -44,7 +47,7 @@ def validate_unfinished_header_block(
     expected_sub_slot_iters: uint64,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
-    check_sub_epoch_summary=True,
+    check_sub_epoch_summary: bool = True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -482,8 +485,8 @@ def validate_unfinished_header_block(
     else:
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    q_str: Optional[bytes32] = header_block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
-        constants, challenge, cc_sp_hash
+    q_str: Optional[bytes32] = verify_and_get_quality_string(
+        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
     )
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)
@@ -831,7 +834,7 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
-    check_sub_epoch_summary=True,
+    check_sub_epoch_summary: bool = True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but

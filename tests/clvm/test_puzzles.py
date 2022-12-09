@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterable, List, Tuple
 from unittest import TestCase
 
@@ -5,9 +7,9 @@ from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
+from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.wallet.puzzles import (
     p2_conditions,
@@ -26,6 +28,7 @@ T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)
 
 MAX_BLOCK_COST_CLVM = int(1e18)
+COST_PER_BYTE = int(12000)
 
 
 def secret_exponent_for_index(index: int) -> int:
@@ -69,10 +72,10 @@ def do_test_spend(
     coin = coin_db.farm_coin(puzzle_hash, farm_time)
 
     # spend it
-    coin_solution = CoinSolution(coin, puzzle_reveal, solution)
+    coin_spend = CoinSpend(coin, puzzle_reveal, solution)
 
-    spend_bundle = SpendBundle([coin_solution], G2Element())
-    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM)
+    spend_bundle = SpendBundle([coin_spend], G2Element())
+    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
 
     # ensure all outputs are there
     for puzzle_hash, amount in payments:
@@ -84,10 +87,10 @@ def do_test_spend(
 
     # make sure we can actually sign the solution
     signatures = []
-    for coin_solution in spend_bundle.coin_solutions:
-        signature = key_lookup.signature_for_solution(coin_solution, bytes([2] * 32))
+    for coin_spend in spend_bundle.coin_spends:
+        signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)
-    return SpendBundle(spend_bundle.coin_solutions, AugSchemeMPL.aggregate(signatures))
+    return SpendBundle(spend_bundle.coin_spends, AugSchemeMPL.aggregate(signatures))
 
 
 def default_payments_and_conditions(
@@ -190,10 +193,10 @@ class TestPuzzles(TestCase):
         hidden_public_key = public_key_for_index(10, key_lookup)
 
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_public_key, hidden_puzzle
+            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle
         )
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
-            hidden_public_key, hidden_puzzle, Program.to(0)
+            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle, Program.to(0)
         )
 
         do_test_spend(puzzle, solution, payments, key_lookup)
@@ -204,9 +207,10 @@ class TestPuzzles(TestCase):
 
         hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
         hidden_public_key = public_key_for_index(hidden_pub_key_index, key_lookup)
+        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
 
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_public_key, hidden_puzzle
+            hidden_pub_key_point, hidden_puzzle
         )
         payable_payments, payable_conditions = default_payments_and_conditions(5, key_lookup)
 
@@ -214,7 +218,7 @@ class TestPuzzles(TestCase):
         delegated_solution = []
 
         synthetic_public_key = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_public_key(
-            hidden_public_key, hidden_puzzle.get_tree_hash()
+            G1Element.from_bytes(hidden_public_key), hidden_puzzle.get_tree_hash()
         )
 
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_delegated_puzzle(
@@ -223,10 +227,9 @@ class TestPuzzles(TestCase):
 
         hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
         synthetic_offset = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_offset(
-            hidden_public_key, hidden_puzzle_hash
+            hidden_pub_key_point, hidden_puzzle_hash
         )
 
-        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
         assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
 
         secret_exponent = key_lookup.get(hidden_public_key)

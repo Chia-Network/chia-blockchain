@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def truncate_to_significant_bits(input_x: int, num_significant_bits: int) -> int:
     """
     Truncates the number such that only the top num_significant_bits contain 1s.
@@ -6,7 +9,7 @@ def truncate_to_significant_bits(input_x: int, num_significant_bits: int) -> int
     """
     x = abs(input_x)
     if num_significant_bits > x.bit_length():
-        return x
+        return input_x
     lower = x.bit_length() - num_significant_bits
     mask = (1 << (x.bit_length())) - 1 - ((1 << lower) - 1)
     if input_x < 0:

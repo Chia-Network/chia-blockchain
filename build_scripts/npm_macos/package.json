@@ -1,0 +1,18 @@
+{
+  "name": "npm_macos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@chia-network/notarize-cli": "^0.2.2",
+    "dmg-license": "^1.0.11",
+    "electron-builder": "^23.5.1",
+    "lerna": "^5.5.2"
+  }
+}

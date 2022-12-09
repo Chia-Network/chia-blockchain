@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from blspy import G1Element
@@ -19,3 +21,4 @@ class DerivationRecord:
     pubkey: G1Element
     wallet_type: WalletType
     wallet_id: uint32
+    hardened: bool

@@ -1,0 +1,44 @@
+name: "Install chia-blockchain"
+
+description: "Run the platform appropriate installer script."
+
+inputs:
+  python-version:
+    description: "Value to be set for INSTALL_PYTHON_VERSION."
+    required: false
+    default: ""
+  development:
+    description: "Install development dependencies."
+    required: false
+    default: ""
+  legacy_keyring:
+    description: "Install legacy keyring dependencies."
+    required: false
+    default: ""
+  automated:
+    description: "Automated install, no questions."
+    required: false
+    default: "true"
+  command-prefix:
+    description: "Text to place before the command such as `arch -arm64` for non-native macOS runners."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run install script (macOS, Ubuntu)
+      if: runner.os == 'macos' || runner.os == 'linux'
+      shell: bash
+      env:
+        INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
+
+    - name: Run install script (Windows)
+      if: runner.os == 'windows'
+      shell: pwsh
+      env:
+        INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }}

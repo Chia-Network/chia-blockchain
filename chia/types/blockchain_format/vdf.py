@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 import traceback
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 from functools import lru_cache
+from typing import Optional
 
 from chiavdf import create_discriminant, verify_n_wesolowski
 
@@ -16,7 +18,7 @@ from chia.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=20)
+@lru_cache(maxsize=200)
 def get_discriminant(challenge, size_bites) -> int:
     return int(
         create_discriminant(challenge, size_bites),
@@ -24,7 +26,7 @@ def get_discriminant(challenge, size_bites) -> int:
     )
 
 
-@lru_cache(maxsize=100)
+@lru_cache(maxsize=1000)
 def verify_vdf(
     disc: int,
     input_el: bytes100,
@@ -44,16 +46,16 @@ def verify_vdf(
     )
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class VDFInfo(Streamable):
     challenge: bytes32  # Used to generate the discriminant (VDF group)
     number_of_iterations: uint64
     output: ClassgroupElement
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes

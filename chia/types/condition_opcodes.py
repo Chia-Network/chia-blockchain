@@ -1,12 +1,11 @@
+from __future__ import annotations
+
 import enum
 from typing import Any
 
 
 # See chia/wallet/puzzles/condition_codes.clvm
 class ConditionOpcode(bytes, enum.Enum):
-    # UNKNOWN is ascii "0"
-    UNKNOWN = bytes([48])
-
     # AGG_SIG is ascii "1"
 
     # the conditions below require bls12-381 signatures
@@ -42,6 +41,9 @@ class ConditionOpcode(bytes, enum.Enum):
     # block index
     ASSERT_HEIGHT_RELATIVE = bytes([82])
     ASSERT_HEIGHT_ABSOLUTE = bytes([83])
+
+    # A condition that is always true and always ignore all arguments
+    REMARK = bytes([1])
 
     def __bytes__(self) -> bytes:
         return bytes(self.value)
