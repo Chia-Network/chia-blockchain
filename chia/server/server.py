@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -28,7 +28,7 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -44,6 +44,27 @@ from chia.util.ssl_check import verify_ssl_certs_and_keys
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 ConnectionCallback = Callable[[WSChiaConnection], Awaitable[None]]
+
+
+_capability_values = {int(capability) for capability in Capability}
+
+
+def known_active_capabilities(values: Iterable[Tuple[uint16, str]]) -> List[Capability]:
+    # NOTE: order is not guaranteed
+    # TODO: what if there's a claim for both supporting and not?
+    #       presently it considers it supported
+    filtered: Set[uint16] = set()
+    for value, state in values:
+        if state != "1":
+            continue
+
+        if value not in _capability_values:
+            continue
+
+        filtered.add(value)
+
+    # TODO: consider changing all uses to sets instead of lists
+    return [Capability(value) for value in filtered]
 
 
 def ssl_context_for_server(
