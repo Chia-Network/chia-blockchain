@@ -173,8 +173,8 @@ def get_transactions_cmd(
     default="0",
 )
 @click.option(
-    "-e",
-    "--exclude-coin-ids",
+    "--exclude-coin",
+    "exclude_coins",
     multiple=True,
     help="Exclude this coin from being spent.",
 )
@@ -189,7 +189,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    exclude_coin_ids: Tuple[str],
+    exclude_coins: Tuple[str],
 ) -> None:
     extra_params = {
         "id": id,
@@ -200,7 +200,7 @@ def send_cmd(
         "override": override,
         "min_coin_amount": min_coin_amount,
         "max_coin_amount": max_coin_amount,
-        "exclude_coin_ids": list(exclude_coin_ids),
+        "exclude_coin_ids": list(exclude_coins),
     }
     import asyncio
 
