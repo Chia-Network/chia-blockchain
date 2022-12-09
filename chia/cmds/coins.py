@@ -110,6 +110,7 @@ def list_cmd(
 )
 @click.option(
     "--exclude-amount",
+    "excluded_amounts",
     multiple=True,
     help="Exclude any coins with this amount from being included.",
 )
