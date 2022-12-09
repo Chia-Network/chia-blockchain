@@ -36,7 +36,7 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
         return
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_max_coin_amount: uint64 = uint64(int(max_coin_amount * mojo_per_unit))
-    final_excluded_amounts: List[uint64] = [uint64(int(amount * mojo_per_unit)) for amount in excluded_amounts]
+    final_excluded_amounts: List[uint64] = [uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts]
     conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_client.get_spendable_coins(
         wallet_id=wallet_id,
         max_coin_amount=final_max_coin_amount,
@@ -126,7 +126,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
         return
     final_max_dust_amount = uint64(int(max_dust_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
-    final_excluded_amounts: List[uint64] = [uint64(int(amount * mojo_per_unit)) for amount in excluded_amounts]
+    final_excluded_amounts: List[uint64] = [uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts]
     final_fee = uint64(int(fee * mojo_per_unit))
     final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
     if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.

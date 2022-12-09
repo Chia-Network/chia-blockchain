@@ -145,7 +145,8 @@ def list_cmd(
     help="Only combine coins with these ids.",
 )
 @click.option(
-    "--smallest-first/--largest-first",
+    "--largest-first/--smallest-first",
+    "largest_first",
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
@@ -155,23 +156,23 @@ def combine_cmd(
     id: int,
     target_amount: str,
     min_amount: str,
-    amounts_to_exlude: Tuple[int],
+    amounts_to_exclude: Tuple[int],
     number_of_coins: int,
     max_dust_amount: str,
     fee: str,
     input_coins: Tuple[str],
-    largest_coins_first: bool,
+    largest_first: bool,
 ) -> None:
     extra_params = {
         "id": id,
         "target_coin_amount": target_amount,
         "min_coin_amount": min_amount,
-        "excluded_amounts": amounts_to_exlude,
+        "excluded_amounts": amounts_to_exclude,
         "number_of_coins": number_of_coins,
         "max_dust_amount": max_dust_amount,
         "fee": fee,
         "target_coin_ids": list(input_coins),
-        "largest": largest_coins_first,
+        "largest": largest_first,
     }
     from .coin_funcs import async_combine
 
