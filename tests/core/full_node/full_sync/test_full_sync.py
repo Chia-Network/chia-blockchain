@@ -409,8 +409,7 @@ class TestFullSync:
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )
         start = time.time()
-        res = await peers[0].request_proof_of_weight(request, timeout=5)
+        res = await peers[0].request_proof_of_weight(request, timeout=6)
         assert res is None
         duration = time.time() - start
         assert duration > 5
-        log.info(f"result was {res}")
