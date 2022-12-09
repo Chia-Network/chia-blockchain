@@ -25,7 +25,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.action_manager.action_aliases import DirectPayment
-from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import (
     ActionAlias,
     PuzzleDescription,
@@ -57,10 +56,6 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, UpdateMetadata
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_public_key,
-)
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -68,7 +63,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.wallet import InnerDriver as StdInnerDriver
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -1349,7 +1343,7 @@ class DataLayerWallet:
     @staticmethod
     async def select_coins_from_spend_descriptions(
         wallet_state_manager: Any, coin_spec: Solver, previous_actions: List[SpendDescription]
-    ) -> Tuple[List[CoinInfo], Optional[Solver]]:
+    ) -> Tuple[List[SpendDescription], Optional[Solver]]:
         expected_launcher_id: bytes32
         if "asset_id" in coin_spec:
             expected_launcher_id = bytes32(coin_spec["asset_id"])
@@ -1370,10 +1364,7 @@ class DataLayerWallet:
                 isinstance(spend.outer_puzzle_description.driver, OuterDriver)
                 and spend.outer_puzzle_description.driver.launcher_id == expected_launcher_id
             ):
-                info = CoinInfo.from_spend_description(spend)
-                actions: List[WalletAction] = info.alias_actions(
-                    spend.get_all_actions(), wallet_state_manager.action_aliases
-                )
+                actions: List[WalletAction] = spend.get_all_actions(wallet_state_manager.action_aliases)
                 metadata_updates: List[UpdateMetadataDL] = [
                     action for action in actions if isinstance(action, UpdateMetadataDL)
                 ]
@@ -1393,7 +1384,7 @@ class DataLayerWallet:
                 )
 
                 return [
-                    CoinInfo(
+                    SpendDescription(
                         Coin(
                             spend.coin.name(),
                             create_host_fullpuz(
@@ -1403,26 +1394,33 @@ class DataLayerWallet:
                             ).get_tree_hash_precalc(singleton_recreation.payment.puzzle_hash),
                             singleton_recreation.payment.amount,
                         ),
-                        Solver({"launcher_id": "0x" + expected_launcher_id.hex(), "root": "0x" + root.hex()}),
-                        OuterDriver(
-                            expected_launcher_id,
-                            root,
-                            singleton_recreation.payment.amount,
-                            LineageProof(
-                                spend.coin.parent_coin_info,
-                                create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash_precalc(
-                                    inner_puzzle_hash
-                                ),
-                                uint64(spend.coin.amount),
+                        PuzzleDescription(
+                            OuterDriver(
+                                expected_launcher_id,
+                                root,
+                            ),
+                            Solver({"launcher_id": "0x" + expected_launcher_id.hex(), "root": "0x" + root.hex()}),
+                        ),
+                        SolutionDescription(
+                            [],
+                            Solver(
+                                {
+                                    "amount": str(singleton_recreation.payment.amount),
+                                    "lineage_proof": disassemble(
+                                        LineageProof(
+                                            spend.coin.parent_coin_info,
+                                            create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash_precalc(
+                                                inner_puzzle_hash
+                                            ),
+                                            uint64(spend.coin.amount),
+                                        ).to_program()
+                                    ),
+                                }
                             ),
                         ),
-                        # TODO: this is hacky, but works because we only have one inner wallet
-                        StdInnerDriver(
-                            calculate_synthetic_public_key(
-                                await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                                    singleton_recreation.payment.puzzle_hash
-                                ),
-                                DEFAULT_HIDDEN_PUZZLE_HASH,
+                        *(
+                            await wallet_state_manager.get_inner_descriptions_for_puzzle_hash(
+                                singleton_recreation.payment.puzzle_hash
                             )
                         ),
                     )
@@ -1434,7 +1432,7 @@ class DataLayerWallet:
     @staticmethod
     async def select_new_coins(
         wallet_state_manager: Any, coin_spec: Solver, exclude: List[Coin] = []
-    ) -> List[CoinInfo]:
+    ) -> List[SpendDescription]:
         expected_launcher_id: bytes32
         if "asset_id" in coin_spec:
             expected_launcher_id = bytes32(coin_spec["asset_id"])
@@ -1466,22 +1464,29 @@ class DataLayerWallet:
             raise ValueError("Found specified singleton but it was excluded")
 
         return [
-            CoinInfo(
+            SpendDescription(
                 selected_coin,
-                Solver({"launcher_id": "0x" + expected_launcher_id.hex(), "root": "0x" + singleton_record.root.hex()}),
-                OuterDriver(
-                    expected_launcher_id,
-                    singleton_record.root,
-                    uint64(selected_coin.amount),
-                    parent_lineage,
+                PuzzleDescription(
+                    OuterDriver(
+                        expected_launcher_id,
+                        singleton_record.root,
+                    ),
+                    Solver(
+                        {"launcher_id": "0x" + expected_launcher_id.hex(), "root": "0x" + singleton_record.root.hex()}
+                    ),
                 ),
-                # TODO: this is hacky, but works because we only have one inner wallet
-                StdInnerDriver(
-                    calculate_synthetic_public_key(
-                        await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                            singleton_record.inner_puzzle_hash
-                        ),
-                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                SolutionDescription(
+                    [],
+                    Solver(
+                        {
+                            "amount": str(uint64(selected_coin.amount)),
+                            "lineage_proof": disassemble(parent_lineage.to_program()),
+                        }
+                    ),
+                ),
+                *(
+                    await wallet_state_manager.get_inner_descriptions_for_puzzle_hash(
+                        singleton_record.inner_puzzle_hash
                     )
                 ),
             )
@@ -1515,13 +1520,18 @@ class OuterDriver:
         return create_host_fullpuz(inner_puzzle, self.root, self.launcher_id)
 
     async def construct_outer_solution(
-        self, actions: List[WalletAction], inner_solution: Program, environment: Solver, optimize: bool = False
+        self,
+        actions: List[WalletAction],
+        inner_solution: Program,
+        global_environment: Solver,
+        local_environment: Solver,
+        optimize: bool = False,
     ) -> Program:
         db_layer_sol: Program = Program.to([inner_solution])
         full_sol: Program = Program.to(
             [
-                self.parent_lineage.to_program(),
-                self.amount,
+                local_environment["lineage_proof"],
+                local_environment["amount"],
                 db_layer_sol,
             ]
         )
@@ -1532,8 +1542,7 @@ class OuterDriver:
         coin: Coin,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
-        environment: Solver,
-    ) -> Tuple[List[WalletAction], List[WalletAction], Solver]:
+    ) -> Tuple[List[WalletAction], List[WalletAction]]:
         if len(outer_actions) > 1:
             raise ValueError("Cannot update the root of a DL singleton twice in one generation")
 
@@ -1576,13 +1585,13 @@ class OuterDriver:
         else:
             raise ValueError("Need to recreate or melt the singleton when spending")
 
-        return [], new_inner_actions, Solver({})
+        return [], new_inner_actions
 
     @classmethod
     async def match_puzzle(
         cls, puzzle: Program, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleDescription, Program]]:
-        matched, args = match_dl_singleton(puzzle.to_program())
+        matched, args = match_dl_singleton(puzzle)
         if matched:
             innerpuz, rt, lid = args
             launcher_id: bytes32 = bytes32(lid.as_python())
@@ -1609,7 +1618,6 @@ class OuterDriver:
     @classmethod
     async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
         return SolutionDescription(
-            [],
             [],
             Solver({"amount": str(solution.at("rf").as_int()), "lineage_proof": disassemble(solution.at("f"))}),
         ), solution.at("rrff")
@@ -1653,6 +1661,9 @@ class OuterDriver:
         ):
             return True
         return False
+
+    def get_required_signatures(self, solution_description: SolutionDescription) -> List[Tuple[G1Element, bytes, bool]]:
+        return []
 
 
 _T_UpdateMetadataDL = TypeVar("_T_UpdateMetadataDL", bound="UpdateMetadataDL")

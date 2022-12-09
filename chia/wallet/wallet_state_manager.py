@@ -49,8 +49,14 @@ from chia.wallet.action_manager.action_aliases import (
     RequestPayment,
 )
 from chia.wallet.action_manager.action_manager import WalletActionManager
-from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, InnerDriver, OuterDriver, SpendDescription
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    InnerDriver,
+    OuterDriver,
+    PuzzleDescription,
+    SolutionDescription,
+    SpendDescription,
+)
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -77,6 +83,10 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    calculate_synthetic_public_key,
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+)
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
@@ -1783,7 +1793,7 @@ class WalletStateManager:
 
     async def get_coin_infos_for_spec(
         self, coin_spec: Solver, previous_actions: List[SpendDescription]
-    ) -> List[CoinInfo]:
+    ) -> List[SpendDescription]:
         if "asset_id" in coin_spec:
             outer_wallet = (await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex())).__class__
         elif "asset_types" in coin_spec:
@@ -1791,7 +1801,7 @@ class WalletStateManager:
         else:
             outer_wallet = Wallet
 
-        coin_infos: List[CoinInfo]
+        coin_infos: List[SpendDescription]
         remaining_spec: Optional[Solver]
         coin_infos, remaining_spec = await outer_wallet.select_coins_from_spend_descriptions(
             self, coin_spec, previous_actions
@@ -1829,3 +1839,23 @@ class WalletStateManager:
             raise ValueError("No matching wallet found for specified asset types")
 
         return matches[0]
+
+    async def get_inner_descriptions_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> Tuple[PuzzleDescription, SolutionDescription]:
+        # TODO: right now we only support one inner wallet
+        return (
+            PuzzleDescription(
+                StdInnerDriver(
+                    calculate_synthetic_public_key(
+                        await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(puzzle_hash),
+                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                    )
+                ),
+                Solver({}),
+            ),
+            SolutionDescription(
+                [],
+                Solver({}),
+            ),
+        )

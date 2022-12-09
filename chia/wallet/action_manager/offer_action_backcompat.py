@@ -17,7 +17,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
-from chia.wallet.action_manager.coin_info import CoinInfo
 from chia.wallet.action_manager.protocols import PuzzleDescription, SolutionDescription, SpendDescription
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.db_wallet.db_wallet_puzzles import (
@@ -377,9 +376,9 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
                             inner_puzzle, *inner_puzzle.uncurry()
                         )
                         if inner_puzzle_description is not None:
-                            inner_solution_description: Optional[SolutionDescription] = await inner_wallet.match_puzzle(
-                                inner_solution
-                            )
+                            inner_solution_description: Optional[
+                                SolutionDescription
+                            ] = await inner_wallet.match_solution(inner_solution)
                             if inner_solution_description is not None:
                                 matches.append(
                                     SpendDescription(
@@ -398,9 +397,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
         # Step 3: Attempt to find matching aliases for the actions
-        info = CoinInfo.from_spend_description(matches[0])
-        actions = info.alias_actions(matches[0].get_all_actions(), wallet_state_manager.action_aliases)
-        environment = Solver({**environment.info, **matches[0].get_full_environment().info})
+        actions = matches[0].get_all_actions(wallet_state_manager.action_aliases)
         # Step 4: Re-order the actions so that DL graftroots are the last applied (need to be outermost)
         dl_graftroot_actions: List[Solver] = []
         all_other_actions: List[Solver] = []
@@ -431,13 +428,14 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
 
         sorted_actions: List[Solver] = [*all_other_actions, *dl_graftroot_actions]
 
-        remaining_actions, environment, new_spend, new_description = await info.create_spend_for_actions(
-            sorted_actions, wallet_state_manager.action_aliases, environment=environment
+        remaining_actions, new_description = await matches[0].apply_actions(
+            sorted_actions, default_aliases=wallet_state_manager.action_aliases, environment=environment
         )
+        new_spend: CoinSpend = await new_description.spend(environment=environment)
 
-        re_matched_spend: Optional[Tuple[SolutionDescription, Program]] = await info.outer_driver.match_solution(
-            new_spend.solution.to_program()
-        )
+        re_matched_spend: Optional[
+            Tuple[SolutionDescription, Program]
+        ] = await new_description.outer_puzzle_description.driver.match_solution(new_spend.solution.to_program())
         if re_matched_spend is None:
             raise RuntimeError("Internal logic error, spend could not be rematched")
         inner_most_solution: Program = re_matched_spend[1]
@@ -451,11 +449,18 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
                 [inner_most_solution.first(), inner_most_solution.at("rf"), new_delegated_solution]
             )
 
-        new_full_solution: Program = await info.outer_driver.construct_outer_solution(
-            new_description.outer_solution_description.actions, inner_most_solution, environment, optimize=False
+        new_full_solution: Program = (
+            # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
+            await new_description.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
+                new_description.outer_solution_description.actions,
+                inner_most_solution,
+                global_environment=environment,
+                local_environment=new_description.outer_solution_description.environment,
+                optimize=False,
+            )
         )
 
-        if isinstance(info.outer_driver, CATOuterDriver):
+        if isinstance(new_description.outer_puzzle_description.driver, CATOuterDriver):
             cat_args = list(new_full_solution.as_iter())
             if Program.to(None) in cat_args[2:5]:
                 new_full_solution = Program.to(
@@ -466,7 +471,10 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
                         [new_spend.coin.parent_coin_info, new_spend.coin.puzzle_hash, new_spend.coin.amount],
                         [
                             new_spend.coin.parent_coin_info,
-                            (await info.inner_driver.construct_inner_puzzle()).get_tree_hash(),
+                            (
+                                # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
+                                await new_description.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore  # noqa
+                            ).get_tree_hash(),
                             new_spend.coin.amount,
                         ],
                         cat_args[5],

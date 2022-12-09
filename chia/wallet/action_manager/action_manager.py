@@ -15,8 +15,13 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
-from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleDescription, SolutionDescription, SpendDescription
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    PuzzleDescription,
+    SolutionDescription,
+    SpendDescription,
+    WalletAction,
+)
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
@@ -51,30 +56,28 @@ class WalletActionManager:
         self,
         actions: List[Solver],
         bundle_actions: List[Solver],
-        infos: List[CoinInfo],
+        infos: List[SpendDescription],
         coin_specific_actions: Dict[Coin, List[Solver]],
         default_aliases: Dict[str, Type[ActionAlias]] = {},
         environment: Solver = Solver({}),
-    ) -> Tuple[List[Solver], List[CoinSpend], List[SpendDescription]]:
+    ) -> Tuple[List[Solver], List[SpendDescription]]:
         """
         Helper function for build_spend
         """
         actions_left: List[Solver] = [*actions, *bundle_actions]
-        coin_spends: List[CoinSpend] = []
         spend_descriptions: List[SpendDescription] = []
-        for coin in infos:
-            actions_left.extend(coin_specific_actions[coin.coin])
-            actions_left, environment, new_spend, new_description = await coin.create_spend_for_actions(
-                actions_left, default_aliases
+        for spend in infos:
+            actions_left.extend(coin_specific_actions[spend.coin])
+            actions_left, new_description = await spend.apply_actions(
+                actions_left, default_aliases=default_aliases, environment=environment
             )
-            for specific_action in coin_specific_actions[coin.coin]:
+            for specific_action in coin_specific_actions[spend.coin]:
                 if specific_action in actions_left:
                     raise ValueError(
-                        f"Coin with ID {coin.coin.name()} could not create specific conditions: ",
-                        f"{coin_specific_actions[coin.coin]}",
+                        f"Coin with ID {spend.coin.name()} could not create specific conditions: ",
+                        f"{coin_specific_actions[spend.coin]}",
                     )
 
-            coin_spends.append(new_spend)
             spend_descriptions.append(new_description)
 
         if len(actions_left) > 0:
@@ -82,9 +85,11 @@ class WalletActionManager:
                 if action not in bundle_actions:
                     raise ValueError(f"Could not complete action with specified coins {action}")
 
-        return actions_left, coin_spends, spend_descriptions
+        return actions_left, spend_descriptions
 
-    async def build_spend(self, request: Solver, previous_spends: List[SpendDescription] = []) -> SpendBundle:
+    async def build_spend(
+        self, request: Solver, previous_spends: List[SpendDescription] = [], environment: Solver = Solver({})
+    ) -> SpendBundle:
         bundle_actions_left: List[Solver] = request["bundle_actions"]
         if "add_payment_nonces" not in request or request["add_payment_nonces"] != Program.to(None):
             bundle_actions_left = list(map(nonce_payments, bundle_actions_left))
@@ -95,7 +100,7 @@ class WalletActionManager:
         # Step 1: Determine which coins we need to complete the action
         for action_spec in request["actions"]:
             coin_spec: Solver = action_spec["with"]
-            coin_infos: List[CoinInfo] = await self.wallet_state_manager.get_coin_infos_for_spec(
+            coin_infos: List[SpendDescription] = await self.wallet_state_manager.get_coin_infos_for_spec(
                 coin_spec, all_descriptions
             )
 
@@ -147,16 +152,16 @@ class WalletActionManager:
 
             all_actions.extend(actions)
 
-            bundle_actions_left, coin_spends, spend_descriptions = await self.spends_from_actions_and_infos(
+            bundle_actions_left, spend_descriptions = await self.spends_from_actions_and_infos(
                 actions,
                 bundle_actions_left,
                 coin_infos,
                 coin_announcements,
                 self.wallet_state_manager.action_aliases,
-                Solver({}),
+                environment,
             )
 
-            new_spends.extend(coin_spends)
+            new_spends.extend([await spend.spend(environment=environment) for spend in spend_descriptions])
             all_descriptions.extend(spend_descriptions)
 
         if len(bundle_actions_left) > 0:
@@ -222,7 +227,7 @@ class WalletActionManager:
                             if inner_puzzle_description is not None:
                                 inner_solution_description: Optional[
                                     SolutionDescription
-                                ] = await inner_wallet.match_puzzle(inner_solution)
+                                ] = await inner_wallet.match_solution(inner_solution)
                                 if inner_solution_description is not None:
                                     matches.append(
                                         SpendDescription(
@@ -242,13 +247,16 @@ class WalletActionManager:
 
             # Step 2: Attempt to find matching aliases for the actions
             spend_description: SpendDescription = matches[0]
-            info = CoinInfo.from_spend_description(spend_description)
-            actions = info.alias_actions(spend_description.get_all_actions(), self.wallet_state_manager.action_aliases)
+            actions = spend_description.get_all_actions(self.wallet_state_manager.action_aliases)
 
-            final_actions.append(Solver({"with": info.description, "do": [action.to_solver() for action in actions]}))
+            final_actions.append(
+                Solver(
+                    {"with": spend_description.get_full_description(), "do": [action.to_solver() for action in actions]}
+                )
+            )
 
             all_signature_info: List[Tuple[G1Element, bytes, bool]] = spend_description.get_all_signatures()
-            final_signatures.extend([(bytes32(info.coin.name()), *sig) for sig in all_signature_info])
+            final_signatures.extend([(bytes32(spend_description.coin.name()), *sig) for sig in all_signature_info])
 
         # Step 4: Attempt to group coins in some way
         asset_types: List[List[Solver]] = []
@@ -354,7 +362,7 @@ class WalletActionManager:
                             if inner_puzzle_description is not None:
                                 inner_solution_description: Optional[
                                     SolutionDescription
-                                ] = await inner_wallet.match_puzzle(inner_solution)
+                                ] = await inner_wallet.match_solution(inner_solution)
                                 if inner_solution_description is not None:
                                     matches.append(
                                         SpendDescription(
@@ -382,27 +390,11 @@ class WalletActionManager:
                         "id": "0x" + spend.coin.name().hex(),
                         "outer": {
                             "actions": [action.to_solver() for action in spend.outer_solution_description.actions],
-                            "signatures_required": [
-                                {
-                                    "pubkey": "0x" + bytes(pubkey).hex(),
-                                    "data": "0x" + data.hex(),
-                                    "me": "1" if me else "()",
-                                }
-                                for pubkey, data, me in spend.outer_solution_description.signatures_required
-                            ],
                             "coin_description": spend.outer_puzzle_description.coin_description,
                             "environment": spend.outer_solution_description.environment,
                         },
                         "inner": {
                             "actions": [action.to_solver() for action in spend.inner_solution_description.actions],
-                            "signatures_required": [
-                                {
-                                    "pubkey": "0x" + bytes(pubkey).hex(),
-                                    "data": "0x" + data.hex(),
-                                    "me": "1" if me else "()",
-                                }
-                                for pubkey, data, me in spend.inner_solution_description.signatures_required
-                            ],
                             "coin_description": spend.inner_puzzle_description.coin_description,
                             "environment": spend.inner_solution_description.environment,
                         },
@@ -415,18 +407,16 @@ class WalletActionManager:
         new_spends: List[CoinSpend] = []
         for description in spend_descriptions:
             # Step 3: Attempt to find matching aliases for the actions
-            info = CoinInfo.from_spend_description(description)
-            actions = info.alias_actions(description.get_all_actions(), self.wallet_state_manager.action_aliases)
-            environment = Solver({**environment.info, **description.get_full_environment().info})
+            actions: List[WalletAction] = description.get_all_actions(self.wallet_state_manager.action_aliases)
             # Step 4: Augment each action with the environment
             augmented_actions: List[Solver] = [action.augment(environment).to_solver() for action in actions]
-            remaining_actions, environment, spend, _ = await info.create_spend_for_actions(
-                augmented_actions, self.wallet_state_manager.action_aliases, environment, optimize=True
+            remaining_actions, new_description = await description.apply_actions(
+                augmented_actions, self.wallet_state_manager.action_aliases, environment=environment
             )
             if len(remaining_actions) > 0:
                 raise ValueError(
                     "Attempting to solve the spends with specified environment resulted in being unable to spend a coin"
                 )
-            new_spends.append(spend)
+            new_spends.append(await new_description.spend(environment=environment, optimize=True))
 
         return SpendBundle(new_spends, bundle.aggregated_signature)

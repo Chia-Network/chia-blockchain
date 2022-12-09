@@ -27,8 +27,13 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.action_manager.action_aliases import DirectPayment, OfferedAmount
-from chia.wallet.action_manager.coin_info import CoinInfo
-from chia.wallet.action_manager.protocols import ActionAlias, PuzzleDescription, SolutionDescription, WalletAction
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    PuzzleDescription,
+    SolutionDescription,
+    SpendDescription,
+    WalletAction,
+)
 from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
@@ -48,7 +53,6 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver, cast_to_int
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_public_key,
     calculate_synthetic_secret_key,
 )
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
@@ -58,7 +62,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.wallet import InnerDriver as StdInnerDriver
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -898,7 +901,7 @@ class CATWallet:
     @staticmethod
     async def select_coins_from_spend_descriptions(
         wallet_state_manager: Any, coin_spec: Solver, previous_actions: List[CoinSpend]
-    ) -> Tuple[List[CoinInfo], Optional[Solver]]:
+    ) -> Tuple[List[SpendDescription], Optional[Solver]]:
         target_amount: int = cast_to_int(coin_spec["amount"])
         expected_tail: bytes32
         if "asset_id" in coin_spec:
@@ -915,7 +918,7 @@ class CATWallet:
         ]
         parent_spends: List[CoinSpend] = [cs for cs in previous_actions if cs.coin.name() in non_ephemeral_parents]
 
-        selected_coins: List[CoinInfo] = []
+        selected_coins: List[SpendDescription] = []
         for parent_spend in parent_spends:
             curried_args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
             if curried_args is not None:
@@ -933,17 +936,24 @@ class CATWallet:
                             amount: uint64 = uint64(condition.at("rrf").as_int())
                             selected_coin: Coin = Coin(parent_spend.coin.name(), inner_puzzle_hash, amount)
                             selected_coins.append(
-                                CoinInfo(
+                                SpendDescription(
                                     selected_coin,
-                                    Solver({"tail": "0x" + expected_tail.hex()}),
-                                    OuterDriver(expected_tail, parent_lineage, selected_coin.name()),
-                                    # TODO: this is hacky, but works because we only have one inner wallet
-                                    StdInnerDriver(
-                                        calculate_synthetic_public_key(
-                                            await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(  # noqa
-                                                inner_puzzle_hash
-                                            ),
-                                            DEFAULT_HIDDEN_PUZZLE_HASH,
+                                    PuzzleDescription(
+                                        OuterDriver(expected_tail),
+                                        Solver({"tail": "0x" + expected_tail.hex()}),
+                                    ),
+                                    SolutionDescription(
+                                        [],
+                                        Solver(
+                                            {
+                                                "my_id": "0x" + selected_coin.name().hex(),
+                                                "lineage_proof": disassemble(parent_lineage.to_program()),
+                                            }
+                                        ),
+                                    ),
+                                    *(
+                                        await wallet_state_manager.get_inner_descriptions_for_puzzle_hash(
+                                            inner_puzzle_hash
                                         )
                                     ),
                                 )
@@ -965,7 +975,7 @@ class CATWallet:
     @staticmethod
     async def select_new_coins(
         wallet_state_manager: Any, coin_spec: Solver, exclude: List[Coin] = []
-    ) -> List[CoinInfo]:
+    ) -> List[SpendDescription]:
         target_amount: int = cast_to_int(coin_spec["amount"])
         expected_tail: bytes32
         if "asset_id" in coin_spec:
@@ -984,17 +994,24 @@ class CATWallet:
             exclude=exclude,
         )
         return [
-            CoinInfo(
+            SpendDescription(
                 coin,
-                Solver({"tail": "0x" + expected_tail.hex()}),
-                OuterDriver(expected_tail, await wallet.get_lineage_proof_for_coin(coin), coin.name()),
-                # TODO: this is hacky, but works because we only have one inner wallet
-                StdInnerDriver(
-                    calculate_synthetic_public_key(
-                        await wallet_state_manager.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                            (await wallet.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)).get_tree_hash()
-                        ),
-                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                PuzzleDescription(
+                    OuterDriver(expected_tail),
+                    Solver({"tail": "0x" + expected_tail.hex()}),
+                ),
+                SolutionDescription(
+                    [],
+                    Solver(
+                        {
+                            "my_id": "0x" + coin.name().hex(),
+                            "lineage_proof": disassemble((await wallet.get_lineage_proof_for_coin(coin)).to_program()),
+                        }
+                    ),
+                ),
+                *(
+                    await wallet_state_manager.get_inner_descriptions_for_puzzle_hash(
+                        (await wallet.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)).get_tree_hash()
                     )
                 ),
             )
@@ -1026,9 +1043,14 @@ class OuterDriver:
         return construct_cat_puzzle(CAT_MOD, self.tail, inner_puzzle)
 
     async def construct_outer_solution(
-        self, actions: List[WalletAction], inner_solution: Program, environment: Solver, optimize: bool = False
+        self,
+        actions: List[WalletAction],
+        inner_solution: Program,
+        global_environment: Solver,
+        local_environment: Solver,
+        optimize: bool = False,
     ) -> Program:
-        if optimize and "spends" in environment:
+        if optimize and "spends" in global_environment:
             all_spends: List[CoinSpend] = [
                 CoinSpend(
                     Coin(
@@ -1039,7 +1061,7 @@ class OuterDriver:
                     spend["puzzle_reveal"],
                     spend["solution"],
                 )
-                for spend in environment["spends"]
+                for spend in global_environment["spends"]
             ]
 
             # Sort the spends deterministically so every CAT knows its role in the ring
@@ -1054,11 +1076,15 @@ class OuterDriver:
             ]
             relevant_ids: List[bytes32] = [cs.coin.name() for cs in only_same_cat_spends]
             relevant_descriptions: List[Solver] = [
-                description for description in environment["spend_descriptions"] if description["id"] in relevant_ids
+                description
+                for description in global_environment["spend_descriptions"]
+                if description["id"] in relevant_ids
             ]
             relevant_descriptions.sort(key=lambda description: bytes32(description["id"]))
 
-            my_index: int = next(i for i, cs in enumerate(only_same_cat_spends) if cs.coin.name() == self.my_id)
+            my_index: int = next(
+                i for i, cs in enumerate(only_same_cat_spends) if cs.coin.name() == local_environment["my_id"]
+            )
             previous_index: int = my_index - 1
             next_index: int = 0 if my_index == len(only_same_cat_spends) - 1 else my_index + 1
 
@@ -1087,7 +1113,7 @@ class OuterDriver:
             full_solution: Program = Program.to(
                 [
                     inner_solution,
-                    self.parent_lineage.to_program(),
+                    local_environment["lineage_proof"],
                     consumed_coins[previous_index].name(),
                     [
                         consumed_coins[my_index].parent_coin_info,
@@ -1107,7 +1133,9 @@ class OuterDriver:
             )
             return full_solution
         else:
-            placeholder: Program = Program.to([inner_solution, self.parent_lineage.to_program(), *([None] * 5)])
+            placeholder: Program = Program.to(
+                [inner_solution, local_environment["lineage_proof"], None, local_environment["my_id"], None, None, None]
+            )
             return placeholder
 
     async def check_and_modify_actions(
@@ -1115,9 +1143,8 @@ class OuterDriver:
         coin: Coin,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
-        environment: Solver,
-    ) -> Tuple[List[WalletAction], List[WalletAction], Solver]:
-        return outer_actions, inner_actions, Solver({})
+    ) -> Tuple[List[WalletAction], List[WalletAction]]:
+        return outer_actions, inner_actions
 
     @classmethod
     async def match_puzzle(
@@ -1144,20 +1171,22 @@ class OuterDriver:
 
     @classmethod
     async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
-        parent_id, puzzle_hash, amount = solution.at("rrrf").as_iter()
+        this_coin_info: Program = solution.at("rrrf")
+        if this_coin_info.atom is None:
+            parent_id, puzzle_hash, amount = this_coin_info.as_iter()
+            my_id: bytes32 = Coin(
+                bytes32(parent_id.as_python()), bytes32(puzzle_hash.as_python()), uint64(amount.as_int())
+            ).name()
+        else:
+            my_id = bytes32(this_coin_info.as_python())
+
         return (
             SolutionDescription(
-                [],
                 [],
                 Solver(
                     {
                         "lineage_proof": disassemble(solution.at("rf")),
-                        "my_id": "0x"
-                        + Coin(
-                            bytes32(parent_id.as_python()), bytes32(puzzle_hash.as_python()), uint64(amount.as_int())
-                        )
-                        .name()
-                        .hex(),
+                        "my_id": "0x" + my_id.hex(),
                     }
                 ),
             ),
@@ -1184,6 +1213,9 @@ class OuterDriver:
         if len(asset_types) == 1 and asset_types[0]["mod"] == CAT_MOD:
             return True
         return False
+
+    def get_required_signatures(self, solution_description: SolutionDescription) -> List[Tuple[G1Element, bytes, bool]]:
+        return []
 
 
 if TYPE_CHECKING:
