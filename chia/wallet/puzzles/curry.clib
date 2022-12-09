@@ -81,14 +81,23 @@
 
   ;; inline functions that take varargs don't seem to work, so we can't inline `curry`
 
-  (defun curry (mod-hash . curry-parameter-hashes)
+  (defun curry_hashes (mod-hash . curry-parameter-hashes)
      (tree-hash-of-apply mod-hash
                          (calculate-hash-of-curried-parameters curry-parameter-hashes))
   )
 
-  ;; `curry2` takes exactly two parameters rather than varags, and it can be inlined
 
-  (defun-inline curry2 (mod-hash curry-parameter-hashes)
+  ;; this is included for future compilers that handle it properly. If you get weird
+  ;; errors using this, it may be your tooling. Use `curry` above instead, or inline manually.
+
+  (defun-inline curry_hashes_inline (mod-hash . curry-parameter-hashes)
+     (tree-hash-of-apply mod-hash
+                         (calculate-hash-of-curried-parameters curry-parameter-hashes))
+  )
+
+  ;; `curry_mod_hashes_inline` takes exactly two parameters rather than varags, and it can be inlined
+
+  (defun-inline curry_mod_hashes_inline (mod-hash curry-parameter-hashes)
      (tree-hash-of-apply mod-hash
                          (calculate-hash-of-curried-parameters curry-parameter-hashes))
   )
