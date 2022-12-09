@@ -192,7 +192,7 @@ class CATWallet:
                 assert isinstance(w, CATWallet)
                 if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
-                    raise ValueError("Wallet already exists")
+                    return w
 
         self.wallet_state_manager = wallet_state_manager
         if limitations_program_hash_hex in DEFAULT_CATS:
