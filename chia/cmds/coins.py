@@ -25,30 +25,28 @@ def coins_cmd(ctx: click.Context) -> None:
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-u", "--show_unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
+@click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
 @click.option(
-    "-a",
-    "--min-coin-amount",
+    "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     default="0",
 )
 @click.option(
-    "-l",
-    "--max-coin-amount",
+    "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
     default="0",
 )
 @click.option(
-    "-e",
-    "--excluded-coin-ids",
+    "--exclude-coin",
+    "coins_to_exclude",
     multiple=True,
     help="prevent this coin from being included.",
 )
 @click.option(
-    "-x",
-    "--excluded-coin-amounts",
+    "--exclude-amount",
+    "amounts_to_exclude",
     multiple=True,
     help="Exclude any coins with this amount from being included.",
 )
@@ -64,20 +62,20 @@ def list_cmd(
     fingerprint: int,
     id: int,
     show_unconfirmed: bool,
-    min_coin_amount: str,
-    max_coin_amount: str,
-    excluded_coin_ids: Tuple[str],
-    excluded_coin_amounts: Tuple[int],
+    min_amount: str,
+    max_amount: str,
+    coins_to_exclude: Tuple[str],
+    amounts_to_exclude: Tuple[int],
     paginate: Optional[bool],
 ) -> None:
     config = load_config(ctx.obj["root_path"], "config.yaml", "wallet")
     address_prefix = selected_network_address_prefix(config)
     extra_params = {
         "id": id,
-        "max_coin_amount": max_coin_amount,
-        "min_coin_amount": min_coin_amount,
-        "excluded_amounts": excluded_coin_amounts,
-        "excluded_coin_ids": list(excluded_coin_ids),
+        "max_coin_amount": max_amount,
+        "min_coin_amount": min_amount,
+        "excluded_amounts": amounts_to_exclude,
+        "excluded_coin_ids": list(coins_to_exclude),
         "addr_prefix": address_prefix,
         "show_unconfirmed": show_unconfirmed,
         "paginate": paginate,
@@ -99,21 +97,20 @@ def list_cmd(
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-a",
-    "--target-coin-amount",
+    "--target-amount",
     help="An optional target coin amount, if you want to create a coin with a specific amount.",
     type=str,
     default="0",
 )
 @click.option(
-    "-b",
-    "--min-coin-amount",
+    "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     default="0",
 )
 @click.option(
-    "-e",
-    "--excluded-coin-amounts",
+    "--exclude-amount",
+    "amounts_to_exclude",
     multiple=True,
     help="Exclude any coins with this amount from being included.",
 )
@@ -126,7 +123,6 @@ def list_cmd(
     help="The number of coins we are combining.",
 )
 @click.option(
-    "-x",
     "--max-dust-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
@@ -143,39 +139,38 @@ def list_cmd(
     required=True,
 )
 @click.option(
-    "-t",
-    "--target_coin_ids",
+    "--input-coin",
+    "input_coins",
     multiple=True,
     help="Only combine coins with these ids.",
 )
 @click.option(
-    "-l",
-    "--largest_coins_first",
-    help="Sort coins from largest to smallest instead of smallest to largest.",
-    is_flag=True,
+    "--smallest-first/--largest-first",
+    default=False,
+    help="Sort coins from largest to smallest or smallest to largest.",
 )
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    target_coin_amount: str,
-    min_coin_amount: str,
-    excluded_coin_amounts: Tuple[int],
+    target_amount: str,
+    min_amount: str,
+    amounts_to_exlude: Tuple[int],
     number_of_coins: int,
     max_dust_amount: str,
     fee: str,
-    target_coin_ids: Tuple[str],
+    input_coins: Tuple[str],
     largest_coins_first: bool,
 ) -> None:
     extra_params = {
         "id": id,
-        "target_coin_amount": target_coin_amount,
-        "min_coin_amount": min_coin_amount,
-        "excluded_amounts": excluded_coin_amounts,
+        "target_coin_amount": target_amount,
+        "min_coin_amount": min_amount,
+        "excluded_amounts": amounts_to_exlude,
         "number_of_coins": number_of_coins,
         "max_dust_amount": max_dust_amount,
         "fee": fee,
-        "target_coin_ids": list(target_coin_ids),
+        "target_coin_ids": list(input_coins),
         "largest": largest_coins_first,
     }
     from .coin_funcs import async_combine
