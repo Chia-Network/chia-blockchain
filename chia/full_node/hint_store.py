@@ -7,6 +7,7 @@ from typing import List, Tuple
 import typing_extensions
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.util.db_wrapper import DBWrapper2
 
 log = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class HintStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
         return self
 
-    async def get_coin_ids(self, hint: bytes) -> List[bytes32]:
+    async def get_coin_ids(self, hint: bytes) -> List[CoinID]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT coin_id from hints WHERE hint=?", (hint,))
             rows = await cursor.fetchall()
@@ -41,11 +42,13 @@ class HintStore:
         coin_ids = []
         for row in rows:
             coin_ids.append(row[0])
-        return coin_ids
+        return [bytes_to_CoinID(c_id) for c_id in coin_ids]
 
-    async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
-        if len(coin_hint_list) == 0:
+    async def add_hints(self, coin_id_hint_list: List[Tuple[CoinID, bytes]]) -> None:
+        if len(coin_id_hint_list) == 0:
             return None
+
+        coin_hint_list = [(bytes32(h[0]), 1) for h in coin_id_hint_list]
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             if self.db_wrapper.db_version == 2:

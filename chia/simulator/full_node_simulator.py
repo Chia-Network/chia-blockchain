@@ -17,6 +17,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -244,6 +245,7 @@ class FullNodeSimulator(FullNodeAPI):
                     current_time = False
                     time_per_block = 1
             mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+
             if mempool_bundle is None:
                 spend_bundle = None
             else:
@@ -389,7 +391,7 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to wait for.
         """
-        ids_to_check: Set[bytes32] = set()
+        ids_to_check: Set[SpendBundleID] = set()
         for record in records:
             if record.spend_bundle is None:
                 continue
@@ -444,7 +446,7 @@ class FullNodeSimulator(FullNodeAPI):
         block.
 
         Arguments:
-            coin_names: The coin names to process.
+            coins: The coins to process.
         """
 
         coin_set = set(coins)
@@ -456,7 +458,7 @@ class FullNodeSimulator(FullNodeAPI):
             found: Set[Coin] = set()
             for coin in coin_set:
                 # TODO: is this the proper check?
-                if await coin_store.get_coin_record(coin.name()) is not None:
+                if await coin_store.get_coin_record(bytes_to_CoinID(coin.name())) is not None:
                     found.add(coin)
 
             coin_set = coin_set.difference(found)
@@ -530,8 +532,8 @@ class FullNodeSimulator(FullNodeAPI):
 
         return coins_to_receive
 
-    def tx_id_in_mempool(self, tx_id: bytes32) -> bool:
-        spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_hash=tx_id)
+    def tx_id_in_mempool(self, tx_id: SpendBundleID) -> bool:
+        spendbundle = self.full_node.mempool_manager.get_spendbundle(spend_bundle_id=tx_id)
         return spendbundle is not None
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:

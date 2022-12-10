@@ -7,13 +7,14 @@ from chiabip158 import PyBIP158
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint64
 
 
-def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
+def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[CoinID]) -> HeaderBlock:
     # Create filter
     byte_array_tx: List[bytearray] = []
     addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
@@ -54,19 +55,19 @@ def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
     return additions
 
 
-def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple[List[bytes32], List[Coin]]:
+def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple[List[CoinID], List[Coin]]:
     """
     Doesn't return farmer and pool reward.
     """
 
-    removals: List[bytes32] = []
+    removals: List[CoinID] = []
     additions: List[Coin] = []
 
     # build removals list
     if results is None:
         return [], []
     for spend in results.spends:
-        removals.append(bytes32(spend.coin_id))
+        removals.append(bytes_to_CoinID(spend.coin_id))
         for puzzle_hash, amount, _ in spend.create_coin:
             additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount)))
 

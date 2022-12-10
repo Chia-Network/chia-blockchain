@@ -16,6 +16,7 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
@@ -583,7 +584,7 @@ class FullNodeRpcApi:
         """
         if "name" not in request:
             raise ValueError("Name not in request")
-        name = bytes32.from_hexstr(request["name"])
+        name = CoinID(bytes32.from_hexstr(request["name"]))
 
         coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
         if coin_record is None:
@@ -645,7 +646,7 @@ class FullNodeRpcApi:
         if self.service.hint_store is None:
             return {"coin_records": []}
 
-        names: List[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
+        names: List[CoinID] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
 
         kwargs: Dict[str, Any] = {
             "include_spent_coins": False,
@@ -670,14 +671,15 @@ class FullNodeRpcApi:
 
         spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
+        spend_bundle_id = SpendBundleID(spend_name)
 
-        if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
+        if self.service.mempool_manager.get_spendbundle(spend_bundle_id) is not None:
             status = MempoolInclusionStatus.SUCCESS
             error = None
         else:
             status, error = await self.service.respond_transaction(spend_bundle, spend_name)
             if status != MempoolInclusionStatus.SUCCESS:
-                if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
+                if self.service.mempool_manager.get_spendbundle(spend_bundle_id) is not None:
                     # Already in mempool
                     status = MempoolInclusionStatus.SUCCESS
                     error = None
@@ -690,7 +692,7 @@ class FullNodeRpcApi:
         }
 
     async def get_puzzle_and_solution(self, request: Dict) -> EndpointResult:
-        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
+        coin_name = CoinID(bytes32.from_hexstr(request["coin_id"]))
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
@@ -749,8 +751,8 @@ class FullNodeRpcApi:
             raise ValueError("No tx_id in request")
         include_pending: bool = request.get("include_pending", False)
         tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
-
-        item = self.service.mempool_manager.get_mempool_item(tx_id, include_pending)
+        spend_bundle_id = SpendBundleID(tx_id)
+        item = self.service.mempool_manager.get_mempool_item(spend_bundle_id, include_pending)
         if item is None:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
@@ -768,11 +770,8 @@ class FullNodeRpcApi:
 
         cost = 0
         if "spend_bundle" in request:
-            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
-            spend_name = spend_bundle.name()
-            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_name
-            )
+            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, None)
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
             cost = npc_result.cost
