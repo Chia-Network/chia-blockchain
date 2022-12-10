@@ -13,7 +13,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint64
 from tests.util.temp_file import TempFile
@@ -33,22 +33,22 @@ class TestDbUpgrade:
 
         blocks = default_1000_blocks
 
-        hints: List[Tuple[bytes32, bytes]] = []
+        hints: List[Tuple[CoinID, bytes]] = []
         for i in range(351):
-            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+            hints.append((bytes_to_CoinID(rand_bytes(32)), rand_bytes(20)))
 
         # the v1 schema allows duplicates in the hints table
         for i in range(10):
-            coin_id = bytes32(rand_bytes(32))
+            coin_id = bytes_to_CoinID(rand_bytes(32))
             hint = rand_bytes(20)
             hints.append((coin_id, hint))
             hints.append((coin_id, hint))
 
         for i in range(2000):
-            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+            hints.append((bytes_to_CoinID(rand_bytes(32)), rand_bytes(20)))
 
         for i in range(5):
-            coin_id = bytes32(rand_bytes(32))
+            coin_id = bytes_to_CoinID(rand_bytes(32))
             hint = rand_bytes(20)
             hints.append((coin_id, hint))
             hints.append((coin_id, hint))
@@ -134,7 +134,7 @@ class TestDbUpgrade:
                         block.height
                     ) == await coin_store2.get_coins_removed_at_height(block.height)
                     for c in coins:
-                        n = c.coin.name()
+                        n = CoinID(c.coin.name())
                         assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)
             finally:
                 await db_wrapper1.close()

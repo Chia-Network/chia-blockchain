@@ -6,14 +6,15 @@ from chia_rs import compute_merkle_set_root
 
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID
 from chia.util.errors import Err
 
 
 def validate_block_merkle_roots(
     block_additions_root: bytes32,
     block_removals_root: bytes32,
-    tx_additions: Optional[List[Tuple[Coin, bytes32]]] = None,
-    tx_removals: Optional[List[bytes32]] = None,
+    tx_additions: Optional[List[Tuple[Coin, CoinID]]] = None,
+    tx_removals: Optional[List[CoinID]] = None,
 ) -> Optional[Err]:
     if tx_removals is None:
         tx_removals = []

@@ -8,6 +8,7 @@ import pytest
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import TransactionRecordID
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
@@ -35,7 +36,7 @@ tr1 = TransactionRecord(
     [],  # List[Tuple[str, uint8, Optional[str]]] sent_to
     bytes32(token_bytes(32)),  # trade_id
     uint32(TransactionType.OUTGOING_TX),  # type
-    bytes32(token_bytes(32)),  # name
+    TransactionRecordID(bytes32(token_bytes(32))),  # name
     [],  # List[Tuple[bytes32, List[bytes]]] memos
 )
 

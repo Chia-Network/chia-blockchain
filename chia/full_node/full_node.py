@@ -51,6 +51,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
+from chia.types.borderlands import CoinID, SpendBundleID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -79,10 +80,12 @@ from chia.util.safe_cancel_task import cancel_task_safe
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]  # The result of calling MempoolManager.new_peak
+    mempool_peak_result: List[
+        Tuple[SpendBundle, NPCResult, SpendBundleID]
+    ]  # The result of calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
-    hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
-    lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
+    hints: List[Tuple[CoinID, bytes]]  # The hints added to the DB
+    lookup_coin_ids: List[CoinID]  # The coin IDs that we need to look up to notify wallets of changes
 
 
 class FullNode:
@@ -111,7 +114,7 @@ class FullNode:
     # Puzzle Hash : Set[Peer ID]
     ph_subscriptions: Dict[bytes32, Set[bytes32]]
     # Peer ID: Set[Coin ids]
-    peer_coin_ids: Dict[bytes32, Set[bytes32]]
+    peer_coin_ids: Dict[bytes32, Set[CoinID]]
     # Peer ID: Set[puzzle_hash]
     peer_puzzle_hash: Dict[bytes32, Set[bytes32]]
     # Peer ID: subscription count
@@ -178,9 +181,9 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions = {}
+        self.coin_subscriptions: Dict[CoinID, Set[bytes32]] = {}
         self.ph_subscriptions = {}
-        self.peer_coin_ids = {}
+        self.peer_coin_ids: Dict[bytes32, Set[CoinID]] = {}
         self.peer_puzzle_hash = {}
         self.peer_sub_counter = {}
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1191,20 +1194,20 @@ class FullNode:
     async def update_wallets(
         self,
         state_change_summary: StateChangeSummary,
-        hints: List[Tuple[bytes32, bytes]],
-        lookup_coin_ids: List[bytes32],
+        hints: List[Tuple[CoinID, bytes]],
+        lookup_coin_ids: List[CoinID],
     ) -> None:
         # Looks up coin records in DB for the coins that wallets are interested in
         new_states: List[CoinRecord] = await self.coin_store.get_coin_records(list(lookup_coin_ids))
 
         # Re-arrange to a map, and filter out any non-ph sized hint
-        coin_id_to_ph_hint: Dict[bytes32, bytes32] = {
+        coin_id_to_ph_hint: Dict[CoinID, bytes32] = {
             coin_id: bytes32(hint) for coin_id, hint in hints if len(hint) == 32
         }
 
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
-            cr_name: bytes32 = coin_record.name
+            cr_name: CoinID = bytes_to_CoinID(coin_record.name)
             for peer in self.coin_subscriptions.get(cr_name, []):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
@@ -1511,7 +1514,7 @@ class FullNode:
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
-        mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
+        mempool_new_peak_result = await self.mempool_manager.new_peak(
             self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
         )
 
@@ -2211,7 +2214,7 @@ class FullNode:
     async def respond_transaction(
         self,
         transaction: SpendBundle,
-        spend_name: bytes32,
+        spend_name_bytes: bytes32,
         peer: Optional[WSChiaConnection] = None,
         test: bool = False,
         tx_bytes: Optional[bytes] = None,
@@ -2221,6 +2224,7 @@ class FullNode:
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
+        spend_name = SpendBundleID(spend_name_bytes)
         if self.mempool_manager.get_spendbundle(spend_name) is not None:
             self.mempool_manager.remove_seen(spend_name)
             return MempoolInclusionStatus.SUCCESS, None
@@ -2235,7 +2239,9 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(
+                    transaction, tx_bytes, spend_bundle_id=spend_name
+                )
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code

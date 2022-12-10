@@ -18,6 +18,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import TransactionRecordID, bytes_to_CoinID
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
@@ -643,7 +644,7 @@ class TestWalletSimulator:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=name,
+            name=TransactionRecordID(name),
             memos=list(compute_memos(stolen_sb).items()),
         )
         await wallet.push_transaction(stolen_tx)
@@ -748,20 +749,20 @@ class TestWalletSimulator:
         assert len(unconfirmed) == 0
         tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx.name)
         assert tx_record is not None
-        removed = tx_record.removals[0]
-        added = tx_record.additions[0]
-        added_1 = tx_record.additions[1]
-        wallet_coin_record_rem = await wallet_node.wallet_state_manager.coin_store.get_coin_record(removed.name())
+        removed_id = bytes_to_CoinID(tx_record.removals[0].name())
+        added_id_0 = bytes_to_CoinID(tx_record.additions[0].name())
+        added_id_1 = bytes_to_CoinID(tx_record.additions[1].name())
+        wallet_coin_record_rem = await wallet_node.wallet_state_manager.coin_store.get_coin_record(removed_id)
         assert wallet_coin_record_rem is not None
         assert wallet_coin_record_rem.spent
 
-        coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(removed.name())
+        coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(removed_id)
         assert coin_record_full_node is not None
         assert coin_record_full_node.spent
-        add_1_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added.name())
+        add_1_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added_id_0)
         assert add_1_coin_record_full_node is not None
         assert add_1_coin_record_full_node.confirmed_block_index > 0
-        add_2_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added_1.name())
+        add_2_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added_id_1)
         assert add_2_coin_record_full_node is not None
         assert add_2_coin_record_full_node.confirmed_block_index > 0
 

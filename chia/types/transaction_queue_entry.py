@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import SpendBundleID
 from chia.types.spend_bundle import SpendBundle
 
 
@@ -16,7 +16,7 @@ class TransactionQueueEntry:
 
     transaction: SpendBundle
     transaction_bytes: Optional[bytes]
-    spend_name: bytes32
+    spend_name: SpendBundleID
     peer: Optional[WSChiaConnection]
     test: bool
 

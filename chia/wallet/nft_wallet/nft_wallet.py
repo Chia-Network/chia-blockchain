@@ -16,6 +16,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -662,7 +663,7 @@ class NFTWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
+                name=TransactionRecordID(spend_bundle.name()),
                 memos=list(compute_memos(spend_bundle).items()),
             ),
         ]
