@@ -15,7 +15,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
@@ -133,7 +133,7 @@ class WebSocketServer:
     ):
         self.root_path = root_path
         self.log = log
-        self.services: Dict = dict()
+        self.services: Dict[str, List[subprocess.Popen]] = dict()
         self.plots_queue: List[Dict] = []
         self.connections: Dict[str, List[WebSocketResponse]] = dict()  # service_name : [WebSocket]
         self.remote_address_map: Dict[WebSocketResponse, str] = dict()  # socket: service_name
@@ -1017,7 +1017,7 @@ class WebSocketServer:
                 run_next = True
                 config["state"] = PlotState.REMOVING
                 self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
-                await kill_process(process, self.root_path, service_plotter, id)
+                await kill_processes([process], self.root_path, service_plotter, id)
 
             config["state"] = PlotState.FINISHED
             config["deleted"] = True
@@ -1053,9 +1053,8 @@ class WebSocketServer:
             error = "unknown service"
 
         if service_command in self.services:
-            service = self.services[service_command]
-            r = service is not None and service.poll() is None
-            if r is False:
+            processes = self.services[service_command]
+            if all(process.poll() is not None for process in processes):
                 self.services.pop(service_command)
                 error = None
             else:
@@ -1075,7 +1074,7 @@ class WebSocketServer:
                 if testing is True:
                     exe_command = f"{service_command} --testing=true"
                 process, pid_path = launch_service(self.root_path, exe_command)
-                self.services[service_command] = process
+                self.services[service_command] = [process]
                 success = True
             except (subprocess.SubprocessError, IOError):
                 log.exception(f"problem starting {service_command}")
@@ -1091,12 +1090,13 @@ class WebSocketServer:
         return response
 
     def is_service_running(self, service_name: str) -> bool:
+        processes: List[subprocess.Popen]
         if service_name == service_plotter:
-            processes = self.services.get(service_name)
-            is_running = processes is not None and len(processes) > 0
+            processes = self.services.get(service_name, [])
+            is_running = len(processes) > 0
         else:
-            process = self.services.get(service_name)
-            is_running = process is not None and process.poll() is None
+            processes = self.services.get(service_name, [])
+            is_running = any(process.poll() is None for process in processes)
             if not is_running:
                 # Check if we have a connection to the requested service. This might be the
                 # case if the service was started manually (i.e. not started by the daemon).
@@ -1263,22 +1263,14 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     return process, pid_path
 
 
-async def kill_process(
-    process: Union[subprocess.Popen, List[subprocess.Popen]],
+async def kill_processes(
+    processes: List[subprocess.Popen],
     root_path: Path,
     service_name: str,
     id: str,
     delay_before_kill: int = 15,
 ) -> bool:
     pid_path = pid_path_for_service(root_path, service_name, id)
-
-    processes: List[subprocess.Popen]
-    if service_name == service_plotter:
-        # WebSocketServer.services has process values for every service but the
-        # plotter which has a list of processes.
-        processes = cast(List[subprocess.Popen], process)
-    else:
-        processes = [cast(subprocess.Popen, process)]
 
     if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
@@ -1317,13 +1309,13 @@ async def kill_process(
 
 
 async def kill_service(
-    root_path: Path, services: Dict[str, subprocess.Popen], service_name: str, delay_before_kill: int = 15
+    root_path: Path, services: Dict[str, List[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
 ) -> bool:
-    process = services.get(service_name)
-    if process is None:
+    processes = services.get(service_name)
+    if processes is None:
         return False
     del services[service_name]
-    result = await kill_process(process, root_path, service_name, "", delay_before_kill)
+    result = await kill_processes(processes, root_path, service_name, "", delay_before_kill)
     return result
 
 
