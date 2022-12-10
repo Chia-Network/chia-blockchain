@@ -1176,8 +1176,7 @@ class NFTWallet:
         :param fee: A fee amount, taken out of the xch spend.
         """
         # get DID Wallet
-        for wallet_id in self.wallet_state_manager.wallets:
-            wallet = self.wallet_state_manager.wallets[wallet_id]
+        for wallet in self.wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DECENTRALIZED_ID.value:
                 if self.get_did() == bytes32.from_hexstr(wallet.get_my_DID()):
                     did_wallet = wallet

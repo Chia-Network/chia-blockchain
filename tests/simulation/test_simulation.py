@@ -229,12 +229,13 @@ class TestSimulation:
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
     async def test_simulation_farm_blocks(
         self,
+        self_hostname: str,
         count,
         one_wallet_node: SimulatorsAndWallets,
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -278,13 +279,14 @@ class TestSimulation:
     )
     async def test_simulation_farm_rewards(
         self,
+        self_hostname: str,
         amount: int,
         coin_count: int,
         one_wallet_node: SimulatorsAndWallets,
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -308,13 +310,14 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_wait_transaction_records_entered_mempool(
         self,
+        self_hostname: str,
         one_wallet_node: SimulatorsAndWallets,
     ) -> None:
         repeats = 50
         tx_amount = 1
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -345,6 +348,7 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_process_transactions(
         self,
+        self_hostname: str,
         one_wallet_node: SimulatorsAndWallets,
         records_or_bundles_or_coins: str,
     ) -> None:
@@ -353,7 +357,7 @@ class TestSimulation:
         tx_per_repeat = 2
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -414,12 +418,13 @@ class TestSimulation:
     )
     async def test_create_coins_with_amounts(
         self,
+        self_hostname: str,
         amounts: List[int],
         one_wallet_node: SimulatorsAndWallets,
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -446,12 +451,13 @@ class TestSimulation:
     )
     async def test_create_coins_with_invalid_amounts_raises(
         self,
+        self_hostname: str,
         amounts: List[int],
         one_wallet_node: SimulatorsAndWallets,
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
