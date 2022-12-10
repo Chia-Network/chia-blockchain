@@ -82,6 +82,16 @@ def validate_clvm_and_signature(
 
 class MempoolManager:
     pool: Executor
+    constants: ConsensusConstants
+    seen_bundle_hashes: Dict[bytes32, bytes32]
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+    nonzero_fee_minimum_fpc: int
+    limit_factor: float
+    mempool_max_total_cost: int
+    potential_cache: PendingTxCache
+    seen_cache_size: int
+    peak: Optional[BlockRecord]
+    mempool: Mempool
 
     def __init__(
         self,
