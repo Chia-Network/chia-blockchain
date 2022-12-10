@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Tuple
+from typing import List, Optional
 
 import click
 
@@ -48,7 +48,7 @@ def coins_cmd(ctx: click.Context) -> None:
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
-    help="Exclude any coins with this amount from being included.",
+    help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
     "--paginate/--no-paginate",
@@ -64,8 +64,8 @@ def list_cmd(
     show_unconfirmed: bool,
     min_amount: str,
     max_amount: str,
-    coins_to_exclude: Tuple[str],
-    amounts_to_exclude: Tuple[int],
+    coins_to_exclude: List[str],
+    amounts_to_exclude: List[int],
     paginate: Optional[bool],
 ) -> None:
     config = load_config(ctx.obj["root_path"], "config.yaml", "wallet")
@@ -75,7 +75,7 @@ def list_cmd(
         "max_coin_amount": max_amount,
         "min_coin_amount": min_amount,
         "excluded_amounts": amounts_to_exclude,
-        "excluded_coin_ids": list(coins_to_exclude),
+        "excluded_coin_ids": coins_to_exclude,
         "addr_prefix": address_prefix,
         "show_unconfirmed": show_unconfirmed,
         "paginate": paginate,
@@ -112,7 +112,7 @@ def list_cmd(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
-    help="Exclude any coins with this amount from being included.",
+    help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
     "-n",
@@ -156,11 +156,11 @@ def combine_cmd(
     id: int,
     target_amount: str,
     min_amount: str,
-    amounts_to_exclude: Tuple[int],
+    amounts_to_exclude: List[int],
     number_of_coins: int,
     max_dust_amount: str,
     fee: str,
-    input_coins: Tuple[str],
+    input_coins: List[str],
     largest_first: bool,
 ) -> None:
     extra_params = {
