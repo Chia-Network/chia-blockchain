@@ -45,6 +45,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.borderlands import CoinID, SpendBundleID, bytes_to_CoinID, bytes_to_SpendBundleID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -221,7 +222,7 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
-        spend_bundle = self.full_node.mempool_manager.get_spendbundle(request.transaction_id)
+        spend_bundle = self.full_node.mempool_manager.get_spendbundle(SpendBundleID(request.transaction_id))
         if spend_bundle is None:
             return None
 
@@ -252,7 +253,8 @@ class FullNodeAPI:
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
             await self.full_node.transaction_queue.put(
-                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+                TransactionQueueEntry(tx.transaction, tx_bytes, SpendBundleID(spend_name), peer, test),
+                peer.peer_node_id,
             )
         except TransactionQueueFull:
             pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
@@ -1085,7 +1087,7 @@ class FullNodeAPI:
         if block is None:
             return None
 
-        tx_removals: List[bytes32] = []
+        tx_removals: List[CoinID] = []
         tx_additions: List[Coin] = []
 
         if block.transactions_generator is not None:
@@ -1240,7 +1242,7 @@ class FullNodeAPI:
     async def send_transaction(
         self, request: wallet_protocol.SendTransaction, *, test: bool = False
     ) -> Optional[Message]:
-        spend_name = request.transaction.name()
+        spend_name = bytes_to_SpendBundleID(request.transaction.name())
         if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
             self.full_node.mempool_manager.remove_seen(spend_name)
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
@@ -1279,7 +1281,7 @@ class FullNodeAPI:
 
     @api_request()
     async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
-        coin_name = request.coin_name
+        coin_name = bytes_to_CoinID(request.coin_name)
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
         reject = wallet_protocol.RejectPuzzleSolution(coin_name, height)
@@ -1384,7 +1386,7 @@ class FullNodeAPI:
                 added_coins_records_coroutine, removed_coins_records_coroutine
             )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
-            removal_names = [record.coin.name() for record in removed_coins_records]
+            removal_names = [CoinID(record.coin.name()) for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)
             header_blocks.append(header_block)
 
@@ -1493,7 +1495,7 @@ class FullNodeAPI:
         if peer.peer_node_id not in self.full_node.peer_sub_counter:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
         max_items = self.full_node.config.get("max_subscribe_items", 200000)
-        for coin_id in request.coin_ids:
+        for coin_id in [bytes_to_CoinID(id) for id in request.coin_ids]:
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
             if (
@@ -1504,8 +1506,9 @@ class FullNodeAPI:
                 self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
                 self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
+        coin_ids = [bytes_to_CoinID(c) for c in request.coin_ids]
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
+            include_spent_coins=True, coin_ids=coin_ids, min_height=request.min_height
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
@@ -1515,7 +1518,7 @@ class FullNodeAPI:
     @api_request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
         coin_records: List[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
-            True, [request.coin_name]
+            True, [bytes_to_CoinID(request.coin_name)]
         )
         states = [record.coin_state for record in coin_records]
         response = wallet_protocol.RespondChildren(states)

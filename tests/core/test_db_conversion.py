@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import pytest
 
@@ -11,9 +11,10 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_management import Hint
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint64
 from tests.util.temp_file import TempFile
@@ -33,25 +34,25 @@ class TestDbUpgrade:
 
         blocks = default_1000_blocks
 
-        hints: List[Tuple[bytes32, bytes]] = []
+        hints: List[Hint] = []
         for i in range(351):
-            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+            hints.append(Hint(bytes_to_CoinID(rand_bytes(32)), rand_bytes(20)))
 
         # the v1 schema allows duplicates in the hints table
         for i in range(10):
-            coin_id = bytes32(rand_bytes(32))
+            coin_id = bytes_to_CoinID(rand_bytes(32))
             hint = rand_bytes(20)
-            hints.append((coin_id, hint))
-            hints.append((coin_id, hint))
+            hints.append(Hint(coin_id, hint))
+            hints.append(Hint(coin_id, hint))
 
         for i in range(2000):
-            hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+            hints.append(Hint(bytes_to_CoinID(rand_bytes(32)), rand_bytes(20)))
 
         for i in range(5):
-            coin_id = bytes32(rand_bytes(32))
+            coin_id = bytes_to_CoinID(rand_bytes(32))
             hint = rand_bytes(20)
-            hints.append((coin_id, hint))
-            hints.append((coin_id, hint))
+            hints.append(Hint(coin_id, hint))
+            hints.append(Hint(coin_id, hint))
 
         with TempFile() as in_file, TempFile() as out_file:
 
@@ -70,7 +71,7 @@ class TestDbUpgrade:
                     hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
                     for h in hints:
                         assert hint_store1 is not None
-                        await hint_store1.add_hints([(h[0], h[1])])
+                        await hint_store1.add_hints([h])
                 else:
                     hint_store1 = None
 
@@ -105,8 +106,8 @@ class TestDbUpgrade:
                     # check hints
                     for h in hints:
                         assert hint_store1 is not None
-                        assert h[0] in await hint_store1.get_coin_ids(h[1])
-                        assert h[0] in await hint_store2.get_coin_ids(h[1])
+                        assert h.coin_id in await hint_store1.get_coin_ids(h.hint_bytes)
+                        assert h.coin_id in await hint_store2.get_coin_ids(h.hint_bytes)
 
                 # check peak
                 assert await block_store1.get_peak() == await block_store2.get_peak()
@@ -134,7 +135,7 @@ class TestDbUpgrade:
                         block.height
                     ) == await coin_store2.get_coins_removed_at_height(block.height)
                     for c in coins:
-                        n = c.coin.name()
+                        n = CoinID(c.coin.name())
                         assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)
             finally:
                 await db_wrapper1.close()

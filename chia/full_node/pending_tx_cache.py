@@ -21,10 +21,10 @@ class PendingTxCache:
         Adds SpendBundles that have failed to be added to the pool in potential tx set.
         This is later used to retry to add them.
         """
-        if item.spend_bundle_name in self._txs:
+        if item.name in self._txs:
             return None
 
-        self._txs[item.spend_bundle_name] = item
+        self._txs[item.name] = item
         self._cache_cost += item.cost
 
         while self._cache_cost > self._cache_max_total_cost:

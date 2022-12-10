@@ -36,6 +36,7 @@ from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -427,7 +428,7 @@ class Blockchain(BlockchainInterface):
 
     async def get_tx_removals_and_additions(
         self, block: FullBlock, npc_result: Optional[NPCResult] = None
-    ) -> Tuple[List[bytes32], List[Coin], Optional[NPCResult]]:
+    ) -> Tuple[List[CoinID], List[Coin], Optional[NPCResult]]:
 
         if not block.is_transaction_block():
             return [], [], None
@@ -780,7 +781,9 @@ class Blockchain(BlockchainInterface):
                 ]
                 removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
                 header = get_block_header(
-                    block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
+                    block,
+                    [record.coin for record in tx_additions],
+                    [bytes_to_CoinID(record.coin.name()) for record in removed],
                 )
             header_blocks[header.header_hash] = header
 
