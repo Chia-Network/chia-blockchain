@@ -148,6 +148,13 @@ if [ "$(uname)" = "Linux" ]; then
       sudo dnf install -y nodejs
     fi
     do_install_npm_locally
+  elif type pacman >/dev/null 2>&1 && [ -f /etc/arch-release ]; then
+    #Arch Linux
+    if ! nodejs_is_installed; then
+      echo "Installing nodejs on Arch Linux"
+      sudo pacman -S nodejs npm
+    fi
+    do_install_npm_locally
   fi
 elif [ "$(uname)" = "Darwin" ] && type brew >/dev/null 2>&1; then
   # MacOS
