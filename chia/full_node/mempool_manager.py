@@ -160,11 +160,12 @@ class MempoolManager:
             if broke_from_inner_loop:
                 break
             for item in dic.values():
+                if not item_inclusion_filter(self, item):
+                    continue
                 log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
                 if (
                     item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
-                    and item_inclusion_filter(self, item)
                 ):
                     spend_bundles.append(item.spend_bundle)
                     cost_sum += item.cost
@@ -394,19 +395,11 @@ class MempoolManager:
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         additions: List[Coin] = additions_for_npc(npc_result)
-
         additions_dict: Dict[bytes32, Coin] = {}
+        addition_amount: int = 0
         for add in additions:
             additions_dict[add.name()] = add
-
-        addition_amount: int = 0
-        # Check additions for max coin amount
-        for coin in additions:
-            if coin.amount < 0:
-                return Err.COIN_AMOUNT_NEGATIVE, None, []
-            if coin.amount > self.constants.MAX_COIN_AMOUNT:
-                return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None, []
-            addition_amount = addition_amount + coin.amount
+            addition_amount = addition_amount + add.amount
         # Check for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():

@@ -30,6 +30,9 @@ class Capability(IntEnum):
     # Whether to actually use compression is settable in config, both for sender and receiver
     CAN_DECOMPRESS_MESSAGES = 4
 
+    # a node can handle a None response and not wait the full timeout
+    NONE_RESPONSE = 4
+
 
 @streamable
 @dataclass(frozen=True)
@@ -47,5 +50,6 @@ capabilities = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+    (uint16(Capability.NONE_RESPONSE.value), "1"),
 ]
 # The capability CAN_DECOMPRESS_MESSAGES is conditionally added in ChiaServer
