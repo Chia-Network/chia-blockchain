@@ -117,4 +117,4 @@ class ProtocolMessageTypes(Enum):
     # Compression protocol (full_node <-> full_node)
     # compressed message that is handled transparently in a low-level fashion
     # Not to be used by "user code" - used by WSChiaConnection between full nodes
-    wrapped_compressed = 91
+    wrapped_compressed = 92

@@ -26,12 +26,13 @@ class Capability(IntEnum):
     # if peer A support v3 and peer B supports v2, they should send:
     # (BASE, RATE_LIMITS_V2, RATE_LIMITS_V3), and (BASE, RATE_LIMITS_V2) respectively. They will use the V2 limits.
     RATE_LIMITS_V2 = 3
-    # Specifies if the receiver can handle compressed messages
-    # Whether to actually use compression is settable in config, both for sender and receiver
-    CAN_DECOMPRESS_MESSAGES = 4
 
     # a node can handle a None response and not wait the full timeout
     NONE_RESPONSE = 4
+
+    # Specifies if the receiver can handle compressed messages
+    # Whether to actually use compression is settable in config, both for sender and receiver
+    CAN_DECOMPRESS_MESSAGES = 5
 
 
 @streamable
