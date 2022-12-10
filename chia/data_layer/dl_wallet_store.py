@@ -8,6 +8,7 @@ from aiosqlite import Row
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
@@ -20,7 +21,7 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
         bytes32(row[0]),
         bytes32(row[1]),
         bytes32(row[2]),
-        bytes32(row[3]),
+        PuzzleHash(bytes32(row[3])),
         bool(row[4]),
         uint32(row[5]),
         LineageProof.from_bytes(row[6]),

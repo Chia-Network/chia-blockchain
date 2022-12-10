@@ -17,6 +17,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash, TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.generator_types import BlockGenerator
@@ -165,7 +166,7 @@ class CATWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=[],
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
@@ -284,7 +285,7 @@ class CATWallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             txs = await self.generate_signed_transaction(
-                [uint64(coin.amount)], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
+                [uint64(coin.amount)], [PuzzleHash(coin.puzzle_hash)], coins={coin}, ignore_max_send_amount=True
             )
             assert txs[0].spend_bundle
             program: BlockGenerator = simple_solution_generator(txs[0].spend_bundle)
@@ -663,7 +664,7 @@ class CATWallet:
             primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
 
         if change > 0:
-            changepuzzlehash = await self.get_new_inner_hash()
+            changepuzzlehash = PuzzleHash(await self.get_new_inner_hash())
             primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change), "memos": []})
 
         limitations_program_reveal = Program.to([])
@@ -755,7 +756,7 @@ class CATWallet:
     async def generate_signed_transaction(
         self,
         amounts: List[uint64],
-        puzzle_hashes: List[bytes32],
+        puzzle_hashes: List[PuzzleHash],
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         ignore_max_send_amount: bool = False,
@@ -813,7 +814,7 @@ class CATWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
+                name=TransactionRecordID(spend_bundle.name()),
                 memos=list(compute_memos(spend_bundle).items()),
             )
         ]

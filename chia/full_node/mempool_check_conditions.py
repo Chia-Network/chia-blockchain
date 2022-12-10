@@ -11,7 +11,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.generator import setup_generator_args
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
@@ -87,7 +87,7 @@ def get_puzzle_and_solution_for_coin(
 
 
 def mempool_check_time_locks(
-    removal_coin_records: Dict[bytes32, CoinRecord],
+    removal_coin_records: Dict[CoinID, CoinRecord],
     bundle_conds: SpendBundleConditions,
     prev_transaction_block_height: uint32,
     timestamp: uint64,
@@ -102,7 +102,7 @@ def mempool_check_time_locks(
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
     for spend in bundle_conds.spends:
-        unspent = removal_coin_records[bytes32(spend.coin_id)]
+        unspent = removal_coin_records[bytes_to_CoinID(spend.coin_id)]
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED

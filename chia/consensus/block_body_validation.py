@@ -19,7 +19,8 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, PublicKeyBytes, bytes_to_CoinID
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -148,14 +149,14 @@ async def validate_block_body(
     if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
         return Err.INVALID_REWARD_COINS, None
 
-    removals: List[bytes32] = []
+    removals: List[CoinID] = []
 
     # we store coins paired with their names in order to avoid computing the
     # coin name multiple times, we store it next to the coin while validating
     # the block
-    coinbase_additions: List[Tuple[Coin, bytes32]] = [(c, c.name()) for c in expected_reward_coins]
-    additions: List[Tuple[Coin, bytes32]] = []
-    removals_puzzle_dic: Dict[bytes32, bytes32] = {}
+    coinbase_additions: List[Tuple[Coin, CoinID]] = [(c, bytes_to_CoinID(c.name())) for c in expected_reward_coins]
+    additions: List[Tuple[Coin, CoinID]] = []
+    removals_coin_id_to_puzzle: Dict[CoinID, bytes32] = {}
     cost: uint64 = uint64(0)
 
     # In header validation we check that timestamp is not more than 5 minutes into the future
@@ -213,11 +214,11 @@ async def validate_block_body(
         assert npc_result.conds is not None
 
         for spend in npc_result.conds.spends:
-            removals.append(bytes32(spend.coin_id))
-            removals_puzzle_dic[bytes32(spend.coin_id)] = bytes32(spend.puzzle_hash)
+            removals.append(bytes_to_CoinID(spend.coin_id))
+            removals_coin_id_to_puzzle[bytes_to_CoinID(spend.coin_id)] = bytes32(spend.puzzle_hash)
             for puzzle_hash, amount, _ in spend.create_coin:
                 c = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                additions.append((c, c.name()))
+                additions.append((c, bytes_to_CoinID(c.name())))
     else:
         assert npc_result is None
 
@@ -286,8 +287,8 @@ async def validate_block_body(
     # Get additions and removals since (after) fork_h but not including this block
     # The values include: the coin that was added, the height of the block in which it was confirmed, and the
     # timestamp of the block in which it was confirmed
-    additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = {}  # This includes coinbase additions
-    removals_since_fork: Set[bytes32] = set()
+    additions_since_fork: Dict[CoinID, Tuple[Coin, uint32, uint64]] = {}  # This includes coinbase additions
+    removals_since_fork: Set[CoinID] = set()
 
     # For height 0, there are no additions and removals before this block, so we can skip
     if height > 0:
@@ -328,13 +329,13 @@ async def validate_block_body(
                 assert c_name not in removals_since_fork
                 removals_since_fork.add(c_name)
             for c in additions_in_curr:
-                coin_name = c.name()
+                coin_name = CoinID(c.name())
                 assert coin_name not in additions_since_fork
                 assert curr.foliage_transaction_block is not None
                 additions_since_fork[coin_name] = (c, curr.height, curr.foliage_transaction_block.timestamp)
 
             for coinbase_coin in curr.get_included_reward_coins():
-                coin_name = coinbase_coin.name()
+                coin_name = bytes_to_CoinID(coinbase_coin.name())
                 assert coin_name not in additions_since_fork
                 assert curr.foliage_transaction_block is not None
                 additions_since_fork[coin_name] = (
@@ -347,10 +348,10 @@ async def validate_block_body(
             curr = reorg_blocks[uint32(curr.height - 1)]
             assert curr is not None
 
-    removal_coin_records: Dict[bytes32, CoinRecord] = {}
+    removal_coin_records: Dict[CoinID, CoinRecord] = {}
     # the removed coins we need to look up from the DB
     # i.e. all non-ephemeral coins
-    removals_from_db: List[bytes32] = []
+    removals_from_db: List[CoinID] = []
     for rem in removals:
         if rem in additions_dic:
             # Ephemeral coin
@@ -375,7 +376,7 @@ async def validate_block_body(
 
     # some coin spends we need to ensure exist in the fork branch. Both coins we
     # can't find in the DB, but also coins that were spent after the fork point
-    look_in_fork: List[bytes32] = []
+    look_in_fork: List[CoinID] = []
     for unspent in unspent_records:
         if unspent.confirmed_block_index <= fork_h:
             # Spending something in the current chain, confirmed before fork
@@ -390,7 +391,7 @@ async def validate_block_body(
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
-        found: Set[bytes32] = set([u.name for u in unspent_records])
+        found: Set[CoinID] = set([u.name for u in unspent_records])
         for rem in removals_from_db:
             if rem in found:
                 continue
@@ -448,7 +449,7 @@ async def validate_block_body(
 
     # 20. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
     for unspent in removal_coin_records.values():
-        if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
+        if unspent.coin.puzzle_hash != removals_coin_id_to_puzzle[unspent.name]:
             return Err.WRONG_PUZZLE_HASH, None
 
     # 21. Verify conditions
@@ -465,7 +466,7 @@ async def validate_block_body(
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks: List[bytes48] = []
+    pairs_pks: List[PublicKeyBytes] = []
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None

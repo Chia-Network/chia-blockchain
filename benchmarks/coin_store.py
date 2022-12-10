@@ -12,7 +12,7 @@ from utils import rand_hash, rewards, setup_db
 
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 
@@ -26,13 +26,13 @@ def make_coin() -> Coin:
     return Coin(rand_hash(), rand_hash(), uint64(1))
 
 
-def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
+def make_coins(num: int) -> Tuple[List[Coin], List[CoinID]]:
     additions: List[Coin] = []
-    hashes: List[bytes32] = []
+    hashes: List[CoinID] = []
     for i in range(num):
         c = make_coin()
         additions.append(c)
-        hashes.append(c.name())
+        hashes.append(CoinID(c.name()))
 
     return additions, hashes
 
@@ -48,8 +48,8 @@ async def run_new_block_benchmark(version: int):
     try:
         coin_store = await CoinStore.create(db_wrapper)
 
-        all_unspent: List[bytes32] = []
-        all_coins: List[bytes32] = []
+        all_unspent: List[CoinID] = []
+        all_coins: List[CoinID] = []
 
         block_height = 1
         timestamp = 1631794488
@@ -150,8 +150,8 @@ async def run_new_block_benchmark(version: int):
             total_add += 1
 
             farmer_coin, pool_coin = rewards(uint32(height))
-            all_coins += [c.name()]
-            all_unspent += [c.name()]
+            all_coins += [CoinID(c.name())]
+            all_unspent += [CoinID(c.name())]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
             total_add += 2
 

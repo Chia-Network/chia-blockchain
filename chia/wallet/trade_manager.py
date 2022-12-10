@@ -14,6 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash, TransactionRecordID
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
@@ -277,7 +278,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
-                    name=cancellation_addition.name(),
+                    name=TransactionRecordID(cancellation_addition.name()),
                     memos=[],
                 )
             )
@@ -361,7 +362,7 @@ class TradeManager:
                         sent_to=[],
                         trade_id=None,
                         type=uint32(TransactionType.INCOMING_TX.value),
-                        name=cancellation_addition.name(),
+                        name=TransactionRecordID(cancellation_addition.name()),
                         memos=[],
                     )
                 )
@@ -472,7 +473,7 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
-                    requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
+                    requested_payments[asset_id] = [Payment(PuzzleHash(p2_ph), uint64(amount), memos)]
                 elif amount < 0:
                     # this is what we are sending in the trade
                     if isinstance(id, int):
@@ -643,7 +644,7 @@ class TradeManager:
                             sent_to=[],
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
-                            name=std_hash(final_spend_bundle.name() + addition.name()),
+                            name=TransactionRecordID(std_hash(final_spend_bundle.name() + addition.name())),
                             memos=[],
                         )
                     )
@@ -688,7 +689,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=offer.name(),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
-                    name=std_hash(final_spend_bundle.name() + removal_tree_hash),
+                    name=TransactionRecordID(std_hash(final_spend_bundle.name() + removal_tree_hash)),
                     memos=[],
                 )
             )
@@ -781,7 +782,7 @@ class TradeManager:
             sent_to=[],
             trade_id=bytes32([1] * 32),
             type=uint32(TransactionType.OUTGOING_TRADE.value),
-            name=final_spend_bundle.name(),
+            name=TransactionRecordID(final_spend_bundle.name()),
             memos=[],
         )
         await self.wallet_state_manager.add_pending_transaction(push_tx)

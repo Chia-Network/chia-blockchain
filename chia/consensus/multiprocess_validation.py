@@ -24,6 +24,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.borderlands import CoinID
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
@@ -72,7 +73,7 @@ def batch_pre_validate_blocks(
             try:
                 block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
                 tx_additions: List[Coin] = []
-                removals: List[bytes32] = []
+                removals: List[CoinID] = []
                 npc_result: Optional[NPCResult] = None
                 if block.height in npc_results:
                     npc_result = NPCResult.from_bytes(npc_results[block.height])

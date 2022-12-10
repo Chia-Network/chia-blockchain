@@ -5,6 +5,7 @@ from typing import Iterator, List, Optional, Tuple
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -178,7 +179,7 @@ def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
     return Program.to([2, (1, inner_puzzle), [6, 1]])
 
 
-def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
+def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: PuzzleHash) -> bytes32:
     puzzle = adapt_inner_to_singleton(Program.to(inner_puzzle_hash))
     return puzzle.get_tree_hash_precalc(inner_puzzle_hash)
 

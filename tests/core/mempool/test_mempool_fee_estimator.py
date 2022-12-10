@@ -14,6 +14,7 @@ from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.borderlands import SpendBundleID
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
@@ -42,7 +43,7 @@ async def test_basics() -> None:
                 fee,
                 NPCResult(None, None, cost),
                 cost,
-                spend_bundle.name(),
+                SpendBundleID(spend_bundle.name()),
                 [],
                 uint32(i - 1),
             )
@@ -54,7 +55,7 @@ async def test_basics() -> None:
                 fee1,
                 NPCResult(None, None, cost),
                 cost,
-                spend_bundle.name(),
+                SpendBundleID(spend_bundle.name()),
                 [],
                 uint32(i - 40),
             )
@@ -66,7 +67,7 @@ async def test_basics() -> None:
                 fee2,
                 NPCResult(None, None, cost),
                 cost,
-                spend_bundle.name(),
+                SpendBundleID(spend_bundle.name()),
                 [],
                 uint32(i - 270),
             )

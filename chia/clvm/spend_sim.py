@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar, Callable
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
+from chia.types.borderlands import CoinID, bytes_to_CoinID, SpendBundleID
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
@@ -212,7 +213,6 @@ class SpendSim:
             peak = self.mempool_manager.peak
             if peak is not None:
                 result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
-
                 if result is not None:
                     bundle, additions, removals = result
                     generator_bundle = bundle
@@ -220,7 +220,9 @@ class SpendSim:
                     return_removals = removals
 
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
-                    await self.coin_store._set_spent([r.name() for r in removals], uint32(self.block_height + 1))
+                    await self.coin_store._set_spent(
+                        [bytes_to_CoinID(r.name()) for r in removals], uint32(self.block_height + 1)
+                    )
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
@@ -270,19 +272,18 @@ class SimClient:
         self.service = service
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+        spend_bundle_id = SpendBundleID(spend_bundle.name())
         try:
-            cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle.name()
-            )
+            cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, None)
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
-            spend_bundle, cost_result, spend_bundle.name(), self.service.mempool_manager.peak.height
+            spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
         )
         return status, error
 
-    async def get_coin_record_by_name(self, name: bytes32) -> Optional[CoinRecord]:
+    async def get_coin_record_by_name(self, name: CoinID) -> Optional[CoinRecord]:
         return await self.service.coin_store.get_coin_record(name)
 
     async def get_coin_records_by_names(
@@ -370,7 +371,7 @@ class SimClient:
         removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block_height)
         return additions, removals
 
-    async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSpend]:
+    async def get_puzzle_and_solution(self, coin_id: CoinID, height: uint32) -> Optional[CoinSpend]:
         filtered_generators = list(filter(lambda block: block.height == height, self.service.blocks))
         # real consideration should be made for the None cases instead of just hint ignoring
         generator: BlockGenerator = filtered_generators[0].transactions_generator  # type: ignore[assignment]
@@ -384,16 +385,16 @@ class SimClient:
             assert solution is not None
             return CoinSpend(coin_record.coin, puzzle, solution)
 
-    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+    async def get_all_mempool_tx_ids(self) -> List[SpendBundleID]:
         return list(self.service.mempool_manager.mempool.spends.keys())
 
-    async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
+    async def get_all_mempool_items(self) -> Dict[SpendBundleID, MempoolItem]:
         spends = {}
         for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id] = item
         return spends
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict[str, Any]]:
+    async def get_mempool_item_by_tx_id(self, tx_id: SpendBundleID) -> Optional[Dict[str, Any]]:
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
             return None

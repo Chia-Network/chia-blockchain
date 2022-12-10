@@ -10,7 +10,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, SpendBundleID
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
@@ -20,9 +20,9 @@ from chia.util.ints import uint64
 class Mempool:
     def __init__(self, max_size_in_cost: int, minimum_fee_per_cost_to_replace: uint64, max_block_cost_clvm: uint64):
         self.log = logging.getLogger(__name__)
-        self.spends: Dict[bytes32, MempoolItem] = {}
+        self.spends: Dict[SpendBundleID, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
-        self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
+        self.removals: Dict[CoinID, List[SpendBundleID]] = {}  # From removal coin id to spend bundle ids
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
         self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
@@ -50,7 +50,7 @@ class Mempool:
         else:
             return 0
 
-    def remove_from_pool(self, items: List[bytes32]) -> None:
+    def remove_from_pool(self, items: List[SpendBundleID]) -> None:
         """
         Removes an item from the mempool.
         """
@@ -61,7 +61,7 @@ class Mempool:
             assert item.name == spend_bundle_id
             removals: List[Coin] = item.removals
             for rem in removals:
-                rem_name: bytes32 = rem.name()
+                rem_name = CoinID(rem.name())
                 self.removals[rem_name].remove(spend_bundle_id)
                 if len(self.removals[rem_name]) == 0:
                     del self.removals[rem_name]
@@ -95,7 +95,7 @@ class Mempool:
         self.sorted_spends[item.fee_per_cost][item.name] = item
 
         for coin in item.removals:
-            coin_id = coin.name()
+            coin_id = CoinID(coin.name())
             if coin_id not in self.removals:
                 self.removals[coin_id] = []
             self.removals[coin_id].append(item.name)

@@ -7,6 +7,7 @@ from blspy import G1Element
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
@@ -54,7 +55,7 @@ def get_inner_puzhash_by_p2(
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
-) -> bytes32:
+) -> PuzzleHash:
     """
     Calculate DID inner puzzle hash based on a P2 puzzle hash
     :param p2_puzhash: P2 puzzle hash
@@ -70,13 +71,15 @@ def get_inner_puzhash_by_p2(
 
     quoted_mod_hash = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
 
-    return curry_and_treehash(
-        quoted_mod_hash,
-        p2_puzhash,
-        Program.to(backup_ids_hash).get_tree_hash(),
-        Program.to(num_of_backup_ids_needed).get_tree_hash(),
-        Program.to(singleton_struct).get_tree_hash(),
-        metadata.get_tree_hash(),
+    return PuzzleHash(
+        curry_and_treehash(
+            quoted_mod_hash,
+            p2_puzhash,
+            Program.to(backup_ids_hash).get_tree_hash(),
+            Program.to(num_of_backup_ids_needed).get_tree_hash(),
+            Program.to(singleton_struct).get_tree_hash(),
+            metadata.get_tree_hash(),
+        )
     )
 
 

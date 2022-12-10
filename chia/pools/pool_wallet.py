@@ -25,6 +25,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.borderlands import TransactionRecordID, PuzzleHash
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -473,7 +474,7 @@ class PoolWallet:
             memos=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
+            name=TransactionRecordID(spend_bundle.name()),
         )
         await standard_wallet.push_transaction(standard_wallet_record)
         p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
@@ -632,7 +633,7 @@ class PoolWallet:
             trade_id=None,
             memos=[],
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=signed_spend_bundle.name(),
+            name=TransactionRecordID(signed_spend_bundle.name()),
         )
 
         await self.publish_transactions(tx_record, fee_tx)
@@ -697,7 +698,7 @@ class PoolWallet:
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
             amount,
-            genesis_launcher_puz.get_tree_hash(),
+            PuzzleHash(genesis_launcher_puz.get_tree_hash()),
             fee,
             launcher_parent.name(),
             coins,
@@ -903,7 +904,7 @@ class PoolWallet:
             memos=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=full_spend.name(),
+            name=TransactionRecordID(full_spend.name()),
         )
 
         await self.publish_transactions(absorb_transaction, fee_tx)

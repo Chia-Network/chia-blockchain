@@ -9,6 +9,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -26,7 +27,7 @@ from chia.wallet.trading.offer import NotarizedPayment, Offer
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
-acs_ph = acs.get_tree_hash()
+acs_ph = PuzzleHash(acs.get_tree_hash())
 
 
 # Some methods mapping strings to CATs
@@ -59,7 +60,7 @@ async def generate_coins(
             if tail_str:
                 tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
                 cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-                payments.append(Payment(cat_puzzle.get_tree_hash(), amount, []))
+                payments.append(Payment(PuzzleHash(cat_puzzle.get_tree_hash()), amount, []))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,

@@ -17,6 +17,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import PuzzleHash, TransactionRecordID
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -578,7 +579,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
                 {
-                    "puzzlehash": new_inner_puzzle.get_tree_hash(),
+                    "puzzlehash": PuzzleHash(new_inner_puzzle.get_tree_hash()),
                     "amount": uint64(coin.amount),
                     "memos": [p2_puzzle.get_tree_hash()],
                 }
@@ -651,7 +652,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -745,7 +746,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -773,7 +774,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
                 {
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    "puzzlehash": PuzzleHash(new_innerpuzzle.get_tree_hash()),
                     "amount": uint64(coin.amount),
                     "memos": [p2_puzzle.get_tree_hash()],
                 }
@@ -856,7 +857,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -880,7 +881,7 @@ class DIDWallet:
         assert coins is not None and coins != set()
         coin = coins.pop()
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
-        innermessage = message.get_tree_hash()
+        innermessage = PuzzleHash(message.get_tree_hash())
         innerpuz: Program = self.did_info.current_inner
         uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
         assert uncurried is not None
@@ -889,7 +890,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
                 {
-                    "puzzlehash": innerpuz.get_tree_hash(),
+                    "puzzlehash": PuzzleHash(innerpuz.get_tree_hash()),
                     "amount": uint64(coin.amount),
                     "memos": [p2_puzzle.get_tree_hash()],
                 },
@@ -937,7 +938,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
@@ -1065,7 +1066,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -1227,7 +1228,8 @@ class DIDWallet:
 
         origin = coins.copy().pop()
         genesis_launcher_puz = did_wallet_puzzles.LAUNCHER_PUZZLE
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
+        genesis_launcher_ph = genesis_launcher_puz.get_tree_hash()
+        launcher_coin = Coin(origin.name(), genesis_launcher_ph, amount)
 
         did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
         did_inner_hash = did_inner.get_tree_hash()
@@ -1239,7 +1241,7 @@ class DIDWallet:
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount, genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
+            amount, PuzzleHash(genesis_launcher_ph), fee, origin.name(), coins, None, False, announcement_set
         )
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
@@ -1297,7 +1299,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=TransactionRecordID(bytes32(token_bytes())),
             memos=[],
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
@@ -1314,7 +1316,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
                 {
-                    "puzzlehash": innerpuz.get_tree_hash(),
+                    "puzzlehash": PuzzleHash(innerpuz.get_tree_hash()),
                     "amount": uint64(coin.amount),
                     "memos": [p2_puzzle.get_tree_hash()],
                 }
@@ -1365,12 +1367,13 @@ class DIDWallet:
         )
         await self.save_info(did_info)
 
-    async def update_recovery_list(self, recover_list: List[bytes32], num_of_backup_ids_needed: uint64) -> bool:
+    async def update_recovery_list(self, recover_list: List[PuzzleHash], num_of_backup_ids_needed: uint64) -> bool:
         if num_of_backup_ids_needed > len(recover_list):
             return False
+        recover_list_bytes = [bytes32(ph) for ph in recover_list]
         did_info: DIDInfo = DIDInfo(
             self.did_info.origin_coin,
-            recover_list,
+            recover_list_bytes,
             num_of_backup_ids_needed,
             self.did_info.parent_info,
             self.did_info.current_inner,

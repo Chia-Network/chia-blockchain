@@ -12,6 +12,7 @@ from aiosqlite import Cursor
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID
 from chia.types.coin_record import CoinRecord
 from chia.util.chunks import chunks
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
@@ -117,7 +118,7 @@ class CoinStore:
         timestamp: uint64,
         included_reward_coins: Set[Coin],
         tx_additions: List[Coin],
-        tx_removals: List[bytes32],
+        tx_removals: List[CoinID],
     ) -> List[CoinRecord]:
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
@@ -167,12 +168,12 @@ class CoinStore:
         return additions
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
-    async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
+    async def get_coin_record(self, coin_name: CoinID) -> Optional[CoinRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp FROM coin_record WHERE coin_name=?",
-                (self.maybe_to_hex(coin_name),),
+                (self.maybe_to_hex(bytes32(coin_name)),),
             ) as cursor:
                 row = await cursor.fetchone()
                 if row is not None:
@@ -180,7 +181,7 @@ class CoinStore:
                     return CoinRecord(coin, row[0], row[1], row[2], row[6])
         return None
 
-    async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
+    async def get_coin_records(self, names: List[CoinID]) -> List[CoinRecord]:
         if len(names) == 0:
             return []
 
@@ -325,7 +326,7 @@ class CoinStore:
     async def get_coin_records_by_names(
         self,
         include_spent_coins: bool,
-        names: List[bytes32],
+        names: List[CoinID],
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
@@ -399,7 +400,7 @@ class CoinStore:
     async def get_coin_records_by_parent_ids(
         self,
         include_spent_coins: bool,
-        parent_ids: List[bytes32],
+        parent_ids: List[CoinID],
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
@@ -431,7 +432,7 @@ class CoinStore:
     async def get_coin_states_by_ids(
         self,
         include_spent_coins: bool,
-        coin_ids: List[bytes32],
+        coin_ids: List[CoinID],
         min_height: uint32 = uint32(0),
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
@@ -462,7 +463,7 @@ class CoinStore:
         Returns the list of coin records that have been modified
         """
 
-        coin_changes: Dict[bytes32, CoinRecord] = {}
+        coin_changes: Dict[CoinID, CoinRecord] = {}
         # Add coins that are confirmed in the reverted blocks to the list of updated coins.
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
@@ -547,7 +548,7 @@ class CoinStore:
                     )
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_names: List[bytes32], index: uint32) -> None:
+    async def _set_spent(self, coin_names: List[CoinID], index: uint32) -> None:
 
         assert len(coin_names) == 0 or index > 0
 
