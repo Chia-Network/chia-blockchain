@@ -18,6 +18,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
+from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -137,7 +138,7 @@ class WSChiaConnection:
             local_type=local_type,
             local_port=server_port,
             local_capabilities_for_handshake=local_capabilities_for_handshake,
-            local_capabilities=[Capability(x[0]) for x in local_capabilities_for_handshake if x[1] == "1"],
+            local_capabilities=known_active_capabilities(local_capabilities_for_handshake),
             peer_host=peer_host,
             peer_port=peername[1],
             peer_node_id=peer_id,
@@ -198,7 +199,7 @@ class WSChiaConnection:
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
-            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
+            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
         else:
             try:
                 message = await self._read_one_message()
@@ -224,7 +225,7 @@ class WSChiaConnection:
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
-            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
+            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
