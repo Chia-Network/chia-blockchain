@@ -49,3 +49,10 @@ capabilities = [
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
     (uint16(Capability.NONE_RESPONSE.value), "1"),
 ]
+
+# capabilities to send to nodes prior to 1.7
+limitedcapabilties = [
+    (uint16(Capability.BASE.value), "1"),
+    (uint16(Capability.BLOCK_HEADERS.value), "1"),
+    (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+]
