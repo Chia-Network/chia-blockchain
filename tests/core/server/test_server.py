@@ -8,7 +8,6 @@ import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability, capabilities
-from chia.server import ws_connection
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
@@ -27,10 +26,10 @@ async def test_duplicate_client_connection(
 
 
 @pytest.mark.asyncio
+@patch("chia.server.ws_connection.chia_full_version_str", MagicMock(return_value="1.5.0b657"))
 async def test_capabilities_back_comp_fix(
     two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
-    ws_connection.chia_full_version_str = MagicMock(return_value="1.5.0b657")
     _, _, server_1, server_2, _ = two_nodes
     assert await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
     con = server_2.get_connections()[0]
