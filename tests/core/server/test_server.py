@@ -44,4 +44,4 @@ async def test_capabilities_curr_version(
     assert await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
     con = server_2.get_connections()[0]
     for cap in capabilities:
-        assert Capability(cap[0]) in con.peer_capabilities
+        assert con.has_capability(Capability(cap[0]))
