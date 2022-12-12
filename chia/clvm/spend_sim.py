@@ -212,6 +212,7 @@ class SpendSim:
             peak = self.mempool_manager.peak
             if peak is not None:
                 result = await self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
+
                 if result is not None:
                     bundle, additions, removals = result
                     generator_bundle = bundle
@@ -269,16 +270,15 @@ class SimClient:
         self.service = service
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
-        spend_bundle_id = spend_bundle.name()
         try:
             cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle_id
+                spend_bundle, None, spend_bundle.name()
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
-            spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
+            spend_bundle, cost_result, spend_bundle.name(), self.service.mempool_manager.peak.height
         )
         return status, error
 

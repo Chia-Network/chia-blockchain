@@ -70,8 +70,7 @@ class CoinStore:
         if result.error is not None:
             raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")
 
-        ephemeral_db = dict(self._db.items())
-
+        ephemeral_db = dict(self._db)
         assert result.conds is not None
         for spend in result.conds.spends:
             for puzzle_hash, amount, hint in spend.create_coin:
@@ -114,7 +113,7 @@ class CoinStore:
         for spent_coin in removals:
             coin_name = spent_coin.name()
             coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=uint32(now.height))
+            self._db[coin_name] = replace(coin_record, spent_block_index=now.height)
         return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:

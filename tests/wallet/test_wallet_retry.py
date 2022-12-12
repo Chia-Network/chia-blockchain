@@ -9,7 +9,6 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
@@ -23,15 +22,15 @@ def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
 
 
-def assert_sb_not_in_pool(node: FullNodeAPI, bundle_id: bytes32) -> None:
-    assert node.full_node.mempool_manager.get_spendbundle(bundle_id) is None
-    assert not node.full_node.mempool_manager.seen(bundle_id)
+def assert_sb_not_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
+    assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
+    assert not node.full_node.mempool_manager.seen(sb.name())
 
 
-def evict_from_pool(node: FullNodeAPI, bundle_id: bytes32) -> None:
-    mempool_item = node.full_node.mempool_manager.mempool.spends[bundle_id]
+def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
+    mempool_item = node.full_node.mempool_manager.mempool.spends[sb.name()]
     node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name])
-    node.full_node.mempool_manager.remove_seen(bundle_id)
+    node.full_node.mempool_manager.remove_seen(sb.name())
 
 
 @pytest.mark.asyncio
@@ -66,8 +65,8 @@ async def test_wallet_tx_retry(
     await time_out_assert(wait_secs, sb_in_mempool)
 
     # Evict SpendBundle from peer
-    evict_from_pool(full_node_1, sb1.name())
-    assert_sb_not_in_pool(full_node_1, sb1.name())
+    evict_from_pool(full_node_1, sb1)
+    assert_sb_not_in_pool(full_node_1, sb1)
 
     # Wait some time so wallet will retry
     await asyncio.sleep(2)
@@ -83,11 +82,10 @@ async def test_wallet_tx_retry(
         assert txn is not None
         sb = txn.spend_bundle
         assert sb is not None
-        bundle_id = sb.name()
-        full_node_sb = full_node_1.full_node.mempool_manager.get_spendbundle(bundle_id)
+        full_node_sb = full_node_1.full_node.mempool_manager.get_spendbundle(sb.name())
         if full_node_sb is None:
             return False
-        in_mempool: bool = full_node_sb.name() == bundle_id
+        in_mempool: bool = full_node_sb.name() == sb.name()
         return txn.confirmed or in_mempool
 
     # Check that wallet resent the unconfirmed SpendBundle
