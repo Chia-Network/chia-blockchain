@@ -136,8 +136,8 @@ class MempoolManager:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_bundles: List[SpendBundle] = []
-        removals = []
-        additions = []
+        removals: List[Coin] = []
+        additions: List[Coin] = []
         for dic in reversed(self.mempool.sorted_spends.values()):
             for item in dic.values():
                 if not item_inclusion_filter(self, item):
