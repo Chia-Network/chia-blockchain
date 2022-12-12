@@ -18,7 +18,7 @@ def start_reconnect_task(
     if peer_info_arg.is_valid():
         peer_info = peer_info_arg
     else:
-        peer_info = PeerInfo(str(get_host_addr(peer_info_arg.host, prefer_ipv6)), peer_info_arg.port)
+        peer_info = PeerInfo(str(get_host_addr(peer_info_arg.host, prefer_ipv6=prefer_ipv6)), peer_info_arg.port)
 
     async def connection_check() -> None:
         while True:
