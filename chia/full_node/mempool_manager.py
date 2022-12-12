@@ -82,6 +82,16 @@ def validate_clvm_and_signature(
 
 class MempoolManager:
     pool: Executor
+    constants: ConsensusConstants
+    seen_bundle_hashes: Dict[bytes32, bytes32]
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+    nonzero_fee_minimum_fpc: int
+    limit_factor: float
+    mempool_max_total_cost: int
+    potential_cache: PendingTxCache
+    seen_cache_size: int
+    peak: Optional[BlockRecord]
+    mempool: Mempool
 
     def __init__(
         self,
@@ -395,19 +405,11 @@ class MempoolManager:
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         additions: List[Coin] = additions_for_npc(npc_result)
-
         additions_dict: Dict[bytes32, Coin] = {}
+        addition_amount: int = 0
         for add in additions:
             additions_dict[add.name()] = add
-
-        addition_amount: int = 0
-        # Check additions for max coin amount
-        for coin in additions:
-            if coin.amount < 0:
-                return Err.COIN_AMOUNT_NEGATIVE, None, []
-            if coin.amount > self.constants.MAX_COIN_AMOUNT:
-                return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None, []
-            addition_amount = addition_amount + coin.amount
+            addition_amount = addition_amount + add.amount
         # Check for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():
@@ -509,7 +511,7 @@ class MempoolManager:
                 for c_sb_id in self.mempool.removals[conflicting.name()]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
-            log.warning(f"Conflicting pool items: {len(conflicting_pool_items)}")
+            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
