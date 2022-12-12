@@ -144,16 +144,15 @@ class MempoolManager:
                     continue
                 log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
                 if (
-                    item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
-                    and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
+                    item.cost + cost_sum > self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
+                    or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT
                 ):
-                    spend_bundles.append(item.spend_bundle)
-                    cost_sum += item.cost
-                    fee_sum += item.fee
-                    removals.extend(item.removals)
-                    additions.extend(item.additions)
-                else:
                     return (spend_bundles, uint64(cost_sum), additions, removals)
+                spend_bundles.append(item.spend_bundle)
+                cost_sum += item.cost
+                fee_sum += item.fee
+                removals.extend(item.removals)
+                additions.extend(item.additions)
         return (spend_bundles, uint64(cost_sum), additions, removals)
 
     async def create_bundle_from_mempool(
