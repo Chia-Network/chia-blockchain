@@ -208,6 +208,7 @@ class CATWallet:
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         await self.wallet_state_manager.add_new_wallet(self, self.id())
+        self.wallet_state_manager.state_changed("wallet_created")
         return self
 
     @classmethod

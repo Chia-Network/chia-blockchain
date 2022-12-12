@@ -744,7 +744,6 @@ class WalletStateManager:
                 )
                 wallet_id = cat_wallet.id()
                 wallet_type = WalletType(cat_wallet.type())
-                self.state_changed("wallet_created")
             else:
                 # Found unacknowledged CAT, save it in the database.
                 await self.interested_store.add_unacknowledged_token(
