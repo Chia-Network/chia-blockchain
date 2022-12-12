@@ -270,7 +270,9 @@ async def node_with_params(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname):
+async def two_nodes(
+    db_version, self_hostname
+) -> AsyncIterator[tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
     async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
         yield _
 

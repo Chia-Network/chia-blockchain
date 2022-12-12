@@ -317,19 +317,19 @@ class TestRateLimits:
         a_con: WSChiaConnection = full_node_server_a.get_connections()[0]
         b_con: WSChiaConnection = full_node_server_b.get_connections()[0]
 
-        print(a_con.local_capabilities, a_con.peer_capabilities)
-        print(b_con.local_capabilities, b_con.peer_capabilities)
+        print(a_con.local_capabilities, a_con.mutual_capabilities)
+        print(b_con.local_capabilities, b_con.mutual_capabilities)
 
         # The two nodes will use the same rate limits even if their versions are different
-        assert get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities) == get_rate_limits_to_use(
-            b_con.local_capabilities, b_con.peer_capabilities
+        assert get_rate_limits_to_use(a_con.local_capabilities, a_con.mutual_capabilities) == get_rate_limits_to_use(
+            b_con.local_capabilities, b_con.mutual_capabilities
         )
 
         # The following code checks whether all of the runs resulted in the same number of items in "rate_limits_tx",
         # which would mean the same rate limits are always used. This should not happen, since two nodes with V2
         # will use V2.
         total_tx_msg_count = len(
-            get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)["rate_limits_tx"]
+            get_rate_limits_to_use(a_con.local_capabilities, a_con.mutual_capabilities)["rate_limits_tx"]
         )
         test_different_versions_results.append(total_tx_msg_count)
         if len(test_different_versions_results) >= 4:

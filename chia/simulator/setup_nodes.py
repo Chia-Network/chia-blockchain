@@ -382,7 +382,9 @@ async def setup_full_system(
     b_tools: Optional[BlockTools] = None,
     b_tools_1: Optional[BlockTools] = None,
     db_version: int = 1,
-) -> AsyncGenerator[Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord], object, object, Any, ChiaServer], None]:
+) -> AsyncGenerator[
+    Tuple[FullNodeAPI, FullNodeAPI, Harvester, Farmer, Any, Service[Timelord], object, object, Any, ChiaServer], None
+]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         daemon_ws, node_iters, ret = await setup_full_system_inner(
             b_tools, b_tools_1, False, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
@@ -427,7 +429,7 @@ async def setup_full_system_inner(
 ) -> Tuple[
     Optional[WebSocketServer],
     List[AsyncGenerator[object, None]],
-    Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord], object, object, Any, ChiaServer],
+    Tuple[FullNodeAPI, FullNodeAPI, Harvester, Farmer, Any, Service[Timelord], object, object, Any, ChiaServer],
 ]:
     if b_tools is None:
         b_tools = await create_block_tools_async(constants=test_constants, keychain=keychain1)
@@ -459,7 +461,7 @@ async def setup_full_system_inner(
         for i in range(2)
     ]
     nodes = [await fni.__anext__() for fni in full_node_iters]
-    node_apis = [fni._api for fni in nodes]
+    node_apis: List[FullNodeAPI] = [fni._api for fni in nodes]
     full_node_0_port = node_apis[0].full_node.server.get_port()
     farmer_iter = setup_farmer(
         shared_b_tools,

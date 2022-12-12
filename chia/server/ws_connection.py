@@ -47,6 +47,20 @@ class ConnectionClosedCallbackProtocol(Protocol):
         ...
 
 
+def compute_mutually_understood_capabilities(
+    our_capability_list: List[Tuple[uint16, str]], peer_capability_list: List[Tuple[uint16, str]]
+) -> List[Capability]:
+    """
+    Compute the set of peer capabilities, discarding any we do not recognize.
+    """
+    # The value "1" in the on-wire protocol means the capability is enabled
+    known_capabilities = set([x[0] for x in our_capability_list if x[1] == "1"])
+    peer_capabilities = set([x[0] for x in peer_capability_list if x[1] == "1"])
+    shared_capabilities = known_capabilities.intersection(peer_capabilities)
+
+    return [Capability(x) for x in shared_capabilities]
+
+
 @final
 @dataclass
 class WSChiaConnection:
@@ -95,7 +109,8 @@ class WSChiaConnection:
     closed: bool = False
     connection_type: Optional[NodeType] = None
     request_nonce: uint16 = uint16(0)
-    peer_capabilities: List[Capability] = field(default_factory=list)
+    mutual_capabilities: List[Capability] = field(default_factory=list)  # Capabilities shared between us and peer
+    raw_peer_capabilities: List[Tuple[uint16, str]] = field(default_factory=list)
     # Used by the Chia Seeder.
     version: str = field(default_factory=str)
     protocol_version: str = field(default_factory=str)
@@ -197,8 +212,10 @@ class WSChiaConnection:
             self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-            # "1" means capability is enabled
-            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
+            self.raw_peer_capabilities = inbound_handshake.capabilities
+            self.mutual_capabilities = compute_mutually_understood_capabilities(
+                self.local_capabilities_for_handshake, inbound_handshake.capabilities
+            )
         else:
             try:
                 message = await self._read_one_message()
@@ -223,8 +240,10 @@ class WSChiaConnection:
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-            # "1" means capability is enabled
-            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
+            self.raw_peer_capabilities = inbound_handshake.capabilities
+            self.mutual_capabilities = compute_mutually_understood_capabilities(
+                self.local_capabilities_for_handshake, inbound_handshake.capabilities
+            )
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
@@ -430,7 +449,7 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         if not self.outbound_rate_limiter.process_msg_and_check(
-            message, self.local_capabilities, self.peer_capabilities
+            message, self.local_capabilities, self.mutual_capabilities
         ):
             if not is_localhost(self.peer_host):
                 self.log.debug(
@@ -499,7 +518,7 @@ class WSChiaConnection:
             except Exception:
                 message_type = "Unknown"
             if not self.inbound_rate_limiter.process_msg_and_check(
-                full_message_loaded, self.local_capabilities, self.peer_capabilities
+                full_message_loaded, self.local_capabilities, self.mutual_capabilities
             ):
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_host):
                     self.log.error(
@@ -529,6 +548,7 @@ class WSChiaConnection:
             self.log.error(f"Unexpected WebSocket message type: {message}")
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
+        self.log.error(f"_read_one_message default case: WebSocket message: {message}")
         return None
 
     # Used by the Chia Seeder.

@@ -295,7 +295,7 @@ class ChiaServer:
             prefer_ipv6=prefer_ipv6,
             logger=self.log,
         )
-        self._port = int(self.webserver.listen_port)
+        self._port = uint16(self.webserver.listen_port)
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request: web.Request) -> web.StreamResponse:

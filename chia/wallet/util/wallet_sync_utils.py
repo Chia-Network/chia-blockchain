@@ -328,7 +328,7 @@ def get_block_header(block):
 async def request_header_blocks(
     peer: WSChiaConnection, start_height: uint32, end_height: uint32
 ) -> Optional[List[HeaderBlock]]:
-    if Capability.BLOCK_HEADERS in peer.peer_capabilities:
+    if Capability.BLOCK_HEADERS in peer.mutual_capabilities:
         response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
     else:
         response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
@@ -343,13 +343,13 @@ async def _fetch_header_blocks_inner(
     request_end: uint32,
 ) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
     # We will modify this list, don't modify passed parameters.
-    bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer[0].peer_capabilities]
-    other_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS not in peer[0].peer_capabilities]
+    bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer[0].mutual_capabilities]
+    other_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS not in peer[0].mutual_capabilities]
     random.shuffle(bytes_api_peers)
     random.shuffle(other_peers)
 
     for peer, is_trusted in bytes_api_peers + other_peers:
-        if Capability.BLOCK_HEADERS in peer.peer_capabilities:
+        if Capability.BLOCK_HEADERS in peer.mutual_capabilities:
             response = await peer.request_block_headers(RequestBlockHeaders(request_start, request_end, False))
         else:
             response = await peer.request_header_blocks(RequestHeaderBlocks(request_start, request_end))
