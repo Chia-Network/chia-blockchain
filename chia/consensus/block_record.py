@@ -24,7 +24,7 @@ class BlockRecord(Streamable):
     difficulty adjustments, etc, without saving the whole header block in memory.
     """
 
-    header_hash: bytes32
+    header_hash: BlockRecordHeaderHash
     prev_hash: bytes32  # Header hash of the previous block
     height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
