@@ -586,7 +586,7 @@ class WalletRpcApi:
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
-                    cat_wallet = await CATWallet.create_wallet_for_cat(
+                    cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
                         wallet_state_manager, main_wallet, request["asset_id"], name
                     )
                 self.service.wallet_state_manager.state_changed("wallet_created")

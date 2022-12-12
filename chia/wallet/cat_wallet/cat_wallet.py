@@ -174,7 +174,7 @@ class CATWallet:
         return self
 
     @staticmethod
-    async def create_wallet_for_cat(
+    async def get_or_create_wallet_for_cat(
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         limitations_program_hash_hex: str,
@@ -218,7 +218,7 @@ class CATWallet:
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
     ) -> CATWallet:
-        return await cls.create_wallet_for_cat(
+        return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
             puzzle_driver["tail"].hex(),
