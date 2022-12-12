@@ -1539,7 +1539,6 @@ class OuterDriver:
 
     async def check_and_modify_actions(
         self,
-        coin: Coin,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
     ) -> Tuple[List[WalletAction], List[WalletAction]]:

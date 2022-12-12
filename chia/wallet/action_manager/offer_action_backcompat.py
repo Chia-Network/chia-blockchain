@@ -108,6 +108,7 @@ async def old_request_to_new(
             "do": [],
         }
 
+        # Get the specified solver for this asset id
         try:
             if asset_id is not None:
                 try:
@@ -209,6 +210,7 @@ async def old_request_to_new(
     final_solver["bundle_actions"].extend(dl_dependencies)
     for asset_id, amount in requested_assets.items():
         asset_types = []
+        # It wouldn't break backwards compatibility if we added the option to specify this
         p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
         # DL singletons are not sent as part of offers by default
@@ -222,6 +224,8 @@ async def old_request_to_new(
             and driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
         ):
             asset_driver = driver_dict[asset_id]
+
+            # Fill in asset types for the requested asset
             if asset_driver.type() == AssetType.CAT.value:
                 asset_types = [
                     solver.info for solver in CATOuterDriver.get_asset_types(Solver({"tail": "0x" + asset_id.hex()}))
@@ -237,6 +241,7 @@ async def old_request_to_new(
                     "metadata": asset_driver.info["metadata"],
                     "metadata_updater_hash": asset_driver.info["updater_hash"],
                 }
+                # Royalty enabled NFTs have some more info to fill in
                 if asset_driver.check_type(
                     [
                         AssetType.SINGLETON.value,
@@ -302,6 +307,15 @@ def calculate_royalty_payments(
 
 
 def find_full_prog_from_mod_in_serialized_program(full_program: bytes, start: int, num_curried_args: int) -> Program:
+    """
+    This takes a serialized program. Starting from a specified point where an uncurried program should be, it jumps
+    backwards in the serialization to (a mod ...) and takes note of how many curried arguments are in ...
+
+    If the number of curried arguments is less than the target amount, it will repeat the above process.
+
+    The goal is that even if a mod is curried multiple times, it will keep expanding until it captures the full program
+    with all of them.
+    """
     curried_args: int = 0
     while curried_args < num_curried_args:
         start -= 5
@@ -314,6 +328,9 @@ def find_full_prog_from_mod_in_serialized_program(full_program: bytes, start: in
 
 
 def uncurry_to_mod(program: Program, target_mod: Program) -> List[Program]:
+    """
+    This is the inverse operation from above. A program is uncurried until it is a target base mod.
+    """
     curried_args: List[Program] = []
     while program != target_mod:
         program, new_curried_args = program.uncurry()
@@ -322,6 +339,9 @@ def uncurry_to_mod(program: Program, target_mod: Program) -> List[Program]:
 
 
 def request_payment_to_legacy_encoding(action: RequestPayment, add_nonce: Optional[bytes32] = None) -> CoinSpend:
+    """
+    This method takes a RequestPayment WalletAction and converts it to the CoinSpend encoding that is in use in offers
+    """
     puzzle_reveal: Program = OFFER_MOD
     for typ in action.asset_types:
         puzzle_reveal = Program.to(
@@ -352,11 +372,14 @@ def request_payment_to_legacy_encoding(action: RequestPayment, add_nonce: Option
     )
 
 
-async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -> bytes:
+async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
+    """
+    This converts from new action-style spend bundle -> Offer class
+    """
     new_spends: List[CoinSpend] = []
     environment: Solver = Solver({})
     for spend in bundle.coin_spends:
-        # Step 2: Get any wallets that claim to identify the puzzle
+        # Step 1: Get any wallets that claim to identify the puzzle
         matches: List[SpendDescription] = []
         for outer_wallet in wallet_state_manager.outer_wallets:
             puzzle_reveal: Program = spend.puzzle_reveal.to_program()
@@ -396,16 +419,15 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             # QUESTION: Should we support this? Giving multiple interpretations?
             raise ValueError(f"There are multiple ways to describe spend with coin: {spend.coin}")
 
-        # Step 3: Attempt to find matching aliases for the actions
         actions = matches[0].get_all_actions(wallet_state_manager.action_aliases)
-        # Step 4: Re-order the actions so that DL graftroots are the last applied (need to be outermost)
+        # Step 2: Re-order the actions so that DL graftroots are the last applied
+        # DL Inclusion graftroots are expected by old clients to be the outermost graftroot puzzle
         dl_graftroot_actions: List[Solver] = []
         all_other_actions: List[Solver] = []
         for action in actions:
-            if action.name() == RequireDLInclusion.name():
-                assert isinstance(action, RequireDLInclusion)
+            if isinstance(action, RequireDLInclusion):
                 dl_graftroot_actions.append(action.to_solver())
-                # Step 5: Add the dummy spend that used to encode the requested payment
+                # Add the dummy spend that used to encode the requested payment
                 for launcher_id in action.launcher_ids:
                     puzzle_reveal = create_host_fullpuz(OFFER_MOD, bytes32([0] * 32), launcher_id)
                     dummy_solution = Program.to([(bytes32([0] * 32), [[bytes32([0] * 32), uint64(1), []]])])
@@ -417,9 +439,8 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
                         )
                     )
             else:
-                if action.name() == RequestPayment.name():
-                    assert isinstance(action, RequestPayment)
-                    # Step 5: Add the dummy spend that used to encode the requested payment
+                if isinstance(action, RequestPayment):
+                    # Add the dummy spend that used to encode the requested payment
                     new_spends.append(request_payment_to_legacy_encoding(action))
                 all_other_actions.append(action.to_solver())
 
@@ -433,6 +454,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
         )
         new_spend: CoinSpend = await new_description.spend(environment=environment)
 
+        # Step 3: Erase the graftroot metadata from the delegated solution, the old client won't know to dump it
         re_matched_spend: Optional[
             Tuple[SolutionDescription, Program]
         ] = await new_description.outer_puzzle_description.driver.match_solution(new_spend.solution.to_program())
@@ -460,6 +482,7 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             )
         )
 
+        # Step 4: Fill in the ring info for CATs in a way so as not to make the CAT spend raise
         if isinstance(new_description.outer_puzzle_description.driver, CATOuterDriver):
             cat_args = list(new_full_solution.as_iter())
             if Program.to(None) in cat_args[2:5]:
@@ -491,16 +514,21 @@ async def spend_to_offer_bytes(wallet_state_manager: Any, bundle: SpendBundle) -
             raise ValueError("Attempting to convert the spends to an offer resulted in being unable to spend a coin")
         new_spends.append(new_spend)
 
-    return bytes(SpendBundle(new_spends, bundle.aggregated_signature))
+    return Offer.from_spend_bundle(SpendBundle(new_spends, bundle.aggregated_signature))
 
 
 def legacy_rp_puzzle_to_asset_types(rp_puzzle: Program) -> List[Solver]:
+    """
+    Give the old style of encoding requested payments, we know what the inner puzzle is and that all args are committed
+    so we can actually generally get the asset types that are encoded in the offer.
+    """
     if rp_puzzle == OFFER_MOD:
         return []
 
     mod, curried_args = rp_puzzle.uncurry()
     args_list = list(curried_args.as_iter())
 
+    # Recursive loop where we uncurry, check each arg for the OFFER_MOD, if we haven't found it recurse on each arg
     for curried_arg in args_list:
         if curried_arg == OFFER_MOD:
             deeper_asset_types: List[Solver] = []
@@ -515,8 +543,10 @@ def legacy_rp_puzzle_to_asset_types(rp_puzzle: Program) -> List[Solver]:
     else:
         raise ValueError("Could not find the offer mod in the requested payments puzzle")
 
+    # We know the solution template is always (1 1 1 ... . $)
     solution_template: List[str] = ["1" if i != args_list.index(curried_arg) else "0" for i in range(0, len(args_list))]
     solution_template.extend([".", "$"])
+    # "curried_arg" at this point will be the INNER_PUZZLE so we don't want to include that in committed args
     committed_args: List[str] = [disassemble(arg) if arg != curried_arg else "()" for arg in args_list]
     committed_args.extend([".", "()"])
     this_asset_type = Solver(
@@ -530,11 +560,16 @@ def legacy_rp_puzzle_to_asset_types(rp_puzzle: Program) -> List[Solver]:
 
 
 def offer_to_spend(offer: Offer) -> SpendBundle:
+    """
+    The inverse of spend_to_offer: convert an old Offer class into a new action-style spendbundle
+    """
     new_spends: List[CoinSpend] = []
     requested_spends: List[CoinSpend] = [
         cs for cs in offer.to_spend_bundle().coin_spends if cs.coin.parent_coin_info == bytes32([0] * 32)
     ]
     for spend in offer.bundle.coin_spends:
+        # Operating directly on the serialization, we're going to jump to either the first instance of
+        # the DL graftroot mod, or the announcements we expect from the requested payments
         solution_bytes: bytes = bytes(spend.solution)
         dl_inclusion_index: int = solution_bytes.find(bytes(GRAFTROOT_DL_OFFERS))
         announcement_hash_index: int = -1
@@ -547,9 +582,11 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                 ).name()
                 new_index = solution_bytes.find(announcement_hash)
                 if new_index != -1:
+                    # We want the earliest possible index
                     announcement_hash_index = (
                         new_index if announcement_hash_index == -1 else min(announcement_hash_index, new_index)
                     )
+                    # Construct the WalletActions as we're looping through
                     asset_types: List[Solver] = legacy_rp_puzzle_to_asset_types(
                         requested_spend.puzzle_reveal.to_program()
                     )
@@ -560,6 +597,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
                     ]
                     requested_payments.append(RequestPayment(asset_types, nonce, payments))
 
+        # Take note of the DL graftroot (old offers never supported more than 1)
         if dl_inclusion_index != -1:
             delegated_puzzle = find_full_prog_from_mod_in_serialized_program(solution_bytes, dl_inclusion_index, 4)
             inner_puzzle, singleton_structs, _, values_to_prove = uncurry_to_mod(delegated_puzzle, GRAFTROOT_DL_OFFERS)
@@ -575,9 +613,11 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
         elif announcement_hash_index != -1:
             delegated_puzzle = Program.from_bytes(solution_bytes[announcement_hash_index - 9 :])
         else:
+            # No DL or RP graftroots means we can skip this spend, it's fine as it is
             new_spends.append(spend)
             continue
 
+        # Now we need to re-add the metadata that was deleted when we serialized down to an Offer
         innermost_solution: Program = Program.from_bytes(
             solution_bytes[solution_bytes.find(bytes(delegated_puzzle)) - 3 :]
         )
@@ -616,13 +656,18 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
 async def generate_summary_complement(
     wallet_state_manager: Any, summary: Solver, additional_summary: Solver, fee: uint64 = uint64(0)
 ) -> Solver:
+    """
+    Given a new action-style summary, generate the complement that would have been generated by the trade manager
+    """
     comp_actions: List[Solver] = []
     comp_bundle_actions: List[Solver] = []
     bundle_actions = summary["bundle_actions"] if "bundle_actions" in summary else []
     paid_fee: bool = fee == 0
+    # Loop through all actions, bundle or not
     for total_action in [*summary["actions"], *bundle_actions]:
         actions_to_loop = [total_action] if total_action in bundle_actions else total_action["do"]
         for action in actions_to_loop:
+            # OfferedAmount generates a corresponding RequestPayment
             if action["type"] == OfferedAmount.name():
                 new_p2_puzhash: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
                 self_payment: Payment = Payment(new_p2_puzhash, uint64(cast_to_int(action["amount"])), [new_p2_puzhash])
@@ -630,13 +675,14 @@ async def generate_summary_complement(
                     total_action["with"]["asset_types"] if "asset_types" in total_action["with"] else []
                 )
                 comp_bundle_actions.append(RequestPayment(asset_types, None, [self_payment]).to_solver())
+            # RequestPayment generates a corresponding OfferedAmount
             elif action["type"] == RequestPayment.name():
                 requested_payment = RequestPayment.from_solver(action)
                 offered_amount: int = sum(p.amount for p in requested_payment.payments)
                 total_amount: int = offered_amount
-                if not paid_fee and requested_payment.asset_types == []:
+                pay_fee_now: bool = not paid_fee and requested_payment.asset_types == []
+                if pay_fee_now:
                     total_amount += fee
-                    paid_fee = True
                 comp_actions.append(
                     Solver(
                         {
@@ -645,13 +691,15 @@ async def generate_summary_complement(
                                 OfferedAmount(offered_amount).to_solver(),
                                 *(
                                     [Fee(fee).to_solver()]
-                                    if not paid_fee and requested_payment.asset_types == []
+                                    if pay_fee_now
                                     else []
                                 ),
                             ],
                         }
                     )
                 )
+                if pay_fee_now:
+                    paid_fee = True
     return Solver(
         {
             "actions": [
@@ -668,9 +716,13 @@ async def generate_summary_complement(
 
 
 async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> Solver:
+    """
+    Given a solver that would be used for an offer, convert it into a new action-style summary and environment
+    """
     actions: List[Solver] = []
     bundle_actions: List[Solver] = []
     for key, solver in old_solver.info.items():
+        # "dependencies" was the old way of specifying DL inclusion requirements
         if "dependencies" in old_solver[key]:
             bundle_actions.append(
                 Solver(
@@ -684,11 +736,13 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
                 )
             )
 
+        # Make sure the asset id is bytes32 before going into the next DL specific part
         try:
             bytes32.from_hexstr(key)
         except ValueError:
             continue
 
+        # The solver used to specify what update to make to your DLs in exchange for others'
         wallet: WalletProtocol = await wallet_state_manager.get_wallet_for_asset_id(key)
         if WalletType(wallet.type()) == WalletType.DATA_LAYER:
             asset_types = DLOuterDriver.get_asset_types(
@@ -720,6 +774,7 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
                 )
             )
 
+    # Proofs of inclusion is now a feature of the environment, used to solve the graftroot before it hits the chain
     dl_inclusion_proofs: Optional[List[Program]] = None
     if "proofs_of_inclusion" in old_solver:
         dl_inclusion_proofs = []
@@ -741,8 +796,12 @@ async def old_solver_to_new(wallet_state_manager: Any, old_solver: Solver) -> So
 
 
 def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
-    old_summary: Dict[str, Any] = {"offered": [], "requested": []}
+    """
+    Convert a new action-style summary into a summary that old clients will have no problem interpreting
+    """
+    old_summary: Dict[str, Any] = {"offered": [], "requested": []}  # old format
     for total_action in new_summary["actions"]:
+        # Assets in the old summary are expecting fungible total amounts, not amount per spend
         asset_description: Dict[str, Any] = total_action["with"].info
         if "amount" in asset_description:
             del asset_description["amount"]
@@ -750,6 +809,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
         requested_descriptions: List[Dict[str, Any]] = []
         for action in total_action["do"]:
             if action["type"] == OfferedAmount.name():
+                # Recreate offered_descriptions, but add the amount into the existing amount if it exists
                 new_offered_descriptions: List[Dict[str, Any]] = []
                 added_amount: bool = False
                 for description in offered_descriptions:
@@ -765,6 +825,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
                     offered_descriptions.append({"amount": action.info["amount"]})
             elif action["type"] == RequestPayment.name():
                 payment_request: RequestPayment = RequestPayment.from_solver(action)
+                # Old style summaries have an asset id in them
                 if len(payment_request.asset_types) > 0:
                     outer_mod: Program = payment_request.asset_types[0]["mod"]
                     if outer_mod == CAT_MOD:
@@ -772,6 +833,7 @@ def new_summary_to_old(new_summary: Solver) -> Dict[str, Any]:
                     elif outer_mod == SINGLETON_TOP_LAYER_MOD:
                         asset_id = payment_request.asset_types[0]["committed_args"].at("frf").as_python().hex()
 
+                # similar to offered_descriptions above, recreate them all, adding the amount in if it already exists
                 new_requested_descriptions: List[Dict[str, Any]] = []
                 added_amount = False
                 for description in requested_descriptions:

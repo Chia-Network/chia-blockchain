@@ -28,7 +28,7 @@ from chia.wallet.action_manager.offer_action_backcompat import (
     old_request_to_new,
     old_solver_to_new,
     request_payment_to_legacy_encoding,
-    spend_to_offer_bytes,
+    spend_to_offer,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -895,10 +895,10 @@ class TradeManager:
                         # how to avoid this.
                         signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
                             offer_to_spend(
-                                Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, unsigned_spend))
+                                await spend_to_offer(self.wallet_state_manager, unsigned_spend)
                             )
                         )
-                        return Offer.from_bytes(await spend_to_offer_bytes(self.wallet_state_manager, signed_spend))
+                        return await spend_to_offer(self.wallet_state_manager, signed_spend)
 
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee

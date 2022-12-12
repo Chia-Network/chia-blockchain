@@ -9,8 +9,11 @@ from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import Solver
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
+_T_Graftroot = TypeVar("_T_Graftroot", bound="Graftroot")
 
-
+"""
+See chia/wallet/protocols.py for descriptions of the methods on the following classes (WalletAction)
+"""
 @dataclass(frozen=True)
 class Condition:
     condition: Program
@@ -38,13 +41,19 @@ class Condition:
         return Condition(self.condition)
 
 
-_T_Graftroot = TypeVar("_T_Graftroot", bound="Graftroot")
-
-
 @dataclass(frozen=True)
 class Graftroot:
     """
-    The _wrapper members of this class take an inner puzzle/solution and return a new one to replace it
+    A graftroot action is the request to sign a puzzle to execute, some of whose parameters can be supplied later.
+    This is useful for things like requested payments in which you may not know everything about the asset you are
+    requesting, just that it needs match a certain format.
+
+    In order to have multiple graftroot requirements in the standard inner puzzle (p2_delegated_puzzle_or_hidden_puzzle)
+    in which there is only one "delegated_puzzle" (another name for graftroot) slot, each graftroot action must be
+    able to take another graftroot action as it's "inner" puzzle. The innermost puzzle will likely be a quoted list of
+    conditions.
+
+    The *_wrapper members of this class take an inner puzzle/solution and return a wrapped puzzle to replace it
     """
 
     puzzle_wrapper: Program
@@ -73,6 +82,9 @@ class Graftroot:
 
     def augment(self, environment: Solver) -> "Graftroot":
         if "graftroot_edits" in environment:
+            # The idea here is that you can just up and replace an existing graftroot
+            # Changing the puzzle wrapper would result in an invalid signature,
+            # so we use that as the hook to determine which graftroot we are editing
             for edit in environment["graftroot_edits"]:
                 if edit["puzzle_wrapper"] == self.puzzle_wrapper:
                     return Graftroot.from_solver(edit)

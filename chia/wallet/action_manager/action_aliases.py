@@ -29,12 +29,18 @@ ADD_WRAPPED_ANNOUNCEMENT = load_clvm("add_wrapped_announcement.clsp")
 CURRY = load_clvm("curry.clsp")
 
 _T_DirectPayment = TypeVar("_T_DirectPayment", bound="DirectPayment")
+_T_OfferedAmount = TypeVar("_T_OfferedAmount", bound="OfferedAmount")
+_T_Fee = TypeVar("_T_Fee", bound="Fee")
+_T_MakeAnnouncement = TypeVar("_T_MakeAnnouncement", bound="MakeAnnouncement")
+_T_AssertAnnouncement = TypeVar("_T_AssertAnnouncement", bound="AssertAnnouncement")
+_T_RequestPayment = TypeVar("_T_RequestPayment", bound="RequestPayment")
 
 
 @dataclass(frozen=True)
 class DirectPayment:
+    """ An alias for CREATE_COIN """
     payment: Payment
-    hints: List[bytes]
+    hints: List[bytes]  # Hints are just additional memos that are guaranteed to get prepended
 
     @staticmethod
     def name() -> str:
@@ -84,6 +90,7 @@ class DirectPayment:
             raise ValueError("Can only parse a DirectPayment from Condition")
 
         puzzle_hash: bytes32 = bytes32(action.condition.at("rf").as_python())
+        # Question: should we deliberately make this offer hash exception?  Maybe aliasing can go multiple levels?
         if action.condition.first() != Program.to(51) or puzzle_hash == OFFER_MOD_HASH:
             raise ValueError("Tried to parse a condition that was not a direct payment")
 
@@ -100,11 +107,9 @@ class DirectPayment:
         return DirectPayment(self.payment, self.hints)
 
 
-_T_OfferedAmount = TypeVar("_T_OfferedAmount", bound="OfferedAmount")
-
-
 @dataclass(frozen=True)
 class OfferedAmount:
+    """ An alias for a CREATE_COIN that goes to the offer ph w/ no memos"""
     amount: int
 
     @staticmethod
@@ -145,11 +150,9 @@ class OfferedAmount:
         return OfferedAmount(self.amount)
 
 
-_T_Fee = TypeVar("_T_Fee", bound="Fee")
-
-
 @dataclass(frozen=True)
 class Fee:
+    """ An alias for RESERVE_FEE """
     amount: int
 
     @staticmethod
@@ -189,12 +192,10 @@ class Fee:
         return Fee(self.amount)
 
 
-_T_MakeAnnouncement = TypeVar("_T_MakeAnnouncement", bound="MakeAnnouncement")
-
-
 @dataclass(frozen=True)
 class MakeAnnouncement:
-    type: str
+    """ An alias for CREATE_*_ANNOUNCEMENT """
+    type: str  # coin | puzzle  # maybe should be enum?
     data: Program
 
     @staticmethod
@@ -244,12 +245,11 @@ class MakeAnnouncement:
         return MakeAnnouncement(self.type, self.data)
 
 
-_T_AssertAnnouncement = TypeVar("_T_AssertAnnouncement", bound="AssertAnnouncement")
-
-
 @dataclass(frozen=True)
 class AssertAnnouncement:
+    """ An alias for ASSERT_*_ANNOUNCEMENT """
     type: str
+    # Maybe you know origin & data, but it's possible you only know hash(origin + data), in which case that will be data
     data: bytes
     origin: Optional[bytes32] = None
 
@@ -318,11 +318,20 @@ class AssertAnnouncement:
         return AssertAnnouncement(self.type, self.data, self.origin)
 
 
-_T_RequestPayment = TypeVar("_T_RequestPayment", bound="RequestPayment")
-
-
 @dataclass(frozen=True)
 class RequestPayment:
+    """
+    This is an alias for a graftroot action to request a payment that matches a format specified by "asset types"
+    (For a full description of how asset types work see chia/wallet/puzzles/add_wrapped_announcement.clsp)
+
+    It also takes an optional nonce to prevent a replay attack where two equivalent requests made by different coins
+    could both be satisfied by only one completed payment. Two coins who request the same payments (or payments that
+    may be a subset of each other) should use different nonces.
+
+    In the case where the requested payment type is entirely specific (no solvable information), we do not pay the
+    overhead for this relatively large program, we instead simplify the graftroot to a puzzle which simply prepends
+    the inevitable condition to the output of the inner puzzle.
+    """
     asset_types: List[Solver]
     nonce: Optional[bytes32]
     payments: List[Payment]
@@ -367,6 +376,7 @@ class RequestPayment:
         puzzle_reveal: Program = OFFER_MOD
         for typ in self.asset_types:
             puzzle_reveal = Program.to(
+                # (a (q . mod) environment)
                 [
                     2,
                     (1, typ["mod"]),
@@ -383,7 +393,8 @@ class RequestPayment:
     def construct_metadata(self) -> Program:
         metadata: Program = Program.to(
             (
-                (self.nonce, [p.as_condition_args() for p in self.payments]),
+                (self.nonce, [p.as_condition_args() for p in self.payments]),  # payment information
+                # asset types
                 [
                     [typ["mod"] for typ in self.asset_types],
                     [typ["solution_template"] for typ in self.asset_types],
@@ -397,6 +408,7 @@ class RequestPayment:
         if self.check_for_optimization():
             announcement: Announcement = self.construct_announcement_assertion()
             assertion: Program = Program.to([63, announcement.name()])
+            # Return a program which runs the innerpuz with whatever solution exists for it, then prepends a condition
             # (mod (inner_puz) (qq (c (q . assertion) (a (q . (unquote inner_puz)) 1))))
             # (c (q . 4) (c (q 1 . "assertion") (c (c (q . 2) (c (c (q . 1) 2) (q 1))) ())))
             wrapper: Program = Program.to(
@@ -405,6 +417,10 @@ class RequestPayment:
             return wrapper
         else:
 
+            # For optimization, the chialisp takes the already treehashed committed arguments
+            # At this level, it makes more sense to be dealing with the pre-hashed arguments
+            # So before we pass our committed args to the chialisp, we walk the tree and hash everything that is a leaf
+            # (which we determine from the template)
             def walk_tree_and_hash_curried(tree: Program, template: Program) -> Program:
                 if template.atom is None:
                     new_tree: Program = walk_tree_and_hash_curried(tree.first(), template.first()).cons(
@@ -432,9 +448,9 @@ class RequestPayment:
 
     def construct_solution_wrapper(self, solved_args: List[Program]) -> Program:
         if self.check_for_optimization():
-            solution_wrapper: Program = Program.to(2)
+            solution_wrapper: Program = Program.to(2)  # return exactly the solution
         else:
-            solution_wrapper = Program.to([4, 2, [1, solved_args]])  # (c 2 (q solved_args))
+            solution_wrapper = Program.to([4, 2, [1, solved_args]])  # (c (f solution) (q solved_args))
 
         return solution_wrapper
 
@@ -449,6 +465,10 @@ class RequestPayment:
     def build_environment(
         cls, template: Program, committed_values: Program, solved_values: Program, puzzle_reveal: Program
     ) -> Program:
+        """
+        This method is a python implementation of what the chialisp does to construct the environment
+        (with the small exception that it constructs the tree, not the treehash)
+        """
         if template.atom is None:
             environment: Program = Program.to(
                 [
@@ -508,6 +528,9 @@ class RequestPayment:
 
     def augment(self, environment: Solver) -> Graftroot:
         if "payment_types" in environment:
+            # To complete this graftroot from the environment, we will simply ask for the asset types again,
+            # this time with solved_args. If everything else matches this instance (types, nonce, payments),
+            # that's how we know to use the specified solved args.
             for payment_type in environment["payment_types"]:
                 nonce: Optional[bytes32] = (
                     None
@@ -533,7 +556,6 @@ class RequestPayment:
                     else:
                         return Graftroot(
                             self.construct_puzzle_wrapper(),
-                            # nothing specified means it will get optimized so it doesn't matter what we pass here
                             self.construct_solution_wrapper(solved_args),
                             self.construct_metadata(),
                         )
