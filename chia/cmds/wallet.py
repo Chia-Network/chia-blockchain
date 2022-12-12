@@ -142,7 +142,7 @@ def get_transactions_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
-@click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
+@click.option("--memo", help="Additional memo for the transaction", type=str, default=None)
 @click.option(
     "-m",
     "--fee",
