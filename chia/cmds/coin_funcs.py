@@ -12,6 +12,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import WalletType
 
 
 async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -26,7 +27,7 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
     if paginate is None:
         paginate = sys.stdout.isatty()
     try:
-        wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+        wallet_type: WalletType = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type)
     except LookupError:
         print(f"Wallet id: {wallet_id} not found.")
@@ -44,6 +45,10 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
         excluded_amounts=final_excluded_amounts,
         excluded_coin_ids=excluded_coin_ids,
     )
+    coin_type: str = "XCH" if addr_prefix == "xch" else "TXCH"
+    if wallet_type == WalletType.CAT:
+        coin_type = "CAT"  # override XCH/TXCH prefix for CAT wallet
+
     print(f"There are a total of {len(conf_coins) + len(unconfirmed_additions)} coins in wallet {wallet_id}.")
     print(f"{len(conf_coins)} confirmed coins.")
     print(f"{len(unconfirmed_additions)} unconfirmed additions.")
@@ -54,6 +59,7 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
         [(cr.coin, str(cr.confirmed_block_index)) for cr in conf_coins],
         mojo_per_unit,
         addr_prefix,
+        coin_type,
         paginate,
     )
     if show_unconfirmed:
@@ -63,6 +69,7 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
             [(cr.coin, str(cr.confirmed_block_index)) for cr in unconfirmed_removals],
             mojo_per_unit,
             addr_prefix,
+            coin_type,
             paginate,
         )
         print("\nUnconfirmed Additions:")
@@ -71,12 +78,18 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
             [(coin, "") for coin in unconfirmed_additions],
             mojo_per_unit,
             addr_prefix,
+            coin_type,
             paginate,
         )
 
 
 def print_coins(
-    target_string: str, coins: List[Tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
+    target_string: str,
+    coins: List[Tuple[Coin, str]],
+    mojo_per_unit: int,
+    addr_prefix: str,
+    coin_type: str,
+    paginate: bool,
 ) -> None:
     if len(coins) == 0:
         print("\tNo Coins.")
@@ -88,7 +101,7 @@ def print_coins(
                 break
             coin, conf_height = coins[i + j]
             address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix, decimal_only=True)
+            amount_str = print_balance(coin.amount, mojo_per_unit, coin_type, decimal_only=True)
             print(f"Coin ID: 0x{coin.name().hex()}")
             print(target_string.format(address, amount_str, conf_height))
 
