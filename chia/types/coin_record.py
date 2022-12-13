@@ -5,7 +5,7 @@ from typing import Optional
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import CoinID, bytes_to_CoinID
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
@@ -29,8 +29,8 @@ class CoinRecord(Streamable):
         return self.spent_block_index > 0
 
     @property
-    def name(self) -> bytes32:
-        return self.coin.name()
+    def name(self) -> CoinID:
+        return bytes_to_CoinID(self.coin.name())
 
     @property
     def coin_state(self) -> CoinState:

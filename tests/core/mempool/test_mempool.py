@@ -25,7 +25,8 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.borderlands import bytes_to_PublicKeyBytes
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -84,7 +85,7 @@ class TestPendingTxCache:
         item = make_item(1)
         c.add(item)
         tx = c.drain()
-        assert tx == {item.spend_bundle_name: item}
+        assert tx == {item.name: item}
 
     def test_fifo_limit(self):
         c = PendingTxCache(200)
@@ -95,14 +96,14 @@ class TestPendingTxCache:
         # the max cost is 200, only two transactions will fit
         # we evict items FIFO, so the to most recently added will be left
         tx = c.drain()
-        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+        assert tx == {items[-2].name: items[-2], items[-1].name: items[-1]}
 
     def test_drain(self):
         c = PendingTxCache(100)
         item = make_item(1)
         c.add(item)
         tx = c.drain()
-        assert tx == {item.spend_bundle_name: item}
+        assert tx == {item.name: item}
 
         # drain will clear the cache, so a second call will be empty
         tx = c.drain()
@@ -126,7 +127,7 @@ class TestPendingTxCache:
         assert c.cost() == 160
 
         tx = c.drain()
-        assert tx == {item2.spend_bundle_name: item2, item3.spend_bundle_name: item3}
+        assert tx == {item2.name: item2, item3.name: item3}
 
         assert c.cost() == 0
         item4 = make_item(4)
@@ -134,7 +135,7 @@ class TestPendingTxCache:
         assert c.cost() == 80
 
         tx = c.drain()
-        assert tx == {item4.spend_bundle_name: item4}
+        assert tx == {item4.name: item4}
 
 
 class TestMempool:
@@ -2413,22 +2414,34 @@ class TestPkmPairs:
 
     def test_agg_sig_me(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)]
+        spends = [
+            Spend(
+                self.h1,
+                self.h2,
+                None,
+                0,
+                [],
+                [(bytes_to_PublicKeyBytes(self.pk1), b"msg1"), (bytes_to_PublicKeyBytes(self.pk2), b"msg2")],
+                0,
+            )
+        ]
         conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe(self):
-        conds = SpendBundleConditions([], 0, 0, 0, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)
+        conds = SpendBundleConditions(
+            [], 0, 0, 0, [(bytes_to_PublicKeyBytes(self.pk1), b"msg1"), (bytes_to_PublicKeyBytes(self.pk2), b"msg2")], 0
+        )
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")], 0)]
-        conds = SpendBundleConditions(spends, 0, 0, 0, [(bytes48(self.pk2), b"msg2")], 0)
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes_to_PublicKeyBytes(self.pk1), b"msg1")], 0)]
+        conds = SpendBundleConditions(spends, 0, 0, 0, [(bytes_to_PublicKeyBytes(self.pk2), b"msg2")], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
         assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]

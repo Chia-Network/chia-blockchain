@@ -22,7 +22,7 @@ class Mempool:
         self.log = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
-        self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
+        self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle ids
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
         self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
@@ -95,7 +95,7 @@ class Mempool:
         self.sorted_spends[item.fee_per_cost][item.name] = item
 
         for coin in item.removals:
-            coin_id = coin.name()
+            coin_id: bytes32 = coin.name()
             if coin_id not in self.removals:
                 self.removals[coin_id] = []
             self.removals[coin_id].append(item.name)
