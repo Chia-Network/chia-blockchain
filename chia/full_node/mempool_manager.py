@@ -22,7 +22,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import PublicKeyBytes, bytes_to_PublicKeyBytes
+from chia.types.borderlands import PublicKeyBytes
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
@@ -65,7 +65,6 @@ def validate_clvm_and_signature(
         msgs: List[bytes] = []
         assert result.conds is not None
         pks, msgs = pkm_pairs(result.conds, additional_data)
-        pks = [bytes_to_PublicKeyBytes(pk) for pk in pks]
 
         # Verify aggregated signature
         cache: LRUCache[bytes32, GTElement] = LRUCache(10000)
