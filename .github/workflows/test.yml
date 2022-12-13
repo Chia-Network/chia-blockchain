@@ -141,10 +141,9 @@ jobs:
         run: |
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
-# needs some debugging since it just reports no changes
-#      - name: Coverage report (diff)
-#        run: |
-#          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
+      - name: Coverage report (diff)
+        run: |
+          diff-cover --compare-branch=${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }} coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
 
       - name: Publish coverage reports
         if: always()
