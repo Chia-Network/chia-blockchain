@@ -610,19 +610,19 @@ class MempoolManager:
                     included_items.append(item)
 
         potential_txs = self.potential_cache.drain()
-        txs_added_to_mempool_from_pending_pool = []
+        txs_added = []
         for item in potential_txs.values():
             cost, status, error = await self.add_spend_bundle(
                 item.spend_bundle, item.npc_result, item.name, item.height_added_to_mempool
             )
             if status == MempoolInclusionStatus.SUCCESS:
-                txs_added_to_mempool_from_pending_pool.append((item.spend_bundle, item.npc_result, item.name))
+                txs_added.append((item.spend_bundle, item.npc_result, item.name))
         log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
-        return txs_added_to_mempool_from_pending_pool
+        return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:
         items: List[MempoolItem] = []
