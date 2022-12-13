@@ -271,14 +271,15 @@ class SimClient:
 
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         try:
+            spend_bundle_id = spend_bundle.name()
             cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle.name()
+                spend_bundle, None, spend_bundle_id
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak
         cost, status, error = await self.service.mempool_manager.add_spend_bundle(
-            spend_bundle, cost_result, spend_bundle.name(), self.service.mempool_manager.peak.height
+            spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
         )
         return status, error
 

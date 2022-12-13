@@ -461,42 +461,44 @@ class WSChiaConnection:
         await self.outgoing_queue.put(message)
         return True
 
-    def __getattr__(self, attr_name: str) -> Any:
-        # TODO KWARGS
-        async def invoke(*args: Any, **kwargs: Any) -> Optional[Streamable]:
-            timeout = 60
-            if "timeout" in kwargs:
-                timeout = kwargs["timeout"]
-            if self.connection_type is None:
-                raise ValueError("handshake not done yet")
-            attribute = getattr(class_for_type(self.connection_type), attr_name, None)
-            if attribute is None:
-                raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
-
-            request = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, bytes(args[0]))
-            request_start_t = time.time()
-            response = await self.send_request(request, timeout)
-            self.log.debug(
-                f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
-                f"None? {response is None}"
+    async def call_api(
+        self,
+        request_method: Callable[..., Awaitable[Optional[Message]]],
+        message: Streamable,
+        timeout: int = 60,
+    ) -> Any:
+        if self.connection_type is None:
+            raise ValueError("handshake not done yet")
+        request_metadata = get_metadata(request_method)
+        assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
+        attribute = getattr(class_for_type(self.connection_type), request_metadata.request_type.name, None)
+        if attribute is None:
+            raise AttributeError(
+                f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}"
             )
-            if response is None or response.type == ProtocolMessageTypes.none_response.value:
-                return None
-            sent_message_type = ProtocolMessageTypes(request.type)
-            recv_message_type = ProtocolMessageTypes(response.type)
-            if not message_response_ok(sent_message_type, recv_message_type):
-                # peer protocol violation
-                error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
-                f"but received {recv_message_type.name}"
-                await self.ban_peer_bad_protocol(error_message)
-                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-            recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
-            api_metadata = get_metadata(recv_method)
-            assert api_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
-            return api_metadata.message_class.from_bytes(response.data)
+        request = Message(uint8(request_metadata.request_type.value), None, bytes(message))
+        request_start_t = time.time()
+        response = await self.send_request(request, timeout)
+        self.log.debug(
+            f"Time for request {request_metadata.request_type.name}: {self.get_peer_logging()} = "
+            f"{time.time() - request_start_t}, None? {response is None}"
+        )
+        if response is None or response.type == ProtocolMessageTypes.none_response.value:
+            return None
+        sent_message_type = ProtocolMessageTypes(request.type)
+        recv_message_type = ProtocolMessageTypes(response.type)
+        if not message_response_ok(sent_message_type, recv_message_type):
+            # peer protocol violation
+            error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
+            f"but received {recv_message_type.name}"
+            await self.ban_peer_bad_protocol(error_message)
+            raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-        return invoke
+        recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
+        receive_metadata = get_metadata(recv_method)
+        assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
+        return receive_metadata.message_class.from_bytes(response.data)
 
     async def send_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:
         """Sends a message and waits for a response."""

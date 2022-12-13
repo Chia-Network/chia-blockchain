@@ -146,9 +146,10 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
         async def add_spend_bundles(spend_bundles: List[SpendBundle]) -> None:
             for tx in spend_bundles:
-                npc = await mempool.pre_validate_spendbundle(tx, None, tx.name())
+                spend_bundle_id = tx.name()
+                npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)
                 assert npc is not None
-                _, status, error = await mempool.add_spend_bundle(tx, npc, tx.name(), height)
+                _, status, error = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
                 assert status == MempoolInclusionStatus.SUCCESS
                 assert error is None
 

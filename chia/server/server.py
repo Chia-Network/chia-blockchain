@@ -420,6 +420,7 @@ class ChiaServer:
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
         if self.is_duplicate_or_self_connection(target_node):
+            self.log.warning(f"cannot connect to {target_node.host}, duplicate/self connection")
             return False
 
         if target_node.host in self.banned_peers and time.time() < self.banned_peers[target_node.host]:
@@ -461,6 +462,7 @@ class ChiaServer:
                 self.log.debug(f"Timeout error connecting to {url}")
                 return False
             if ws is None:
+                self.log.warning(f"Connection failed to {url}. ws was None")
                 return False
 
             ssl_object = ws.get_extra_info("ssl_object")

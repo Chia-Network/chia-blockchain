@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
 from chia.rpc.rpc_server import default_get_connections
@@ -103,7 +104,7 @@ class Crawler:
             if peer_info is not None and version is not None:
                 self.version_cache.append((peer_info.host, version))
             # Ask peer for peers
-            response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=3)
+            response = await peer.call_api(FullNodeAPI.request_peers, full_node_protocol.RequestPeers(), timeout=3)
             # Add peers to DB
             if isinstance(response, full_node_protocol.RespondPeers):
                 self.peers_retrieved.append(response)
