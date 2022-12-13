@@ -557,7 +557,7 @@ class MempoolManager:
 
     def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
         """
-        Returns a MempoolItem if it's inside one the mempools.
+        Returns a MempoolItem if it's inside one of the mempools.
 
         If include_pending is specified, also check the PENDING cache.
         """
