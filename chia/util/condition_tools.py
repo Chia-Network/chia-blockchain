@@ -7,7 +7,7 @@ from clvm.casts import int_from_bytes
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import PublicKeyBytes, bytes_to_PublicKeyBytes
+from chia.types.border_types import PublicKeyBytes, bytes_to_PublicKeyBytes
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle_conditions import SpendBundleConditions

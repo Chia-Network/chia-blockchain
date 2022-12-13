@@ -22,7 +22,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import PublicKeyBytes
+from chia.types.border_types import PublicKeyBytes
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate

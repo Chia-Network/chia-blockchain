@@ -15,7 +15,7 @@ from chia_rs import run_generator, MEMPOOL_MODE
 
 from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.borderlands import PublicKeyBytes
+from chia.types.border_types import PublicKeyBytes
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
 from chia.util.condition_tools import pkm_pairs

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from chia.types.blockchain_format.sized_bytes import bytes48
-from chia.types.borderlands import PublicKeyBytes, bytes_to_PublicKeyBytes
+from chia.types.border_types import PublicKeyBytes, bytes_to_PublicKeyBytes
 
 
 def test_wrong_input_type() -> None:

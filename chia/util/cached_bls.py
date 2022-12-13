@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Sequence
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import PublicKeyBytes
+from chia.types.border_types import PublicKeyBytes
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 

@@ -20,7 +20,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.borderlands import PublicKeyBytes
+from chia.types.border_types import PublicKeyBytes
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
