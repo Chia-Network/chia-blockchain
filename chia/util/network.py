@@ -117,14 +117,22 @@ def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     addrset: List[
         Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
     ] = socket.getaddrinfo(host, None)
-    # Addrset is never empty, an exception is thrown or data is returned.
-    for t in addrset:
-        if prefer_ipv6 and t[0] == socket.AF_INET6:
-            return ip_address(t[4][0])
-        if not prefer_ipv6 and t[0] == socket.AF_INET:
-            return ip_address(t[4][0])
-    # If neither matched preference, just return the first available
-    return ip_address(addrset[0][4][0])
+    # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
+    ips_v4 = []
+    ips_v6 = []
+    for family, _, _, _, ip_port in addrset:
+        ip = ip_address(ip_port[0])
+        if family == socket.AF_INET:
+            ips_v4.append(ip)
+        if family == socket.AF_INET6:
+            ips_v6.append(ip)
+    preferred, alternative = (ips_v6, ips_v4) if prefer_ipv6 else (ips_v4, ips_v6)
+    if len(preferred) > 0:
+        return preferred[0]
+    elif len(alternative) > 0:
+        return alternative[0]
+    else:
+        raise ValueError(f"failed to resolve {host} into an IP address")
 
 
 def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict, testing: bool) -> bool:
