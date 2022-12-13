@@ -103,7 +103,12 @@ def main() -> None:
 
 
 @main.command()
-def check() -> int:
+@click.option("-v", "--verbose", is_flag=True, help="Increase verbosity")
+def check(verbose: bool) -> int:
+    def print_maybe(message: str = "") -> None:
+        if verbose:
+            print(message)
+
     used_excludes = set()
     overall_fail = False
 
@@ -113,18 +118,18 @@ def check() -> int:
         suffix = all_suffixes[name]
         extra = found - found_stems["clvm"]
 
-        print()
-        print(f"Extra {suffix} files:")
+        print_maybe()
+        print_maybe(f"Extra {suffix} files:")
 
         if len(extra) == 0:
-            print("    -")
+            print_maybe("    -")
         else:
             overall_fail = True
             for stem in extra:
-                print(f"    {stem.with_name(stem.name + suffix)}")
+                print_maybe(f"    {stem.with_name(stem.name + suffix)}")
 
-    print()
-    print("Checking that all existing .clvm files compile to .clvm.hex that match existing caches:")
+    print_maybe()
+    print_maybe("Checking that all existing .clvm files compile to .clvm.hex that match existing caches:")
     for stem_path in sorted(found_stems["clvm"]):
         clvm_path = stem_path.with_name(stem_path.name + clvm_suffix)
         if clvm_path.name in excludes:
@@ -164,7 +169,7 @@ def check() -> int:
             if error is not None:
                 print(error)
         else:
-            print(f"    pass: {clvm_path}")
+            print_maybe(f"    pass: {clvm_path}")
 
         if file_fail:
             overall_fail = True
@@ -172,11 +177,11 @@ def check() -> int:
     unused_excludes = sorted(excludes - used_excludes)
     if len(unused_excludes) > 0:
         overall_fail = True
-        print()
-        print("Unused excludes:")
+        print_maybe()
+        print_maybe("Unused excludes:")
 
         for exclude in unused_excludes:
-            print(f"    {exclude}")
+            print_maybe(f"    {exclude}")
 
     return 1 if overall_fail else 0
 
