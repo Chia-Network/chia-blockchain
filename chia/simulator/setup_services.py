@@ -321,7 +321,9 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
 
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[asyncio.Task[Any], None]:
     lock = asyncio.Lock()
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
+    vdf_task_1 = asyncio.create_task(
+        spawn_process(self_hostname, port, 1, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
 
     def stop() -> None:
         asyncio.create_task(kill_processes(lock))
@@ -337,9 +339,15 @@ async def setup_vdf_clients(
     bt: BlockTools, self_hostname: str, port: int
 ) -> AsyncGenerator[Tuple[asyncio.Task[Any], asyncio.Task[Any], asyncio.Task[Any]], None]:
     lock = asyncio.Lock()
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
-    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, lock, bt.config.get("prefer_ipv6")))
-    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, lock, bt.config.get("prefer_ipv6")))
+    vdf_task_1 = asyncio.create_task(
+        spawn_process(self_hostname, port, 1, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
+    vdf_task_2 = asyncio.create_task(
+        spawn_process(self_hostname, port, 2, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
+    vdf_task_3 = asyncio.create_task(
+        spawn_process(self_hostname, port, 3, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
 
     def stop() -> None:
         asyncio.create_task(kill_processes(lock))
