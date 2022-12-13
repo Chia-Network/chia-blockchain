@@ -26,10 +26,6 @@ class VettedPeer:
     last_attempt: uint64 = uint64(0)
     time_added: uint64 = uint64(0)
 
-    def __init__(self, h: str, p: uint16):
-        self.host = h
-        self.port = p
-
     def __eq__(self, rhs: object) -> bool:
         return self.host == rhs.host and self.port == rhs.port  # type: ignore[no-any-return, attr-defined]
 
