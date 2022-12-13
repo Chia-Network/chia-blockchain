@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from chia.types.blockchain_format.sized_bytes import bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.border_types import PublicKeyBytes, bytes_to_PublicKeyBytes
 
 
@@ -30,3 +30,29 @@ def test_type_conversion() -> None:
             )
         )
     )
+
+
+def test_type_construction_from_correct_type() -> None:
+    _ = PublicKeyBytes(bytes48(b"a" * 48))
+
+
+def test_type_construction_from_correctly_sized_bytes() -> None:
+    _ = PublicKeyBytes(b"a" * 48)  # type: ignore[arg-type]
+
+
+def test_type_construction_from_incorrect_type_str() -> None:
+    """Danger: No runtime check."""
+    _ = PublicKeyBytes("a" * 48)  # type: ignore[arg-type]
+
+
+def test_type_construction_from_incorrect_type_int() -> None:
+    """Danger: No runtime check."""
+    _ = PublicKeyBytes(48)  # type: ignore[arg-type]
+
+
+def test_type_construction_from_incorrectly_sized_bytes() -> None:
+    _ = PublicKeyBytes(b"a" * 32)  # type: ignore[arg-type]
+
+
+def test_type_construction_from_incorrectly_sized_SizedBytes() -> None:
+    _ = PublicKeyBytes(bytes32(b"a" * 32))  # type: ignore[arg-type]
