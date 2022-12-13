@@ -1,14 +1,25 @@
 from __future__ import annotations
 
-from typing import NewType
+from typing import NewType, TypeVar
+
+from typing_extensions import Protocol
 
 from chia.types.blockchain_format.sized_bytes import bytes48
+
+_T = TypeVar("_T", covariant=True)
+
 
 PublicKeyBytes = NewType("PublicKeyBytes", bytes48)
 
 
+class BytesToProtocol(Protocol[_T]):
+    def __call__(self, __positional_only: bytes) -> _T:
+        ...
+
+
 """
-These conversion functions should be used at the border between native code (eg. Rust and C++) and Python
+These conversion functions of the form bytes_to_TYPENAME
+should be used at the border between native code (eg. Rust and C++) and Python only.
 
 Use bytes_to_TypeName() for bytes coming from native code into the Python program.
 Use the TypeName() constructor if you are constructing e.g. a bytes32 from within Python, perhaps for use in a test.
@@ -23,6 +34,4 @@ from those libraries.
 
 """
 
-
-def bytes_to_PublicKeyBytes(input_bytes: bytes) -> PublicKeyBytes:
-    return PublicKeyBytes(bytes48(input_bytes))
+bytes_to_PublicKeyBytes: BytesToProtocol[PublicKeyBytes] = bytes48
