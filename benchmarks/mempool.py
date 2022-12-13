@@ -167,8 +167,8 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
-            for i in range(2000):
-                await mempool.create_bundle_from_mempool(bytes32(b"a" * 32))
+            for _ in range(2000):
+                mempool.create_bundle_from_mempool(bytes32(b"a" * 32))
             stop = monotonic()
         print(f"create_bundle_from_mempool time: {stop - start:0.4f}s")
 
