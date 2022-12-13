@@ -1636,6 +1636,41 @@ class WalletNode:
 
         return coin_state.coin_states
 
+    async def get_coin_and_puzzle_solution(
+        self,
+        coin_name: bytes32,
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
+    ) -> CoinSpend:
+        coin_names = [coin_name]
+        msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
+        # fetch full coin details
+        coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
+            raise PeerRequestException(f"Was not able to get states for {coin_names}")
+        valid_list = []
+        # validate coin details
+        if not self.is_trusted(peer):
+            for coin in coin_state.coin_states:
+                valid = await self.validate_received_state_from_peer(
+                    coin, peer, self.get_cache_for_peer(peer), fork_height
+                )
+                if valid:
+                    valid_list.append(coin)
+        if len(valid_list) != 1:
+            raise PeerRequestException("Unable to fetch coin info")
+        # fetch original coin's parent's children to get our coin
+        coin = valid_list[0].coin
+        parents_children = await self.fetch_children(valid_list)
+        assert len(parents_children) == 1
+        full_coin = parents_children[0].coin
+        assert full_coin.name() == coin_name
+        spend_height = parents_children[0].spend_height
+        # fetch original coin's spend using our coin's created height
+
+        breakpoint()
+        return
+
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:

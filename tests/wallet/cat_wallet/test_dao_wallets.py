@@ -26,21 +26,29 @@ class TestDAOWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_dao_creation(self, self_hostname, two_wallet_nodes, trusted):
+    async def test_dao_creation(self, self_hostname, three_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets, _ = two_wallet_nodes
+        full_nodes, wallets, _ = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
-        wallet_node, server_2 = wallets[0]
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_node_0, server_0 = wallets[0]
+        wallet_node_1, server_1 = wallets[1]
+        wallet = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_0.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+            wallet_node_1.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -53,11 +61,18 @@ class TestDAOWallet:
         )
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
         dao_wallet = await DAOWallet.create_new_dao_and_wallet(
-            wallet_node.wallet_state_manager,
+            wallet_node_0.wallet_state_manager,
             wallet,
             200,
         )
         assert dao_wallet is not None
+        treasury_id = dao_wallet.dao_info.treasury_id
+        dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
+            treasury_id,
+        )
+        assert dao_wallet_1 is not None

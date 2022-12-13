@@ -61,7 +61,7 @@ class ProposalInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class DAOInfo(Streamable):
-    teasury_id: bytes32
+    treasury_id: bytes32
     cat_wallet_id: uint64
     proposals_list: List[ProposalInfo]
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
@@ -161,18 +161,22 @@ class DAOWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DID wallet from recovery file ...")
-        info = DAOInfo(treasury_id, None, [], [])
-        # teasury_id: bytes32
+        info = DAOInfo(treasury_id, 0, [], [])
+        # treasury_id: bytes32
         # cat_wallet_id: int
         # proposals_list: List[ProposalInfo]
         # parent_info: List[LineageProof]
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DAO.value, info
+        self.dao_info = DAOInfo(
+            bytes32([0] * 32), 0, [], [],
         )
+        info_as_string = json.dumps(self.dao_info.to_json_dict())
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            name, WalletType.DAO.value, info_as_string
+        )
+        await self.resync_treasury_state()
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         await self.save_info(self.dao_info)
-        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-        await self.load_parent(self.did_info)
+
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
@@ -429,6 +433,60 @@ class DAOWallet:
                 await self.add_parent(child_coin.parent_coin_info, parent_info)
             parent_coin = child_coin
         assert parent_info is not None
+
+    async def resync_treasury_state(self):
+        parent_coin: Coin = self.dao_info.treasury_id
+        wallet_node = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
+        cs = self.wallet_node.get_coin_state([parent_coin], peer)
+        parent_coin = cs[0].coin
+        breakpoint()
+        while True:
+            children = await self.wallet_node.fetch_children(parent_coin, peer)
+            if len(children) == 0:
+                break
+
+            children_state: CoinState = children[0]
+            child_coin = children_state.coin
+            future_parent = LineageProof(
+                child_coin.parent_coin_info,
+                did_info.current_inner.get_tree_hash(),
+                uint64(child_coin.amount),
+            )
+            await self.add_parent(child_coin.name(), future_parent)
+            if children_state.spent_height != children_state.created_height:
+                did_info = DIDInfo(
+                    did_info.origin_coin,
+                    did_info.backup_ids,
+                    did_info.num_of_backup_ids_needed,
+                    self.did_info.parent_info,
+                    did_info.current_inner,
+                    child_coin,
+                    new_did_inner_puzhash,
+                    bytes(new_pubkey),
+                    False,
+                    did_info.metadata,
+                )
+
+                await self.save_info(did_info)
+                assert children_state.created_height
+                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
+                assert parent_spend is not None
+                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
+                    parent_spend.puzzle_reveal.to_program()
+                )
+                assert parent_innerpuz is not None
+                parent_info = LineageProof(
+                    parent_coin.parent_coin_info,
+                    parent_innerpuz.get_tree_hash(),
+                    uint64(parent_coin.amount),
+                )
+                await self.add_parent(child_coin.parent_coin_info, parent_info)
+            parent_coin = child_coin
+        assert parent_info is not None
+        return
 
     async def create_tandem_xch_tx(
         self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
@@ -1110,7 +1168,7 @@ class DAOWallet:
         cat_wallet_id = new_cat_wallet.wallet_info.id
 
         dao_info = DAOInfo(
-            self.dao_info.teasury_id,
+            self.dao_info.treasury_id,
             cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
@@ -1232,7 +1290,7 @@ class DAOWallet:
         current_list = self.dao_info.parent_info.copy()
         current_list.append((name, parent))
         dao_info: DAOInfo = DAOInfo(
-            self.dao_info.teasury_id,
+            self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
             self.dao_info.proposals_list,
             current_list,

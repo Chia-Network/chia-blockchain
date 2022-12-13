@@ -450,6 +450,7 @@ class DIDWallet:
         parent_coin: Coin = did_info.origin_coin
         while True:
             children = await wallet_node.fetch_children(parent_coin.name(), peer)
+            # breakpoint()
             if len(children) == 0:
                 break
 
