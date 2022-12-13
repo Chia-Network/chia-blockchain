@@ -11,11 +11,6 @@ def test_wrong_input_type() -> None:
         _ = bytes_to_PublicKeyBytes("hi")  # type: ignore[arg-type]
 
 
-def test_unknown_type() -> None:
-    with pytest.raises(ValueError):
-        _ = bytes_to_PublicKeyBytes(b"")
-
-
 def test_underlying_typecheck() -> None:
     with pytest.raises(ValueError):
         _ = bytes_to_PublicKeyBytes(b"")
