@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import logging
+import os
 import pathlib
 import signal
 import time
-import os
 from typing import Dict, List
 
 import pkg_resources

@@ -1,19 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import json
-import traceback
+import logging
 import os
 import sys
-import logging
-
+import traceback
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import (
-    run_plotter,
-    run_command,
-    reset_loop_policy_for_windows,
-    get_venv_bin,
-)
 
 log = logging.getLogger(__name__)
 
