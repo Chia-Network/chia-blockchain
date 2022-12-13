@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -367,7 +368,7 @@ class DIDWallet:
             puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
                 coin.parent_coin_info, uint32(parent_state.spent_height)
             )
-            response = await peer.request_puzzle_solution(puzzle_solution_request)
+            response = await peer.call_api(FullNodeAPI.request_puzzle_solution, puzzle_solution_request)
             req_puz_sol = response.response
             assert req_puz_sol.puzzle is not None
             parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
