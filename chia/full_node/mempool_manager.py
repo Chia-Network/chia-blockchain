@@ -581,10 +581,10 @@ class MempoolManager:
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
-                        spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(spendbundle_ids)
-                        for spendbundle_id in spendbundle_ids:
-                            self.remove_seen(spendbundle_id)
+                        c_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
+                        self.mempool.remove_from_pool(c_ids)
+                        for c_id in c_ids:
+                            self.remove_seen(c_id)
         else:
             old_pool = self.mempool
 
