@@ -110,9 +110,6 @@ def class_for_type(type: NodeType) -> Any:
 
 
 def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
-    # If there was no preference passed in (from config), set the system-wide
-    # default here.  Not a great place to locate a default value, and we should
-    # probably do something to write it into the config, but.  For now...
     try:
         return ip_address(host)
     except ValueError:
