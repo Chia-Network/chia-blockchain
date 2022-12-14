@@ -150,7 +150,7 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - name: Get latest full release bladebit plotter
-        if: env.FULL_RELEASE == 'true'
+        if: '!github.event.release.prerelease'
         run: |
           FULLRELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease | not)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
           mkdir "$GITHUB_WORKSPACE/bladebit"
