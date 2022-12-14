@@ -1,9 +1,6 @@
 [run]
 branch=True
 relative_files=True
-source=
-  chia
-  tests
 concurrency=multiprocessing
 parallel=True
 
