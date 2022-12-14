@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import logging
 import time
@@ -72,7 +71,6 @@ class PoolWallet:
     next_transaction_fee: uint64 = uint64(0)
     target_state: Optional[PoolState] = None
     _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = None
-    _update_pool_config_after_sync_task: Optional[asyncio.Task] = None
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
@@ -297,26 +295,8 @@ class PoolWallet:
                     self.next_transaction_fee = uint64(0)
                 break
 
-        await self.update_pool_config_after_sync()  # Update pool config after we finish syncing.
+        await self.update_pool_config()
         return True
-
-    async def update_pool_config_after_sync(self) -> None:
-        """
-        Updates the pool config file with the current state after sync is complete.
-        If the wallet crashes, the config file will be auto updated on restart.
-        """
-        # we only need one task running at a time.
-        if self._update_pool_config_after_sync_task is None or self._update_pool_config_after_sync_task.done():
-
-            async def update_pool_config_after_sync_task():
-                synced = await self.wallet_state_manager.synced()
-                while not synced:
-                    await asyncio.sleep(5)  # we sync pretty quickly, so I think this is ok.
-                    synced = await self.wallet_state_manager.synced()
-                await self.update_pool_config()
-                self.log.info("Updated pool config after syncing finished.")
-
-            self._update_pool_config_after_sync_task = asyncio.create_task(update_pool_config_after_sync_task())
 
     async def rewind(self, block_height: int) -> bool:
         """
@@ -400,7 +380,6 @@ class PoolWallet:
             wallet_id=wallet_info.id,
             standard_wallet=wallet,
         )
-        await pool_wallet.update_pool_config()
         return pool_wallet
 
     @staticmethod
