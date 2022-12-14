@@ -17,7 +17,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
-from chia.full_node.mempool import Mempool
+from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -346,7 +346,7 @@ class MempoolManager:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
             self.mempool.add_to_pool(item)
-            self.mempool.remove_from_pool(remove_items)
+            self.mempool.remove_from_pool(remove_items, reason=MempoolRemoveReason.CONFLICT)
             return item.cost, MempoolInclusionStatus.SUCCESS, None
         elif item is not None:
             # There is an error,  but we still returned a mempool item, this means we should add to the pending pool.
@@ -514,7 +514,6 @@ class MempoolManager:
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
-
         duration = time.time() - start_time
 
         log.log(
@@ -591,7 +590,7 @@ class MempoolManager:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
                         c_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(c_ids)
+                        self.mempool.remove_from_pool(c_ids, MempoolRemoveReason.BLOCK_INCLUSION)
                         for c_id in c_ids:
                             self.remove_seen(c_id)
         else:

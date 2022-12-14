@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from enum import IntEnum
 from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
@@ -15,6 +16,18 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64
+
+
+class MempoolRemoveReason(IntEnum):
+    CONFLICT = 1
+    BLOCK_INCLUSION = 2
+    POOL_FULL = 3
+
+    def __repr__(self) -> str:
+        return str(f"{self.__class__.__name__}.{self.name}")
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 class Mempool:
@@ -50,7 +63,7 @@ class Mempool:
         else:
             return 0
 
-    def remove_from_pool(self, items: List[bytes32]) -> None:
+    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
         """
         Removes an item from the mempool.
         """
@@ -73,7 +86,8 @@ class Mempool:
             self.total_mempool_cost -= item.cost
             assert self.total_mempool_cost >= 0
             mempool_info = self.get_mempool_info()
-            self.fee_estimator.remove_mempool_item(mempool_info, item)
+            if reason != MempoolRemoveReason.BLOCK_INCLUSION:
+                self.fee_estimator.remove_mempool_item(mempool_info, item)
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
@@ -84,7 +98,7 @@ class Mempool:
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
             to_remove: MempoolItem = list(val.values())[0]
-            self.remove_from_pool([to_remove.name])
+            self.remove_from_pool([to_remove.name], MempoolRemoveReason.POOL_FULL)
 
         self.spends[item.name] = item
 
