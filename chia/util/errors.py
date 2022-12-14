@@ -283,6 +283,15 @@ class KeychainLabelExists(KeychainLabelError):
 
 
 ##
+#  Server errors
+##
+
+
+class ServerError(Exception):
+    pass
+
+
+##
 #  Miscellaneous errors
 ##
 

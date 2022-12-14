@@ -5,6 +5,7 @@ import logging
 import ssl
 import time
 import traceback
+from contextlib import suppress
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
@@ -34,7 +35,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError
+from chia.util.errors import Err, ProtocolError, ServerError
 from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
@@ -122,6 +123,7 @@ class ChiaServer:
     _network_id: str
     _inbound_rate_limit_percent: int
     _outbound_rate_limit_percent: int
+    _reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task[None]]]
     api: Any
     node: Any
     root_path: Path
@@ -158,6 +160,7 @@ class ChiaServer:
         config: Dict[str, Any],
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
+        connect_peers: List[PeerInfo],
         name: str = __name__,
     ) -> ChiaServer:
 
@@ -214,6 +217,7 @@ class ChiaServer:
             _network_id=network_id,
             _inbound_rate_limit_percent=inbound_rate_limit_percent,
             _outbound_rate_limit_percent=outbound_rate_limit_percent,
+            _reconnect_tasks={peer_info: None for peer_info in connect_peers},
             log=log,
             api=api,
             node=node,
@@ -228,6 +232,18 @@ class ChiaServer:
 
     def set_received_message_callback(self, callback: ConnectionCallback) -> None:
         self.received_message_callback = callback
+
+    async def _reconnect_task_handler(self, peer_info: PeerInfo) -> None:
+        while True:
+            if peer_info not in [connection.get_peer_info() for connection in self.all_connections.values()]:
+                self.log.info(f"Reconnecting to peer {peer_info}")
+                try:
+                    await self.start_client(peer_info, None)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:
+                    self.log.info(f"Failed to connect to {peer_info} {e}")
+            await asyncio.sleep(3)
 
     async def garbage_collect_connections_task(self) -> None:
         """
@@ -265,11 +281,19 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
+    def add_peer(self, peer: PeerInfo) -> None:
+        if self._reconnect_tasks.get(peer) is not None:
+            raise ServerError(f"Peer {peer} already added")
+        self._reconnect_tasks[peer] = asyncio.create_task(self._reconnect_task_handler(peer))
+
     async def start_server(self, prefer_ipv6: bool, on_connect: Optional[ConnectionCallback] = None) -> None:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
         if self.gc_task is None:
             self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
+
+        for peer_info in self._reconnect_tasks.keys():
+            self.add_peer(peer_info)
 
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
             return None
@@ -610,6 +634,9 @@ class ChiaServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
+        for task in self._reconnect_tasks.values():
+            if task is not None:
+                task.cancel()
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
         if self.webserver is not None:
             self.webserver.close()
@@ -627,6 +654,11 @@ class ChiaServer:
         if self.webserver is not None:
             await self.webserver.await_closed()
             self.webserver = None
+        for task in self._reconnect_tasks.values():
+            if task is not None:
+                with suppress(asyncio.CancelledError):
+                    await task
+        self._reconnect_tasks.clear()
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None

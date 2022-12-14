@@ -25,7 +25,6 @@ from chia.util.lock import Lockfile, LockfileError
 from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
-from .reconnect_task import start_reconnect_task
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -35,10 +34,6 @@ T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
-
-
-class ServiceException(Exception):
-    pass
 
 
 class Service(Generic[_T_RpcServiceProtocol]):
@@ -109,6 +104,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             self.service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
+            connect_peers,
             name=f"{service_name}_server",
         )
         f = getattr(node, "set_server", None)
@@ -128,7 +124,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
-        self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task[None]]] = {peer: None for peer in connect_peers}
         self.upnp: UPnP = UPnP()
 
     async def start(self) -> None:
@@ -152,9 +147,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         await self._server.start_server(self.config.get("prefer_ipv6", False), self._on_connect_callback)
         self._advertised_port = self._server.get_port()
-
-        for peer in self._reconnect_tasks.keys():
-            self.add_peer(peer)
 
         self._log.warning(
             f"Started {self._service_name} service on network_id: {self._network_id} "
@@ -184,12 +176,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
-
-    def add_peer(self, peer: PeerInfo) -> None:
-        if self._reconnect_tasks.get(peer) is not None:
-            raise ServiceException(f"Peer {peer} already added")
-
-        self._reconnect_tasks[peer] = start_reconnect_task(self._server, peer, self._log)
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
@@ -236,11 +222,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
             for port in self._upnp_ports:
                 self.upnp.release(port)
 
-            self._log.info("Cancelling reconnect task")
-            for task in self._reconnect_tasks.values():
-                if task is not None:
-                    task.cancel()
-            self._reconnect_tasks.clear()
             self._log.info("Closing connections")
             self._server.close_all()
             self._node._close()
