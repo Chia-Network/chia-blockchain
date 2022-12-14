@@ -8,6 +8,7 @@ from typing import Dict, Optional, List, Any, Set, Tuple, TYPE_CHECKING
 from blspy import AugSchemeMPL, G1Element, G2Element
 from secrets import token_bytes
 
+import chia.wallet.singleton
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -18,7 +19,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64, uint32, uint8, uint128
-from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.util.transaction_type import TransactionType
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -213,7 +214,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+            json.dumps(chia.wallet.singleton.program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
@@ -362,7 +363,7 @@ class DIDWallet:
             response = await peer.request_puzzle_solution(puzzle_solution_request)
             req_puz_sol = response.response
             assert req_puz_sol.puzzle is not None
-            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
+            parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
             if parent_innerpuz:
                 parent_info = LineageProof(
                     parent_state.coin.parent_coin_info,
@@ -440,7 +441,7 @@ class DIDWallet:
             did_info.backup_ids,
             did_info.num_of_backup_ids_needed,
             did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
@@ -480,7 +481,7 @@ class DIDWallet:
                 assert children_state.created_height
                 parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
                 assert parent_spend is not None
-                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
+                parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
                     parent_spend.puzzle_reveal.to_program()
                 )
                 assert parent_innerpuz is not None
@@ -514,12 +515,12 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 self.did_info.num_of_backup_ids_needed,
                 self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
             )
-            return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
+            return chia.wallet.singleton.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
         else:
             innerpuz = Program.to((8, 0))
-            return did_wallet_puzzles.create_fullpuz(innerpuz, bytes32([0] * 32))
+            return chia.wallet.singleton.create_fullpuz(innerpuz, bytes32([0] * 32))
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
@@ -531,9 +532,9 @@ class DIDWallet:
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             origin_coin_name,
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
-        return did_wallet_puzzles.create_fullpuz_hash(innerpuz_hash, origin_coin_name)
+        return chia.wallet.singleton.create_fullpuz_hash(innerpuz_hash, origin_coin_name)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -581,7 +582,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -599,7 +600,7 @@ class DIDWallet:
             ]
         )
         # Create an additional spend to confirm the change on-chain
-        new_full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        new_full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             new_inner_puzzle,
             self.did_info.origin_coin.name(),
         )
@@ -673,7 +674,7 @@ class DIDWallet:
             backup_ids,
             backup_required,
             self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
@@ -693,7 +694,7 @@ class DIDWallet:
             innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
-        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             self.did_info.current_inner,
             self.did_info.origin_coin.name(),
         )
@@ -777,7 +778,7 @@ class DIDWallet:
         innersol: Program = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -812,7 +813,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -891,7 +892,7 @@ class DIDWallet:
         innersol = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -1008,7 +1009,7 @@ class DIDWallet:
         # full solution is (parent_info my_amount solution)
         assert self.did_info.current_inner is not None
         innerpuz: Program = self.did_info.current_inner
-        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -1090,7 +1091,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         elif origin_id is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
@@ -1098,7 +1099,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 origin_id,
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         else:
             raise ValueError("must have origin coin")
@@ -1123,7 +1124,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             uint64(self.did_info.num_of_backup_ids_needed),
             self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
@@ -1136,7 +1137,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         return inner_puzzle
 
@@ -1204,12 +1205,12 @@ class DIDWallet:
             return None
 
         origin = coins.copy().pop()
-        genesis_launcher_puz = did_wallet_puzzles.LAUNCHER_PUZZLE
+        genesis_launcher_puz = chia.wallet.singleton.LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
         did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
         did_inner_hash = did_inner.get_tree_hash()
-        did_full_puz = did_wallet_puzzles.create_fullpuz(did_inner, launcher_coin.name())
+        did_full_puz = chia.wallet.singleton.create_fullpuz(did_inner, launcher_coin.name())
         did_puzzle_hash = did_full_puz.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()

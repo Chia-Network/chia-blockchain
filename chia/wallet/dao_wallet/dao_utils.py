@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from typing import List
-from chia.wallet.puzzles.load_clvm import load_clvm
+
 from chia.types.blockchain_format.program import Program
-from chia.util.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
@@ -59,10 +62,7 @@ def get_treasury_puzzle(
 
 
 def get_lockup_puzzle(
-    cat_tail: bytes32,
-    previous_votes_list: List[bytes32],
-    proposal_timelock: uint64,
-    innerpuz: Program
+    cat_tail: bytes32, previous_votes_list: List[bytes32], proposal_timelock: uint64, innerpuz: Program
 ) -> Program:
     # PROPOSAL_MOD_HASH
     # SINGLETON_MOD_HASH
@@ -95,7 +95,7 @@ def get_proposal_puzzle(
     proposal_timelock: uint64,
     votes_sum: int,
     total_votes: uint64,
-    innerpuz: Program
+    innerpuz: Program,
 ) -> Program:
     # SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
     # PROPOSAL_MOD_HASH
@@ -165,11 +165,7 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
     # SINGLETON_LAUNCHER_PUZHASH
     # DAO_PROPOSAL_MOD_HASH
     puzzle = DAO_CAT_TAIL.curry(
-        genesis_coin_id,
-        treasury_id,
-        SINGLETON_MOD_HASH,
-        SINGLETON_LAUNCHER_PUZHASH,
-        DAO_PROPOSAL_MOD
+        genesis_coin_id, treasury_id, SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_PUZHASH, DAO_PROPOSAL_MOD
     )
     return puzzle
 

@@ -42,7 +42,8 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, program_to_metadata
+from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle
+from chia.wallet.singleton import program_to_metadata
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs

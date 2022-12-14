@@ -14,7 +14,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.util.address_type import AddressType
 
 from chia.wallet.util.wallet_types import WalletType

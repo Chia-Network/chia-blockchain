@@ -53,7 +53,8 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
