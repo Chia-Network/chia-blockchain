@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
-from chia_rs import Coin
+from chia_rs import ELIGIBLE_FOR_DEDUP, Coin
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -18,6 +18,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
@@ -50,53 +51,75 @@ class InternalMempoolItem:
     height_added_to_mempool: uint32
 
 
-def compute_spend_cost(
-    puzzle_reveal: SerializedProgram, solution: SerializedProgram, maximum_cost: uint64
-) -> Optional[uint64]:
+@dataclass(frozen=True)
+class DedupCoinSpend:
+    solution: SerializedProgram
+    cost: Optional[uint64]
+    additions: Set[Coin]
+
+
+def run_for_cost_and_additions(
+    coin_id: bytes32, puzzle_reveal: SerializedProgram, solution: SerializedProgram, maximum_cost: uint64
+) -> Optional[Tuple[uint64, List[Coin]]]:
     try:
-        cost, _ = puzzle_reveal.run_with_cost(maximum_cost, solution)
-        return uint64(cost)
+        cost, conditions = puzzle_reveal.run_with_cost(maximum_cost, solution)
+        created_coins = []
+        for condition in conditions.as_python():
+            if condition[0] == ConditionOpcode.CREATE_COIN:
+                puzzle_hash = bytes32(condition[1])
+                amount = uint64(int.from_bytes(condition[2], "big"))
+                created_coins.append(Coin(coin_id, puzzle_hash, amount))
+        return (uint64(cost), created_coins)
     except Exception:
         return None
 
 
 def check_item_for_dedup(
-    item: MempoolItem, dedup_coin_spends: Dict[bytes32, Tuple[bytes32, Optional[uint64]]]
-) -> Optional[Tuple[List[CoinSpend], uint64, Dict[bytes32, Tuple[bytes32, Optional[uint64]]]]]:
+    item: MempoolItem, dedup_coin_spends: Dict[bytes32, DedupCoinSpend]
+) -> Optional[Tuple[List[CoinSpend], uint64, Dict[bytes32, DedupCoinSpend], Set[Coin]]]:
     consider_this_item = True
     cost_saving = uint64(0)
     spends_to_dedup: List[CoinSpend] = []
-    new_dedups: Dict[bytes32, Tuple[bytes32, Optional[uint64]]] = {}
+    dedup_additions: Set[Coin] = set()
+    new_dedups: Dict[bytes32, DedupCoinSpend] = {}
     # See if this item has coin spends that are eligible for deduplication
     assert item.npc_result.conds is not None
-    eligible_coin_ids = [bytes32(s.coin_id) for s in item.npc_result.conds.spends if s.eligible_for_dedup]
+    eligible_coin_ids = [bytes32(s.coin_id) for s in item.npc_result.conds.spends if s.flags & ELIGIBLE_FOR_DEDUP]
     for coin_id in eligible_coin_ids:
         # Pick the first coin spend with coin_id
         # npc_result.conds.spends should be consistent with
         # spend_bundle.coin_spends at this point, guaranteeing the presence of
         # this coin spend in this bundle as a result
         coin_spend_in_bundle = next(cs for cs in item.spend_bundle.coin_spends if cs.coin.name() == coin_id)
-        solution_hash_in_bundle = std_hash(coin_spend_in_bundle.solution)
+        solution_in_bundle = coin_spend_in_bundle.solution
         # See if we processed an item with this coin before
         if coin_id in dedup_coin_spends:
             # See if the solution was identical
-            processed_solution_hash, duplicate_cost = dedup_coin_spends[coin_id]
-            if processed_solution_hash == solution_hash_in_bundle:
+            dedup_coin_spend = dedup_coin_spends[coin_id]
+            processed_solution = dedup_coin_spend.solution
+            duplicate_cost = dedup_coin_spend.cost
+            duplicate_additions = dedup_coin_spend.additions
+            if processed_solution == solution_in_bundle:
                 # Let's calculate the saved cost if we never did that before
                 if duplicate_cost is None:
-                    spend_cost = compute_spend_cost(
-                        coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost
+                    # If we never ran this before, additions should be empty
+                    assert len(duplicate_additions) == 0
+                    result = run_for_cost_and_additions(
+                        coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost
                     )
-                    if spend_cost is None:
+                    if result is None:
                         # We failed to run this puzzle, skip this whole item
                         consider_this_item = False
                         cost_saving = uint64(0)
                         break
                     else:
+                        spend_cost, created_coins = result
                         duplicate_cost = spend_cost
-                        # If we end up including this item, update this entry's cost
-                        new_dedups[coin_id] = (processed_solution_hash, spend_cost)
+                        duplicate_additions.update(created_coins)
+                        # If we end up including this item, update this entry's cost and additions
+                        new_dedups[coin_id] = DedupCoinSpend(processed_solution, duplicate_cost, duplicate_additions)
                 cost_saving = uint64(cost_saving + duplicate_cost)
+                dedup_additions.update(duplicate_additions)
                 spends_to_dedup.append(coin_spend_in_bundle)
             else:
                 # It wasn't, so let's skip this whole transaction
@@ -106,9 +129,9 @@ def check_item_for_dedup(
         else:
             # We didn't process an item with this coin before. If we end up including
             # this item, add this pair to dedup_coin_spends
-            new_dedups[coin_id] = (solution_hash_in_bundle, None)
+            new_dedups[coin_id] = DedupCoinSpend(solution_in_bundle, None, set())
     if consider_this_item:
-        return (spends_to_dedup, cost_saving, new_dedups)
+        return (spends_to_dedup, cost_saving, new_dedups, dedup_additions)
     else:
         return None
 
@@ -460,7 +483,7 @@ class Mempool:
         processed_spend_bundles = 0
         additions: Set[Coin] = set()
         # This is a map of coin ID to a pair of the coin spend solution hash and its isolated cost
-        dedup_coin_spends: Dict[bytes32, Tuple[bytes32, Optional[uint64]]] = {}
+        dedup_coin_spends: Dict[bytes32, DedupCoinSpend] = {}
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
@@ -470,7 +493,7 @@ class Mempool:
             result = check_item_for_dedup(item, dedup_coin_spends)
             if result is None:
                 continue
-            spends_to_dedup, cost_saving, new_dedups = result
+            spends_to_dedup, cost_saving, new_dedups, dedup_additions = result
             item_cost = item.cost - cost_saving
             log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
             if (
@@ -484,16 +507,13 @@ class Mempool:
             for cs in item.spend_bundle.coin_spends:
                 if cs not in spends_to_dedup:
                     coin_spends.append(cs)
-            # The assumption here is that deduplicated spends generate
-            # the same additions (as a result of spending the coin with
-            # the same solution), so those additions get deduplicated
-            # naturally on set update.
-            # Ideally we would have more explicit checks
+            # Deduplicate the created coins resulting from the deduplicated coin spends
             if item.npc_result.conds is not None:
                 for spend in item.npc_result.conds.spends:
                     for puzzle_hash, amount, _ in spend.create_coin:
                         coin = Coin(spend.coin_id, puzzle_hash, amount)
-                        additions.add(coin)
+                        if coin not in dedup_additions:
+                            additions.add(coin)
             sigs.append(item.spend_bundle.aggregated_signature)
             cost_sum += item_cost
             fee_sum += item.fee

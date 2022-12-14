@@ -10,6 +10,7 @@ from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
 from blspy import GTElement
+from chia_rs import ELIGIBLE_FOR_DEDUP
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -535,7 +536,7 @@ class MempoolManager:
             coin_id = removal.name()
             # Only consider conflicts if the coin is not eligible for deduplication
             assert npc_result.conds is not None
-            if len([s for s in npc_result.conds.spends if s.coin_id == coin_id and s.eligible_for_dedup]) == 0:
+            if len([s for s in npc_result.conds.spends if s.coin_id == coin_id and s.flags & ELIGIBLE_FOR_DEDUP]) == 0:
                 removals_ids.append(coin_id)
         # 2. Checks if there are mempool conflicts
         conflicts = self.mempool.get_items_by_coin_ids(removals_ids)
