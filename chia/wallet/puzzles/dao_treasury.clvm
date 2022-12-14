@@ -10,16 +10,16 @@
   CAT_MOD_HASH
   CAT_TAIL
   CURRENT_CAT_ISSUANCE
-  PROPOSAL_PASS_PERCENTAGE
-  PROPOSAL_TIMELOCK
-  old_amount
-  new_amount_change
-  my_puzhash_or_proposal_id
+  PROPOSAL_PASS_PERCENTAGE ; percent of total potential votes needed to have a chance at passing
+  PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
+  my_amount         ; current amount
+  new_amount_change ; may be negative or positive. Is zero during eve spend
+  my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
   announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
   new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
   proposal_innerpuz
-  proposal_current_votes
-  proposal_total_votes
+  proposal_current_votes ; sum of (votes_for - votes_against)
+  proposal_total_votes   ; total votes cast (by number of cat-mojos)
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -91,13 +91,13 @@
 
   ; main
   (c
-    (list ASSERT_MY_AMOUNT old_amount)
+    (list ASSERT_MY_AMOUNT my_amount)
     (if new_puzhash
       ; this is the payout spend case
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list my_puzhash_or_proposal_id CURRENT_CAT_ISSUANCE)))  ; announce the proposal we're approving, and the current amount of CATs in the world
         (c
-          (list CREATE_COIN new_puzhash (+ old_amount new_amount_change))
+          (list CREATE_COIN new_puzhash (+ my_amount new_amount_change))
           (create_puzzle_asserts
             (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
                 (calculate_proposal_puzzle
@@ -126,7 +126,7 @@
       ; this is the add money spend case
       (if (> new_amount_change -1)
         (list
-          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change old_amount))
+          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change my_amount))
           (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
           (list
             CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken

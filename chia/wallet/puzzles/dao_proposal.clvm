@@ -4,7 +4,7 @@
 (mod (
   SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
   PROPOSAL_MOD_HASH
-  PROPOSAL_TIMER_MOD_HASH
+  PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
   CAT_MOD_HASH
   TREASURY_MOD_HASH
   LOCKUP_MOD_HASH
@@ -15,8 +15,8 @@
   VOTES_SUM  ; yes votes are +1, no votes are -1
   TOTAL_VOTES  ; how many people responded
   INNERPUZ  ; this is what runs if this proposal is successful
-  vote_amount_or_solution
-  vote_info_or_p2_singleton_mod_hash
+  vote_amount_or_solution ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+  vote_info_or_p2_singleton_mod_hash ; in vote tally mode, if this argument is 1, then we ADD vote_amount_or_solution votes. Else we subtract.
   vote_coin_id_or_current_cat_issuance
   previous_votes  ; set this to 0 if we have passed
   lockup_innerpuzhash
@@ -189,6 +189,7 @@
               TREASURY_ID
               PROPOSAL_TIMELOCK
               (if vote_info_or_p2_singleton_mod_hash (+ VOTES_SUM vote_amount_or_solution) (- VOTES_SUM vote_amount_or_solution))
+
               TOTAL_VOTES
               INNERPUZ
             )
@@ -216,7 +217,7 @@
       )
     )
 
-    ; if we've passed
+    ; terminate this proposal
     (c
       (list CREATE_COIN dao_finished_state ONE)  ; move to announce finished mode. See previous comment about proposal amounts
       (c
@@ -257,7 +258,7 @@
               )
               (if (all (> TOTAL_VOTES (calculate_win_percentage vote_coin_id_or_current_cat_issuance PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
                 (a INNERPUZ vote_amount_or_solution)  ; run proposed chialisp
-                ()  ; we don't run the chialisp, and instead move to the finished state
+                ()  ; we don't run the chialisp, but we still move to the finished state
               )
             )
           )

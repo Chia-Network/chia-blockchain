@@ -11,7 +11,7 @@
   LOCKUP_MOD_HASH
   CAT_MOD_HASH
   CAT_TAIL
-  PREVIOUS_VOTES  ; "active votes" list
+  ACTIVE_VOTES  ; "active votes" list
   LOCKUP_TIME
   INNERPUZ
   my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
@@ -87,11 +87,11 @@
     INNERPUZ
     my_id
     new_vote_id
-    previous_votes
+    active_votes
     proposal_curry_vals
   )
-    (if previous_votes
-      (if (= new_vote_id (f previous_votes))  ; check new vote id is not equal to an existent vote id
+    (if active_votes
+      (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
         (x)
         (check_not_previously_voted
           SINGLETON_MOD_HASH
@@ -104,7 +104,7 @@
           INNERPUZ
           my_id
           new_vote_id
-          (r previous_votes)
+          (r active_votes)
           proposal_curry_vals
         )
       )
@@ -161,11 +161,11 @@
     )
   )
 
-  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes INNERPUZ)
+  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME active_votes INNERPUZ)
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
                                      (sha256 ONE INNERPUZ)
                                      (sha256 ONE LOCKUP_TIME)
-                                     (sha256tree previous_votes)
+                                     (sha256tree active_votes)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE LOCKUP_MOD_HASH)
@@ -175,7 +175,7 @@
     )
   )
 
-  ; search for an announcement that a proposal is finished and then remove that proposal ID from PREVIOUS_VOTES
+  ; search for an announcement that a proposal is finished and then remove that proposal ID from ACTIVE_VOTES
   (defun check_for_removal_announcement (
     PROPOSAL_MOD_HASH
     SINGLETON_MOD_HASH
@@ -184,15 +184,15 @@
     CAT_MOD_HASH
     CAT_TAIL
     LOCKUP_TIME
-    PREVIOUS_VOTES
+    ACTIVE_VOTES
     INNERPUZ
     removal_id
     my_amount
     proposal_curry_vals
     unused_votes
     )
-    (if PREVIOUS_VOTES
-      (if (= (f PREVIOUS_VOTES) removal_id)
+    (if ACTIVE_VOTES
+      (if (= (f ACTIVE_VOTES) removal_id)
         (list
           (list
             CREATE_COIN  ; recreate self with the finished proposal ID removed
@@ -204,7 +204,7 @@
               CAT_MOD_HASH
               CAT_TAIL
               LOCKUP_TIME
-              (merge_list unused_votes (r PREVIOUS_VOTES))  ; removes the current entry from the list
+              (merge_list unused_votes (r ACTIVE_VOTES))  ; removes the current entry from the list
               INNERPUZ
             )
             my_amount
@@ -222,7 +222,7 @@
           (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
         )
 
-        (check_for_removal_announcement  ; keep looping through PREVIOUS_VOTES to search for removal_id
+        (check_for_removal_announcement  ; keep looping through ACTIVE_VOTES to search for removal_id
           PROPOSAL_MOD_HASH
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
@@ -230,12 +230,12 @@
           CAT_MOD_HASH
           CAT_TAIL
           LOCKUP_TIME
-          (r PREVIOUS_VOTES)
+          (r ACTIVE_VOTES)
           INNERPUZ
           removal_id
           my_amount
           proposal_curry_vals
-          (c (f PREVIOUS_VOTES) unused_votes)
+          (c (f ACTIVE_VOTES) unused_votes)
         )
       )
       (x)  ; proposal ID not found, invalid spend
@@ -262,7 +262,7 @@
               INNERPUZ
               my_id
               new_proposal_vote_id_or_removal_id
-              PREVIOUS_VOTES
+              ACTIVE_VOTES
               proposal_curry_vals
             )
             (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
@@ -275,7 +275,7 @@
                 CAT_MOD_HASH
                 CAT_TAIL
                 LOCKUP_TIME
-                (c new_proposal_vote_id_or_removal_id PREVIOUS_VOTES)
+                (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
                 INNERPUZ
               )
               my_amount
@@ -291,7 +291,7 @@
     )
 
     ; return to return_address - check if our locked list is empty
-    (if PREVIOUS_VOTES
+    (if ACTIVE_VOTES
       (check_for_removal_announcement  ; locked list is not empty, so we must be trying to remove something from it
         PROPOSAL_MOD_HASH
         SINGLETON_MOD_HASH
@@ -300,7 +300,7 @@
         CAT_MOD_HASH
         CAT_TAIL
         LOCKUP_TIME
-        PREVIOUS_VOTES
+        ACTIVE_VOTES
         INNERPUZ
         new_proposal_vote_id_or_removal_id
         my_amount
