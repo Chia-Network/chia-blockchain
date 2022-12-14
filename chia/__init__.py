@@ -10,7 +10,7 @@ except DistributionNotFound:
 
 PYINSTALLER_SPEC_PATH = resource_filename("chia", "pyinstaller.spec")
 
-def f() -> None:
+def f() -> int:
     x = 0
 
     if False:
@@ -20,5 +20,7 @@ def f() -> None:
     if True:
         # this line is covered, but the not-entering branch is not covered
         x = 2
+
+    return x
 
 f()
