@@ -10,6 +10,7 @@ except DistributionNotFound:
 
 PYINSTALLER_SPEC_PATH = resource_filename("chia", "pyinstaller.spec")
 
+
 def f() -> int:
     x = 0
 
@@ -22,5 +23,6 @@ def f() -> int:
         x = 2
 
     return x
+
 
 f()
