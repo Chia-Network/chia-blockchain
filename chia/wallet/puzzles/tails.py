@@ -199,6 +199,7 @@ class GenesisByIdOrProposal(LimitationsProgram):
     """
     This TAIL allows for another TAIL to be used, as long as a signature of that TAIL's puzzlehash is included.
     """
+
     @staticmethod
     def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
         if uncurried_mod == GENESIS_BY_ID_OR_PROPOSAL_MOD:
@@ -223,7 +224,9 @@ class GenesisByIdOrProposal(LimitationsProgram):
         return Program.to([pid, solution_dict["amount"]])
 
     @classmethod
-    async def generate_issuance_bundle(cls, wallet, tail_info: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
+    async def generate_issuance_bundle(
+        cls, wallet, tail_info: Dict, amount: uint64
+    ) -> Tuple[TransactionRecord, SpendBundle]:
         coins = await wallet.standard_wallet.select_coins(amount)
 
         origin = coins.copy().pop()
@@ -235,13 +238,15 @@ class GenesisByIdOrProposal(LimitationsProgram):
         # SINGLETON_MOD_HASH
         # SINGLETON_LAUNCHER_PUZHASH
         # DAO_PROPOSAL_MOD_HASH
-        tail: Program = cls.construct([
-            origin_id,
-            tail_info["treasury_id"],
-            SINGLETON_MOD.get_tree_hash(),
-            SINGLETON_LAUNCHER.get_tree_hash(),
-            DAO_PROPOSAL_MOD.get_tree_hash(),
-        ])
+        tail: Program = cls.construct(
+            [
+                origin_id,
+                tail_info["treasury_id"],
+                Program(SINGLETON_MOD.get_tree_hash()),
+                Program(SINGLETON_LAUNCHER.get_tree_hash()),
+                Program(DAO_PROPOSAL_MOD.get_tree_hash()),
+            ]
+        )
 
         wallet.lineage_store = await CATLineageStore.create(
             wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
