@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.shared_protocol import Capability
 from chia.simulator.block_tools import test_constants
@@ -398,7 +399,7 @@ class TestFullSync:
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )
         start = time.time()
-        res = await peers[0].request_proof_of_weight(request, timeout=5)
+        res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=5)
         assert res is None
         duration = time.time() - start
         log.info(f"result was {res}")
@@ -409,8 +410,7 @@ class TestFullSync:
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )
         start = time.time()
-        res = await peers[0].request_proof_of_weight(request, timeout=5)
+        res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=6)
         assert res is None
         duration = time.time() - start
         assert duration > 5
-        log.info(f"result was {res}")
