@@ -142,8 +142,11 @@ jobs:
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
+        env:
+          compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
-          diff-cover --compare-branch=${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }} coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          diff-cover --compare-branch=${{ env.compare-branch }} --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports
         if: always()
