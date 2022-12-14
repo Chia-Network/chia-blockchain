@@ -512,7 +512,10 @@ class MempoolManager:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
-            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+            can_replace = self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost)
+            log.warning(f"Conflicting pool items: {len(conflicting_pool_items)} can_replace={can_replace}")
+            if not can_replace:
+                log.warning(f"Cannot replace SpendBundles: {[c for c in conflicting_pool_items]}")
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
