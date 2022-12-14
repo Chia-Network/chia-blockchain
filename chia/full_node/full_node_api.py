@@ -745,7 +745,7 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                        mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(
                             curr_l_tb.header_hash
                         )
                     except Exception as e:

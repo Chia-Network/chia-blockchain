@@ -165,7 +165,7 @@ class MempoolManager:
                 additions.extend(item.additions)
         return (spend_bundles, uint64(cost_sum), additions, removals)
 
-    async def create_bundle_from_mempool(
+    def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
         item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
