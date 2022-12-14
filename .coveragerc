@@ -1,6 +1,9 @@
 [run]
 branch=True
 relative_files=True
+source_pkgs=
+  chia
+  tests
 concurrency=multiprocessing
 parallel=True
 
