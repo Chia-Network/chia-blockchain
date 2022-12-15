@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from enum import IntEnum
+from enum import Enum
 from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
@@ -18,16 +18,10 @@ from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64
 
 
-class MempoolRemoveReason(IntEnum):
+class MempoolRemoveReason(Enum):
     CONFLICT = 1
     BLOCK_INCLUSION = 2
     POOL_FULL = 3
-
-    def __repr__(self) -> str:
-        return str(f"{self.__class__.__name__}.{self.name}")
-
-    def __str__(self) -> str:
-        return self.__repr__()
 
 
 class Mempool:
