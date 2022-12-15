@@ -200,11 +200,6 @@ class KeychainSecretsMissing(KeychainException):
     pass
 
 
-class KeychainRequiresMigration(KeychainException):
-    def __init__(self) -> None:
-        super().__init__("Keychain requires migration")
-
-
 class KeychainCurrentPassphraseIsInvalid(KeychainException):
     def __init__(self) -> None:
         super().__init__("Invalid current passphrase")

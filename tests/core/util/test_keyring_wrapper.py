@@ -1,12 +1,13 @@
+from __future__ import annotations
+
 import logging
+from typing import Type
+
 import pytest
 
-from chia.util.errors import KeychainLabelError, KeychainLabelExists, KeychainFingerprintNotFound, KeychainLabelInvalid
-from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-from pathlib import Path
-from typing import Type
-from sys import platform
-from tests.util.keyring import using_temp_file_keyring, using_temp_file_keyring_and_cryptfilekeyring
+from chia.simulator.keyring import using_temp_file_keyring
+from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 
 log = logging.getLogger(__name__)
 
@@ -39,84 +40,6 @@ class TestKeyringWrapper:
         # Expect: the shared instance should be cleared
         assert KeyringWrapper.get_shared_instance(create_if_necessary=False) is None
 
-    # When: creating a new file keyring with a legacy keyring in place
-    @using_temp_file_keyring_and_cryptfilekeyring()
-    @pytest.mark.skip(reason="Does only work if `test_keyring_wrapper.py` gets called separately.")
-    def test_using_legacy_cryptfilekeyring(self):
-        """
-        In the case that an existing CryptFileKeyring (legacy) keyring exists and we're
-        creating a new FileKeyring, the legacy keyring's use should be prioritized over
-        the FileKeyring (until migration is triggered by a write to the keyring.)
-        """
-
-        if platform != "linux":
-            return
-
-        # Expect: the new keyring should not have content (not actually empty though...)
-        assert KeyringWrapper.get_shared_instance().keyring.has_content() is False
-        assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).exists() is True
-        assert Path(KeyringWrapper.get_shared_instance().keyring.keyring_path).stat().st_size != 0
-
-        # Expect: legacy keyring should be in use
-        assert KeyringWrapper.get_shared_instance().legacy_keyring is not None
-        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is True
-        assert KeyringWrapper.get_shared_instance().get_keyring() == KeyringWrapper.get_shared_instance().legacy_keyring
-
-    # When: a file keyring has content and the legacy keyring exists
-    @using_temp_file_keyring_and_cryptfilekeyring(populate=True)
-    def test_using_file_keyring_with_legacy_keyring(self):
-        """
-        In the case that an existing CryptFileKeyring (legacy) keyring exists and we're
-        using a new FileKeyring with some keys in it, the FileKeyring's use should be
-        used instead of the legacy keyring.
-        """
-        # Expect: the new keyring should have content
-        assert KeyringWrapper.get_shared_instance().keyring.has_content() is True
-
-        # Expect: the new keyring should be in use
-        assert KeyringWrapper.get_shared_instance().legacy_keyring is None
-        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is False
-        assert KeyringWrapper.get_shared_instance().get_keyring() == KeyringWrapper.get_shared_instance().keyring
-
-    # When: a file keyring has content and the legacy keyring doesn't exists
-    @using_temp_file_keyring(populate=True)
-    def test_using_file_keyring_without_legacy_keyring(self):
-        """
-        In the case of a new installation (no legacy CryptFileKeyring) using a FileKeyring
-        with some content, the legacy keyring should not be used.
-        """
-        # Expect: the new keyring should have content
-        assert KeyringWrapper.get_shared_instance().keyring.has_content() is True
-
-        # Expect: the new keyring should be in use
-        assert KeyringWrapper.get_shared_instance().legacy_keyring is None
-        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is False
-        assert KeyringWrapper.get_shared_instance().get_keyring() == KeyringWrapper.get_shared_instance().keyring
-
-    # When: a file keyring is empty/unpopulated and the legacy keyring doesn't exists
-    @using_temp_file_keyring()
-    def test_using_new_file_keyring(self):
-        """
-        In the case of a new installation using a new FileKeyring, the legacy keyring
-        should not be used.
-        """
-        # Expect: the new keyring should not have any content
-        assert KeyringWrapper.get_shared_instance().keyring.has_content() is False
-
-        # Expect: the new keyring should be in use
-        assert KeyringWrapper.get_shared_instance().legacy_keyring is None
-        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is False
-        assert KeyringWrapper.get_shared_instance().get_keyring() == KeyringWrapper.get_shared_instance().keyring
-
-    # When: using a file keyring
-    @using_temp_file_keyring()
-    def test_file_keyring_supports_master_passphrase(self):
-        """
-        File keyrings should support setting a master passphrase
-        """
-        # Expect: keyring supports a master passphrase
-        assert KeyringWrapper.get_shared_instance().keyring_supports_master_passphrase() is True
-
     # When: creating a new/unpopulated file keyring
     @using_temp_file_keyring()
     def test_empty_file_keyring_doesnt_have_master_passphrase(self):
@@ -134,18 +57,6 @@ class TestKeyringWrapper:
         """
         # Expect: master passphrase is set
         assert KeyringWrapper.get_shared_instance().has_master_passphrase() is True
-
-    # When: creating a new file keyring with a legacy keyring in place
-    @pytest.mark.xfail(reason="wasn't running, fails now, to be removed soon")
-    @using_temp_file_keyring_and_cryptfilekeyring()
-    def test_legacy_keyring_does_not_support_master_passphrase(self):
-        """
-        CryptFileKeyring (legacy keyring) should not support setting a master passphrase
-        """
-        # Expect: legacy keyring in use and master passphrase is not supported
-        assert KeyringWrapper.get_shared_instance().legacy_keyring is not None
-        assert KeyringWrapper.get_shared_instance().using_legacy_keyring() is True
-        assert KeyringWrapper.get_shared_instance().keyring_supports_master_passphrase() is False
 
     # When: creating a new file keyring
     @using_temp_file_keyring()

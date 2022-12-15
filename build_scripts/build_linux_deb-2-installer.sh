@@ -83,17 +83,21 @@ if [ "$PLATFORM" = "arm64" ]; then
   sudo gem install public_suffix -v 4.0.7
   sudo gem install fpm
   echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
   USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
   LAST_EXIT_CODE=$?
 else
   echo electron-builder build --linux deb --x64 \
+    --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
   electron-builder build --linux deb --x64 \
+    --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
   LAST_EXIT_CODE=$?

@@ -1,4 +1,6 @@
-from typing import Dict, List, Optional, Any, Tuple, Union
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo

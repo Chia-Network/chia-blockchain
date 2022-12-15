@@ -1,28 +1,38 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional, Tuple
 
 import pytest
-from blspy import G2Element, AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
-from chia.protocols import full_node_protocol as fnp, full_node_protocol, wallet_protocol
-from chia.protocols import timelord_protocol
+from chia.protocols import full_node_protocol
+from chia.protocols import full_node_protocol as fnp
+from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability, capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools, get_signage_point, test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_plot_id_pk, calculate_pos_challenge
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -32,35 +42,25 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.errors import Err
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from chia.util.errors import ConsensusError
 from chia.wallet.transaction_record import TransactionRecord
-from chia.simulator.block_tools import get_signage_point
-from tests.blockchain.blockchain_test_utils import (
-    _validate_and_add_block,
-    _validate_and_add_block_no_error,
-)
-from tests.util.wallet_is_synced import wallet_is_synced
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
-from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
+from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import test_constants
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
-from chia.types.blockchain_format.foliage import Foliage, TransactionsInfo, FoliageTransactionBlock
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def new_transaction_not_requested(incoming, new_spend):
     await asyncio.sleep(3)
     while not incoming.empty():
-        response, peer = await incoming.get()
+        response = await incoming.get()
         if (
             response is not None
             and isinstance(response, Message)
@@ -75,7 +75,7 @@ async def new_transaction_not_requested(incoming, new_spend):
 async def new_transaction_requested(incoming, new_spend):
     await asyncio.sleep(1)
     while not incoming.empty():
-        response, peer = await incoming.get()
+        response = await incoming.get()
         if (
             response is not None
             and isinstance(response, Message)
@@ -1271,9 +1271,9 @@ class TestFullNodeProtocol:
 
                 if committment > 5:
                     if pos.pool_public_key is None:
-                        plot_id = ProofOfSpace.calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
+                        plot_id = calculate_plot_id_pk(pos.pool_contract_puzzle_hash, public_key)
                     else:
-                        plot_id = ProofOfSpace.calculate_plot_id_pk(pos.pool_public_key, public_key)
+                        plot_id = calculate_plot_id_pk(pos.pool_public_key, public_key)
                     original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
 
                     if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -1281,7 +1281,7 @@ class TestFullNodeProtocol:
                         cc_sp_hash = original_challenge_hash
                     else:
                         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                    challenge = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, cc_sp_hash)
+                    challenge = calculate_pos_challenge(plot_id, original_challenge_hash, cc_sp_hash)
 
                 else:
                     challenge = pos.challenge
@@ -1953,3 +1953,41 @@ class TestFullNodeProtocol:
             if block.challenge_chain_sp_proof is not None:
                 assert not block.challenge_chain_sp_proof.normalized_to_identity
             assert not block.challenge_chain_ip_proof.normalized_to_identity
+
+    @pytest.mark.parametrize(
+        argnames=["custom_capabilities", "expect_success"],
+        argvalues=[
+            # standard
+            [capabilities, True],
+            # an additional enabled but unknown capability
+            [[*capabilities, (uint16(max(Capability) + 1), "1")], True],
+            # no capability, not even Chia mainnet
+            # TODO: shouldn't we fail without Capability.BASE?
+            [[], True],
+            # only an unknown capability
+            # TODO: shouldn't we fail without Capability.BASE?
+            [[(uint16(max(Capability) + 1), "1")], True],
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_invalid_capability_can_connect(
+        self,
+        two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+        self_hostname: str,
+        custom_capabilities: List[Tuple[uint16, str]],
+        expect_success: bool,
+    ) -> None:
+        # TODO: consider not testing this against both DB v1 and v2?
+
+        [
+            initiating_full_node_api,
+            listening_full_node_api,
+            initiating_server,
+            listening_server,
+            bt,
+        ] = two_nodes
+
+        initiating_server._local_capabilities_for_handshake = custom_capabilities
+
+        connected = await initiating_server.start_client(PeerInfo(self_hostname, uint16(listening_server._port)), None)
+        assert connected == expect_success, custom_capabilities

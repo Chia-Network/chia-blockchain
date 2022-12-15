@@ -25,9 +25,10 @@ log = logging.getLogger(__name__)
 
 
 async def disconnect_all(server: ChiaServer) -> None:
-    cons = list(server.all_connections.values())[:]
-    for con in cons:
-        await con.close()
+    connections = list(server.all_connections.values())
+    await asyncio.gather(*(connection.close() for connection in connections))
+
+    await asyncio.sleep(5)  # 5 seconds to allow connections and tasks to all drain
 
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
@@ -40,7 +41,6 @@ async def add_dummy_connection(
 ) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    incoming_queue: asyncio.Queue = asyncio.Queue()
     config = load_config(server.root_path, "config.yaml")
     chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server.root_path, config)
     dummy_crt_path = server.root_path / "dummy.crt"
@@ -54,15 +54,15 @@ async def add_dummy_connection(
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
     url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
-    wsc = WSChiaConnection(
+    wsc = WSChiaConnection.create(
         type,
         ws,
+        server.api,
         server._port,
         log,
         True,
-        False,
+        server.received_message_callback,
         self_hostname,
-        incoming_queue,
         None,
         peer_id,
         100,
@@ -70,7 +70,9 @@ async def add_dummy_connection(
         local_capabilities_for_handshake=capabilities,
     )
     await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
-    return incoming_queue, peer_id
+    if wsc.incoming_message_task is not None:
+        wsc.incoming_message_task.cancel()
+    return wsc.incoming_queue, peer_id
 
 
 async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer, self_hostname: str) -> WSChiaConnection:

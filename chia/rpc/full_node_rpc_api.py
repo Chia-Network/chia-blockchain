@@ -156,9 +156,9 @@ class FullNodeRpcApi:
 
         sync_tip_height: Optional[uint32] = uint32(0)
         if sync_mode:
-            if self.service.sync_store.get_sync_target_height() is not None:
-                sync_tip_height = self.service.sync_store.get_sync_target_height()
-                assert sync_tip_height is not None
+            target_peak = self.service.sync_store.target_peak
+            if target_peak is not None:
+                sync_tip_height = target_peak.height
             if peak is not None:
                 sync_progress_height: uint32 = peak.height
                 # Don't display we're syncing towards 0, instead show 'Syncing height/height'
@@ -747,9 +747,10 @@ class FullNodeRpcApi:
     async def get_mempool_item_by_tx_id(self, request: Dict) -> EndpointResult:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
+        include_pending: bool = request.get("include_pending", False)
         tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
 
-        item = self.service.mempool_manager.get_mempool_item(tx_id)
+        item = self.service.mempool_manager.get_mempool_item(tx_id, include_pending)
         if item is None:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 

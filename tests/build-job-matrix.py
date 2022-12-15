@@ -18,8 +18,6 @@ def skip(path: Path) -> bool:
 
 
 def subdirs(per: str) -> List[Path]:
-    dirs: List[Path]
-
     if per == "directory":
         glob_pattern = "**/"
     elif per == "file":
@@ -118,6 +116,7 @@ for path in test_paths:
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
         "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
+        "legacy_keyring_required": conf.get("legacy_keyring_required", False),
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)

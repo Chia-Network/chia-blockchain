@@ -8,6 +8,7 @@ import pytest
 import pytest_asyncio
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
+from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.coin import Coin
@@ -17,7 +18,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
-from tests.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
 
 pytestmark = pytest.mark.data_layer
 
@@ -69,7 +69,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_initial_creation(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_initial_creation(self, self_hostname: str, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets, _ = wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -81,7 +81,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
@@ -117,7 +117,9 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_get_owned_singletons(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_get_owned_singletons(
+        self, self_hostname: str, wallet_node: SimulatorsAndWallets, trusted: bool
+    ) -> None:
         full_nodes, wallets, _ = wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -129,7 +131,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
@@ -169,7 +171,9 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_tracking_non_owned(self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_tracking_non_owned(
+        self, self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool
+    ) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -185,8 +189,8 @@ class TestDLWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
@@ -249,7 +253,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_lifecycle(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_lifecycle(self, self_hostname: str, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets, _ = wallet_node
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -261,7 +265,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
 
@@ -344,7 +348,7 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_rebase(self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_rebase(self, self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -360,8 +364,8 @@ class TestDLWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
         await full_node_api.farm_blocks(count=5, wallet=wallet_1)

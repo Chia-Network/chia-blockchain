@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import cProfile
 import logging
-import tracemalloc
 import pathlib
-
+import tracemalloc
 from datetime import datetime
 
 from chia.util.path import path_from_root
@@ -42,11 +43,12 @@ async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logge
 
 
 if __name__ == "__main__":
-    import sys
-    import pstats
     import io
-    from colorama import init, Fore, Back, Style
+    import pstats
+    import sys
     from subprocess import check_call
+
+    from colorama import Back, Fore, Style, init
 
     profile_dir = pathlib.Path(sys.argv[1])
     init(strip=False)
@@ -83,6 +85,7 @@ if __name__ == "__main__":
                     if (
                         "{method 'poll' of 'select.epoll' objects}" in columns[5]
                         or "method 'control' of 'select.kqueue' objects" in columns[5]
+                        or "method _overlapped.GetQueuedCompletionStatus" in columns[5]
                     ):
                         # cumulative time
                         sleep += float(columns[3])
