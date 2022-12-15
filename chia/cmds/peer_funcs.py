@@ -17,7 +17,10 @@ async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> Non
         )
         print(f"Connecting to {ip}, {port}")
         try:
-            await rpc_client.open_connection(ip, int(port))
+            result = await rpc_client.open_connection(ip, int(port))
+            err = result.get("error")
+            if result["success"] is False or err is not None:
+                print(err)
         except Exception:
             print(f"Failed to connect to {ip}:{port}")
 

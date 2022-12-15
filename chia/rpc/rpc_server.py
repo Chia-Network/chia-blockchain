@@ -270,8 +270,8 @@ class RpcServer:
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
         if not await self.rpc_api.service.server.start_client(target_node, on_connect):
-            raise ValueError("Start client failed, or server is not set")
-        return {}
+            return {"success": False, "error": f"could not connect to {target_node}"}
+        return {"success": True}
 
     async def close_connection(self, request: Dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])

@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
@@ -70,7 +71,9 @@ async def subscribe_to_phs(
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
-    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg, timeout=300)
+    all_coins_state: Optional[RespondToPhUpdates] = await peer.call_api(
+        FullNodeAPI.register_interest_in_puzzle_hash, msg, timeout=300
+    )
     if all_coins_state is None:
         raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_puzzle_hash")
     return all_coins_state.coin_states
@@ -85,7 +88,9 @@ async def subscribe_to_coin_updates(
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
-    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg, timeout=300)
+    all_coins_state: Optional[RespondToCoinUpdates] = await peer.call_api(
+        FullNodeAPI.register_interest_in_coin, msg, timeout=300
+    )
 
     if all_coins_state is None:
         raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_coin")
@@ -208,8 +213,8 @@ async def request_and_validate_removals(
 ) -> bool:
     removals_request = RequestRemovals(height, header_hash, [coin_name])
 
-    removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
-        removals_request
+    removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.call_api(
+        FullNodeAPI.request_removals, removals_request
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
         return False
@@ -228,8 +233,8 @@ async def request_and_validate_additions(
     if peer_request_cache.in_additions_in_block(header_hash, puzzle_hash):
         return True
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
-    additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
-        additions_request
+    additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.call_api(
+        FullNodeAPI.request_additions, additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
         return False
@@ -329,9 +334,11 @@ async def request_header_blocks(
     peer: WSChiaConnection, start_height: uint32, end_height: uint32
 ) -> Optional[List[HeaderBlock]]:
     if Capability.BLOCK_HEADERS in peer.peer_capabilities:
-        response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
+        response = await peer.call_api(
+            FullNodeAPI.request_block_headers, RequestBlockHeaders(start_height, end_height, False)
+        )
     else:
-        response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
+        response = await peer.call_api(FullNodeAPI.request_header_blocks, RequestHeaderBlocks(start_height, end_height))
     if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
         return None
     return response.header_blocks
@@ -350,9 +357,13 @@ async def _fetch_header_blocks_inner(
 
     for peer, is_trusted in bytes_api_peers + other_peers:
         if Capability.BLOCK_HEADERS in peer.peer_capabilities:
-            response = await peer.request_block_headers(RequestBlockHeaders(request_start, request_end, False))
+            response = await peer.call_api(
+                FullNodeAPI.request_block_headers, RequestBlockHeaders(request_start, request_end, False)
+            )
         else:
-            response = await peer.request_header_blocks(RequestHeaderBlocks(request_start, request_end))
+            response = await peer.call_api(
+                FullNodeAPI.request_header_blocks, RequestHeaderBlocks(request_start, request_end)
+            )
 
         if isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders)):
             return response
