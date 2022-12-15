@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
 from typing_extensions import Protocol, final
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia.cmds.init_funcs import chia_full_version_str, get_version_numbers
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply, message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
@@ -691,14 +692,13 @@ class WSChiaConnection:
     def has_capability(self, capability: Capability) -> bool:
         return capability in self.peer_capabilities
 
-    # only send limitedcapabilties to peers before 1.7
+    # only send limitedcapabilties to peers before 1.6.2
     def get_capabilties_for_version(self, software_version: str) -> list[tuple[uint16, str]]:
-        version = software_version.split(".")
-        major = int(version[0])
-        minor = int(version[1])
-        patch_version = 0
-        if len(version) > 2:
-            patch_version = int(version[2])
-        if major == 1 and minor < 6 and patch_version < 2:
+        major, minor, patch, _ = get_version_numbers(software_version)
+        patch_number = 0
+        path_split = re.findall("[0-9]+", patch)  # extract number from patch string
+        if len(path_split) > 1:
+            patch_number = path_split[0]
+        if int(major) == 1 and int(minor) <= 6 and int(patch_number) < 2:
             return limitedcapabilties
         return self.local_capabilities_for_handshake

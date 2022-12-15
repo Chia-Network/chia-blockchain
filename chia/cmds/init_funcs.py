@@ -257,11 +257,12 @@ def init(
 
 
 def chia_version_number() -> Tuple[str, str, str, str]:
-    scm_full_version = __version__
+    return get_version_numbers(__version__)
+
+
+def get_version_numbers(scm_full_version: str) -> Tuple[str, str, str, str]:
     left_full_version = scm_full_version.split("+")
-
     version = left_full_version[0].split(".")
-
     scm_major_version = version[0]
     scm_minor_version = version[1]
     if len(version) > 2:
@@ -269,11 +270,9 @@ def chia_version_number() -> Tuple[str, str, str, str]:
         patch_release_number = smc_patch_version
     else:
         smc_patch_version = ""
-
     major_release_number = scm_major_version
     minor_release_number = scm_minor_version
     dev_release_number = ""
-
     # If this is a beta dev release - get which beta it is
     if "0b" in scm_minor_version:
         original_minor_ver_list = scm_minor_version.split("0b")
@@ -294,13 +293,11 @@ def chia_version_number() -> Tuple[str, str, str, str]:
         minor_release_number = scm_minor_version
         patch_release_number = smc_patch_version
         dev_release_number = ""
-
     install_release_number = major_release_number + "." + minor_release_number
     if len(patch_release_number) > 0:
         install_release_number += "." + patch_release_number
     if len(dev_release_number) > 0:
         install_release_number += dev_release_number
-
     return major_release_number, minor_release_number, patch_release_number, dev_release_number
 
 
