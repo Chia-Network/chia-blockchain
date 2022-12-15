@@ -1296,14 +1296,13 @@ async def kill_processes(
         r = process.wait()
         log.info("process %s returned %d", service_name, r)
 
-    if service_name != service_plotter:
-        try:
-            pid_path_killed = pid_path.with_suffix(".pid-killed")
-            if pid_path_killed.exists():
-                pid_path_killed.unlink()
-            os.rename(pid_path, pid_path_killed)
-        except Exception:
-            pass
+    try:
+        pid_path_killed = pid_path.with_suffix(".pid-killed")
+        if pid_path_killed.exists():
+            pid_path_killed.unlink()
+        os.rename(pid_path, pid_path_killed)
+    except Exception:
+        pass
 
     return True
 
