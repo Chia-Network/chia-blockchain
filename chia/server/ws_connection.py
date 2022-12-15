@@ -699,6 +699,6 @@ class WSChiaConnection:
         path_split = re.findall("[0-9]+", patch)  # extract number from patch string
         if len(path_split) > 1:
             patch_number = path_split[0]
-        if int(major) == 1 and int(minor) <= 6 and int(patch_number) < 2:
+        if (int(major), int(minor), int(patch_number)) < (1, 6, 2):
             return limitedcapabilties
         return self.local_capabilities_for_handshake
