@@ -501,13 +501,8 @@ class Mempool:
                 cost_sum += item_cost
                 fee_sum += item.fee
                 processed_spend_bundles += 1
-            except ValueError as e:
-                # This is raised when a coin is spent with different
-                # solutions so we can't deduplicate on that
-                assert str(e) == "Solution is different from what we're deduplicating on"
-                continue
             except Exception as e:
-                log.warning(f"Exception while checking a mempool item for deduplication: {e}")
+                log.debug(f"Exception while checking a mempool item for deduplication: {e}")
                 continue
         if processed_spend_bundles == 0:
             return None
