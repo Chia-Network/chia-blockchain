@@ -693,12 +693,17 @@ class WSChiaConnection:
         return capability in self.peer_capabilities
 
     # only send limitedcapabilties to peers before 1.6.2
+    # see https://github.com/Chia-Network/chia-blockchain/commit/618f93b4c42b176659cc74c02a4dd711adc62052
+    # for why that version was selected
     def get_capabilties_for_version(self, software_version: str) -> list[tuple[uint16, str]]:
         major, minor, patch, _ = get_version_numbers(software_version)
         patch_number = 0
-        path_split = re.findall("[0-9]+", patch)  # extract number from patch string
-        if len(path_split) > 1:
-            patch_number = path_split[0]
-        if (int(major), int(minor), int(patch_number)) < (1, 6, 2):
-            return limitedcapabilties
+        try:
+            path_split = re.findall("[0-9]+", patch)  # extract number from patch string
+            if len(path_split) > 1:
+                patch_number = path_split[0]
+            if (int(major), int(minor), int(patch_number)) < (1, 6, 2):
+                return limitedcapabilties
+        except Exception:
+            self.log.error(f"could not parse incoming version {software_version}, returning limited capabilities")
         return self.local_capabilities_for_handshake
