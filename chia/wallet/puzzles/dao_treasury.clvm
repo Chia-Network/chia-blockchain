@@ -10,7 +10,8 @@
   CAT_MOD_HASH
   CAT_TAIL
   CURRENT_CAT_ISSUANCE
-  PROPOSAL_PASS_PERCENTAGE ; percent of total potential votes needed to have a chance at passing
+  ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
+  PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
   PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
   my_amount         ; current amount
   new_amount_change ; may be negative or positive. Is zero during eve spend
@@ -18,7 +19,7 @@
   announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
   new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
   proposal_innerpuz
-  proposal_current_votes ; sum of (votes_for - votes_against)
+  proposal_current_votes ; tally of yes votes
   proposal_total_votes   ; total votes cast (by number of cat-mojos)
 )
   (include condition_codes.clvm)
@@ -43,9 +44,7 @@
     TREASURY_MOD_HASH
     LOCKUP_MOD_HASH
     CAT_TAIL
-    PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
-    PROPOSAL_TIMELOCK
     proposal_current_votes
     proposal_total_votes
     proposal_innerpuz
@@ -54,9 +53,7 @@
                                      (sha256tree proposal_innerpuz)
                                      (sha256 ONE proposal_total_votes)
                                      (sha256 ONE proposal_current_votes)
-                                     (sha256 ONE PROPOSAL_TIMELOCK)
                                      (sha256 ONE TREASURY_ID)
-                                     (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE CAT_TAIL)
 				     (sha256 ONE LOCKUP_MOD_HASH)
 				     (sha256 ONE TREASURY_MOD_HASH)
@@ -79,9 +76,9 @@
     )
   )
 
-  (defun create_puzzle_asserts (proposal_puzhash my_singleton_id new_puzhash new_amount_change announcement_messages_list)
+  (defun create_puzzle_asserts (PROPOSAL_TIMELOCK proposal_puzhash my_singleton_id new_puzhash new_amount_change announcement_messages_list)
     (c
-      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash my_singleton_id))  ; the proposal format will make this
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (list my_singleton_id PROPOSAL_TIMELOCK))))  ; the proposal format will make this
       (c
         (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (c new_puzhash new_amount_change))))  ; the proposals innerpuz will make this
         (loop_through_announcements proposal_puzhash announcement_messages_list)
@@ -95,22 +92,21 @@
     (if new_puzhash
       ; this is the payout spend case
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list my_puzhash_or_proposal_id CURRENT_CAT_ISSUANCE)))  ; announce the proposal we're approving, and the current amount of CATs in the world
+        (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, and the current amount of CATs in the world
         (c
           (list CREATE_COIN new_puzhash (+ my_amount new_amount_change))
           (create_puzzle_asserts
+            PROPOSAL_TIMELOCK
             (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
                 (calculate_proposal_puzzle
                   (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))
                   PROPOSAL_MOD_HASH
                   PROPOSAL_TIMER_MOD_HASH
                   CAT_MOD_HASH
-		  TREASURY_MOD_HASH
-		  LOCKUP_MOD_HASH
+                  TREASURY_MOD_HASH
+                  LOCKUP_MOD_HASH
                   CAT_TAIL
-                  PROPOSAL_PASS_PERCENTAGE
                   (f (r SINGLETON_STRUCT))
-                  PROPOSAL_TIMELOCK
                   proposal_current_votes
                   proposal_total_votes
                   proposal_innerpuz
