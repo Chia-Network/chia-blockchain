@@ -7,7 +7,12 @@ from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD_HASH, SINGLETON_TOP_LAYER_MOD, LAUNCHER_PUZZLE_HASH
+from chia.wallet.singleton import (
+    SINGLETON_TOP_LAYER_MOD_HASH,
+    SINGLETON_TOP_LAYER_MOD,
+    LAUNCHER_PUZZLE_HASH,
+    is_did_core,
+)
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
 DID_INNERPUZ_MOD = load_clvm_maybe_recompile("did_innerpuz.clvm")
@@ -75,15 +80,6 @@ def is_did_innerpuz(inner_f: Program) -> bool:
     :return: Boolean
     """
     return inner_f == DID_INNERPUZ_MOD
-
-
-def is_did_core(inner_f: Program) -> bool:
-    """
-    Check if a puzzle is a singleton mod
-    :param inner_f: puzzle
-    :return: Boolean
-    """
-    return inner_f == SINGLETON_TOP_LAYER_MOD
 
 
 def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program, Program, Program, Program]]:
@@ -169,5 +165,3 @@ def check_is_did_puzzle(puzzle: Program) -> bool:
         return False
     inner_f, args = r
     return is_did_core(inner_f)
-
-

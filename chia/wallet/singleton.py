@@ -2,7 +2,6 @@ from typing import Dict, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.did_wallet.did_wallet_puzzles import is_did_core
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.curry_and_treehash import curry_and_treehash, calculate_hash_of_quoted_mod_hash
 
@@ -52,6 +51,15 @@ def metadata_to_program(metadata: Dict[str, str]) -> Program:
     for key, value in metadata.items():
         kv_list.append((key, value))
     return Program(Program.to(kv_list))
+
+
+def is_did_core(inner_f: Program) -> bool:
+    """
+    Check if a puzzle is a singleton mod
+    :param inner_f: puzzle
+    :return: Boolean
+    """
+    return inner_f == SINGLETON_TOP_LAYER_MOD
 
 
 def create_fullpuz_hash(innerpuz_hash: bytes32, launcher_id: bytes32) -> bytes32:
