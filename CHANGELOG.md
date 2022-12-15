@@ -24,7 +24,6 @@ for setuptools_scm/PEP 440 reasons.
 - Add options `--max-coin-amount` and `--exclude-coin-ids` to `chia wallet send`
 - Add `--fingerprint` option to `chia keys show`
 - Add SECURITY.md
-- Improve error message when sending more mojos than Spendable Balance
 - Add GUI support for adding and removing full node peers
 - New GUI setting for NFT image scaling
 - New GUI warning if the GUI version is different from the back-end version
@@ -75,6 +74,7 @@ for setuptools_scm/PEP 440 reasons.
 - Fixed NFT inbox detection
 - Convert and cache NFT metadata as UTF-8
 - Fixed issue with switching between farmer and wallet modes (GUI issue #1005)
+- Improve error message when sending more mojos than Spendable Balance
 
 ## 1.6.1 Chia blockchain 2022-11-03
 
