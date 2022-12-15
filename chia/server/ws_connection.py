@@ -693,6 +693,9 @@ class WSChiaConnection:
         version = software_version.split(".")
         major = int(version[0])
         minor = int(version[1])
-        if major == 1 and minor < 7:
+        patch_version = 0
+        if len(version) > 2:
+            patch_version = int(version[2])
+        if major == 1 and minor < 6 and patch_version < 2:
             return limitedcapabilties
         return self.local_capabilities_for_handshake
