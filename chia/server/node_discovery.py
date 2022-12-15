@@ -173,8 +173,6 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             peer_info = peer.get_peer_info()
-            if peer_info is None:
-                return None
             if peer_info.host not in self.connection_time_pretest:
                 self.connection_time_pretest[peer_info.host] = time.time()
             if time.time() - self.connection_time_pretest[peer_info.host] > 600:
@@ -325,11 +323,8 @@ class FullNodeDiscovery:
                 groups = set()
                 full_node_connected = self.server.get_connections(NodeType.FULL_NODE, outbound=True)
                 connected = [c.get_peer_info() for c in full_node_connected]
-                connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:
                     peer = conn.get_peer_info()
-                    if peer is None:
-                        continue
                     group = peer.get_group()
                     groups.add(group)
 
@@ -458,7 +453,6 @@ class FullNodeDiscovery:
             # Perform the cleanup only if we have at least 3 connections.
             full_node_connected = self.server.get_connections(NodeType.FULL_NODE)
             connected = [c.get_peer_info() for c in full_node_connected]
-            connected = [c for c in connected if c is not None]
             if self.address_manager is not None and len(connected) >= 3:
                 async with self.address_manager.lock:
                     self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
@@ -652,8 +646,6 @@ class FullNodePeers(FullNodeDiscovery):
                 cur_day = int(time.time()) // (24 * 60 * 60)
                 for connection in connections:
                     peer_info = connection.get_peer_info()
-                    if peer_info is None:
-                        continue
                     cur_hash = int.from_bytes(
                         bytes(
                             std_hash(
@@ -670,8 +662,6 @@ class FullNodePeers(FullNodeDiscovery):
                     if index >= num_peers:
                         break
                     peer_info = connection.get_peer_info()
-                    if peer_info is None:
-                        continue
                     async with self.lock:
                         if peer_info not in self.neighbour_known_peers:
                             self.neighbour_known_peers[peer_info] = set()

@@ -261,7 +261,7 @@ class Farmer:
         )
 
     def on_disconnect(self, connection: WSChiaConnection) -> None:
-        self.log.info(f"peer disconnected {connection.get_peer_logging()}")
+        self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
             del self.plot_sync_receivers[connection.peer_node_id]

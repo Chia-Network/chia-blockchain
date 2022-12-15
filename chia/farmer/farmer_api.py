@@ -534,7 +534,7 @@ class FarmerAPI:
 
     @api_request(peer_required=True)
     async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: WSChiaConnection):
-        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_info()}")
 
     @api_request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection):

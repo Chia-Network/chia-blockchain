@@ -91,14 +91,11 @@ class FakeServer:
 
 
 class FakePeer:
-    def get_peer_logging(self) -> PeerInfo:
-        return PeerInfo("0.0.0.0", uint16(0))
-
     def __init__(self):
         self.peer_node_id = bytes([0] * 32)
 
-    async def get_peer_info(self) -> Optional[PeerInfo]:
-        return None
+    async def get_peer_info(self) -> PeerInfo:
+        return PeerInfo("0.0.0.0", uint16(0))
 
 
 async def run_sync_test(

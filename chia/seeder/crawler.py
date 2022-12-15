@@ -115,13 +115,11 @@ class Crawler:
             got_peak = False
             while tries < 25:
                 tries += 1
-                if peer_info is None:
-                    break
                 if peer_info in self.with_peak:
                     got_peak = True
                     break
                 await asyncio.sleep(0.1)
-            if not got_peak and peer_info is not None and self.crawl_store is not None:
+            if not got_peak and self.crawl_store is not None:
                 await self.crawl_store.peer_connected_hostname(peer_info.host, False)
             await peer.close()
 
@@ -356,8 +354,6 @@ class Crawler:
             tls_version = peer.get_tls_version()
             if tls_version is None:
                 tls_version = "unknown"
-            if peer_info is None:
-                return
             if request.height >= self.minimum_height:
                 if self.crawl_store is not None:
                     await self.crawl_store.peer_connected_hostname(peer_info.host, True, tls_version)

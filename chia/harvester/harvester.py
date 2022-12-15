@@ -124,7 +124,7 @@ class Harvester:
             self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
 
     def on_disconnect(self, connection: WSChiaConnection) -> None:
-        self.log.info(f"peer disconnected {connection.get_peer_logging()}")
+        self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection")
         self.plot_sync_sender.stop()
         asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())

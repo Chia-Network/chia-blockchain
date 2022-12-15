@@ -342,9 +342,7 @@ class ChiaServer:
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_info.host, self.exempt_peer_networks
             ):
-                self.log.info(
-                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
-                )
+                self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
                 await connection.close()
             else:
                 await self.connection_added(connection, self.on_connect)

@@ -639,10 +639,10 @@ class FullNode:
                     FullNodeAPI.request_block, full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx)
                 )
                 if curr is None:
-                    raise ValueError(f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, timed out")
+                    raise ValueError(f"Failed to fetch block {curr_height} from {peer.get_peer_info()}, timed out")
                 if curr is None or not isinstance(curr, full_node_protocol.RespondBlock):
                     raise ValueError(
-                        f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, wrong type {type(curr)}"
+                        f"Failed to fetch block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
                     )
                 blocks.append(curr.block)
                 if self.blockchain.contains_block(curr.block.prev_header_hash) or curr_height == 0:
@@ -869,7 +869,7 @@ class FullNode:
                 await self.send_peak_to_timelords()
 
     def on_disconnect(self, connection: WSChiaConnection) -> None:
-        self.log.info(f"peer disconnected {connection.get_peer_logging()}")
+        self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self._state_changed("close_connection")
         self._state_changed("sync_mode")
         if self.sync_store is not None:
@@ -1244,7 +1244,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
-                    f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
+                    f"Invalid block from peer: {peer.get_peer_info()} {Err(pre_validation_results[i].error)}"
                 )
                 return False, None
 
@@ -1275,7 +1275,7 @@ class FullNode:
                     )
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
-                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
+                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                 return False, agg_state_change_summary
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:

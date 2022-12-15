@@ -395,7 +395,7 @@ class WSChiaConnection:
                     pass
                 except Exception as e:
                     tb = traceback.format_exc()
-                    self.log.error(f"Exception: {e}, {self.get_peer_logging()}. {tb}")
+                    self.log.error(f"Exception: {e}, {self.get_peer_info()}. {tb}")
                     raise
                 return None
 
@@ -421,7 +421,7 @@ class WSChiaConnection:
         except Exception as e:
             if not self.closed:
                 tb = traceback.format_exc()
-                self.log.error(f"Exception: {e} {type(e)}, closing connection {self.get_peer_logging()}. {tb}")
+                self.log.error(f"Exception: {e} {type(e)}, closing connection {self.get_peer_info()}. {tb}")
             else:
                 self.log.debug(f"Exception: {e} while closing connection")
             # TODO: actually throw one of the errors from errors.py and pass this to close
@@ -486,7 +486,7 @@ class WSChiaConnection:
         request_start_t = time.time()
         response = await self.send_request(request, timeout)
         self.log.debug(
-            f"Time for request {request_metadata.request_type.name}: {self.get_peer_logging()} = "
+            f"Time for request {request_metadata.request_type.name}: {self.get_peer_info()} = "
             f"{time.time() - request_start_t}, None? {response is None}"
         )
         # todo or response.type == ProtocolMessageTypes.none_response.value when enabling none response
@@ -681,22 +681,9 @@ class WSChiaConnection:
         else:
             return "unknown"
 
-    def get_peer_info(self) -> Optional[PeerInfo]:
-        result = self._get_extra_info("peername")
-        if result is None:
-            return None
-        connection_host = result[0]
+    def get_peer_info(self) -> PeerInfo:
         port = self.peer_server_port if self.peer_server_port is not None else self.peer_info.port
-        return PeerInfo(connection_host, port)
-
-    def get_peer_logging(self) -> PeerInfo:
-        info: Optional[PeerInfo] = self.get_peer_info()
-        if info is None:
-            # in this case, we will use self.peer_info.host which is friendlier for logging
-            port = self.peer_server_port if self.peer_server_port is not None else self.peer_info.port
-            return PeerInfo(self.peer_info.host, port)
-        else:
-            return info
+        return PeerInfo(self.peer_info.host, port)
 
     def has_capability(self, capability: Capability) -> bool:
         return capability in self.peer_capabilities
