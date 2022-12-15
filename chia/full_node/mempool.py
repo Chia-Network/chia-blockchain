@@ -80,8 +80,7 @@ class Mempool:
             self.total_mempool_cost -= item.cost
             assert self.total_mempool_cost >= 0
             mempool_info = self.get_mempool_info()
-            if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-                self.fee_estimator.remove_mempool_item(mempool_info, item)
+            self.fee_estimator.remove_mempool_item(mempool_info, item)
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
