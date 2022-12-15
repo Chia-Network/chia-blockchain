@@ -18,7 +18,7 @@ class MempoolItem(Streamable):
     fee: uint64
     npc_result: NPCResult
     cost: uint64
-    spend_bundle_name: bytes32  # SpendBundleID, but Streamable requires bytes32
+    spend_bundle_name: bytes32
     additions: List[Coin]
     height_added_to_mempool: uint32
 
