@@ -64,6 +64,7 @@ class NotificationManager:
                         coin_state.coin.name(),
                         coin_memos[1],
                         uint64(coin_state.coin.amount),
+                        coin_state.spent_height,
                     )
                 )
                 self.wallet_state_manager.state_changed("new_on_chain_notification")
