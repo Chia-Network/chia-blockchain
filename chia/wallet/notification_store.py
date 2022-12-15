@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import sqlite3
 import logging
 from typing import List, Optional, Tuple
 
