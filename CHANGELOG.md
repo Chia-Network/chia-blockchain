@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.6.2 Chia blockchain YYYY-MM-DD
+
+### Added
+
+- `chia keys show --json` (display all keys as json)
+- Coin Selection CLI / RPC Expansion
+- Add atari get sync status RPC.
+- Add task_instrumentation fixture
+- Add download progress log and stream in aiohttp
+- Add LimitedSemaphore
+- Add verify signature API
+- Added total balance check, updated error messages
+- Add target_coin amount to coin selection cli (chia wallet coins)
+- Add did_message_spend API
+- Add optional `outbound` parameter to `get_connections`
+- Add a workflow for scanning python deps
+- Introduce `sync_store.Peak`
+- Add `--fingerprint` option to `chia keys show`
+- Adding SECURITY.md
+- Add bulk set NFT DID API
+
+### Changed
+
+- `process_transaction_records()` -> `process_transactions()`
+- `debug_spend_bundle` -- print coin id as hex string
+- Only open SQLite log file once per db wrapper
+- Switch to context manager for task timing instrumentation
+- Revert rate limiting messages from `warning` back to `debug`
+- `add_private_key` now returns the fingerprint of the added key
+- SQLite log the full node db version check
+- Delete DID wallet after transfer
+- Don't validate wp on log_in
+- Drop broken message types logging
+- Make `WSChiaConnection` a `dataclass`
+- Simplify `ChiaServer.close_all_connections`
+- Return minted NFT ID & Allow transfer NFT with NFT ID
+- Bump chia-blockchain-gui to dd4d7d031995189711248628f10d85ebd6764c25
+- Remove legacy keyring support
+- Simplify TradeManager.respond_to_offer() return
+- Display key labels when making a wallet key selection
+- Add support for pending transactions to `get_mempool_item_by_tx_id()`
+- Simplify the mempool manager instantiation
+- Made it able to RAM plot with bladebit2
+- Bump chia-blockchain-gui to 2a605eb5e04b2a2b72941c4a244e04d563513a77
+- Renamed chia packages to use the @Chia-Network scope Updates build scripts to account for the scope rename
+
+### Fixed
+
+- Add a state_changed for frontend on notification
+- Rework wallet new peak
+- Upped the number of file handles for madmax
+- Catch exceptions raised when resolving plot directories
+- Call close callback for already closed connections
+- Set GUI binary name to chia-blockchain in the Fedora rpm
+- Set GUI binary name to chia-blockchain in the Ubuntu DEB
+- Ensure `chia-blockchain` still opens UI on Linux
+- Enable and fix `mypy` in `server.py`
+- Add simple fix to set farmer response timer for `SP: 0`
+- Preserve correct `MempoolItem` block height when rebuilding mempool
+- Windows: start daemon without a window and detached from current console
+- Fix pool singleton sync height in DB
+- Remove duplicate nft wallet deletion in reorg
+- Fix DID unnecessary wallet deletion
+- Improve performance of wallets with many NFTs
+- Stop creating unecessary index in notification store
+- Fix coin selection cli decimal handling & splitting issue
+- Make `--number-of-coins` required for the `chia coins split` CLI
+- Bump chia-blockchain-gui to restore add token functionality and fix NFTDetails exception
+- Revert delayed pool config handling
+- Handle incoming unknown capabilities
+
 ## 1.6.1 Chia blockchain 2022-11-03
 
 ### Added
