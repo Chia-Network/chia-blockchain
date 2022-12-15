@@ -77,7 +77,6 @@ def run_for_cost_and_additions(
 def check_item_for_dedup(
     item: MempoolItem, dedup_coin_spends: Dict[bytes32, DedupCoinSpend]
 ) -> Optional[Tuple[List[CoinSpend], uint64, Dict[bytes32, DedupCoinSpend], Set[Coin]]]:
-    consider_this_item = True
     cost_saving = uint64(0)
     spends_to_dedup: List[CoinSpend] = []
     dedup_additions: Set[Coin] = set()
@@ -93,47 +92,38 @@ def check_item_for_dedup(
         coin_spend_in_bundle = next(cs for cs in item.spend_bundle.coin_spends if cs.coin.name() == coin_id)
         solution_in_bundle = coin_spend_in_bundle.solution
         # See if we processed an item with this coin before
-        if coin_id in dedup_coin_spends:
-            # See if the solution was identical
-            dedup_coin_spend = dedup_coin_spends[coin_id]
-            processed_solution = dedup_coin_spend.solution
-            duplicate_cost = dedup_coin_spend.cost
-            duplicate_additions = dedup_coin_spend.additions
-            if processed_solution == solution_in_bundle:
-                # Let's calculate the saved cost if we never did that before
-                if duplicate_cost is None:
-                    # If we never ran this before, additions should be empty
-                    assert len(duplicate_additions) == 0
-                    result = run_for_cost_and_additions(
-                        coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost
-                    )
-                    if result is None:
-                        # We failed to run this puzzle, skip this whole item
-                        consider_this_item = False
-                        cost_saving = uint64(0)
-                        break
-                    else:
-                        spend_cost, created_coins = result
-                        duplicate_cost = spend_cost
-                        duplicate_additions.update(created_coins)
-                        # If we end up including this item, update this entry's cost and additions
-                        new_dedups[coin_id] = DedupCoinSpend(processed_solution, duplicate_cost, duplicate_additions)
-                cost_saving = uint64(cost_saving + duplicate_cost)
-                dedup_additions.update(duplicate_additions)
-                spends_to_dedup.append(coin_spend_in_bundle)
-            else:
-                # It wasn't, so let's skip this whole transaction
-                consider_this_item = False
-                cost_saving = uint64(0)
-                break
-        else:
+        if coin_id not in dedup_coin_spends:
             # We didn't process an item with this coin before. If we end up including
             # this item, add this pair to dedup_coin_spends
             new_dedups[coin_id] = DedupCoinSpend(solution_in_bundle, None, set())
-    if consider_this_item:
-        return (spends_to_dedup, cost_saving, new_dedups, dedup_additions)
-    else:
-        return None
+            continue
+        # See if the solution was identical
+        dedup_coin_spend = dedup_coin_spends[coin_id]
+        processed_solution = dedup_coin_spend.solution
+        duplicate_cost = dedup_coin_spend.cost
+        duplicate_additions = dedup_coin_spend.additions
+        if processed_solution != solution_in_bundle:
+            # It wasn't, so let's skip this whole transaction
+            return None
+        # Let's calculate the saved cost if we never did that before
+        if duplicate_cost is None:
+            # If we never ran this before, additions should be empty
+            assert len(duplicate_additions) == 0
+            result = run_for_cost_and_additions(
+                coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost
+            )
+            if result is None:
+                # We failed to run this puzzle, skip this whole item
+                return None
+            spend_cost, created_coins = result
+            duplicate_cost = spend_cost
+            duplicate_additions.update(created_coins)
+            # If we end up including this item, update this entry's cost and additions
+            new_dedups[coin_id] = DedupCoinSpend(processed_solution, duplicate_cost, duplicate_additions)
+        cost_saving = uint64(cost_saving + duplicate_cost)
+        dedup_additions.update(duplicate_additions)
+        spends_to_dedup.append(coin_spend_in_bundle)
+    return (spends_to_dedup, cost_saving, new_dedups, dedup_additions)
 
 
 class Mempool:
