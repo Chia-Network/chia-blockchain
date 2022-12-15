@@ -145,6 +145,10 @@ jobs:
         run: |
           diff-cover --compare-branch=${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }} coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
 
+      - name: debug
+        run: |
+          cat chia/__init__.py
+
       - name: Publish coverage reports
         if: always()
         uses: actions/upload-artifact@v3
