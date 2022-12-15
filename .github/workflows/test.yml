@@ -145,8 +145,10 @@ jobs:
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
-          diff-cover --compare-branch=${{ env.compare-branch }} --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          diff-cover --compare-branch=${{ env.compare-branch }} --markdown-report coverage-reports/diff-cover.md --html-report coverage-reports/diff-cover.html coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
+          echo --- >> $GITHUB_STEP_SUMMARY
+          cat coverage-reports/diff-cover.html >> $GITHUB_STEP_SUMMARY
 
       - name: debug
         run: |
