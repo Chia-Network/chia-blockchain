@@ -45,7 +45,7 @@ class ConsensusConstants:
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash
     MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
-    # Size of mempool = 10x the size of block
+    # Size of mempool = (MEMPOOL_BLOCK_BUFFER x the size of one block)
     MEMPOOL_BLOCK_BUFFER: int
     # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
     MAX_COIN_AMOUNT: int

@@ -7,7 +7,6 @@ from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
-from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.coin import Coin
@@ -15,6 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
+from chia.types.mojos import Mojos
 from chia.util.ints import uint64
 
 
@@ -25,15 +25,18 @@ class MempoolRemoveReason(Enum):
 
 
 class Mempool:
-    def __init__(self, max_size_in_cost: int, minimum_fee_per_cost_to_replace: uint64, max_block_cost_clvm: uint64):
+    def __init__(self, mempool_info: FeeMempoolInfo, fee_estimator: FeeEstimatorInterface):
+        # TODO: Just hold a FeeMempoolInfo
         self.log = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
         self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
-        self.max_size_in_cost: int = max_size_in_cost
+        self.max_size_in_cost: CLVMCost = mempool_info.max_size_in_cost
         self.total_mempool_cost: int = 0
-        self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
-        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, self.log)
+        self.total_mempool_fees: int = 0
+        self.minimum_fee_per_cost_to_replace: FeeRate = mempool_info.minimum_fee_per_cost_to_replace
+        self.max_block_clvm_cost = mempool_info.max_block_clvm_cost
+        self.fee_estimator = fee_estimator
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
@@ -78,9 +81,11 @@ class Mempool:
             if len(dic.values()) == 0:
                 del self.sorted_spends[item.fee_per_cost]
             self.total_mempool_cost -= item.cost
+            self.total_mempool_fees -= item.fee
             assert self.total_mempool_cost >= 0
             mempool_info = self.get_mempool_info()
-            self.fee_estimator.remove_mempool_item(mempool_info, item)
+            if reason != MempoolRemoveReason.BLOCK_INCLUSION:
+                self.fee_estimator.remove_mempool_item(mempool_info, item)
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
@@ -107,6 +112,7 @@ class Mempool:
                 self.removals[coin_id] = []
             self.removals[coin_id].append(item.name)
         self.total_mempool_cost += item.cost
+        self.total_mempool_fees += item.fee
 
         mempool_info = self.get_mempool_info()
         self.fee_estimator.add_mempool_item(mempool_info, item)
@@ -121,8 +127,9 @@ class Mempool:
     def get_mempool_info(self) -> FeeMempoolInfo:
         return FeeMempoolInfo(
             CLVMCost(uint64(self.max_size_in_cost)),
-            FeeRate(uint64(self.minimum_fee_per_cost_to_replace)),
+            CLVMCost(uint64(self.max_block_clvm_cost)),
+            self.minimum_fee_per_cost_to_replace,
             CLVMCost(uint64(self.total_mempool_cost)),
+            Mojos(uint64(self.total_mempool_fees)),
             datetime.now(),
-            CLVMCost(uint64(self.max_size_in_cost)),
         )

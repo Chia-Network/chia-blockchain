@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import datetime
 import logging
 import time
 from concurrent.futures import Executor
@@ -15,8 +16,10 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
@@ -27,6 +30,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.mojos import Mojos
 from chia.types.spend_bundle import SpendBundle
 from chia.util import cached_bls
 from chia.util.cached_bls import LOCAL_CACHE
@@ -131,10 +135,21 @@ class MempoolManager:
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(
+            CLVMCost(uint64(self.mempool_max_total_cost)),
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM * self.limit_factor)),
+            FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
+        )
         self.mempool: Mempool = Mempool(
-            self.mempool_max_total_cost,
-            uint64(self.nonzero_fee_minimum_fpc),
-            uint64(self.constants.MAX_BLOCK_COST_CLVM),
+            FeeMempoolInfo(
+                CLVMCost(uint64(self.mempool_max_total_cost)),
+                CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM * self.limit_factor)),
+                FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
+                CLVMCost(uint64(0)),
+                Mojos(uint64(0)),
+                datetime.datetime.now(),
+            ),
+            self.fee_estimator,
         )
 
     def shut_down(self) -> None:
@@ -573,7 +588,12 @@ class MempoolManager:
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
         if new_peak is None:
+            log.warning(f"new_peak: {new_peak}")
             return []
+        if new_peak.is_transaction_block:
+            log.warning(f"new_peak: height={new_peak.height} time={new_peak.timestamp}")  # xxx debug
+            if last_npc_result and last_npc_result.conds:
+                log.warning(f"new_peak: spends: {len(last_npc_result.conds.spends)}" f"")
         if new_peak.is_transaction_block is False:
             return []
         if self.peak == new_peak:
@@ -590,17 +610,16 @@ class MempoolManager:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
                         spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
                         for spendbundle_id in spendbundle_ids:
+                            item = self.mempool.spends.get(spendbundle_id)
+                            if item:
+                                included_items.append(item)
                             self.remove_seen(spendbundle_id)
+                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
 
-            self.mempool = Mempool(
-                self.mempool_max_total_cost,
-                uint64(self.nonzero_fee_minimum_fpc),
-                uint64(self.constants.MAX_BLOCK_COST_CLVM),
-            )
+            self.mempool = Mempool(self.get_mempool_info(), old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, err = await self.add_spend_bundle(
@@ -652,12 +671,12 @@ class MempoolManager:
         return items
 
     def get_mempool_info(self) -> FeeMempoolInfo:
-        import datetime
 
         return FeeMempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM * self.limit_factor)),
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.mempool.total_mempool_cost)),
+            Mojos(uint64(self.mempool.total_mempool_fees)),
             datetime.datetime.now(),
-            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
         )

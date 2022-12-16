@@ -19,13 +19,13 @@ from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
 from tests.util.db_connection import DBConnection
 
+log = logging.getLogger(__name__)
+
 
 @pytest.mark.asyncio
 async def test_basics() -> None:
-    log = logging.getLogger(__name__)
-
     fee_store = FeeStore()
-    fee_tracker = FeeTracker(log, fee_store)
+    fee_tracker = FeeTracker(fee_store)
 
     wallet_tool = WalletTool(test_constants)
     ph = wallet_tool.get_new_puzzlehash()

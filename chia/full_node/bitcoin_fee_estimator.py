@@ -14,6 +14,8 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.mojos import Mojos
 from chia.util.ints import uint32, uint64
 
+log = logging.getLogger(__name__)
+
 
 class BitcoinFeeEstimator(FeeEstimatorInterface):
     """
@@ -21,22 +23,30 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
     https://github.com/bitcoin/bitcoin/tree/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy
     """
 
-    def __init__(self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator) -> None:
+    def __init__(
+        self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator, mempool_info: FeeMempoolInfo
+    ) -> None:
         self.fee_rate_estimator: SmartFeeEstimator = smart_fee_estimator
         self.tracker: FeeTracker = fee_tracker
-        self.last_mempool_info = FeeMempoolInfo(
-            CLVMCost(uint64(0)),
-            FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))),
-            CLVMCost(uint64(0)),
-            datetime.min,
-            CLVMCost(uint64(0)),
-        )
+        self.last_mempool_info: FeeMempoolInfo = mempool_info
 
     def new_block(self, block_info: FeeBlockInfo) -> None:
+        # log.warning(f"m_fee_rate_avg: {self.tracker.short_horizon.m_fee_rate_avg}")
+        # log.warning(f"confirmed_average: {self.tracker.short_horizon.confirmed_average}")
+        # log.warning(f"failed_average: {self.tracker.short_horizon.failed_average}")
+
+        # log.warning(f"unconfirmed_txs: {self.tracker.short_horizon.unconfirmed_txs}")
+        # log.warning(f"sorted_buckets: {self.tracker.short_horizon.sorted_buckets}")
+        log.warning(f"new_block: short {self.tracker.short_horizon}")
+        log.warning(f"new_block: med   {self.tracker.med_horizon}")
+        log.warning(f"new_block: long  {self.tracker.long_horizon}")
+        # if len(block_info.included_items) > 0:
+        #    breakpoint()
         self.tracker.process_block(block_info.block_height, block_info.included_items)
 
     def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         self.last_mempool_info = mempool_info
+        self.tracker.add_tx(mempool_item)
 
     def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         self.last_mempool_info = mempool_info
@@ -73,10 +83,20 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         return self.tracker
 
 
-def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64, log: logging.Logger) -> BitcoinFeeEstimator:
+def create_bitcoin_fee_estimator(
+    max_mempool_cost: uint64, max_block_cost_clvm: uint64, minimum_replace_fpc: FeeRate
+) -> BitcoinFeeEstimator:
     # fee_store and fee_tracker are particular to the BitcoinFeeEstimator, and
     # are not necessary if a different fee estimator is used.
     fee_store = FeeStore()
-    fee_tracker = FeeTracker(log, fee_store)
+    fee_tracker = FeeTracker(fee_store)
     smart_fee_estimator = SmartFeeEstimator(fee_tracker, max_block_cost_clvm)
-    return BitcoinFeeEstimator(fee_tracker, smart_fee_estimator)
+    mempool_info = FeeMempoolInfo(
+        CLVMCost(uint64(max_mempool_cost)),
+        CLVMCost(max_block_cost_clvm),
+        minimum_replace_fpc,  # nonzero_fee_minimum_fpc
+        CLVMCost(uint64(0)),  # total_mempool_cost
+        Mojos(uint64(0)),  # total_mempool_fees
+        datetime.now(),
+    )
+    return BitcoinFeeEstimator(fee_tracker, smart_fee_estimator, mempool_info)

@@ -43,7 +43,7 @@ class WalletNodeAPI:
     @api_request(peer_required=True, execute_task=True)
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         """
-        The full node sent as a new peak
+        The full node sent a new peak
         """
         self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
         await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)

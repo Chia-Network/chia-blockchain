@@ -185,11 +185,13 @@ class FullNodeRpcApi:
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
             mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
+            mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees
             mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
             mempool_max_total_cost = self.service.mempool_manager.mempool_max_total_cost
         else:
             mempool_size = 0
             mempool_cost = 0
+            mempool_fees = 0
             mempool_min_fee_5m = 0
             mempool_max_total_cost = 0
         if self.service.server is not None:
@@ -216,6 +218,7 @@ class FullNodeRpcApi:
                 "space": space["space"],
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
+                "mempool_fees": mempool_fees,
                 "mempool_min_fees": {
                     # We may give estimates for varying costs in the future
                     # This Dict sets us up for that in the future
@@ -786,16 +789,31 @@ class FullNodeRpcApi:
         ]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
         mempool_size = estimator.mempool_size()
+        mempool_info = self.service.mempool_manager.mempool.get_mempool_info()
+        mempool_fees = mempool_info.current_mempool_fees
+        num_spends = len(self.service.mempool_manager.mempool.spends)
         mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
         peak_height = blockchain_state["blockchain_state"]["peak"].height
         last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
         peak_with_timestamp = peak_height
-        while last_peak_timestamp is None:
+
+        last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+        while last_tx_block is None or last_peak_timestamp is None:
             peak_with_timestamp -= 1
-            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-            last_peak_timestamp = block_record.timestamp
+            last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+            last_peak_timestamp = last_tx_block.timestamp
+
+        assert last_tx_block is not None
+        assert last_peak_timestamp is not None
+        record = await self.service.blockchain.block_store.get_full_block(last_tx_block.header_hash)
+
+        last_block_cost = 0
+        fee_rate_last_block = 0.0
+        if record and record.transactions_info and record.transactions_info.cost > 0:
+            last_block_cost = record.transactions_info.cost
+            fee_rate_last_block = record.transactions_info.fees / record.transactions_info.cost
 
         dt = datetime.now(timezone.utc)
         utc_time = dt.replace(tzinfo=timezone.utc)
@@ -806,9 +824,17 @@ class FullNodeRpcApi:
             "target_times": target_times,
             "current_fee_rate": current_fee_rate.mojos_per_clvm_cost,
             "mempool_size": mempool_size,
+            "mempool_fees": mempool_fees,
+            "num_spends": num_spends,
             "mempool_max_size": mempool_max_size,
             "full_node_synced": synced,
             "peak_height": peak_height,
             "last_peak_timestamp": last_peak_timestamp,
             "node_time_utc": int(utc_timestamp),
+            "last_block_cost": last_block_cost,
+            "fees_last_block": last_tx_block.fees,
+            "fee_rate_last_block": fee_rate_last_block,
+            "last_tx_block_height": last_tx_block.height,
+            "max_block_clvm_cost": mempool_info.max_block_clvm_cost,  # self.service.constants.MAX_BLOCK_COST_CLVM,
+            # TODO: Send the error from the estimator
         }

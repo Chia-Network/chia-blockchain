@@ -16,6 +16,7 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class FeeRate(Streamable):
     """
+    FeeRate in mojo / 1 clvm_cost
     Represents Fee Rate in mojos divided by CLVM Cost.
     Performs XCH/mojo conversion.
     Similar to 'Fee per cost'.

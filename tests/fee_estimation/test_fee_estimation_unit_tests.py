@@ -6,7 +6,7 @@ from typing import List
 from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator, create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.simulator.block_tools import test_constants
@@ -21,8 +21,10 @@ log = logging.getLogger(__name__)
 
 
 def test_interface() -> None:
-    max_block_cost_clvm = uint64(1000 * 1000)
-    estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    max_mempool_size = uint64(2 * 1000 * 1000)
+    max_block_cost = uint64(1000 * 1000)
+    replace_fpc = FeeRate(uint64(5))
+    estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_mempool_size, max_block_cost, replace_fpc, log)
     target_times = [0, 120, 300]
     estimates = [estimator.estimate_fee_rate(time_offset_seconds=time) for time in target_times]
     current_fee_rate = estimator.estimate_fee_rate(
@@ -34,14 +36,18 @@ def test_interface() -> None:
 
 
 def test_estimator_create() -> None:
-    max_block_cost_clvm = uint64(1000 * 1000)
-    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    max_mempool_size = uint64(2 * 1000 * 1000)
+    max_block_cost = uint64(1000 * 1000)
+    replace_fpc = FeeRate(uint64(5))
+    estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_mempool_size, max_block_cost, replace_fpc, log)
     assert estimator is not None
 
 
 def test_single_estimate() -> None:
-    max_block_cost_clvm = uint64(1000 * 1000)
-    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    max_mempool_size = uint64(2 * 1000 * 1000)
+    max_block_cost = uint64(1000 * 1000)
+    replace_fpc = FeeRate(uint64(5))
+    estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_mempool_size, max_block_cost, replace_fpc, log)
     height = uint32(1)
     estimator.new_block(FeeBlockInfo(height, []))
     fee_rate = estimator.estimate_fee_rate(time_offset_seconds=40 * height)
@@ -70,8 +76,10 @@ def test_steady_fee_pressure() -> None:
     We submit successive blocks containing transactions with identical FeeRates.
     We expect the estimator to converge on this FeeRate value.
     """
-    max_block_cost_clvm = uint64(1000 * 1000)
-    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    max_mempool_size = uint64(2 * 1000 * 1000)
+    max_block_cost = uint64(1000 * 1000)
+    replace_fpc = FeeRate(uint64(5))
+    estimator: BitcoinFeeEstimator = create_bitcoin_fee_estimator(max_mempool_size, max_block_cost, replace_fpc, log)
     wallet_tool = WalletTool(test_constants)
     cost = uint64(5000000)
     fee = uint64(10000000)
@@ -106,8 +114,10 @@ def test_fee_estimation_inception() -> None:
     Confirm that estimates are given only for blocks farther out than the smallest
     transaction block wait time we have observed.
     """
-    max_block_cost_clvm = uint64(1000 * 1000)
-    estimator1 = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    max_mempool_size = uint64(2 * 1000 * 1000)
+    max_block_cost = uint64(1000 * 1000)
+    replace_fpc = FeeRate(uint64(5))
+    estimator1: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_mempool_size, max_block_cost, replace_fpc, log)
     wallet_tool = WalletTool(test_constants)
     cost = uint64(5000000)
     fee = uint64(10000000)
@@ -130,7 +140,7 @@ def test_fee_estimation_inception() -> None:
     assert e == [2, 2, 2, 2, 2, 2, 2]
 
     ##########################################################
-    estimator5 = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator5: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_mempool_size, max_block_cost, replace_fpc, log)
 
     for height in range(start, end):
         height = uint32(height)

@@ -33,7 +33,8 @@ class SmartFeeEstimator:
         # get_bucket_index returns left (-1) bucket (-1). Start value is already -1
         # We want +1 from the lowest bucket it failed at. Thus +3
         max_val = len(self.fee_tracker.buckets) - 1
-        start_index = min(self.fee_tracker.get_bucket_index(fail_bucket.start) + 3, max_val)
+        # start_index = min(self.fee_tracker.get_bucket_index(fail_bucket.start) + 3, max_val)
+        start_index = min(self.fee_tracker.get_bucket_index(fail_bucket.start) + 2, max_val)
 
         fee_val: float = self.fee_tracker.buckets[start_index]
         return fee_val
@@ -57,7 +58,7 @@ class SmartFeeEstimator:
         if tracking_length < 20:
             return FeeEstimateGroup(error="Not enough data", estimates=[])
 
-        if ignore_mempool is False and mempool_info.current_mempool_cost < int(mempool_info.MAX_BLOCK_COST_CLVM * 0.8):
+        if ignore_mempool is False and mempool_info.current_mempool_cost < mempool_info.max_block_clvm_cost * 0.8:
             return FeeEstimateGroup(
                 error=None,
                 estimates=[
@@ -66,6 +67,8 @@ class SmartFeeEstimator:
                     FeeEstimate(None, uint64(long_time_seconds), FeeRate(uint64(0))),
                 ],
             )
+        else:
+            pass  # mempool full logic
 
         short_result, med_result, long_result = self.fee_tracker.estimate_fees()
 
@@ -77,8 +80,7 @@ class SmartFeeEstimator:
 
     def estimate_result_to_fee_estimate(self, r: EstimateResult) -> FeeEstimate:
         fee: float = self.parse(r)
-        if fee == -1 or r.median == -1:
+        if fee == -1:
             return FeeEstimate("Not enough data", r.requested_time, FeeRate(uint64(0)))
         else:
-            # convert from mojo / 1000 clvm_cost to mojo / 1 clvm_cost
             return FeeEstimate(None, r.requested_time, FeeRate(uint64(fee / 1000)))

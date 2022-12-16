@@ -750,7 +750,7 @@ class FullNode:
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
 
-            # This is the either the case where we were not able to sync successfully (for example, due to the fork
+            # This is either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
             self._sync_task = asyncio.create_task(self._sync())
 
@@ -1053,8 +1053,8 @@ class FullNode:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
-            # dont sync to wp if local peak is heavier,
-            # dont ban peer, we asked for this peak
+            # don't sync to wp if local peak is heavier,
+            # don't ban peer, we asked for this peak
             current_peak = self.blockchain.get_peak()
             if current_peak is not None:
                 if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
@@ -2229,6 +2229,9 @@ class FullNode:
         test: bool = False,
         tx_bytes: Optional[bytes] = None,
     ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+        if not self.mempool_manager.peak:
+            # If shutting down or starting up, return
+            return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
         if not test and not (await self.synced()):
@@ -2259,7 +2262,6 @@ class FullNode:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
-                assert self.mempool_manager.peak
                 cost, status, error = await self.mempool_manager.add_spend_bundle(
                     transaction, cost_result, spend_name, self.mempool_manager.peak.height
                 )
