@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from random import Random
 
 import pytest
@@ -22,10 +21,8 @@ from tests.util.db_connection import DBConnection
 
 @pytest.mark.asyncio
 async def test_basics() -> None:
-    log = logging.getLogger(__name__)
-
     fee_store = FeeStore()
-    fee_tracker = FeeTracker(log, fee_store)
+    fee_tracker = FeeTracker(fee_store)
 
     wallet_tool = WalletTool(test_constants)
     ph = wallet_tool.get_new_puzzlehash()

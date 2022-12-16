@@ -105,7 +105,6 @@ class FeeStat:  # TxConfirmStats
         max_periods: int,
         decay: float,
         scale: int,
-        log: logging.Logger,
         fee_store: FeeStore,
         my_type: str,
     ):
@@ -116,7 +115,7 @@ class FeeStat:  # TxConfirmStats
         self.decay = decay
         self.scale = scale
         self.max_confirms = self.scale * len(self.confirmed_average)
-        self.log = log
+        self.log = logging.Logger(__name__)
         self.fee_store = fee_store
         self.type = my_type
         self.max_periods = max_periods
@@ -411,8 +410,8 @@ class FeeTracker:
     fee_store: FeeStore
     buckets: List[float]
 
-    def __init__(self, log: logging.Logger, fee_store: FeeStore):
-        self.log = log
+    def __init__(self, fee_store: FeeStore):
+        self.log = logging.Logger(__name__)
         self.sorted_buckets = SortedDict()
         self.buckets = []
         self.latest_seen_height = uint32(0)
@@ -440,7 +439,6 @@ class FeeTracker:
             SHORT_BLOCK_PERIOD,
             SHORT_DECAY,
             SHORT_SCALE,
-            self.log,
             self.fee_store,
             "short",
         )
@@ -450,7 +448,6 @@ class FeeTracker:
             MED_BLOCK_PERIOD,
             MED_DECAY,
             MED_SCALE,
-            self.log,
             self.fee_store,
             "medium",
         )
@@ -460,7 +457,6 @@ class FeeTracker:
             LONG_BLOCK_PERIOD,
             LONG_DECAY,
             LONG_SCALE,
-            self.log,
             self.fee_store,
             "long",
         )

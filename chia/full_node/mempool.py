@@ -26,7 +26,7 @@ class Mempool:
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
         self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
-        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, self.log)
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm)
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
