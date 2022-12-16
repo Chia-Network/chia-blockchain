@@ -89,7 +89,7 @@ def print_coins(
                 break
             coin, conf_height = coins[i + j]
             address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix, decimal_only=True)
+            amount_str = print_balance(coin.amount, mojo_per_unit, "", decimal_only=True)
             print(f"Coin ID: 0x{coin.name().hex()}")
             print(target_string.format(address, amount_str, conf_height))
 
