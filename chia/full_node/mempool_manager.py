@@ -508,7 +508,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                for c_sb_id in self.mempool.removals[conflicting.name()]:
+                for c_sb_id in self.mempool.removal_coin_id_to_spendbundle_ids[conflicting.name()]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
@@ -541,7 +541,7 @@ class MempoolManager:
             if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
-            if removal.name() in self.mempool.removals:
+            if removal.name() in self.mempool.removal_coin_id_to_spendbundle_ids:
                 conflicts.append(removal)
 
         if len(conflicts) > 0:
@@ -589,8 +589,10 @@ class MempoolManager:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
-                    if spend.coin_id in self.mempool.removals:
-                        spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
+                    if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
+                        spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
+                            bytes32(spend.coin_id)
+                        ]
                         self.mempool.remove_from_pool(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
                             self.remove_seen(spendbundle_id)
