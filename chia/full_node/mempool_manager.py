@@ -590,7 +590,7 @@ class MempoolManager:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
                         spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(spendbundle_ids)
+                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
                         for spendbundle_id in spendbundle_ids:
                             self.remove_seen(spendbundle_id)
         else:
