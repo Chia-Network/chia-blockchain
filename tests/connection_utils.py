@@ -14,7 +14,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -28,7 +28,7 @@ async def disconnect_all(server: ChiaServer) -> None:
     connections = list(server.all_connections.values())
     await asyncio.gather(*(connection.close() for connection in connections))
 
-    await asyncio.sleep(5)  # 5 seconds to allow connections and tasks to all drain
+    await asyncio.sleep(adjusted_timeout(5))  # 5 seconds to allow connections and tasks to all drain
 
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
