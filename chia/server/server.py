@@ -6,7 +6,7 @@ import ssl
 import time
 import traceback
 from dataclasses import dataclass, field
-from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
+from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -419,14 +419,8 @@ class ChiaServer:
             timeout_value = float(self.config.get("peer_connect_timeout", 30))
             timeout = ClientTimeout(total=timeout_value)
             session = ClientSession(timeout=timeout)
-
-            try:
-                if type(ip_address(target_node.host)) is IPv6Address:
-                    target_node = PeerInfo(f"[{target_node.host}]", target_node.port)
-            except ValueError:
-                pass
-
-            url = f"wss://{target_node.host}:{target_node.port}/ws"
+            ip = f"[{target_node.ip}]" if target_node.ip.is_v6 else f"{target_node.ip}"
+            url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
@@ -656,10 +650,10 @@ class ChiaServer:
                 ip = None
         if ip is None:
             return None
-        peer = PeerInfo(ip, uint16(port))
-        if not peer.is_valid():
+        try:
+            return PeerInfo(ip, uint16(port))
+        except ValueError:
             return None
-        return peer
 
     def get_port(self) -> uint16:
         return uint16(self._port)
