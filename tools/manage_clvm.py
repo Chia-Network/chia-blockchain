@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import os
 import pathlib
 import sys
@@ -13,6 +15,7 @@ import typing_extensions
 
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
+cache_path = root.joinpath(".chia_cache", "manage_clvm.json")
 
 # This is a work-around for fixing imports so they get the appropriate top level
 # packages instead of those of the same name in the same directory as this program.
@@ -32,6 +35,29 @@ hash_suffix = ".clvm.hex.sha256tree"
 all_suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
 # TODO: could be cli options
 top_levels = {"chia"}
+
+
+class CacheEntry(typing.TypedDict):
+    clvm: str
+    hex: str
+    hash: str
+
+
+# PathString = typing.NewType(str)
+# HashString = typing.NewType(str)
+CacheEntries = typing.Dict[str, CacheEntry]
+
+
+class Cache(typing.TypedDict):
+    entries: CacheEntries
+
+
+def load_cache(file: typing.IO[str]) -> Cache:
+    return typing.cast(Cache, json.load(file))
+
+
+def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
+    json.dump(cache, file, indent=4)
 
 
 def generate_hash_bytes(hex_bytes: bytes) -> bytes:
@@ -97,6 +123,25 @@ def find_stems(
     return found_stems
 
 
+def create_cache_entry(reference_paths: ClvmPaths, reference_bytes: ClvmBytes) -> CacheEntry:
+    source_bytes = reference_paths.clvm.read_bytes()
+
+    clvm_hasher = hashlib.sha256()
+    clvm_hasher.update(source_bytes)
+
+    hex_hasher = hashlib.sha256()
+    hex_hasher.update(reference_bytes.hex)
+
+    hash_hasher = hashlib.sha256()
+    hash_hasher.update(reference_bytes.hash)
+
+    return {
+        "clvm": clvm_hasher.hexdigest(),
+        "hex": hex_hasher.hexdigest(),
+        "hash": hash_hasher.hexdigest(),
+    }
+
+
 @click.group()
 def main() -> None:
     pass
@@ -106,6 +151,16 @@ def main() -> None:
 def check() -> int:
     used_excludes = set()
     overall_fail = False
+
+    cache: Cache
+    try:
+        with cache_path.open(mode="r") as file:
+            cache = load_cache(file=file)
+    except FileNotFoundError:
+        cache = {"entries": {}}
+
+    cache_entries = cache["entries"]
+    cache_modified = False
 
     found_stems = find_stems(top_levels)
     for name in ["hex", "hash"]:
@@ -134,27 +189,36 @@ def check() -> int:
         file_fail = False
         error = None
 
+        cache_key = str(stem_path)
         try:
             reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
             reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths)
 
-            with tempfile.TemporaryDirectory() as temporary_directory:
-                generated_paths = ClvmPaths.from_clvm(
-                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
-                )
+            new_cache_entry = create_cache_entry(reference_paths=reference_paths, reference_bytes=reference_bytes)
+            existing_cache_entry = cache_entries.get(cache_key)
+            cache_hit = new_cache_entry == existing_cache_entry
 
-                compile_clvm(
-                    input_path=os.fspath(reference_paths.clvm),
-                    output_path=os.fspath(generated_paths.hex),
-                    search_paths=[os.fspath(reference_paths.clvm.parent)],
-                )
+            if not cache_hit:
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    generated_paths = ClvmPaths.from_clvm(
+                        clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
+                    )
 
-                generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
+                    compile_clvm(
+                        input_path=os.fspath(reference_paths.clvm),
+                        output_path=os.fspath(generated_paths.hex),
+                        search_paths=[os.fspath(reference_paths.clvm.parent)],
+                    )
 
-            if generated_bytes != reference_bytes:
-                file_fail = True
-                error = f"        reference: {reference_bytes!r}\n"
-                error += f"        generated: {generated_bytes!r}"
+                    generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
+
+                if generated_bytes != reference_bytes:
+                    file_fail = True
+                    error = f"        reference: {reference_bytes!r}\n"
+                    error += f"        generated: {generated_bytes!r}"
+                else:
+                    cache_modified = True
+                    cache_entries[cache_key] = new_cache_entry
         except Exception:
             file_fail = True
             error = traceback.format_exc()
@@ -177,6 +241,11 @@ def check() -> int:
 
         for exclude in unused_excludes:
             print(f"    {exclude}")
+
+    if cache_modified:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with cache_path.open(mode="w") as file:
+            dump_cache(cache=cache, file=file)
 
     return 1 if overall_fail else 0
 
