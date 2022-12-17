@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 
 from chia.full_node.fee_estimate_store import FeeStore
@@ -73,10 +72,10 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         return self.tracker
 
 
-def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64, log: logging.Logger) -> BitcoinFeeEstimator:
+def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64) -> BitcoinFeeEstimator:
     # fee_store and fee_tracker are particular to the BitcoinFeeEstimator, and
     # are not necessary if a different fee estimator is used.
     fee_store = FeeStore()
-    fee_tracker = FeeTracker(log, fee_store)
+    fee_tracker = FeeTracker(fee_store)
     smart_fee_estimator = SmartFeeEstimator(fee_tracker, max_block_cost_clvm)
     return BitcoinFeeEstimator(fee_tracker, smart_fee_estimator)
