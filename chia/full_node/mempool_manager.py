@@ -15,8 +15,10 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
@@ -131,11 +133,11 @@ class MempoolManager:
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
-        self.mempool: Mempool = Mempool(
-            self.mempool_max_total_cost,
-            uint64(self.nonzero_fee_minimum_fpc),
-            uint64(self.constants.MAX_BLOCK_COST_CLVM),
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM * self.limit_factor)), log
         )
+
+        self.mempool: Mempool = Mempool(self.get_mempool_info(), self.fee_estimator)
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
@@ -597,11 +599,7 @@ class MempoolManager:
         else:
             old_pool = self.mempool
 
-            self.mempool = Mempool(
-                self.mempool_max_total_cost,
-                uint64(self.nonzero_fee_minimum_fpc),
-                uint64(self.constants.MAX_BLOCK_COST_CLVM),
-            )
+            self.mempool = Mempool(self.get_mempool_info(), old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, err = await self.add_spend_bundle(
@@ -626,7 +624,8 @@ class MempoolManager:
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.info(
-            f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
+            f"Size of mempool: {len(self.mempool.spends)} spends, "
+            f"cost: {self.mempool.mempool_info.current_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
@@ -658,7 +657,7 @@ class MempoolManager:
         return FeeMempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
-            CLVMCost(uint64(self.mempool.total_mempool_cost)),
+            CLVMCost(uint64(self.mempool.mempool_info.current_mempool_cost)),
             datetime.datetime.now(),
             CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
         )
