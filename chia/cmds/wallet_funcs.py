@@ -219,7 +219,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         print(f"Wallet id: {wallet_id} not found.")
         return
 
-    final_fee = uint64(int(fee * mojo_per_unit))
+    final_fee: uint64 = uint64(int(fee * units["chia"]))  # fees are always in XCH mojos
     final_amount: uint64 = uint64(int(amount * mojo_per_unit))
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_max_coin_amount: uint64 = uint64(int(max_coin_amount * mojo_per_unit))
@@ -707,8 +707,12 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     return "", units["mojo"]
 
 
-def print_balance(amount: int, scale: int, address_prefix: str) -> str:
-    ret = f"{amount / scale} {address_prefix} "
+def print_balance(amount: int, scale: int, address_prefix: str, *, decimal_only: bool = False) -> str:
+    if decimal_only:  # dont use scientific notation.
+        final_amount = f"{amount / scale:.12f}"
+    else:
+        final_amount = f"{amount / scale}"
+    ret = f"{final_amount} {address_prefix} "
     if scale > 1:
         ret += f"({amount} mojo)"
     return ret
