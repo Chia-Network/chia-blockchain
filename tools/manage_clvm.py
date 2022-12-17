@@ -43,8 +43,6 @@ class CacheEntry(typing.TypedDict):
     hash: str
 
 
-# PathString = typing.NewType(str)
-# HashString = typing.NewType(str)
 CacheEntries = typing.Dict[str, CacheEntry]
 
 
