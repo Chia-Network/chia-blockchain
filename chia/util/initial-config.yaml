@@ -403,6 +403,9 @@ full_node:
   # Number of coin_ids | puzzle hashes that node will let wallets subscribe to
   max_subscribe_items: 200000
 
+  # Number of coin_ids | puzzle hashes that node will let local wallets subscribe to
+  local_max_subscribe_items: 2000000
+
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:

@@ -60,6 +60,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
+from chia.util.network import is_in_network
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
@@ -1460,7 +1461,10 @@ class FullNodeAPI:
 
         hint_coin_ids = []
         # Add peer to the "Subscribed" dictionary
-        max_items = self.full_node.config.get("max_subscribe_items", 200000)
+        if is_in_network(peer_host=peer.peer_host, networks=self.server.exempt_peer_networks):
+            max_items = self.full_node.config.get("local_max_subscribe_items", 2000000)
+        else:
+            max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for puzzle_hash in request.puzzle_hashes:
             ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
             hint_coin_ids.extend(ph_hint_coins)
@@ -1468,11 +1472,14 @@ class FullNodeAPI:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
             if (
                 peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
+                and self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items
             ):
-                self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
-                self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
-                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+                self.log.warning(f"wallet {peer.peer_node_id} reached max puzzle_hash subscription limit")
+                break
+
+            self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
+            self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
+            self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
@@ -1498,17 +1505,23 @@ class FullNodeAPI:
 
         if peer.peer_node_id not in self.full_node.peer_sub_counter:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
-        max_items = self.full_node.config.get("max_subscribe_items", 200000)
+        if is_in_network(peer_host=peer.peer_host, networks=self.server.exempt_peer_networks):
+            max_items = self.full_node.config.get("local_max_subscribe_items", 2000000)
+        else:
+            max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for coin_id in request.coin_ids:
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
             if (
                 peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
+                and self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items
             ):
-                self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
-                self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
-                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+                self.log.warning(f"wallet {peer.peer_node_id} reached max coin subscription limit")
+                break
+
+            self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
+            self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
+            self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
             include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
