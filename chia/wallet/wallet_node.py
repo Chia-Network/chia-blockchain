@@ -22,7 +22,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates, RespondToPhUpdates
+from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -852,20 +852,6 @@ class WalletNode:
         await asyncio.gather(*all_tasks)
         await self.update_ui()
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
-
-    async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
-        # TODO Use trusted peer, otherwise try untrusted
-        all_nodes = self.server.get_connections(NodeType.FULL_NODE)
-        if len(all_nodes) == 0:
-            raise ValueError("Not connected to the full node")
-        first_node = all_nodes[0]
-        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
-        coin_state: Optional[RespondToPhUpdates] = await first_node.call_api(
-            FullNodeAPI.register_interest_in_puzzle_hash, msg
-        )
-        # TODO validate state if received from untrusted peer
-        assert coin_state is not None
-        return coin_state.coin_states
 
     async def is_peer_synced(
         self, peer: WSChiaConnection, header_block: HeaderBlock, request_time: uint64
