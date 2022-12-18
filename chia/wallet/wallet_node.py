@@ -692,9 +692,7 @@ class WalletNode:
         self.synced_peers.add(full_node.peer_node_id)
         await self.update_ui()
 
-        end_time = time.time()
-        duration = end_time - start_time
-        self.log.info(f"Sync (trusted: {trusted}) duration was: {duration}")
+        self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
 
     async def receive_state_from_peer(
         self,
