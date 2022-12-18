@@ -646,9 +646,11 @@ class WalletNode:
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
         # Things, so we don't have to reprocess these later. There can be many things in ph_update_res.
         already_checked_ph: Set[bytes32] = set()
-        continue_while: bool = True
-        all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-        while continue_while:
+        while not self._shut_down:
+            await self.wallet_state_manager.create_more_puzzle_hashes()
+            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
+            if all(puzzle_hash in already_checked_ph for puzzle_hash in all_puzzle_hashes):
+                break
             # Get all phs from puzzle store
             ph_chunks: Iterator[List[bytes32]] = chunks(all_puzzle_hashes, 1000)
             for chunk in ph_chunks:
@@ -661,14 +663,6 @@ class WalletNode:
                     return
                 already_checked_ph.update(chunk)
 
-            # Check if new puzzle hashed have been created
-            await self.wallet_state_manager.create_more_puzzle_hashes()
-            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
-            continue_while = False
-            for ph in all_puzzle_hashes:
-                if ph not in already_checked_ph:
-                    continue_while = True
-                    break
         self.log.info(f"Successfully subscribed and updated {len(already_checked_ph)} puzzle hashes")
 
         # The number of coin id updates are usually going to be significantly less than ph updates, so we can
