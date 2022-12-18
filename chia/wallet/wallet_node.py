@@ -672,8 +672,7 @@ class WalletNode:
             all_coin_ids = await self.get_coin_ids_to_subscribe(0)
             if all(coin_id in already_checked_coin_ids for coin_id in all_coin_ids):
                 break
-            one_k_chunks = chunks(all_coin_ids, 1000)
-            for chunk in one_k_chunks:
+            for chunk in chunks(all_coin_ids, 1000):
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
 
                 if not await self.receive_state_from_peer(c_update_res, full_node):
