@@ -667,10 +667,11 @@ class WalletNode:
 
         # The number of coin id updates are usually going to be significantly less than ph updates, so we can
         # sync from 0 every time.
-        continue_while = True
-        all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(0)
         already_checked_coin_ids: Set[bytes32] = set()
-        while continue_while:
+        while not self._shut_down:
+            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
+            if all(coin_id in already_checked_coin_ids for coin_id in all_coin_ids):
+                break
             one_k_chunks = chunks(all_coin_ids, 1000)
             for chunk in one_k_chunks:
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
@@ -679,13 +680,6 @@ class WalletNode:
                     # If something goes wrong, abort sync
                     return
                 already_checked_coin_ids.update(chunk)
-
-            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
-            continue_while = False
-            for coin_id in all_coin_ids:
-                if coin_id not in already_checked_coin_ids:
-                    continue_while = True
-                    break
         self.log.info(f"Successfully subscribed and updated {len(already_checked_coin_ids)} coin ids")
 
         # Only update this fully when the entire sync has completed
