@@ -37,6 +37,10 @@ all_suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
 top_levels = {"chia"}
 
 
+class ManageClvmError(Exception):
+    pass
+
+
 class CacheEntry(typing.TypedDict):
     clvm: str
     hex: str
@@ -44,14 +48,49 @@ class CacheEntry(typing.TypedDict):
 
 
 CacheEntries = typing.Dict[str, CacheEntry]
+CacheVersion = typing.List[int]
+current_cache_version: CacheVersion = [1]
+
+
+class CacheVersionError(ManageClvmError):
+    pass
+
+
+class NoCacheVersionError(CacheVersionError):
+    def __init__(self) -> None:
+        super().__init__("Cache must specify a version, none found")
+
+
+class WrongCacheVersionError(CacheVersionError):
+    def __init__(self, found_version: object, expected_version: CacheVersion) -> None:
+        self.found_version = found_version
+        self.expected_version = expected_version
+        super().__init__(f"Cache has wrong version, expected {expected_version!r} got: {found_version!r}")
 
 
 class Cache(typing.TypedDict):
     entries: CacheEntries
+    version: CacheVersion
+
+
+def create_empty_cache() -> Cache:
+    return {
+        "entries": {},
+        "version": current_cache_version,
+    }
 
 
 def load_cache(file: typing.IO[str]) -> Cache:
-    return typing.cast(Cache, json.load(file))
+    loaded_cache = typing.cast(Cache, json.load(file))
+    try:
+        loaded_version = loaded_cache["version"]
+    except KeyError as e:
+        raise NoCacheVersionError() from e
+
+    if loaded_version != current_cache_version:
+        raise WrongCacheVersionError(found_version=loaded_version, expected_version=current_cache_version)
+
+    return loaded_cache
 
 
 def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
@@ -152,10 +191,18 @@ def check() -> int:
 
     cache: Cache
     try:
+        print(f"Attempting to load cache from: {cache_path}")
         with cache_path.open(mode="r") as file:
             cache = load_cache(file=file)
     except FileNotFoundError:
-        cache = {"entries": {}}
+        print("Cache not found, starting fresh")
+        cache = create_empty_cache()
+    except NoCacheVersionError:
+        print("Ignoring cache due to lack of version")
+        cache = create_empty_cache()
+    except WrongCacheVersionError as e:
+        print(f"Ignoring cache due to incorrect version, expected {e.expected_version!r} got: {e.found_version!r}")
+        cache = create_empty_cache()
 
     cache_entries = cache["entries"]
     cache_modified = False
