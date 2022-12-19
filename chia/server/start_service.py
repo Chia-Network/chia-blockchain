@@ -279,6 +279,8 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
 
 def async_run(coro: Coroutine[object, object, T]) -> T:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     if uvloop is not None:
         uvloop.install()
     return asyncio.run(coro)
