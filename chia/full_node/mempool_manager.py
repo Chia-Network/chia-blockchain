@@ -88,7 +88,6 @@ class MempoolManager:
     seen_bundle_hashes: Dict[bytes32, bytes32]
     get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
     nonzero_fee_minimum_fpc: int
-    limit_factor: float
     mempool_max_total_cost: int
     potential_cache: PendingTxCache
     seen_cache_size: int
@@ -195,7 +194,7 @@ class MempoolManager:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
-            f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
+            f"full: {cost_sum / self.max_block_clvm_cost}"
         )
         agg = SpendBundle.aggregate(spend_bundles)
         return agg, additions, removals
@@ -603,7 +602,6 @@ class MempoolManager:
                             self.remove_seen(spendbundle_id)
         else:
             old_pool = self.mempool
-
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
