@@ -903,7 +903,7 @@ class TestDIDWallet:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await full_node_api.farm_blocks(count=2, wallet=wallet)
+        await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -1054,7 +1054,7 @@ class TestDIDWallet:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        expected_confirmed_balance = await full_node_api.farm_blocks(count=2, wallet=wallet)
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
         async with wallet_node.wallet_state_manager.lock:

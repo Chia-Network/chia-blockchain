@@ -41,6 +41,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "anyio",
     "build",
     "coverage",
     "diff-cover",
