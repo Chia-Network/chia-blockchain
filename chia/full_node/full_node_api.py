@@ -1466,13 +1466,12 @@ class FullNodeAPI:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for puzzle_hash in request.puzzle_hashes:
 
+            hint_coin_ids.extend(await self.full_node.hint_store.get_coin_ids(puzzle_hash))
+
             # check subscription limit
             if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
                 self.log.warning(f"wallet {peer.peer_node_id} exceeded max puzzle_hash subscription limit")
-                break
-
-            ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
-            hint_coin_ids.extend(ph_hint_coins)
+                continue
 
             if puzzle_hash not in self.full_node.ph_subscriptions:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
