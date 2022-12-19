@@ -67,6 +67,9 @@ def get_bucket_index(sorted_buckets: SortedDict, fee_rate: float) -> int:
     else:
         # Choose the bucket to the left if we do not have exactly this fee rate
         bucket_index = sorted_buckets.bisect_left(fee_rate)
+    if bucket_index >= len(sorted_buckets):
+        # The fee rate is greater than our max fee rate
+        return len(sorted_buckets) - 1
     return int(bucket_index)
 
 
