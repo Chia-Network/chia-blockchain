@@ -60,7 +60,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
-from chia.util.network import is_in_network
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
