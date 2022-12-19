@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -10,6 +10,7 @@ from blspy import AugSchemeMPL, G2Element, PrivateKey
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import (
@@ -36,7 +37,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_taproot_sk,
     verify_and_get_quality_string,
 )
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_node, api_request
 from chia.util.ints import uint32, uint64
 
 
@@ -50,7 +51,9 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
     return []
 
 
+@api_node()
 class FarmerAPI:
+    node_type: ClassVar[NodeType] = NodeType.FARMER
     farmer: Farmer
 
     def __init__(self, farmer) -> None:
@@ -383,8 +386,7 @@ class FarmerAPI:
                         pool_target_signature,
                     )
                     self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
-                    msg = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
-                    await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
+                    await self.farmer.server.send_to_all(FullNodeAPI.declare_proof_of_space, request)
                     return None
 
         else:
@@ -434,8 +436,7 @@ class FarmerAPI:
                         foliage_block_agg_sig,
                     )
 
-                    msg = make_msg(ProtocolMessageTypes.signed_values, request_to_nodes)
-                    await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
+                    await self.farmer.server.send_to_all(FullNodeAPI.signed_values, request_to_nodes)
 
     """
     FARMER PROTOCOL (FARMER <-> FULL NODE)
@@ -473,8 +474,7 @@ class FarmerAPI:
                 pool_difficulties,
             )
 
-            msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
-            await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
+            await self.farmer.server.send_to_all(HarvesterAPI.new_signage_point_harvester, message)
             if new_signage_point.challenge_chain_sp not in self.farmer.sps:
                 self.farmer.sps[new_signage_point.challenge_chain_sp] = []
         finally:

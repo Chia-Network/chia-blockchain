@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_node, api_request
 from chia.util.errors import Err
 from chia.wallet.wallet_node import WalletNode
 
 
+@api_node()
 class WalletNodeAPI:
+    node_type: ClassVar[NodeType] = NodeType.WALLET
     wallet_node: WalletNode
 
     def __init__(self, wallet_node) -> None:

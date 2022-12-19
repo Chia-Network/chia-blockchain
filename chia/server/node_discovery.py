@@ -573,11 +573,10 @@ class FullNodePeers(FullNodeDiscovery):
                         uint64(int(time.time())),
                     )
                 ]
-                msg = make_msg(
-                    ProtocolMessageTypes.respond_peers,
-                    RespondPeers(timestamped_peer),
-                )
-                await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                msg = RespondPeers(timestamped_peer)
+                from chia.full_node.full_node_api import FullNodeAPI
+
+                await self.server.send_to_all(FullNodeAPI.respond_peers, msg)
 
                 async with self.lock:
                     for host in list(self.received_count_from_peers.keys()):

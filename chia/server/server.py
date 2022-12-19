@@ -8,7 +8,7 @@ import traceback
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -24,8 +24,6 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from typing_extensions import final
 
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.introducer_peers import IntroducerPeers
@@ -34,10 +32,12 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.api_decorators import ApiMetadata, get_metadata
 from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint16
+from chia.util.ints import uint8, uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
+from chia.util.streamable import Streamable
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -559,33 +559,50 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
-        for message in messages:
-            if message_requires_reply(ProtocolMessageTypes(message.type)):
-                # Internal protocol logic error - we will raise, blocking messages to all peers
-                self.log.error(f"Attempt to broadcast message requiring protocol response: {message.type}")
-                for _, connection in self.all_connections.items():
-                    if connection.connection_type is node_type:
-                        await connection.close(
-                            self.invalid_protocol_ban_seconds,
-                            WSCloseCode.INTERNAL_ERROR,
-                            Err.INTERNAL_PROTOCOL_ERROR,
-                        )
-                raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
+    async def validate_broadcast_message_type(self, metadata: ApiMetadata) -> None:
+        # drop node type?
+        if len(metadata.reply_types) > 0:
+            # Internal protocol logic error - we will raise, blocking messages to all peers
+            # self.log.error(f"Attempt to broadcast message requiring protocol response: {message.type}")
+            # TODO: Why are we closing all connections when we have chosen to broadcast something we shouldn't?
+            #       Would this not be our fault, and not that of the remote node?
+            # for _, connection in self.all_connections.items():
+            #     if connection.connection_type is node_type:
+            #         await connection.close(
+            #             self.invalid_protocol_ban_seconds,
+            #             WSCloseCode.INTERNAL_ERROR,
+            #             Err.INTERNAL_PROTOCOL_ERROR,
+            #         )
+            raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [metadata.request_type])
 
-    async def send_to_all(self, messages: List[Message], node_type: NodeType) -> None:
-        await self.validate_broadcast_message_type(messages, node_type)
+    async def send_to_all(
+        self,
+        request_method: Callable[..., Awaitable[Optional[Message]]],
+        message: Streamable,
+        # node_type: NodeType,
+    ) -> None:
+        request_metadata = get_metadata(request_method)
+        assert request_metadata is not None
+        message = Message(uint8(request_metadata.request_type.value), None, bytes(message))
+        await self.validate_broadcast_message_type(request_metadata)
         for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type:
-                for message in messages:
-                    await connection.send_message(message)
+            if connection.connection_type is request_metadata.node_type:
+                await connection.send_message(message)
 
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32) -> None:
-        await self.validate_broadcast_message_type(messages, node_type)
+    async def send_to_all_except(
+        self,
+        request_method: Callable[..., Awaitable[Optional[Message]]],
+        message: Streamable,
+        # node_type: NodeType,
+        exclude: bytes32,
+    ) -> None:
+        request_metadata = get_metadata(request_method)
+        assert request_metadata is not None
+        message = Message(uint8(request_metadata.request_type.value), None, bytes(message))
+        await self.validate_broadcast_message_type(request_metadata)
         for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type and connection.peer_node_id != exclude:
-                for message in messages:
-                    await connection.send_message(message)
+            if connection.connection_type is request_metadata.node_type and connection.peer_node_id != exclude:
+                await connection.send_message(message)
 
     async def send_to_specific(self, messages: List[Message], node_id: bytes32) -> None:
         if node_id in self.all_connections:

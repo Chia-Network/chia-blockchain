@@ -62,14 +62,17 @@ def message_requires_reply(sent: ProtocolMessageTypes) -> bool:
     return sent in VALID_REPLY_MESSAGE_MAP
 
 
-def message_response_ok(sent: ProtocolMessageTypes, received: ProtocolMessageTypes) -> bool:
+from chia.util.api_decorators import ApiMetadata
+
+
+def message_response_ok(sent_metadata: ApiMetadata, received: ProtocolMessageTypes) -> bool:
     """
     Check to see that peers respect protocol message types in reply.
     Call with received == None to indicate that we do not expect a specific reply message type.
     """
     # Errors below are runtime protocol message mismatches from peers
-    if sent in VALID_REPLY_MESSAGE_MAP:
-        return received in VALID_REPLY_MESSAGE_MAP[sent]
+    if len(sent_metadata.reply_types) != 0:
+        return received in sent_metadata.reply_types
 
     return True
 

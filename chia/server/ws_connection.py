@@ -393,9 +393,7 @@ class WSChiaConnection:
                 response_message = Message(response.type, full_message.id, response.data)
                 await self.send_message(response_message)
             # check that this call needs a reply
-            elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and self.has_capability(
-                Capability.NONE_RESPONSE
-            ):
+            elif len(metadata.reply_types) > 0 and self.has_capability(Capability.NONE_RESPONSE):
                 # this peer can accept None reply's, send empty msg back, so it doesn't wait for timeout
                 response_message = Message(uint8(ProtocolMessageTypes.none_response.value), full_message.id, b"")
                 await self.send_message(response_message)
@@ -476,7 +474,7 @@ class WSChiaConnection:
             return None
         sent_message_type = ProtocolMessageTypes(request.type)
         recv_message_type = ProtocolMessageTypes(response.type)
-        if not message_response_ok(sent_message_type, recv_message_type):
+        if not message_response_ok(request_metadata, recv_message_type):
             # peer protocol violation
             error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
             f"but received {recv_message_type.name}"

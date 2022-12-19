@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Callable, Optional
+from typing import Callable, ClassVar, Optional
 
 from chia.protocols import timelord_protocol
+from chia.server.outbound_message import NodeType
 from chia.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_node, api_request
 from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
 
+@api_node()
 class TimelordAPI:
+    node_type: ClassVar[NodeType] = NodeType.TIMELORD
     timelord: Timelord
 
     def __init__(self, timelord) -> None:

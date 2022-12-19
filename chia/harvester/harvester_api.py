@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import ClassVar, List, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -14,7 +14,7 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
@@ -23,12 +23,14 @@ from chia.types.blockchain_format.proof_of_space import (
     passes_plot_filter,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_node, api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
+@api_node()
 class HarvesterAPI:
+    node_type: ClassVar[NodeType] = NodeType.HARVESTER
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):

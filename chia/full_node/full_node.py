@@ -25,6 +25,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.block_store import BlockStore
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
@@ -47,6 +48,7 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -75,6 +77,7 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -805,7 +808,7 @@ class FullNode:
 
             msg = make_msg(ProtocolMessageTypes.new_peak_timelord, timelord_new_peak)
             if peer is None:
-                await self.server.send_to_all([msg], NodeType.TIMELORD)
+                await self.server.send_to_all(TimelordAPI.new_peak_timelord, timelord_new_peak)
             else:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
@@ -1186,13 +1189,10 @@ class FullNode:
     async def send_peak_to_wallets(self) -> None:
         peak = self.blockchain.get_peak()
         assert peak is not None
-        msg = make_msg(
-            ProtocolMessageTypes.new_peak_wallet,
-            wallet_protocol.NewPeakWallet(
-                peak.header_hash, peak.height, peak.weight, uint32(max(peak.height - 1, uint32(0)))
-            ),
+        message = wallet_protocol.NewPeakWallet(
+            peak.header_hash, peak.height, peak.weight, uint32(max(peak.height - 1, uint32(0)))
         )
-        await self.server.send_to_all([msg], NodeType.WALLET)
+        await self.server.send_to_all(WalletNodeAPI.new_peak_wallet, message)
 
     def get_peers_with_peak(self, peak_hash: bytes32) -> List[WSChiaConnection]:
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
@@ -1398,8 +1398,9 @@ class FullNode:
             request.index_from_challenge,
             request.reward_chain_vdf.challenge,
         )
-        msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
-        await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+        await self.server.send_to_all_except(
+            FullNodeAPI.new_signage_point_or_end_of_sub_slot, broadcast, peer.peer_node_id
+        )
 
         peak = self.blockchain.get_peak()
         if peak is not None and peak.height > self.constants.MAX_SUB_SLOT_BLOCKS:
@@ -1425,8 +1426,7 @@ class FullNode:
             sub_slot_iters,
             request.index_from_challenge,
         )
-        msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
-        await self.server.send_to_all([msg], NodeType.FARMER)
+        await self.server.send_to_all(FarmerAPI.new_signage_point, broadcast_farmer)
 
         self._state_changed("signage_point", {"broadcast_farmer": broadcast_farmer})
 
@@ -1561,8 +1561,7 @@ class FullNode:
                 mempool_item.cost,
                 fees,
             )
-            msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.server.send_to_all(FullNodeAPI.new_transaction, new_tx)
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
         if ppp_result.fns_peak_result.added_eos is not None:
@@ -1572,8 +1571,7 @@ class FullNode:
                 uint8(0),
                 ppp_result.fns_peak_result.added_eos.reward_chain.end_of_slot_vdf.challenge,
             )
-            msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.server.send_to_all(FullNodeAPI.new_signage_point_or_end_of_sub_slot, broadcast)
 
         # TODO: maybe add and broadcast new IPs as well
 
@@ -1586,33 +1584,29 @@ class FullNode:
             await self.send_peak_to_timelords(block)
 
             # Tell full nodes about the new peak
-            msg = make_msg(
-                ProtocolMessageTypes.new_peak,
-                full_node_protocol.NewPeak(
-                    record.header_hash,
-                    record.height,
-                    record.weight,
-                    state_change_summary.fork_height,
-                    block.reward_chain_block.get_unfinished().get_hash(),
-                ),
-            )
-            if peer is not None:
-                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
-            else:
-                await self.server.send_to_all([msg], NodeType.FULL_NODE)
-
-        # Tell wallets about the new peak
-        msg = make_msg(
-            ProtocolMessageTypes.new_peak_wallet,
-            wallet_protocol.NewPeakWallet(
+            node_request = full_node_protocol.NewPeak(
                 record.header_hash,
                 record.height,
                 record.weight,
                 state_change_summary.fork_height,
-            ),
+                block.reward_chain_block.get_unfinished().get_hash(),
+            )
+            if peer is not None:
+                await self.server.send_to_all_except(FullNodeAPI.new_peak, node_request, peer.peer_node_id)
+            else:
+                await self.server.send_to_all(FullNodeAPI.new_peak, node_request)
+
+        # Tell wallets about the new peak
+        wallet_request = wallet_protocol.NewPeakWallet(
+            record.header_hash,
+            record.height,
+            record.weight,
+            state_change_summary.fork_height,
         )
         await self.update_wallets(state_change_summary, ppp_result.hints, ppp_result.lookup_coin_ids)
-        await self.server.send_to_all([msg], NodeType.WALLET)
+        from chia.wallet.wallet_node_api import WalletNodeAPI
+
+        await self.server.send_to_all(WalletNodeAPI.new_peak_wallet, wallet_request)
         self._state_changed("new_peak")
 
     async def respond_block(
@@ -2016,15 +2010,15 @@ class FullNode:
             rc_prev,
         )
 
-        timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
-        await self.server.send_to_all([timelord_msg], NodeType.TIMELORD)
+        from chia.timelord.timelord_api import TimelordAPI
+
+        await self.server.send_to_all(TimelordAPI.new_unfinished_block_timelord, timelord_request)
 
         full_node_request = full_node_protocol.NewUnfinishedBlock(block.reward_chain_block.get_hash())
-        msg = make_msg(ProtocolMessageTypes.new_unfinished_block, full_node_request)
         if peer is not None:
-            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all_except(FullNodeAPI.new_unfinished_block, full_node_request, peer.peer_node_id)
         else:
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.server.send_to_all(FullNodeAPI.new_unfinished_block, full_node_request)
 
         self._state_changed("unfinished_block")
 
@@ -2196,8 +2190,9 @@ class FullNode:
                     uint8(0),
                     request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
                 )
-                msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
-                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                await self.server.send_to_all_except(
+                    FullNodeAPI.new_signage_point_or_end_of_sub_slot, broadcast, peer.peer_node_id
+                )
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
@@ -2211,8 +2206,9 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                 )
-                msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
-                await self.server.send_to_all([msg], NodeType.FARMER)
+                from chia.farmer.farmer_api import FarmerAPI
+
+                await self.server.send_to_all(FarmerAPI.new_signage_point, broadcast_farmer)
                 return None, True
             else:
                 self.log.info(
@@ -2282,11 +2278,10 @@ class FullNode:
                     cost,
                     fees,
                 )
-                msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
                 if peer is None:
-                    await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                    await self.server.send_to_all(FullNodeAPI.new_transaction, new_tx)
                 else:
-                    await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                    await self.server.send_to_all_except(FullNodeAPI.new_transaction, new_tx, peer.peer_node_id)
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
@@ -2447,12 +2442,9 @@ class FullNode:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
         self.log.info(f"Replaced compact proof at height {request.height}")
-        msg = make_msg(
-            ProtocolMessageTypes.new_compact_vdf,
-            full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
-        )
+        msg = full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info)
         if self._server is not None:
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.server.send_to_all(FullNodeAPI.new_compact_vdf, msg)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
@@ -2529,12 +2521,9 @@ class FullNode:
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
-        msg = make_msg(
-            ProtocolMessageTypes.new_compact_vdf,
-            full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
-        )
+        msg = full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info)
         if self._server is not None:
-            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all_except(FullNodeAPI.new_compact_vdf, msg, peer.peer_node_id)
 
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
@@ -2629,11 +2618,10 @@ class FullNode:
                     continue
                 if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
-                    msgs = []
                     for new_pot in broadcast_list:
-                        msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
-                        msgs.append(msg)
-                    await self.server.send_to_all(msgs, NodeType.TIMELORD)
+                        from chia.timelord.timelord_api import TimelordAPI
+
+                        await self.server.send_to_all(TimelordAPI.request_compact_proof_of_time, new_pot)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:
             error_stack = traceback.format_exc()
