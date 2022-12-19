@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-import sqlite3
 import logging
+import sqlite3
 from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
