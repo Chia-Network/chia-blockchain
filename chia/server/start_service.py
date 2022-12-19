@@ -18,11 +18,6 @@ from chia.util.lock import Lockfile, LockfileError
 
 from ..protocols.shared_protocol import capabilities
 
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.outbound_message import NodeType
@@ -279,6 +274,4 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
 
 def async_run(coro: Coroutine[object, object, T]) -> T:
-    if uvloop is not None:
-        uvloop.install()
     return asyncio.run(coro)
