@@ -1465,13 +1465,17 @@ class FullNodeAPI:
         else:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for puzzle_hash in request.puzzle_hashes:
+
+            # check subscription limit
+            if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
+                self.log.warning(f"wallet {peer.peer_node_id} exceeded max puzzle_hash subscription limit")
+                break
+
             ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
             hint_coin_ids.extend(ph_hint_coins)
+
             if puzzle_hash not in self.full_node.ph_subscriptions:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
-            if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
-                self.log.warning(f"wallet {peer.peer_node_id} reached max puzzle_hash subscription limit")
-                break
             if peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]:
                 self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
                 self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
@@ -1506,11 +1510,14 @@ class FullNodeAPI:
         else:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for coin_id in request.coin_ids:
+
+            # check subscription limit
+            if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
+                self.log.warning(f"wallet {peer.peer_node_id} exceeded max coin subscription limit")
+                break
+
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
-            if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
-                self.log.warning(f"wallet {peer.peer_node_id} reached max coin subscription limit")
-                break
             if peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]:
                 self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
                 self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
