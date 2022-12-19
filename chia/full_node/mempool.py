@@ -18,9 +18,13 @@ class Mempool:
         self.log = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
-        self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
         self.mempool_info = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
+        self.removal_coin_id_to_spendbundle_ids: Dict[bytes32, List[bytes32]] = {}
+        self.total_mempool_cost: int = 0
+        # self.max_size_in_cost: int = max_size_in_cost
+        # self.total_mempool_cost: int = 0
+        # self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
@@ -28,7 +32,7 @@ class Mempool:
         """
 
         if self.at_full_capacity(cost):
-            current_cost = self.mempool_info.current_mempool_cost
+            current_cost = self.total_mempool_cost
 
             # Iterates through all spends in increasing fee per cost
             fee_per_cost: float
@@ -56,14 +60,15 @@ class Mempool:
             removals: List[Coin] = item.removals
             for rem in removals:
                 rem_name: bytes32 = rem.name()
-                self.removals[rem_name].remove(spend_bundle_id)
-                if len(self.removals[rem_name]) == 0:
-                    del self.removals[rem_name]
+                self.removal_coin_id_to_spendbundle_ids[rem_name].remove(spend_bundle_id)
+                if len(self.removal_coin_id_to_spendbundle_ids[rem_name]) == 0:
+                    del self.removal_coin_id_to_spendbundle_ids[rem_name]
             del self.spends[item.name]
             del self.sorted_spends[item.fee_per_cost][item.name]
             dic = self.sorted_spends[item.fee_per_cost]
             if len(dic.values()) == 0:
                 del self.sorted_spends[item.fee_per_cost]
+            # self.total_mempool_cost -= item.cost
             current_mempool_cost = self.mempool_info.current_mempool_cost - item.cost
             self.mempool_info = dataclasses.replace(self.mempool_info, current_mempool_cost=current_mempool_cost)
             assert self.mempool_info.current_mempool_cost >= 0
@@ -90,12 +95,11 @@ class Mempool:
 
         for coin in item.removals:
             coin_id = coin.name()
-            if coin_id not in self.removals:
-                self.removals[coin_id] = []
-            self.removals[coin_id].append(item.name)
+            if coin_id not in self.removal_coin_id_to_spendbundle_ids:
+                self.removal_coin_id_to_spendbundle_ids[coin_id] = []
+            self.removal_coin_id_to_spendbundle_ids[coin_id].append(item.name)
 
-        current_mempool_cost = self.mempool_info.current_mempool_cost + item.cost
-        self.mempool_info = dataclasses.replace(self.mempool_info, current_mempool_cost=current_mempool_cost)
+        self.total_mempool_cost += item.cost
         self.fee_estimator.add_mempool_item(self.mempool_info, item)
 
     def at_full_capacity(self, cost: int) -> bool:

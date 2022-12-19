@@ -134,7 +134,7 @@ class MempoolManager:
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
         self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(
-            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM * self.limit_factor)), log
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM * self.limit_factor)),
         )
 
         self.mempool: Mempool = Mempool(self.get_mempool_info(), self.fee_estimator)
@@ -510,7 +510,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                for c_sb_id in self.mempool.removals[conflicting.name()]:
+                for c_sb_id in self.mempool.removal_coin_id_to_spendbundle_ids[conflicting.name()]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
@@ -543,7 +543,7 @@ class MempoolManager:
             if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
-            if removal.name() in self.mempool.removals:
+            if removal.name() in self.mempool.removal_coin_id_to_spendbundle_ids:
                 conflicts.append(removal)
 
         if len(conflicts) > 0:
@@ -591,8 +591,10 @@ class MempoolManager:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
-                    if spend.coin_id in self.mempool.removals:
-                        spendbundle_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
+                    if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
+                        spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
+                            bytes32(spend.coin_id)
+                        ]
                         self.mempool.remove_from_pool(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
                             self.remove_seen(spendbundle_id)
@@ -657,7 +659,7 @@ class MempoolManager:
         return FeeMempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
-            CLVMCost(uint64(self.mempool.mempool_info.current_mempool_cost)),
+            CLVMCost(uint64(self.mempool.total_mempool_cost)),
             datetime.datetime.now(),
             CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
         )

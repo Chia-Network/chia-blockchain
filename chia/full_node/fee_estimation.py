@@ -7,7 +7,8 @@ from typing import List
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint32
+from chia.types.mojos import Mojos
+from chia.util.ints import uint32, uint64
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,15 @@ class FeeMempoolInfo:
     current_mempool_cost: CLVMCost  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
     time: datetime  # Local time this sample was taken
     MAX_BLOCK_COST_CLVM: CLVMCost  # Max CLVMCost allowed in the Mempool
+
+
+EmptyFeeMempoolInfo = FeeMempoolInfo(
+    CLVMCost(uint64(0)),
+    FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))),
+    CLVMCost(uint64(0)),
+    datetime.min,
+    CLVMCost(uint64(0)),
+)
 
 
 @dataclass(frozen=True)
