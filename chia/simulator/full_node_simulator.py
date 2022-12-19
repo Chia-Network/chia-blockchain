@@ -440,11 +440,10 @@ class FullNodeSimulator(FullNodeAPI):
         return await self.process_coin_spends(coins=coins_to_wait_for)
 
     async def process_coin_spends(self, coins: Collection[Coin] = ()) -> None:
-        """Process the specified coin names and wait until they have been created in a
-        block.
+        """Process the specified coin names and wait until they have been created in a block.
 
         Arguments:
-            coin_names: The coin names to process.
+            coins: The coins to process.
         """
 
         coin_set = set(coins)
