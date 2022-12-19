@@ -47,9 +47,7 @@ class NotificationStore:
             )
 
             try:
-                await conn.execute(
-                    "ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0"
-                )
+                await conn.execute("ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0")
             except sqlite3.OperationalError:
                 pass  # ignore what is likely Duplicate column error
 

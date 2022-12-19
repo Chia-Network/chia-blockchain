@@ -1196,7 +1196,12 @@ class WalletRpcApi:
 
         return {
             "notifications": [
-                {"id": notification.coin_id.hex(), "message": notification.message.hex(), "amount": notification.amount}
+                {
+                    "id": notification.coin_id.hex(),
+                    "message": notification.message.hex(),
+                    "amount": notification.amount,
+                    "height": notification.height,
+                }
                 for notification in notifications
             ]
         }

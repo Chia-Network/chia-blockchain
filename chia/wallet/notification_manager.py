@@ -14,7 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.notification_store import Notification, NotificationStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos_for_spend
@@ -64,7 +64,7 @@ class NotificationManager:
                         coin_state.coin.name(),
                         coin_memos[1],
                         uint64(coin_state.coin.amount),
-                        coin_state.spent_height,
+                        uint32(coin_state.spent_height),
                     )
                 )
                 self.wallet_state_manager.state_changed("new_on_chain_notification")
