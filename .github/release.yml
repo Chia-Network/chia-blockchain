@@ -9,6 +9,7 @@ changelog:
       - dependencies
       - checkpoint_merge
       - Exclude_Notes
+      - GUI-Pin
     authors:
       - octocat
       - dependabot
