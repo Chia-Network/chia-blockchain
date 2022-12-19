@@ -426,6 +426,7 @@ full_node:
   network_overrides: *network_overrides
   selected_network: *selected_network
 
+  # Node IDs of trusted wallet peers, allows using more permissive limits on sync
   trusted_peers:
     0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb7: Does_not_matter
 

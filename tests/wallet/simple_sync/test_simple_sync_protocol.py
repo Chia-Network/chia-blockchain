@@ -646,7 +646,7 @@ class TestSimpleSyncProtocol:
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
-        assert len(full_node_api.full_node.ph_subscriptions)  == 4
+        assert len(full_node_api.full_node.ph_subscriptions) == 4
 
     @pytest.mark.asyncio
     async def test_coin_subscribe_limits(self, wallet_node_simulator, self_hostname):
