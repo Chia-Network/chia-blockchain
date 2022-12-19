@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
-from chia.full_node.fee_estimation import FeeMempoolInfo
+from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.clvm_cost import CLVMCost
 from chia.types.mempool_item import MempoolItem
+from chia.util.ints import uint64
 
 
 class Mempool:
-    def __init__(self, mempool_info: FeeMempoolInfo, fee_estimator: FeeEstimatorInterface):
+    def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
         self.log = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
         self.mempool_info = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
         self.removal_coin_id_to_spendbundle_ids: Dict[bytes32, List[bytes32]] = {}
-        self.total_mempool_cost: int = 0
-        # self.max_size_in_cost: int = max_size_in_cost
-        # self.total_mempool_cost: int = 0
-        # self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
+        self.total_mempool_cost: CLVMCost = CLVMCost(uint64(0))
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
@@ -68,11 +67,10 @@ class Mempool:
             dic = self.sorted_spends[item.fee_per_cost]
             if len(dic.values()) == 0:
                 del self.sorted_spends[item.fee_per_cost]
-            # self.total_mempool_cost -= item.cost
-            current_mempool_cost = self.mempool_info.current_mempool_cost - item.cost
-            self.mempool_info = dataclasses.replace(self.mempool_info, current_mempool_cost=current_mempool_cost)
-            assert self.mempool_info.current_mempool_cost >= 0
-            self.fee_estimator.remove_mempool_item(self.mempool_info, item)
+            self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost - item.cost))
+            assert self.total_mempool_cost >= 0
+            info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now())
+            self.fee_estimator.remove_mempool_item(info, item)
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
@@ -99,12 +97,13 @@ class Mempool:
                 self.removal_coin_id_to_spendbundle_ids[coin_id] = []
             self.removal_coin_id_to_spendbundle_ids[coin_id].append(item.name)
 
-        self.total_mempool_cost += item.cost
-        self.fee_estimator.add_mempool_item(self.mempool_info, item)
+        self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost + item.cost))
+        info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now())
+        self.fee_estimator.add_mempool_item(info, item)
 
     def at_full_capacity(self, cost: int) -> bool:
         """
         Checks whether the mempool is at full capacity and cannot accept a transaction with size cost.
         """
 
-        return self.mempool_info.current_mempool_cost + cost > self.mempool_info.max_size_in_cost
+        return self.total_mempool_cost + cost > self.mempool_info.max_size_in_cost

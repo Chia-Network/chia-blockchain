@@ -53,7 +53,7 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
 
     def mempool_max_size(self) -> CLVMCost:
         """Report current mempool max size (cost)"""
-        return self.last_mempool_info.max_size_in_cost
+        return self.last_mempool_info.mempool_info.max_size_in_cost
 
     def get_tracker(self) -> FeeTracker:
         """
@@ -61,6 +61,9 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         Not part of `FeeEstimatorInterface`
         """
         return self.tracker
+
+    def get_mempool_info(self) -> FeeMempoolInfo:
+        return self.last_mempool_info if self.last_mempool_info else EmptyFeeMempoolInfo
 
 
 def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64) -> BitcoinFeeEstimator:
