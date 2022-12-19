@@ -19,7 +19,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import Mempool
+from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -140,6 +140,7 @@ class MempoolManager:
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.max_block_clvm_cost)),
         )
+
         self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
 
     def shut_down(self) -> None:
@@ -350,8 +351,9 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
-            self.mempool.add_to_pool(item)
-            self.mempool.remove_from_pool(remove_items)
+            block_height = self.peak.height if self.peak else uint32(0)
+            self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT, block_height)
+            self.mempool.add_to_pool(item, block_height)
             return item.cost, MempoolInclusionStatus.SUCCESS, None
         elif item is not None:
             # There is an error,  but we still returned a mempool item, this means we should add to the pending pool.
@@ -598,9 +600,14 @@ class MempoolManager:
                         spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
                             bytes32(spend.coin_id)
                         ]
-                        self.mempool.remove_from_pool(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
+                            item = self.mempool.spends.get(spendbundle_id)
+                            if item:
+                                included_items.append(item)
                             self.remove_seen(spendbundle_id)
+                        self.mempool.remove_from_pool(
+                            spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION, self.peak.height
+                        )
         else:
             old_pool = self.mempool
 
