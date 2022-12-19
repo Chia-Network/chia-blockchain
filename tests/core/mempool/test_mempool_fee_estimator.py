@@ -114,7 +114,7 @@ async def test_fee_increase() -> None:
             fee_tracker.process_block(i, items)
 
         short, med, long = fee_tracker.estimate_fees()
-        mempool_info = mempool_manager.get_mempool_info()
+        mempool_info = mempool_manager.mempool.fee_estimator.get_mempool_info()
 
         result = estimator.get_estimates(mempool_info, ignore_mempool=True)
 

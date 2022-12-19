@@ -12,7 +12,7 @@ from clvm_tools import binutils
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.fee_estimation import EmptyFeeMempoolInfo, FeeMempoolInfo
+from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -55,9 +55,9 @@ BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
 log = logging.getLogger(__name__)
 
 
-def new_fmi(fmi: FeeMempoolInfo, max_mempool_cost: int, min_replace_fee_per_cost: int) -> FeeMempoolInfo:
+def new_mi(mi: MempoolInfo, max_mempool_cost: int, min_replace_fee_per_cost: int) -> MempoolInfo:
     return dataclasses.replace(
-        fmi,
+        mi,
         minimum_fee_per_cost_to_replace=FeeRate(uint64(min_replace_fee_per_cost)),
         max_size_in_cost=CLVMCost(uint64(max_mempool_cost)),
     )
@@ -160,7 +160,7 @@ class TestMempool:
 
         max_block_cost_clvm = uint64(40000000)
         max_mempool_cost = max_block_cost_clvm * 5
-        mempool_info = new_fmi(EmptyFeeMempoolInfo, max_mempool_cost, uint64(5))
+        mempool_info = new_mi(EmptyMempoolInfo, max_mempool_cost, uint64(5))
         fee_estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
         mempool = Mempool(mempool_info, fee_estimator)
         assert mempool.get_min_fee_rate(104000) == 0

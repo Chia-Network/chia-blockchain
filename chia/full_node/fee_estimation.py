@@ -46,8 +46,13 @@ class FeeMempoolInfo:
     time: datetime  # Local time this sample was taken
 
 
+EmptyMempoolInfo = MempoolInfo(
+    CLVMCost(uint64(0)), FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))), CLVMCost(uint64(0))
+)
+
+
 EmptyFeeMempoolInfo = FeeMempoolInfo(
-    MempoolInfo(CLVMCost(uint64(0)), FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))), CLVMCost(uint64(0))),
+    EmptyMempoolInfo,
     CLVMCost(uint64(0)),
     datetime.min,
 )
