@@ -48,8 +48,11 @@ class NotificationStore:
 
             try:
                 await conn.execute("ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0")
-            except sqlite3.OperationalError:
-                pass  # ignore what is likely Duplicate column error
+            except sqlite3.OperationalError as e:
+                if "duplicate column" in e.args[0]:
+                    pass  # ignore what is likely Duplicate column error
+                else:
+                    raise e
 
             # This used to be an accidentally created redundant index on coin_id which is already a primary key
             # We can remove this at some point in the future when it's unlikely this index still exists
