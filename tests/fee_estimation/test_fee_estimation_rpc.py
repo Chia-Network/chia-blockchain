@@ -44,6 +44,26 @@ async def setup_node_and_rpc(
     return client, full_node_rpc_api
 
 
+@pytest_asyncio.fixture(scope="function")
+async def setup_node_and_rpc_no_blocks_farmed(
+    two_wallet_nodes_services: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools],
+) -> Tuple[FullNodeRpcClient, FullNodeRpcApi]:
+    full_nodes, wallets, bt = two_wallet_nodes_services
+    full_node_apis = [full_node_service._api for full_node_service in full_nodes]
+    full_node_api = full_node_apis[0]
+    full_node_service_1 = full_nodes[0]
+    assert full_node_service_1.rpc_server is not None
+    client = await FullNodeRpcClient.create(
+        bt.config["self_hostname"],
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    )
+    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
+
+    return client, full_node_rpc_api
+
+
 @pytest.mark.asyncio
 async def test_get_blockchain_state(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
     # Confirm full node setup correctly
@@ -58,6 +78,24 @@ async def test_empty_request(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNo
 
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({})
+
+
+@pytest.mark.asyncio
+async def test_empty_peak(setup_node_and_rpc_no_blocks_farmed: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
+    client, full_node_rpc_api = setup_node_and_rpc_no_blocks_farmed
+
+    response = await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": 1})
+    del response["node_time_utc"]
+    assert response == {
+        "estimates": [],
+        "target_times": [],
+        "current_fee_rate": 0,
+        "mempool_size": 0,
+        "mempool_max_size": 0,
+        "full_node_synced": False,
+        "peak_height": 0,
+        "last_peak_timestamp": 0,
+    }
 
 
 @pytest.mark.asyncio
