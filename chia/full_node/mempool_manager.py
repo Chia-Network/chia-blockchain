@@ -410,11 +410,6 @@ class MempoolManager:
         for add in additions:
             additions_dict[add.name()] = add
             addition_amount = addition_amount + add.amount
-        # Check for duplicate outputs
-        addition_counter = collections.Counter(_.name() for _ in additions)
-        for k, v in addition_counter.items():
-            if v > 1:
-                return Err.DUPLICATE_OUTPUT, None, []
         # Check for duplicate inputs
         removal_counter = collections.Counter(name for name in removal_names)
         for k, v in removal_counter.items():

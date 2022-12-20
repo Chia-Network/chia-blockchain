@@ -103,3 +103,15 @@ async def test_too_big_addition_amount() -> None:
     # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
     with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+
+
+@pytest.mark.asyncio
+async def test_duplicate_output() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+    ]
+    sb = spend_bundle_from_conditions(conditions)
+    with pytest.raises(ValidationError, match="Err.DUPLICATE_OUTPUT"):
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
