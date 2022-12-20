@@ -93,7 +93,7 @@ async def get_name_for_wallet_id(
     if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
-        name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
+        name = await wallet_client.get_cat_name(wallet_id=wallet_id)
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
@@ -104,7 +104,8 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     transaction_id = bytes32.from_hexstr(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = selected_network_address_prefix(config)
-    tx: TransactionRecord = await wallet_client.get_transaction("this is unused", transaction_id=transaction_id)
+    this_is_unused = 37
+    tx: TransactionRecord = await wallet_client.get_transaction(this_is_unused, transaction_id=transaction_id)
 
     try:
         wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
@@ -226,7 +227,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     if typ == WalletType.STANDARD_WALLET:
         print("Submitting transaction...")
         res = await wallet_client.send_transaction(
-            str(wallet_id),
+            wallet_id,
             final_amount,
             address,
             final_fee,
@@ -238,7 +239,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     elif typ == WalletType.CAT:
         print("Submitting transaction...")
         res = await wallet_client.cat_spend(
-            str(wallet_id),
+            wallet_id,
             final_amount,
             address,
             final_fee,
@@ -255,7 +256,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     start = time.time()
     while time.time() - start < 10:
         await asyncio.sleep(0.1)
-        tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
+        tx = await wallet_client.get_transaction(wallet_id, tx_id)
         if len(tx.sent_to) > 0:
             print(transaction_submitted_msg(tx))
             print(transaction_status_msg(fingerprint, tx_id))
@@ -388,7 +389,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                         name = "XCH"
                         unit = units["chia"]
                     else:
-                        name = await wallet_client.get_cat_name(str(id))
+                        name = await wallet_client.get_cat_name(id)
                         unit = units["cat"]
                     if item in offers:
                         fungible_asset_dict[name] = uint64(abs(int(Decimal(amount) * unit)))

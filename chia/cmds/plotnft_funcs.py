@@ -99,7 +99,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(str(1), tx_record.name)
+                tx = await wallet_client.get_transaction(1, tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
@@ -139,7 +139,7 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances: Dict = await wallet_client.get_wallet_balance(str(wallet_id))
+        balances: Dict = await wallet_client.get_wallet_balance(wallet_id)
         balance = balances["confirmed_wallet_balance"]
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
@@ -250,7 +250,7 @@ async def submit_tx_with_confirmation(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(str(1), tx_record.name)
+                tx = await wallet_client.get_transaction(1, tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
