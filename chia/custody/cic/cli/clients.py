@@ -3,7 +3,7 @@ import aiohttp
 from pprint import pprint
 from typing import Optional
 
-# wjb from chia.cmds.wallet_funcs import get_wallet
+from chia.cmds.cmds_util import get_wallet
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.config import load_config
@@ -51,7 +51,7 @@ async def get_node_and_wallet_clients(
     try:
         full_node_client = await get_node_client(full_node_rpc_port)
         _wallet_client = await get_wallet_client(wallet_rpc_port)
-        wallet_client_f = None #  wjb await get_wallet(_wallet_client, fingerprint)
+        wallet_client_f = await get_wallet(_wallet_client, fingerprint)
         assert wallet_client_f is not None
         wallet_client, _ = wallet_client_f
         return full_node_client, wallet_client
