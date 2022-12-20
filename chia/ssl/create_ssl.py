@@ -23,9 +23,10 @@ _all_private_node_names: List[str] = [
     "timelord",
     "crawler",
     "data_layer",
+    "custody",
     "daemon",
 ]
-_all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
+_all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer", "custody"]
 
 
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:

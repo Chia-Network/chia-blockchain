@@ -132,6 +132,7 @@ def configure(
                 config["introducer"]["selected_network"] = testnet
                 config["wallet"]["selected_network"] = testnet
                 config["data_layer"]["selected_network"] = testnet
+                config["custody"]["selected_network"] = testnet
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(testnet_port)
@@ -170,6 +171,7 @@ def configure(
                 config["introducer"]["selected_network"] = net
                 config["wallet"]["selected_network"] = net
                 config["data_layer"]["selected_network"] = net
+                config["custody"]["selected_network"] = net
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(mainnet_port)

@@ -17,7 +17,7 @@ class NodeType(IntEnum):
     INTRODUCER = 5
     WALLET = 6
     DATA_LAYER = 7
-
+    CUSTODY = 8
 
 @streamable
 @dataclass(frozen=True)

@@ -95,6 +95,7 @@ kwargs = dict(
         "chia.consensus",
         "chia.daemon",
         "chia.data_layer",
+        "chia.custody",
         "chia.full_node",
         "chia.timelord",
         "chia.farmer",
@@ -140,6 +141,7 @@ kwargs = dict(
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
             "chia_data_layer = chia.server.start_data_layer:main",
             "chia_data_layer_http = chia.data_layer.data_layer_server:main",
+            "chia_custody = chia.server.start_custody:main",
         ]
     },
     package_data={

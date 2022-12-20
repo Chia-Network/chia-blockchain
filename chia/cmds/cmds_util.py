@@ -10,6 +10,7 @@ from aiohttp import ClientConnectorError
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
+from chia.rpc.custody_rpc_client import CustodyRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -29,6 +30,7 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "full_node": FullNodeRpcClient,
     "harvester": HarvesterRpcClient,
     "data_layer": DataLayerRpcClient,
+    "custody": CustodyRpcClient,
 }
 
 

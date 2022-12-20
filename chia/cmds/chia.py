@@ -9,6 +9,7 @@ from chia import __version__
 from chia.cmds.beta import beta_cmd
 from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
+from chia.cmds.custody import custody_cmd
 from chia.cmds.db import db_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
@@ -123,6 +124,7 @@ cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
 cli.add_command(peer_cmd)
 cli.add_command(data_cmd)
+cli.add_command(custody_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
 

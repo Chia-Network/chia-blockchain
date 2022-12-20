@@ -10,6 +10,7 @@ SERVICES_FOR_GROUP = {
     # TODO: should this be `data_layer`?
     "data": "chia_wallet chia_data_layer".split(),
     "data_layer_http": "chia_data_layer_http".split(),
+    "custody": "chia_custody".split(),
     "node": "chia_full_node".split(),
     "harvester": "chia_harvester".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),

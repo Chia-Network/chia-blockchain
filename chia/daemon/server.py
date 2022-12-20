@@ -96,6 +96,7 @@ if getattr(sys, "frozen", False):
         "chia_full_node_simulator": "start_simulator",
         "chia_seeder": "start_seeder",
         "chia_crawler": "start_crawler",
+        "chia_custody": "start_custody",
     }
 
     def executable_for_service(service_name: str) -> str:

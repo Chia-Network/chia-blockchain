@@ -594,6 +594,44 @@ data_layer:
     public_crt:  "config/ssl/data_layer/public_data_layer.crt"
     public_key:  "config/ssl/data_layer/public_data_layer.key"
 
+custody:
+  # TODO: consider name
+  # TODO: organize consistently with other sections
+
+  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
+  port: 8561
+  wallet_peer:
+    host: localhost
+    port: 9256
+
+  database_path: "custody/db/custody_CHALLENGE.sqlite"
+  # The location where the server files will be stored.
+  server_files_location: "data_layer/db/server_files_location_CHALLENGE"
+  # The timeout for the client to download a file from a server
+  client_timeout: 15
+  # Data for running a data layer server.
+  host_ip: 0.0.0.0
+  host_port: 8575
+  # Data for running a data layer client.
+  manage_data_interval: 60
+  selected_network: *selected_network
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  # TODO: what considerations are there in choosing this?
+  rpc_port: 8562
+  rpc_server_max_request_body_size: 26214400
+  fee: 1000000000
+  logging: *logging
+
+  # TODO: which of these are really appropriate?
+
+  ssl:
+    private_crt:  "config/ssl/custody/private_custody.crt"
+    private_key:  "config/ssl/custody/private_custody.key"
+    public_crt:  "config/ssl/custody/public_custody.crt"
+    public_key:  "config/ssl/custody/public_custody.key"
+
+
 simulator:
 
   # Should the simulator farm a block whenever a transaction is in mempool

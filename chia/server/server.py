@@ -171,7 +171,7 @@ class ChiaServer:
         public_cert_path, public_key_path = None, None
 
         authenticated_client_types = {NodeType.HARVESTER}
-        authenticated_server_types = {NodeType.HARVESTER, NodeType.FARMER, NodeType.WALLET, NodeType.DATA_LAYER}
+        authenticated_server_types = {NodeType.HARVESTER, NodeType.FARMER, NodeType.WALLET, NodeType.DATA_LAYER, NodeType.CUSTODY}
 
         if local_type in authenticated_client_types:
             # Authenticated clients
