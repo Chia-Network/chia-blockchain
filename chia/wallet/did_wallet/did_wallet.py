@@ -1179,7 +1179,14 @@ class DIDWallet:
 
             p2_puzzle, _, _, _, _ = puzzle_args
             puzzle_hash = p2_puzzle.get_tree_hash()
-            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
+            if maybe is None:
+                error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+                self.log.error(error_msg)
+                raise ValueError(error_msg)
+
+            pubkey, private = maybe
+
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
             puzzle: Program = Program.to(("Chia Signed Message", message))
@@ -1195,7 +1202,14 @@ class DIDWallet:
             if puzzle_args is not None:
                 p2_puzzle, _, _, _, _ = puzzle_args
                 puzzle_hash = p2_puzzle.get_tree_hash()
-                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+                maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
+                if maybe is None:
+                    error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+                    self.log.error(error_msg)
+                    raise ValueError(error_msg)
+
+                pubkey, private = maybe
+
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),

@@ -445,7 +445,14 @@ class Wallet:
         )
 
     async def sign_message(self, message: str, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
-        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+        maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
+        if maybe is None:
+            error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+            self.log.error(error_msg)
+            raise ValueError(error_msg)
+
+        pubkey, private = maybe
+
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
         puzzle: Program = Program.to(("Chia Signed Message", message))

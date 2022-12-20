@@ -445,7 +445,11 @@ class NFTWallet:
                     puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
             for ph in puzzle_hashes:
                 keys = await self.wallet_state_manager.get_keys(ph)
-                assert keys
+                if keys is None:
+                    error_msg = f"Wallet couldn't find keys for puzzle_hash {ph}"
+                    self.log.error(error_msg)
+                    raise ValueError(error_msg)
+
                 pks[bytes(keys[0])] = private = keys[1]
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 synthetic_pk = synthetic_secret_key.get_g1()
@@ -534,7 +538,14 @@ class NFTWallet:
         if uncurried_nft is not None:
             p2_puzzle = uncurried_nft.p2_puzzle
             puzzle_hash = p2_puzzle.get_tree_hash()
-            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
+            if maybe is None:
+                error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+                self.log.error(error_msg)
+                raise ValueError(error_msg)
+
+            pubkey, private = maybe
+
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
             puzzle: Program = Program.to(("Chia Signed Message", message))
