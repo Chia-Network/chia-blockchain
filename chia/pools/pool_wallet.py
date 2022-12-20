@@ -978,6 +978,9 @@ class PoolWallet:
     def get_name(self) -> str:
         return self.wallet_info.name
 
+    async def get_new_puzzlehash(self) -> bytes32:
+        return await self.standard_wallet.get_new_puzzlehash()
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

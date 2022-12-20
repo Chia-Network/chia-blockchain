@@ -1471,6 +1471,9 @@ class DIDWallet:
     def require_derivation_paths(self) -> bool:
         return True
 
+    async def get_new_puzzlehash(self) -> bytes32:
+        return await self.standard_wallet.get_new_puzzlehash()
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

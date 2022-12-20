@@ -64,6 +64,9 @@ class WalletProtocol(Protocol):
     def get_name(self) -> str:
         ...
 
+    async def get_new_puzzlehash(self) -> bytes32:
+        ...
+
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
