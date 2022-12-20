@@ -1,0 +1,50 @@
+(mod
+  (
+    CLAWBACK_PH
+    (PUZZLE_ROOT . _)  ; PUZZLE_ROOT is the custody coin's merkle root which we use to authenticate we're being withdrawn by some set of legal keys
+    my_amount
+    puzzle_reveal
+    merkle_proof
+    puzzle_solution
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+  (include merkle_utils.clib)
+  (include utility_macros.clib)
+
+  (defun-inline opcode (condition) (f condition))
+  (defun-inline puzhash (condition) (f (r condition)))
+  (defun-inline amount (condition) (f (r (r condition))))
+
+  (defun check_for_clawback (conditions CLAWBACK_PH amount seen)
+    (if conditions
+      (c (f conditions)
+        (check_for_clawback
+          (r conditions)
+          CLAWBACK_PH
+          amount
+          (if (= CREATE_COIN (opcode (f conditions)))
+              (assert
+                (not seen)  ; not seen
+                (= CLAWBACK_PH (puzhash (f conditions)))
+                (= amount (amount (f conditions)))
+                ; then
+                1
+              )
+              seen
+          )
+        )
+      )
+      (assert seen ())
+    )
+  )
+
+  ; main
+  (assert (= PUZZLE_ROOT (simplify_merkle_proof (sha256tree puzzle_reveal) merkle_proof))
+    ; then
+    (c (list ASSERT_MY_AMOUNT my_amount)
+      (check_for_clawback (a puzzle_reveal puzzle_solution) CLAWBACK_PH my_amount ())
+    )
+  )
+)

@@ -1,0 +1,16 @@
+(mod
+  (
+    CLAWBACK_PERIOD
+    (_ . P2_PH)  ; the first param is used by the other spend case, P2_PH is where we pay out to if payment is not withdrawn
+    my_amount
+  )
+
+  (include condition_codes.clib)
+
+  (list
+    (list ASSERT_SECONDS_RELATIVE CLAWBACK_PERIOD)
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN P2_PH my_amount)
+    (list CREATE_COIN_ANNOUNCEMENT ())  ; for fees
+  )
+)

@@ -1,0 +1,27 @@
+(mod
+  (
+      PUBKEY
+      REKEY_MOD_HASH
+      NEW_PUZZLE_ROOT
+      old_puzzle_root
+      (singleton_inner . singleton_amount)
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+
+  (list
+    (list CREATE_COIN
+      (puzzle_hash_of_curried_function REKEY_MOD_HASH
+        (sha256tree (list
+          NEW_PUZZLE_ROOT
+          old_puzzle_root
+          0
+        ))
+      )
+      0
+    )
+    (list CREATE_COIN singleton_inner singleton_amount)
+    (list AGG_SIG_ME PUBKEY ())
+  )
+)

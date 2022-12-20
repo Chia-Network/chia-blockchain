@@ -1,0 +1,72 @@
+(mod
+  (
+    (NEW_CUSTODY_ROOT OLD_CUSTODY_ROOT TIMELOCK)  ; NEW_CUSTODY_ROOT isn't used in this spend_case but is curried in for verification in puzhash
+    my_puzzle_hash
+    puzzle_reveal
+    merkle_proof
+    puzzle_solution
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+  (include merkle_utils.clib)
+  (include utility_macros.clib)
+
+  (defconstant REKEY_KW 'r')
+
+  (defun-inline opcode (condition) (f condition))
+  (defun-inline puzhash (condition) (f (r condition)))
+  (defun-inline amount (condition) (f (r (r condition))))
+
+  (defun check_for_and_filter_clawback_and_rekey_announcement (conditions my_puzzle_hash amount seen)
+    (if conditions
+      (if (= CREATE_COIN (opcode (f conditions)))
+          (assert
+            (not seen)  ; not seen
+            (= my_puzzle_hash (puzhash (f conditions)))  ; assert that the people clawbacking are capable of creating us in the first place
+            (= amount (amount (f conditions)))
+            ; then
+            (check_for_and_filter_clawback_and_rekey_announcement
+              (r conditions)
+              my_puzzle_hash
+              amount
+              1
+            )
+          )
+          (assert
+            (not
+              (and
+                (= (opcode (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+                (= (f (r (f conditions))) REKEY_KW)  ; block this spend from authorising the rekey
+              )
+            )
+            (c (f conditions)
+              (check_for_and_filter_clawback_and_rekey_announcement
+                (r conditions)
+                my_puzzle_hash
+                amount
+                seen
+              )
+            )
+          )
+      )
+      (assert seen ())
+    )
+  )
+
+  (assert (> TIMELOCK 0)  ; No clawing back locks
+    ; then
+    ; By using the custody's root we can force a signature from one of the legal sets of keys thus proving that this is a legitimate clawback
+    (assert (= OLD_CUSTODY_ROOT (simplify_merkle_proof (sha256tree puzzle_reveal) merkle_proof))
+      ; then
+      (c (list ASSERT_MY_PUZZLEHASH my_puzzle_hash)
+        (check_for_and_filter_clawback_and_rekey_announcement
+          (a puzzle_reveal puzzle_solution)
+          my_puzzle_hash
+          0
+          ()
+        )
+      )
+    )
+  )
+)

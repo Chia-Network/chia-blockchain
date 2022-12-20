@@ -1,0 +1,62 @@
+(mod
+  (
+    CURRIED_ARGS  ; this is an abstraction of a list of curried arguments
+    PUZZLE_REVEAL  ; inside p2_merkle_tree this is the "parameters"
+    (  ; inside p2_merkle_tree this is the "inner_solution"
+      solution
+      curried_args_to_coin  ; These are the args that are curried into the even coin that we see
+    )
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+  (include utility_macros.clib)
+
+  ; CURRIED_ARGS is a cons of these 2 things:
+  ;
+  ; - REKEY_MOD_HASH          ; The rekey module without its rekey specific curried arguments
+  ; - ALLOWED_REKEY_TIMELOCK  ; The timelock that is allowed for these rekeys
+
+  (defun-inline REKEY_MOD_HASH (CURRIED_ARGS) (f CURRIED_ARGS))
+  (defun-inline ALLOWED_REKEY_TIMELOCK (CURRIED_ARGS) (r CURRIED_ARGS))
+
+  (defun-inline opcode (condition) (f condition))
+  (defun-inline puzhash (condition) (f (r condition)))
+  (defun-inline amount (condition) (f (r (r condition))))
+
+  (defun check_zero_coin (conditions curried_args_to_coin CURRIED_ARGS)
+    (if conditions
+        (c (f conditions)
+          (if (and  ; if this is an even CREATE_COIN
+                (= CREATE_COIN (opcode (f conditions)))
+                (not (logand (amount (f conditions)) 1))
+              )
+              (assert
+                ; it's a rekey coin
+                (not (amount (f conditions)))
+                (=
+                  (puzhash (f conditions))
+                  (puzzle_hash_of_curried_function (REKEY_MOD_HASH CURRIED_ARGS) (sha256tree curried_args_to_coin))
+                )
+                ; with the correct timelock
+                (not (> (ALLOWED_REKEY_TIMELOCK CURRIED_ARGS) (f (r (r curried_args_to_coin)))))
+                ; then
+                (check_zero_coin
+                  (r conditions)
+                  curried_args_to_coin
+                  CURRIED_ARGS
+                )
+              )
+              (check_zero_coin
+                (r conditions)
+                curried_args_to_coin
+                CURRIED_ARGS
+              )
+          )
+        )
+        ()
+    )
+  )
+
+  (check_zero_coin (a PUZZLE_REVEAL solution) curried_args_to_coin CURRIED_ARGS ())
+)

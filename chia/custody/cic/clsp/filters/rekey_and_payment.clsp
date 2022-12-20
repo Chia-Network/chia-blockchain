@@ -1,0 +1,82 @@
+(mod
+  (
+    CURRIED_ARGS  ; this is an abstraction of a list of curried arguments
+    PUZZLE_REVEAL  ; inside p2_merkle_tree this is the "parameters"
+    (  ; inside p2_merkle_tree this is the "inner_solution"
+      solution
+      curried_args_to_coin  ; These are the args that are curried into the even coin that we see
+    )
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+  (include utility_macros.clib)
+
+  ; CURRIED_ARGS is a list of these 4 things:
+  ;
+  ; ((REKEY_MOD_HASH . ALLOWED_REKEY_TIMELOCK) . (ACH_MOD_HASH . CLAWBACK_PH))
+
+  (defun-inline REKEY_MOD_HASH (CURRIED_ARGS) (f (f CURRIED_ARGS)))
+  (defun-inline ALLOWED_REKEY_TIMELOCK (CURRIED_ARGS) (r (f CURRIED_ARGS)))
+  (defun-inline ACH_MOD_HASH (CURRIED_ARGS) (f (r CURRIED_ARGS)))
+  (defun-inline CLAWBACK_PH (CURRIED_ARGS) (r (r CURRIED_ARGS)))
+
+  (defun-inline opcode (condition) (f condition))
+  (defun-inline puzhash (condition) (f (r condition)))
+  (defun-inline amount (condition) (f (r (r condition))))
+
+  (defun check_even_coin (conditions curried_args_to_coin CURRIED_ARGS)
+    (if conditions
+        (c (f conditions)
+          (assert
+            (if (and  ; if this is an even CREATE_COIN
+                  (= CREATE_COIN (opcode (f conditions)))
+                  (not (logand (amount (f conditions)) 1))
+                )
+                (assert
+                  ; we check it different based on whether it's amount 0 (rekey) or not (payment)
+                  (if (amount (f conditions))
+                      ; PAYMENT CHECKING
+                      (or
+                        ; either it's an ach clawback ...
+                        (=
+                          (puzhash (f conditions))
+                          (CLAWBACK_PH CURRIED_ARGS)
+                        )
+                        ; ...or it's ach drop coin
+                        (=
+                          (puzhash (f conditions))
+                          (puzzle_hash_of_curried_function (ACH_MOD_HASH CURRIED_ARGS) (sha256tree curried_args_to_coin))
+                        )
+                      )
+                      ; REKEY CHECKING
+                      (and
+                        ; it's a rekey coin
+                        (=
+                          (puzhash (f conditions))
+                          (puzzle_hash_of_curried_function (REKEY_MOD_HASH CURRIED_ARGS) (sha256tree curried_args_to_coin))
+                        )
+                        ; with the correct timelock
+                        (not (> (ALLOWED_REKEY_TIMELOCK CURRIED_ARGS) (f (r (r curried_args_to_coin)))))
+                      )
+                  )
+                  (check_even_coin
+                    (r conditions)
+                    curried_args_to_coin
+                    CURRIED_ARGS
+                  )
+                )
+                (check_even_coin
+                  (r conditions)
+                  curried_args_to_coin
+                  CURRIED_ARGS
+                )
+            )
+          )
+        )
+        ()
+    )
+  )
+
+  (check_even_coin (a PUZZLE_REVEAL solution) curried_args_to_coin CURRIED_ARGS)
+)

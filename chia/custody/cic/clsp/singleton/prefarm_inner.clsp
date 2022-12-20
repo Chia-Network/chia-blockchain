@@ -1,0 +1,204 @@
+(mod
+  (
+    THIS_MOD_HASH
+    ROOT
+    STATE
+    my_amount
+    spend_type
+    spend_solution
+    ; optional
+    puzzle_reveal  ; this is a puzzle that is included in the root
+    proof_of_inclusion
+    puzzle_solution
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+  (include utility_macros.clib)
+  (include merkle_utils.clib)
+
+  (defconstant REKEY_KW 'r')
+
+  ; STATE is a tree with the following elements in order
+  ; ((REKEY_MOD_HASH . ACH_MOD_HASH) . (ACH_TIMELOCK . (BASE_REKEY_TIMELOCK . SLOW_REKEY_PENALTY)))
+
+  (defun-inline REKEY_MOD_HASH (STATE) (f (f STATE)))
+  (defun-inline ACH_MOD_HASH (STATE) (r (f STATE)))
+  (defun-inline ACH_TIMELOCK (STATE) (f (r STATE)))
+  (defun-inline BASE_REKEY_TIMELOCK (STATE) (f (r (r STATE))))
+  (defun-inline SLOW_REKEY_PENALTY (STATE) (r (r (r STATE))))
+
+  ;;; utility functions ;;;
+  (defun calculate_our_ph (THIS_MOD_HASH ROOT STATE)
+    (puzzle_hash_of_curried_function THIS_MOD_HASH
+      (sha256tree STATE)
+      (sha256 1 ROOT)
+      (sha256 1 THIS_MOD_HASH)
+    )
+  )
+
+  (defun-inline calculate_rekey_ph (REKEY_MOD_HASH ROOT timelock_multiple new_root)
+    (puzzle_hash_of_curried_function REKEY_MOD_HASH
+      (sha256tree (list
+        new_root
+        ROOT
+        timelock_multiple
+      ))
+    )
+  )
+
+  (defun-inline calculate_ach_payment (ACH_MOD_HASH ROOT clawforward_ph)
+    (puzzle_hash_of_curried_function ACH_MOD_HASH
+      (sha256tree (c ROOT clawforward_ph))
+    )
+  )
+
+  (defun-inline calculate_timelock (BASE_REKEY_TIMELOCK SLOW_REKEY_PENALTY timelock_multiple)
+    (+ (* BASE_REKEY_TIMELOCK timelock_multiple) (i (> timelock_multiple 1) SLOW_REKEY_PENALTY 0))
+  )
+
+  (defun-inline opcode (condition) (f condition))
+  (defun-inline puzhash (condition) (f (r condition)))
+  (defun-inline amount (condition) (f (r (r condition))))
+
+  (defun check_singleton_and_even (
+    conditions
+    (singleton_ph . singleton_amount)  ; singleton info - we assert the singleton we find has this format
+    (even_ph . even_amount)            ; even coin info - we assert the even coin we find has this format
+    (seen_singleton . seen_even)  ; flags used to prevent more than one singleton and one even coin from being created
+  )
+    (if conditions
+        (c
+          (f conditions)
+          (check_singleton_and_even
+            (r conditions)
+            (c singleton_ph singleton_amount)
+            (c even_ph even_amount)
+            (if (= CREATE_COIN (opcode (f conditions)))
+                (if (logand (amount (f conditions)) 1)
+                    (assert
+                      (not seen_singleton)  ; not seen
+                      (= singleton_ph (puzhash (f conditions)))
+                      (= singleton_amount (amount (f conditions)))
+                      ; then
+                      (c 1 seen_even)
+                    )
+                    (assert
+                      (not seen_even)  ; not seen
+                      (= even_ph (puzhash (f conditions)))
+                      (= even_amount (amount (f conditions)))
+                      ; then
+                      (c seen_singleton 1)
+                    )
+                )
+                (assert
+                  (not
+                    (and
+                      (= (opcode (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+                      (= (f (r (f conditions))) REKEY_KW)
+                    )
+                  )
+                  (c seen_singleton seen_even)
+                )
+            )
+          )
+        )
+        (if (all seen_singleton seen_even) () (x))
+    )
+  )
+
+  ;;; FINISH REKEY ;;;
+  (defun finish_rekey (
+    THIS_MOD_HASH
+    ROOT STATE
+    my_amount
+    ( ; this is the spend_solution
+      timelock_multiple
+      new_root
+    )
+  )
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT
+            (sha256
+              (calculate_rekey_ph (REKEY_MOD_HASH STATE) ROOT timelock_multiple new_root)
+              REKEY_KW
+            )
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT REKEY_KW)
+      (list CREATE_COIN
+            (calculate_our_ph THIS_MOD_HASH new_root STATE)
+            my_amount
+      )
+    )
+  )
+
+  ;;; START REKEY ;;;
+  (defun start_rekey (
+    THIS_MOD_HASH
+    ROOT STATE
+    my_amount
+    conditions
+    (  ; this is the spend_solution
+      timelock_multiple
+      new_root_after
+    )
+  )
+    (c
+      (list ASSERT_SECONDS_RELATIVE
+            (calculate_timelock
+              (BASE_REKEY_TIMELOCK STATE)
+              (SLOW_REKEY_PENALTY STATE)
+              timelock_multiple
+            )
+      )
+      (check_singleton_and_even conditions
+        (c (calculate_our_ph THIS_MOD_HASH ROOT STATE) my_amount)                                ; assert that we are recreating ourself in generated conditions
+        (c (calculate_rekey_ph (REKEY_MOD_HASH STATE) ROOT timelock_multiple new_root_after) 0)  ; assert that we are creating a rekey coin in generated conditions
+        (c () ())
+      )
+    )
+  )
+
+  ;;; WITHDRAW_PAYMENT ;;;
+  (defun handle_payment (
+    THIS_MOD_HASH
+    ROOT STATE
+    my_amount
+    conditions
+    (  ; this is the spend_solution
+      out_amount
+      in_amount
+      clawforward_ph
+    )
+  )
+    (assert (not (> 0 in_amount))
+      ; then
+      (c (list ASSERT_SECONDS_RELATIVE (ACH_TIMELOCK STATE))
+          (check_singleton_and_even conditions
+            (c (calculate_our_ph THIS_MOD_HASH ROOT STATE) (+ (- my_amount out_amount) in_amount))  ; assert that we are recreating ourself with the exact same curryed params in generated conditions after adjusting for amount change
+            (c (calculate_ach_payment (ACH_MOD_HASH STATE) ROOT clawforward_ph) out_amount)         ; assert that we are creating the clawback_able payment
+            (c () (not out_amount))  ; mark it as seen if the out amount is 0 - preventing unreported even coin creations
+          )
+      )
+    )
+  )
+
+  ; main
+  (c (list ASSERT_MY_AMOUNT my_amount)  ; assert our amount because every path needs it
+    (if spend_type
+      ; In every case except finishing the rekey the spends require authentication
+        (assert (= ROOT (simplify_merkle_proof (sha256tree puzzle_reveal) proof_of_inclusion))  ; check that inputted puzzle is included in our merkle root
+          ; then
+          (if (= spend_type 1)
+              (start_rekey THIS_MOD_HASH ROOT STATE my_amount (a puzzle_reveal puzzle_solution) spend_solution)  ; run inputted puzzle and send conditions into (start_rekey)
+              (if (= spend_type 2)
+                  (handle_payment THIS_MOD_HASH ROOT STATE my_amount (a puzzle_reveal puzzle_solution) spend_solution)  ; run inputted puzzle and send conditions into (handle_payment)
+                  (x)
+              )
+          )
+        )
+        (finish_rekey THIS_MOD_HASH ROOT STATE my_amount spend_solution)
+    )
+  )
+
+)

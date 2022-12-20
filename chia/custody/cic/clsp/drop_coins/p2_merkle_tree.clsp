@@ -1,0 +1,24 @@
+(mod
+  (
+    INNER_PUZZLE
+    MERKLE_ROOT
+    CURRIED_ARGS
+    parameters
+    merkle_proof
+    inner_solution
+  )
+  ; This puzzle takes a merkle root.
+  ; The merkle root contains a tree of puzzles that can be executed with the passed in CURRIED_ARGS, and inner_solution
+
+  (include curry_and_treehash.clib)
+  (include merkle_utils.clib)
+  (include utility_macros.clib)
+
+  ; For the filter layers we put the INNER_PUZZLE as the filter puzzle
+  ; For drop coins we put the INNER_PUZZLE as `(a 2 5)`
+
+  (assert (= MERKLE_ROOT (simplify_merkle_proof (sha256tree parameters) merkle_proof))
+    ; then
+    (a INNER_PUZZLE (list parameters (if CURRIED_ARGS (c CURRIED_ARGS inner_solution) inner_solution)))
+  )
+)

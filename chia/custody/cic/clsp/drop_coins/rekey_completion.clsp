@@ -1,0 +1,40 @@
+(mod
+  (
+    SINGLETON_STRUCT
+    FINISHING_TIMELOCK
+    (OLD_CUSTODY_ROOT NEW_CUSTODY_ROOT TIMELOCK)  ; the first two aren't used in this code, but are curried in for verification inside this coin's puzzlehash
+    (parent_parent parent_inner_puz parent_amount)  ; lineage proof
+  )
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+
+  (defconstant REKEY_KW 'r')
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle_hash_of_curried_function (f SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree SINGLETON_STRUCT)
+     )
+  )
+
+  (defun main (SINGLETON_STRUCT FINISHING_TIMELOCK parent_parent parent_puzzle parent_amount)
+    (list
+        (list ASSERT_SECONDS_RELATIVE FINISHING_TIMELOCK)
+        (list ASSERT_MY_PARENT_ID (calculate_coin_id parent_parent parent_puzzle parent_amount))
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 parent_puzzle REKEY_KW))
+        (list CREATE_PUZZLE_ANNOUNCEMENT REKEY_KW)
+        (list CREATE_COIN_ANNOUNCEMENT ()) ; for fees
+    )
+  )
+
+  (main
+    SINGLETON_STRUCT
+    (i TIMELOCK FINISHING_TIMELOCK 0)  ; We use the finishing timelock in all circumstances except TIMELOCK == 0 (lock)
+    parent_parent
+    (calculate_full_puzzle_hash SINGLETON_STRUCT parent_inner_puz)
+    parent_amount
+  )
+)

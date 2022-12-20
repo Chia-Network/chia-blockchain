@@ -1,0 +1,40 @@
+(
+  (defun-inline tree_branch_hash (left right) (sha256 2 left right))
+
+  (defun calculate_merkle_root (path current_hash additional_steps)
+   (if additional_steps
+     (calculate_merkle_root
+       (lsh path -1)
+       (if (logand path 1)
+         (tree_branch_hash
+           (f additional_steps)
+           current_hash
+         )
+         (tree_branch_hash
+           current_hash
+           (f additional_steps)
+         )
+       )
+       (r additional_steps)
+     )
+     current_hash
+   )
+ )
+
+ (defun simplify_merkle_proof_after_leaf (leaf_hash (bitpath . hashes_path))
+        (if hashes_path
+            (simplify_merkle_proof_after_leaf
+                (if (logand 1 bitpath)
+                    (sha256 0x02 (f hashes_path) leaf_hash)
+                    (sha256 0x02 leaf_hash (f hashes_path))
+                )
+                (c (lsh bitpath -1) (r hashes_path))
+            )
+            leaf_hash
+         )
+ )
+
+ (defun-inline simplify_merkle_proof (leaf proof)
+  (simplify_merkle_proof_after_leaf (sha256 0x01 leaf) proof)
+ )
+)
