@@ -17,6 +17,7 @@ from _pytest.fixtures import SubRequest
 
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
@@ -367,7 +368,9 @@ async def two_wallet_nodes(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_services() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+async def two_wallet_nodes_services() -> AsyncIterator[
+    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
 

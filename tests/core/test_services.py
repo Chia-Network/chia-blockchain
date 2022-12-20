@@ -38,7 +38,7 @@ class CreateServiceProtocol(Protocol):
         ...
 
 
-async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: int = 15) -> DaemonProxy:
+async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 15) -> DaemonProxy:
     timeout = adjusted_timeout(timeout=timeout)
 
     start = time.monotonic()

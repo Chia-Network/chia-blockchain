@@ -17,6 +17,7 @@ from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
+from chia.simulator.time_out_assert import adjusted_timeout
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -27,6 +28,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class _Default:
@@ -548,6 +550,28 @@ class FullNodeSimulator(FullNodeAPI):
                 if len(coin_set) == 0:
                     return
 
+    async def process_all_wallet_transactions(self, wallet: Wallet, timeout: Optional[float] = 5) -> None:
+        # TODO: Maybe something could be done around waiting for the tx to enter the
+        #       mempool.  Maybe not, might be too many races or such.
+        wallet_state_manager: Optional[WalletStateManager] = wallet.wallet_state_manager
+        assert wallet_state_manager is not None
+
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff in backoff_times():
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
+
+                wallet_ids = wallet_state_manager.wallets.keys()
+                for wallet_id in wallet_ids:
+                    unconfirmed = await wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_id=wallet_id)
+                    if len(unconfirmed) > 0:
+                        break
+                else:
+                    # all wallets have zero unconfirmed transactions
+                    break
+
+                # at least one wallet has unconfirmed transactions
+                await asyncio.sleep(backoff)
+
     async def create_coins_with_amounts(
         self,
         amounts: List[uint64],
@@ -618,3 +642,8 @@ class FullNodeSimulator(FullNodeAPI):
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
         return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
+
+    # TODO: so wallet_is_synced() is in test code and thus unavailable here...  but
+    #       shouldn't we be able to ask the wallet...?
+    # def wait_wallets_synced(self, wallets: List[WalletNode], timeout: float = 5) -> None:
+    #     with anyio.fail_after(delay=adjusted_timeout(timeout)):

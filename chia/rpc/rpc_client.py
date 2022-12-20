@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from ssl import SSLContext
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import aiohttp
 
@@ -12,6 +12,8 @@ from chia.server.ssl_context import private_ssl_ca_paths
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
+
+_T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
 
 
 class RpcClient:
@@ -31,7 +33,7 @@ class RpcClient:
     port: uint16
 
     @classmethod
-    async def create(cls, self_hostname: str, port: uint16, root_path, net_config):
+    async def create(cls: Type[_T_RpcClient], self_hostname: str, port: uint16, root_path, net_config) -> _T_RpcClient:
         self = cls()
         self.hostname = self_hostname
         self.port = port
