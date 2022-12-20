@@ -84,7 +84,7 @@ async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> Wal
     raise LookupError(f"Wallet ID not found: {wallet_id}")
 
 
-async def get_name_for_wallet_id(
+async def get_unit_name_for_wallet_id(
     config: Dict[str, Any],
     wallet_type: WalletType,
     wallet_id: int,
@@ -109,7 +109,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     try:
         wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
-        name = await get_name_for_wallet_id(
+        name = await get_unit_name_for_wallet_id(
             config=config,
             wallet_type=wallet_type,
             wallet_id=tx.wallet_id,
@@ -150,7 +150,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     try:
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
-        name = await get_name_for_wallet_id(
+        name = await get_unit_name_for_wallet_id(
             config=config,
             wallet_type=wallet_type,
             wallet_id=wallet_id,
