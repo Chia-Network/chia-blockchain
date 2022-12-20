@@ -162,6 +162,7 @@ class TestWalletSimulator:
             )
         )
 
+        await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
         assert await wallet.get_confirmed_balance() == permanent_funds
 
     @pytest.mark.parametrize(
@@ -603,7 +604,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         permanent_funds = await full_node_api.farm_blocks_to_wallet(count=permanent_block_count, wallet=wallet)
 
-        await wallet_is_synced(wallet_node=wallet_node, full_node_api=full_node_api)
+        await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
 
         # Ensure that we use a coin that we will not reorg out
         tx_amount = 1000
