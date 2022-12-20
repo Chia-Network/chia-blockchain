@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from random import Random
 
 import pytest
@@ -22,10 +21,8 @@ from tests.util.db_connection import DBConnection
 
 @pytest.mark.asyncio
 async def test_basics() -> None:
-    log = logging.getLogger(__name__)
-
     fee_store = FeeStore()
-    fee_tracker = FeeTracker(log, fee_store)
+    fee_tracker = FeeTracker(fee_store)
 
     wallet_tool = WalletTool(test_constants)
     ph = wallet_tool.get_new_puzzlehash()
@@ -86,7 +83,7 @@ async def test_fee_increase() -> None:
 
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        mempool_manager = MempoolManager(coin_store, test_constants)
+        mempool_manager = MempoolManager(coin_store.get_coin_record, test_constants)
         assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
         btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
         fee_tracker = btc_fee_estimator.get_tracker()

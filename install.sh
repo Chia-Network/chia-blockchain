@@ -3,10 +3,11 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-adsph]
+Usage: $0 [-adlsph]
 
   -a                          automated install, no questions
   -d                          install development dependencies
+  -l                          install legacy keyring dependencies (linux only)
   -s                          skip python package installation and just do pip install
   -p                          additional plotters installation
   -h                          display this help and exit
@@ -21,7 +22,7 @@ EXTRAS=
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
 
-while getopts adsph flag
+while getopts adlsph flag
 do
   case "${flag}" in
     # automated
@@ -31,6 +32,8 @@ do
     # simple install
     s) SKIP_PACKAGE_INSTALL=1;;
     p) PLOTTER_INSTALL=1;;
+    # legacy keyring
+    l) EXTRAS=${EXTRAS}legacy_keyring,;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -359,6 +362,6 @@ echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
 echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
 echo ""
-echo "To install the GUI type 'sh install-gui.sh' after '. ./activate'."
+echo "To install the GUI run '. ./activate' then 'sh install-gui.sh'."
 echo ""
 echo "Type '. ./activate' and then 'chia init' to begin."

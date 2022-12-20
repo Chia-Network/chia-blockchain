@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import logging
 
 import pytest
 from clvm.casts import int_to_bytes
 
 from chia.protocols import full_node_protocol, wallet_protocol
+from chia.simulator.block_tools import test_constants
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -12,8 +16,6 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
-from chia.simulator.wallet_tools import WalletTool
-from chia.simulator.block_tools import test_constants
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -56,7 +58,7 @@ class TestBlockchainTransactions:
         assert sb is spend_bundle
 
         last_block = blocks[-1]
-        next_spendbundle, additions, removals = await full_node_1.mempool_manager.create_bundle_from_mempool(
+        next_spendbundle, additions, removals = full_node_1.mempool_manager.create_bundle_from_mempool(
             last_block.header_hash
         )
         assert next_spendbundle is not None

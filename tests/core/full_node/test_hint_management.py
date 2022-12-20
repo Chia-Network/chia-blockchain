@@ -29,6 +29,7 @@ spends: List[Spend] = [
             (phs[4], uint64(3), b"1" * 32),
         ],
         [],
+        0,
     ),
     Spend(
         coin_ids[2],
@@ -41,6 +42,7 @@ spends: List[Spend] = [
             (phs[9], uint64(123), b"1" * 32),
         ],
         [],
+        0,
     ),
     Spend(
         coin_ids[1],
@@ -52,6 +54,7 @@ spends: List[Spend] = [
             (phs[6], uint64(5), b"1" * 3),
         ],
         [],
+        0,
     ),
 ]
 

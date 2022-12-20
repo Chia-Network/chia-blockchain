@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import multiprocessing
 import time
@@ -17,6 +19,9 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.simulator.block_tools import create_block_tools_async, test_constants
+from chia.simulator.keyring import TempKeyring
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo
@@ -31,27 +36,24 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.generator_tools import get_block_header
-from chia.util.vdf_prover import get_vdf_info_and_proof
-from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.util.errors import Err
+from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint64, uint32
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.merkle_set import MerkleSet
 from chia.util.recursive_replace import recursive_replace
+from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_multi_error,
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
-from chia.simulator.wallet_tools import WalletTool
 from tests.util.blockchain import create_blockchain
-from chia.simulator.keyring import TempKeyring
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-)
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")

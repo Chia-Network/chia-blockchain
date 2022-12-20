@@ -22,6 +22,7 @@ metadata_attribute_name = "_chia_api_metadata"
 
 @dataclass
 class ApiMetadata:
+    request_type: ProtocolMessageTypes
     message_class: Type[Streamable]
     peer_required: bool = False
     bytes_required: bool = False
@@ -71,6 +72,7 @@ def api_request(
         message_name_bytes = f"{message_name}_bytes"
 
         metadata = ApiMetadata(
+            request_type=getattr(ProtocolMessageTypes, f.__name__),
             peer_required=peer_required,
             bytes_required=bytes_required,
             execute_task=execute_task,
