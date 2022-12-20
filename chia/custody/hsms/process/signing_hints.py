@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Dict, List
 
-from hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
-from hsms.util.clvm_serialization import (
+from chia.custody.hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
+from chia.custody.hsms.util.clvm_serialization import (
     clvm_to_list_of_ints,
     clvm_to_list,
 )

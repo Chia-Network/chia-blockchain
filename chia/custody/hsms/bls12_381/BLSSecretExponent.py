@@ -2,10 +2,10 @@ from typing import List, Optional
 
 import blspy
 
-from hsms.atoms import bytes32
+from chia.custody.hsms.atoms import bytes32
 
-from hsms.util.std_hash import std_hash
-from hsms.util.bech32 import bech32_decode, bech32_encode, Encoding
+from chia.custody.hsms.util.std_hash import std_hash
+from chia.custody.hsms.util.bech32 import bech32_decode, bech32_encode, Encoding
 
 from .BLSSignature import BLSSignature
 from .BLSPublicKey import BLSPublicKey

@@ -3,11 +3,11 @@ import zlib
 from dataclasses import dataclass
 from typing import List
 
-from hsms.bls12_381 import BLSPublicKey, BLSSignature
-from hsms.process.signing_hints import SumHint, PathHint
-from hsms.streamables import bytes32, CoinSpend, Program
-from hsms.util.byte_chunks import assemble_chunks, create_chunks_for_blob
-from hsms.util.clvm_serialization import (
+from chia.custody.hsms.bls12_381 import BLSPublicKey, BLSSignature
+from chia.custody.hsms.process.signing_hints import SumHint, PathHint
+from chia.custody.hsms.streamables import bytes32, CoinSpend, Program
+from chia.custody.hsms.util.byte_chunks import assemble_chunks, create_chunks_for_blob
+from chia.custody.hsms.util.clvm_serialization import (
     transform_dict,
     transform_dict_by_key,
     clvm_to_list,

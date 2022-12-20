@@ -1,4 +1,4 @@
-from hsms.meta.struct_stream import struct_stream
+from chia.custody.hsms.meta.struct_stream import struct_stream
 
 
 class int8(int, struct_stream):

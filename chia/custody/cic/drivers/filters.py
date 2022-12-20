@@ -2,17 +2,17 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8
 
-from cic.drivers.drop_coins import (
+from chia.custody.cic.drivers.drop_coins import (
     P2_MERKLE_MOD,
     construct_rekey_puzzle,
     construct_ach_puzzle,
     calculate_ach_clawback_ph,
 )
-from cic.drivers.prefarm_info import PrefarmInfo
-from cic.load_clvm import load_clvm
+from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
+from chia.custody.cic.load_clvm import load_clvm
 
-FILTER_ONLY_REKEY_MOD = load_clvm("only_rekey.clsp", package_or_requirement="cic.clsp.filters")
-FILTER_REKEY_AND_PAYMENT_MOD = load_clvm("rekey_and_payment.clsp", package_or_requirement="cic.clsp.filters")
+FILTER_ONLY_REKEY_MOD = load_clvm("only_rekey.clsp", package_or_requirement="chia.custody.cic.clsp.filters")
+FILTER_REKEY_AND_PAYMENT_MOD = load_clvm("rekey_and_payment.clsp", package_or_requirement="chia.custody.cic.clsp.filters")
 
 
 def construct_payment_and_rekey_filter(

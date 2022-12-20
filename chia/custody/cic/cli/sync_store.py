@@ -8,25 +8,25 @@ from typing import List, Optional, Tuple, Union
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
-from cic.cli.record_types import SingletonRecord, ACHRecord, RekeyRecord
-from cic.drivers.prefarm import SpendType
-from cic.drivers.prefarm_info import PrefarmInfo
-from cic.drivers.puzzle_root_construction import RootDerivation, calculate_puzzle_root
+from chia.custody.cic.cli.record_types import SingletonRecord, ACHRecord, RekeyRecord
+from chia.custody.cic.drivers.prefarm import SpendType
+from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
+from chia.custody.cic.drivers.puzzle_root_construction import RootDerivation, calculate_puzzle_root
 
 
 class SyncStore:
     db_connection: aiosqlite.Connection
-    db_wrapper: DBWrapper
+    db_wrapper: DBWrapper2
 
     @classmethod
     async def create(cls, db_path: Path):
         self = cls()
 
-        wrapper = DBWrapper(await aiosqlite.connect(db_path))
+        wrapper = DBWrapper2(await aiosqlite.connect(db_path))
         self.db_connection = wrapper.db
         self.db_wrapper = wrapper
 

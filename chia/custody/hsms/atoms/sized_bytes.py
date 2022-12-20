@@ -1,4 +1,4 @@
-from hsms.meta.make_sized_bytes import make_sized_bytes
+from chia.custody.hsms.meta.make_sized_bytes import make_sized_bytes
 
 
 bytes32 = make_sized_bytes(32)

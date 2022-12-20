@@ -10,13 +10,13 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
-from cic.drivers.drop_coins import construct_rekey_puzzle
-from cic.drivers.filters import construct_payment_and_rekey_filter, construct_rekey_filter
-from cic.drivers.merkle_utils import build_merkle_tree, simplify_merkle_proof
-from cic.drivers.prefarm_info import PrefarmInfo
-from cic.load_clvm import load_clvm
+from chia.custody.cic.drivers.drop_coins import construct_rekey_puzzle
+from chia.custody.cic.drivers.filters import construct_payment_and_rekey_filter, construct_rekey_filter
+from chia.custody.cic.drivers.merkle_utils import build_merkle_tree, simplify_merkle_proof
+from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
+from chia.custody.cic.load_clvm import load_clvm
 
-P2_NEW_LOCK_LEVEL = load_clvm("p2_new_lock_level.clsp", package_or_requirement="cic.clsp.drop_coins")
+P2_NEW_LOCK_LEVEL = load_clvm("p2_new_lock_level.clsp", package_or_requirement="chia.custody.cic.clsp.drop_coins")
 
 ProofType = List[Tuple[bytes32, Tuple[uint32, List[bytes32]]]]
 

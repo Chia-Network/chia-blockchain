@@ -12,7 +12,7 @@ import segno
 
 from hsms.bls12_381 import BLSSecretExponent
 
-import hsms.cmds.hsms
+import chia.custody.hsms.cmds.hsms
 
 
 def wait_for_usb_mount(parser, mount_path, device_to_mount, mount_command_read_only):

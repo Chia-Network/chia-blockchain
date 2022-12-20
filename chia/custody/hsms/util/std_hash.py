@@ -1,6 +1,6 @@
 import hashlib
 
-from hsms.atoms import bytes32
+from chia.custody.hsms.atoms import bytes32
 
 
 def std_hash(b) -> bytes32:

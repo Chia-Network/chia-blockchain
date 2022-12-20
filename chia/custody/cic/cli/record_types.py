@@ -8,7 +8,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
-from cic.drivers.prefarm import SpendType
+from chia.custody.cic.drivers.prefarm import SpendType
 
 
 @dataclass(frozen=True)

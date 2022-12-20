@@ -17,7 +17,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint64
 
-from cic.drivers.drop_coins import (
+from chia.custody.cic.drivers.drop_coins import (
     construct_rekey_puzzle,
     construct_rekey_clawback,
     construct_ach_puzzle,
@@ -28,20 +28,20 @@ from cic.drivers.drop_coins import (
     solve_ach_completion,
     solve_ach_clawback,
 )
-from cic.drivers.filters import (
+from chia.custody.cic.drivers.filters import (
     construct_payment_and_rekey_filter,
     construct_rekey_filter,
     solve_filter_for_payment,
     solve_filter_for_rekey,
 )
-from cic.drivers.merkle_utils import simplify_merkle_proof
-from cic.drivers.prefarm_info import PrefarmInfo
-from cic.drivers.puzzle_root_construction import RootDerivation, construct_lock_puzzle, solve_lock_puzzle
-from cic.drivers.singleton import construct_singleton, solve_singleton, construct_p2_singleton, solve_p2_singleton
-from cic.load_clvm import load_clvm
+from chia.custody.cic.drivers.merkle_utils import simplify_merkle_proof
+from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
+from chia.custody.cic.drivers.puzzle_root_construction import RootDerivation, construct_lock_puzzle, solve_lock_puzzle
+from chia.custody.cic.drivers.singleton import construct_singleton, solve_singleton, construct_p2_singleton, solve_p2_singleton
+from chia.custody.cic.load_clvm import load_clvm
 
 
-PREFARM_INNER = load_clvm("prefarm_inner.clsp", package_or_requirement="cic.clsp.singleton")
+PREFARM_INNER = load_clvm("prefarm_inner.clsp", package_or_requirement="chia.custody.cic.clsp.singleton")
 
 
 class SpendType(int, enum.Enum):

@@ -33,11 +33,11 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
 )
 
-from cic import __version__
-from cic.cli.record_types import SingletonRecord, ACHRecord, RekeyRecord
-from cic.cli.sync_store import SyncStore
-from cic.drivers.prefarm_info import PrefarmInfo
-from cic.drivers.prefarm import (
+from chia.custody.cic import __version__
+from chia.custody.cic.cli.record_types import SingletonRecord, ACHRecord, RekeyRecord
+from chia.custody.cic.cli.sync_store import SyncStore
+from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
+from chia.custody.cic.drivers.prefarm import (
     SpendType,
     construct_full_singleton,
     construct_singleton_inner_puzzle,
@@ -58,19 +58,40 @@ from cic.drivers.prefarm import (
     get_info_for_rekey_drop,
     was_rekey_completed,
 )
-from cic.drivers.puzzle_root_construction import RootDerivation, calculate_puzzle_root
-from cic.drivers.singleton import generate_launch_conditions_and_coin_spend, construct_p2_singleton
+from chia.custody.cic.drivers.puzzle_root_construction import RootDerivation, calculate_puzzle_root
+from chia.custody.cic.drivers.singleton import generate_launch_conditions_and_coin_spend, construct_p2_singleton
 
-from hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
-from hsms.process.signing_hints import SumHint
-from hsms.process.unsigned_spend import UnsignedSpend
-from hsms.streamables.coin_spend import CoinSpend as HSMCoinSpend
-from hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
+from chia.custody.hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
+from chia.custody.hsms.process.signing_hints import SumHint
+from chia.custody.hsms.process.unsigned_spend import UnsignedSpend
+from chia.custody.hsms.streamables.coin_spend import CoinSpend as HSMCoinSpend
+from chia.custody.hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
 
 if os.environ.get("TESTING_CIC_CLI", "FALSE") == "TRUE":
     from tests.cli_clients import get_node_and_wallet_clients, get_node_client, get_additional_data
 else:
     from cic.cli.clients import get_node_and_wallet_clients, get_node_client, get_additional_data
+
+_T = TypeVar("_T")
+
+
+FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
+
+logger = logging.getLogger(__name__)
+
+
+# TODO: this is more general and should be part of refactoring the overall CLI code duplication
+def run(coro: Coroutine[Any, Any, Optional[Dict[str, Any]]]) -> None:
+    import asyncio
+
+    response = asyncio.run(coro)
+
+    success = response is not None and response.get("success", False)
+    logger.info(f"custody cli call response:{success}")
+    # todo make sure all cli methods follow this pattern, uncomment
+    # if not success:
+    # raise click.ClickException(message=f"query unsuccessful, response: {response}")
+
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -141,16 +162,9 @@ def read_unsigned_spend(filename: str) -> UnsignedSpend:
     with open(filename, "r") as file:
         return UnsignedSpend.from_bytes(a2b_qrint(file.read()))
 
-
-@click.group(
-    help="\n  Commands to control a prefarm singleton \n",
-    context_settings=CONTEXT_SETTINGS,
-)
-@click.version_option(__version__)
-@click.pass_context
-def cli(ctx: click.Context) -> None:
-    ctx.ensure_object(dict)
-
+@click.group("custody", short_help="Manage your custody")
+def custody_cmd() -> None:
+    pass
 
 @cli.command("init", short_help="Create a configuration file for the prefarm")
 @click.option(

@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 from clvm.casts import int_from_bytes, int_to_bytes
 
-from hsms.atoms import uint64
-from hsms.meta import streamable
+from chia.custody.hsms.atoms import uint64
+from chia.custody.hsms.meta import streamable
 
-from hsms.util.std_hash import std_hash
+from chia.custody.hsms.util.std_hash import std_hash
 
 from . import bytes32
 

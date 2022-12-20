@@ -81,7 +81,7 @@ include breaking characters, making them easy to select with a mouse.
 
 from typing import Tuple
 
-from hsms.contrib.bech32m import convertbits
+from chia.custody.hsms.contrib.bech32m import convertbits
 
 
 def b2a_qrint_payload(blob: bytes, grouping_size_bits: int) -> Tuple[int, str]:

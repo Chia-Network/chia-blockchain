@@ -2,7 +2,7 @@
 
 from typing import Optional, Tuple
 
-from hsms.contrib.bech32m import (
+from chia.custody.hsms.contrib.bech32m import (
     bech32_decode as bech32_decode5,
     bech32_encode as bech32_encode5,
     convertbits,

@@ -10,8 +10,8 @@ from clvm.serialize import sexp_from_stream, sexp_to_stream
 
 from clvm_tools.curry import curry
 
-from hsms.atoms import bytes32, hexbytes
-from hsms.meta import bin_methods
+from chia.custody.hsms.atoms import bytes32, hexbytes
+from chia.custody.hsms.meta import bin_methods
 
 
 class Program(SExp, bin_methods):

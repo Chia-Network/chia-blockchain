@@ -5,17 +5,17 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint64
 from chia.wallet.lineage_proof import LineageProof
 
-from cic.drivers.merkle_utils import build_merkle_tree
-from cic.drivers.prefarm_info import PrefarmInfo
-from cic.drivers.singleton import SINGLETON_MOD, SINGLETON_LAUNCHER_HASH, construct_p2_singleton
-from cic.load_clvm import load_clvm
+from chia.custody.cic.drivers.merkle_utils import build_merkle_tree
+from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
+from chia.custody.cic.drivers.singleton import SINGLETON_MOD, SINGLETON_LAUNCHER_HASH, construct_p2_singleton
+from chia.custody.cic.load_clvm import load_clvm
 
-P2_MERKLE_MOD = load_clvm("p2_merkle_tree.clsp", package_or_requirement="cic.clsp.drop_coins")
+P2_MERKLE_MOD = load_clvm("p2_merkle_tree.clsp", package_or_requirement="chia.custody.cic.clsp.drop_coins")
 DEFAULT_INNER = Program.to([2, 2, 5])  # (a 2 5)
-REKEY_COMPLETION_MOD = load_clvm("rekey_completion.clsp", package_or_requirement="cic.clsp.drop_coins")
-REKEY_CLAWBACK_MOD = load_clvm("rekey_clawback.clsp", package_or_requirement="cic.clsp.drop_coins")
-ACH_COMPLETION_MOD = load_clvm("ach_completion.clsp", package_or_requirement="cic.clsp.drop_coins")
-ACH_CLAWBACK_MOD = load_clvm("ach_clawback.clsp", package_or_requirement="cic.clsp.drop_coins")
+REKEY_COMPLETION_MOD = load_clvm("rekey_completion.clsp", package_or_requirement="chia.custody.cic.clsp.drop_coins")
+REKEY_CLAWBACK_MOD = load_clvm("rekey_clawback.clsp", package_or_requirement="chia.custody.cic.clsp.drop_coins")
+ACH_COMPLETION_MOD = load_clvm("ach_completion.clsp", package_or_requirement="chia.custody.cic.clsp.drop_coins")
+ACH_CLAWBACK_MOD = load_clvm("ach_clawback.clsp", package_or_requirement="chia.custody.cic.clsp.drop_coins")
 
 
 ############

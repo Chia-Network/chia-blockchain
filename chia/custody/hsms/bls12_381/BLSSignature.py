@@ -2,9 +2,9 @@ from typing import Iterator, List, Tuple
 
 import blspy
 
-from hsms.meta import streamable
+from chia.custody.hsms.meta import streamable
 
-from hsms.streamables import bytes32, bytes96
+from chia.custody.hsms.streamables import bytes32, bytes96
 
 from .BLSPublicKey import BLSPublicKey
 

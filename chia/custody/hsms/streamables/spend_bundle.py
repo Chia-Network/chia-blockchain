@@ -3,7 +3,7 @@ from typing import List
 
 import io
 
-from hsms.atoms import bytes96, uint32, hexbytes
+from chia.custody.hsms.atoms import bytes96, uint32, hexbytes
 
 from .coin_spend import CoinSpend
 
