@@ -4,7 +4,7 @@
   ;; like unrolling `sha256tree`.
 
   (defconstant TWO 2)
-  (defconstant constant-tree (
+  (defconstant constant_tree (
      (0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a .   ;  = `(sha256 1)`
       0x9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2) .  ;  = `(sha256 1 1)` = `(sha256 1 #q)`
      (0x02a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222 . ;  = `(concat 2 (sha256 1 #a))`
@@ -12,7 +12,7 @@
     )
   )
 
-  ; I looked into calculating the values of `constant-tree` because it's pretty easy to code-golf
+  ; I looked into calculating the values of `constant_tree` because it's pretty easy to code-golf
   ; out an implementation that produces the values cheaper than just inlining them. The problem is,
   ; when do we calculate them? If there were a way to calculate it "before main" and include it in
   ; the globally-accessible constant table, we could do that. But we can't which means to be optimal,
@@ -21,31 +21,31 @@
   ; global constant infrastructure, and include it as a fixed table so the tree of four values will
   ; appear in all code that includes this file, and it will compress better in generators.
 
-  (defun-inline sha256_one _noargs (f (f constant-tree)))
-  (defun-inline sha256_one_one _noargs (r (f constant-tree)))
-  (defun-inline two_sha256_one_a_kw _noargs (f (r constant-tree)))
-  (defun-inline two_sha256_one_c_kw _noargs (r (r constant-tree)))
+  (defun-inline sha256_one _noargs (f (f constant_tree)))
+  (defun-inline sha256_one_one _noargs (r (f constant_tree)))
+  (defun-inline two_sha256_one_a_kw _noargs (f (r constant_tree)))
+  (defun-inline two_sha256_one_c_kw _noargs (r (r constant_tree)))
 
   ;; this returns the sha256 tree hash of expression F = `((q . a1) a2)`
-  (defun hash-expression-F (a1 a2)
+  (defun hash_expression_F (a1 a2)
          (sha256 TWO (sha256 TWO (sha256_one_one) a1)
                  (sha256 TWO a2 (sha256_one)))
   )
 
-  ;; Given the tree hash `environment-hash` of an environment tree E
-  ;; and the tree hash `parameter-hash` of a constant parameter P
+  ;; Given the tree hash `environment_hash` of an environment tree E
+  ;; and the tree hash `parameter_hash` of a constant parameter P
   ;; return the tree hash of the tree corresponding to
   ;; `(c (q . P) E)`
   ;; This is the new environment tree with the addition parameter P curried in.
   ;;
   ;; Note that `(c (q . P) E)` = `(c . ((q . P) . (E . 0)))`
 
-  (defun-inline update-hash-for-parameter-hash (parameter-hash environment-hash)
-     (sha256 (two_sha256_one_c_kw) (hash-expression-F parameter-hash environment-hash))
+  (defun-inline update_hash_for_parameter_hash (parameter_hash environment_hash)
+     (sha256 (two_sha256_one_c_kw) (hash_expression_F parameter_hash environment_hash))
   )
 
-  ;; Given the tree hash `environment-hash` of an environment tree E
-  ;; and the tree hash `mod-hash` of a mod M
+  ;; Given the tree hash `environment_hash` of an environment tree E
+  ;; and the tree hash `mod_hash` of a mod M
   ;; return the tree hash of the tree corresponding to
   ;; `(a (q . M) E)`
   ;; This is the hash of a new function that adopts the new environment E.
@@ -53,27 +53,27 @@
   ;;
   ;; Note that `(a (q . M) E)` = `(a . ((q . M)  . (E . 0)))`
 
-  (defun-inline tree-hash-of-apply (mod-hash environment-hash)
-     (sha256 (two_sha256_one_a_kw) (hash-expression-F mod-hash environment-hash))
+  (defun-inline tree_hash_of_apply (mod_hash environment_hash)
+     (sha256 (two_sha256_one_a_kw) (hash_expression_F mod_hash environment_hash))
   )
 
-  ;; This function recursively calls `update-hash-for-parameter-hash`
+  ;; This function recursively calls `update_hash_for_parameter_hash`
 
-  (defun calculate-hash-of-curried-parameters (curry-parameter-hashes)
-     (if curry-parameter-hashes
-      (update-hash-for-parameter-hash (f curry-parameter-hashes) (calculate-hash-of-curried-parameters (r curry-parameter-hashes)))
+  (defun calculate_hash_of_curried_parameters (curry_parameter_hashes)
+     (if curry_parameter_hashes
+      (update_hash_for_parameter_hash (f curry_parameter_hashes) (calculate_hash_of_curried_parameters (r curry_parameter_hashes)))
       (sha256_one_one)
      )
   )
 
-  ;; mod-hash:
+  ;; mod_hash:
   ;;   the hash of a puzzle function, ie. a `mod`
   ;;
-  ;; curry-parameter-hashes:
-  ;;   a list of pre-hashed trees representing parameters to be curried into the puzzle.
+  ;; curry_parameter_hashes:
+  ;;   a list of pre_hashed trees representing parameters to be curried into the puzzle.
   ;;
   ;; we return the hash of the curried expression
-  ;;   (a (q . mod-hash) (c (cp1 (c cp2 (c ... 1)...))))
+  ;;   (a (q . mod_hash) (c (cp1 (c cp2 (c ... 1)...))))
   ;;
   ;; Note that from a user's perspective the hashes passed in here aren't simply
   ;; the hashes of the desired parameters, but their treehash representation since
@@ -81,24 +81,24 @@
 
   ;; inline functions that take varargs don't seem to work, so we can't inline `curry`
 
-  (defun curry_hashes (mod-hash . curry-parameter-hashes)
-     (tree-hash-of-apply mod-hash
-                         (calculate-hash-of-curried-parameters curry-parameter-hashes))
+  (defun curry_hashes (mod_hash . curry_parameter_hashes)
+     (tree_hash_of_apply mod_hash
+                         (calculate_hash_of_curried_parameters curry_parameter_hashes))
   )
 
 
   ;; this is included for future compilers that handle it properly. If you get weird
   ;; errors using this, it may be your tooling. Use `curry` above instead, or inline manually.
 
-  (defun-inline curry_hashes_inline (mod-hash . curry-parameter-hashes)
-     (tree-hash-of-apply mod-hash
-                         (calculate-hash-of-curried-parameters curry-parameter-hashes))
+  (defun-inline curry_hashes_inline (mod_hash . curry_parameter_hashes)
+     (tree_hash_of_apply mod_hash
+                         (calculate_hash_of_curried_parameters curry_parameter_hashes))
   )
 
   ;; `curry_mod_hashes_inline` takes exactly two parameters rather than varags, and it can be inlined
 
-  (defun-inline curry_mod_hashes_inline (mod-hash curry-parameter-hashes)
-     (tree-hash-of-apply mod-hash
-                         (calculate-hash-of-curried-parameters curry-parameter-hashes))
+  (defun-inline curry_mod_hashes_inline (mod_hash curry_parameter_hashes)
+     (tree_hash_of_apply mod_hash
+                         (calculate_hash_of_curried_parameters curry_parameter_hashes))
   )
 )
