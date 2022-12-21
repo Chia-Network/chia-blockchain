@@ -795,7 +795,7 @@ class PoolWallet:
             self.log.info(f"Bad max_spends_in_tx value of {max_spends_in_tx}. Set to {self.DEFAULT_MAX_CLAIM_SPENDS}.")
             max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
 
-        unspent_coin_records: List[CoinRecord] = list(
+        unspent_coin_records: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
         if len(unspent_coin_records) == 0:

@@ -1140,9 +1140,9 @@ class DIDWallet:
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
-        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            did_hash
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
@@ -1153,6 +1153,8 @@ class DIDWallet:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_puzzle.get_tree_hash()
             )
+        if record is None:
+            raise ValueError(f"Cannot find derivation record for puzzle hash {p2_puzzle.get_tree_hash()}")
         if not (self.did_info.num_of_backup_ids_needed > 0 and len(self.did_info.backup_ids) == 0):
             # We have the recovery list, don't reset it
             old_recovery_list_hash = None
@@ -1337,9 +1339,6 @@ class DIDWallet:
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
-
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
