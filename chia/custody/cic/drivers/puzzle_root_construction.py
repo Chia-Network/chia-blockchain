@@ -136,7 +136,7 @@ def calculate_puzzle_root(
     rnp_root, rnp_proofs = build_merkle_tree(all_standard_phs)
     rnp_filter: bytes32 = construct_payment_and_rekey_filter(prefarm_info, rnp_root, uint8(1)).get_tree_hash()
     all_filters.append(rnp_filter)
-    all_inner_proofs = all_inner_proofs | rnp_proofs
+    all_inner_proofs = { **all_inner_proofs, **rnp_proofs } #  wjb all_inner_proofs | rnp_proofs
 
     # Construct the lock filter
     if next_puzzle_root is not None:
@@ -147,7 +147,7 @@ def calculate_puzzle_root(
         lock_root, lock_proofs = build_merkle_tree(all_lock_phs)
         lock_filter: bytes32 = construct_rekey_filter(prefarm_info, lock_root, uint8(0)).get_tree_hash()
         all_filters.append(lock_filter)
-        all_inner_proofs = all_inner_proofs | lock_proofs
+        all_inner_proofs = { **all_inner_proofs, **lock_proofs } #  wjb all_inner_proofs | lock_proofs
 
     # Construct the remaining slower rekey filters
     for i in range(minimum_pubkeys, required_pubkeys):
@@ -161,7 +161,7 @@ def calculate_puzzle_root(
                 uint8(1 + required_pubkeys - i),
             ).get_tree_hash()
         )
-        all_inner_proofs = all_inner_proofs | slower_proofs
+        all_inner_proofs = { **all_inner_proofs, **slower_proofs } #  wjb all_inner_proofs | slower_proofs
 
     filter_root, filter_proofs = build_merkle_tree(all_filters)
     return RootDerivation(

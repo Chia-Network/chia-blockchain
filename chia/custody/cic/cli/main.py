@@ -187,18 +187,20 @@ async def init_cmd(
     with open(path, "wb") as file:
         file.write(bytes(prefarm_info))
 
-    print(f"Yay Created a configuration file: {path}")
+    print(f"Created a configuration file: {path}")
 
 
-def derive_cmd(
+async def derive_cmd(
     configuration: str,
     db_path: str,
     pubkeys: str,
     initial_lock_level: int,
     minimum_pks: int,
     validate_against: str,
-    maximum_lock_level: str,
+    maximum_lock_level: int,
 ):
+    logger.info(f"configuration {configuration} db_path {db_path} pubkeys {pubkeys} initial_lock_level {initial_lock_level} minimum_pks {minimum_pks} validate_against {validate_against} maximum_lock_level {maximum_lock_level}")
+
     if db_path is None:
         with open(Path(configuration), "rb") as file:
             prefarm_info = PrefarmInfo.from_bytes(file.read())
@@ -216,6 +218,10 @@ def derive_cmd(
 
         prefarm_info = asyncio.get_event_loop().run_until_complete(get_prefarm_info())
     pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
+    
+
+    logger.info(f"prefarm_info {prefarm_info} pubkey_list {pubkey_list} initial_lock_level {initial_lock_level} minimum_pks {minimum_pks}")
+
     derivation: RootDerivation = calculate_puzzle_root(
         prefarm_info,
         pubkey_list,
@@ -223,6 +229,8 @@ def derive_cmd(
         uint32(len(pubkey_list) if maximum_lock_level is None else maximum_lock_level),
         uint32(minimum_pks),
     )
+
+    logger.info(f"derivation {derivation}")
 
     if validate_against is None:
         with open(Path(configuration), "wb") as new_file:

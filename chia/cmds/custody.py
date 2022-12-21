@@ -140,12 +140,12 @@ def init_cmd(
 def derive_cmd(
     custody_rpc_port: Optional[int],
     configuration: str,
-    db_path: str, 
+    db_path: Optional[str],
     pubkeys: str,
     initial_lock_level: int,
     minimum_pks: int,
-    validate_against: str,
-    maximum_lock_level: int,
+    validate_against: Optional[str],
+    maximum_lock_level: Optional[int] = None,
 ):
     from chia.cmds.custody_funcs import derive_cmd
 
