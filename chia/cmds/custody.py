@@ -207,24 +207,11 @@ def init_cmd(
     rekey_cancel: int,
     rekey_timelock: int,
     slow_penalty: int,
-):
-    prefarm_info = PrefarmInfo(
-        bytes32([0] * 32),
-        bytes32([0] * 32),
-        uint64(withdrawal_timelock),
-        uint64(payment_clawback),
-        uint64(rekey_cancel),
-        uint64(rekey_timelock),
-        uint64(slow_penalty),
-    )
+) -> None:
+    from chia.custody.cic.cli.main import init_cmd
 
-    path = Path(directory).joinpath("Configuration (needs derivation).txt")
-
-    with open(path, "wb") as file:
-        file.write(bytes(prefarm_info))
-
-    print(f"Created a configuration file: {path}")
-
+    run(init_cmd(directory, withdrawal_timelock, payment_clawback, rekey_cancel, rekey_timelock, slow_penalty))
+    
 
 @custody_cmd.command("derive_root", short_help="Take an existing configuration and pubkey set to derive a puzzle root")
 @click.option(
