@@ -105,7 +105,6 @@ class Custody:
 
     async def derive_cmd(
         self,
-        custody_rpc_port: Optional[int],
         configuration: str,
         db_path: str,
         pubkeys: str,
