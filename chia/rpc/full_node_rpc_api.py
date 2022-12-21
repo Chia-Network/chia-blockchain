@@ -790,10 +790,14 @@ class FullNodeRpcApi:
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
         peak = blockchain_state["blockchain_state"]["peak"]
-        peak_height = peak.height if peak else uint32(0)
-        last_peak_timestamp = peak.timestamp if peak else uint64(0)
-        peak_with_timestamp = peak_height
-        if peak:
+
+        if peak is None:
+            peak_height = uint32(0)
+            last_peak_timestamp = uint64(0)
+        else:
+            peak_height = peak.height
+            last_peak_timestamp = peak.timestamp
+            peak_with_timestamp = peak_height
             while last_peak_timestamp is None:
                 peak_with_timestamp -= 1
                 block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
