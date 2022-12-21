@@ -123,9 +123,9 @@ class CustodyRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
             
-        await self.service.hsmgen_cmd()
-        return {"success": "true"}
-
+        secretkey = await self.service.hsmgen_cmd()
+        return {"secretkey": secretkey}
+        
     async def launch(self, request: Dict[str, Any]) -> EndpointResult:
         return {"success": "true"}
 
