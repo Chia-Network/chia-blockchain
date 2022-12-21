@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import final

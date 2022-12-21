@@ -86,7 +86,7 @@ class CATWallet:
         wallet: Wallet,
         cat_tail_info: Dict[str, Any],
         amount: uint64,
-        name: Optionsal[str] = None,
+        name: Optional[str] = None,
     ):
         self = CATWallet()
         self.cost_of_single_tx = None
