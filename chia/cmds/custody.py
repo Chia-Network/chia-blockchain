@@ -257,52 +257,16 @@ def init_cmd(
 )
 def derive_cmd(
     configuration: str,
-    db_path: Optional[str],
+    db_path: str, 
     pubkeys: str,
     initial_lock_level: int,
     minimum_pks: int,
-    validate_against: Optional[str],
-    maximum_lock_level: Optional[int] = None,
+    validate_against: str,
+    maximum_lock_level: int,
 ):
-    if db_path is None:
-        with open(Path(configuration), "rb") as file:
-            prefarm_info = PrefarmInfo.from_bytes(file.read())
-    else:
+    from chia.custody.cic.cli.main import derive_cmd
 
-        async def get_prefarm_info() -> PrefarmInfo:
-            assert db_path is not None
-            sync_store = await load_db(db_path)
-            try:
-                prefarm_info = await sync_store.get_configuration(True, block_outdated=False)
-                assert isinstance(prefarm_info, PrefarmInfo)
-                return prefarm_info
-            finally:
-                await sync_store.db_connection.close()
-
-        prefarm_info = asyncio.get_event_loop().run_until_complete(get_prefarm_info())
-    pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
-    derivation: RootDerivation = calculate_puzzle_root(
-        prefarm_info,
-        pubkey_list,
-        uint32(initial_lock_level),
-        uint32(len(pubkey_list) if maximum_lock_level is None else maximum_lock_level),
-        uint32(minimum_pks),
-    )
-
-    if validate_against is None:
-        with open(Path(configuration), "wb") as new_file:
-            new_file.write(bytes(derivation))
-        if "needs derivation" in configuration:
-            os.rename(Path(configuration), Path("awaiting launch".join(configuration.split("needs derivation"))))
-
-        print("Custody rules successfully added to configuration")
-
-    else:
-        validation_info = load_prefarm_info(validate_against)
-        if validation_info.puzzle_root == derivation.prefarm_info.puzzle_root:
-            print("Configuration successfully validated")
-        else:
-            print("Configuration does not match specified parameters")
+    run(derive_cmd(configuration, db_path, pubkeys, initial_lock_level, minimum_pks, validate_against, maximum_lock_level))
 
 
 @custody_cmd.command("launch_singleton", short_help="Use 1 mojo to launch the singleton that will control the funds")

@@ -99,6 +99,23 @@ class CustodyRpcApi:
         return {"success": "true"}
 
     async def derive(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        configuration = request.get("configuration")
+        db_path = request.get("db_path")
+        pubkeys = request.get("pubkeys")
+        initial_lock_level = request.get("initial_lock_level")
+        minimum_pks = request.get("minimum_pks")
+        validate_against = request.get("validate_against")
+        maximum_lock_level = request.get("maximum_lock_level")
+                    
+        await self.service.derive_cmd(configuration,
+            db_path,
+            pubkeys,
+            uint64(initial_lock_level),
+            uint64(minimum_pks),
+            validate_against,
+            uint64(maximum_lock_level))
         return {"success": "true"}
 
     async def launch(self, request: Dict[str, Any]) -> EndpointResult:

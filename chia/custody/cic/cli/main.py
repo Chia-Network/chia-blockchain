@@ -192,12 +192,12 @@ async def init_cmd(
 
 def derive_cmd(
     configuration: str,
-    db_path: Optional[str],
+    db_path: str,
     pubkeys: str,
     initial_lock_level: int,
     minimum_pks: int,
-    validate_against: Optional[str],
-    maximum_lock_level: Optional[int] = None,
+    validate_against: str,
+    maximum_lock_level: str,
 ):
     if db_path is None:
         with open(Path(configuration), "rb") as file:
