@@ -1471,6 +1471,9 @@ class DIDWallet:
     def require_derivation_paths(self) -> bool:
         return True
 
+    def get_asset_id(self) -> str:
+        raise RuntimeError("DID wallet does not have an asset id")
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

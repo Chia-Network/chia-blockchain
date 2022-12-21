@@ -460,12 +460,13 @@ class TradeManager:
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
                         if wallet.type() != WalletType.STANDARD_WALLET:
-                            if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                            try:
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                                 memos = [p2_ph]
-                            else:
+                            except RuntimeError as e:
                                 raise ValueError(
                                     f"Cannot request assets from wallet id {wallet.id()} without more information"
+                                    f" - {str(e)}"
                                 )
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()

@@ -605,6 +605,9 @@ class Wallet:
     def get_name(self) -> str:
         return "Standard Wallet"
 
+    def get_asset_id(self) -> str:
+        raise RuntimeError("Standard wallet does not have an asset id")
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

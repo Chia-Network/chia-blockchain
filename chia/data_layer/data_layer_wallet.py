@@ -1105,6 +1105,9 @@ class DataLayerWallet:
     def get_name(self) -> str:
         return self.wallet_info.name
 
+    def get_asset_id(self) -> str:
+        raise RuntimeError("DL wallet does not have an asset id")
+
     ##########
     # OFFERS #
     ##########
