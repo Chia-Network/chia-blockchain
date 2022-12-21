@@ -124,3 +124,11 @@ class Custody:
         b = await hsmgen_cmd()
         return b
 
+
+    async def hsmpk_cmd(self,
+        secretkey:str) -> str:
+        from chia.custody.hsms.cmds.hsmpk import hsmpk_cmd
+
+        b = await hsmpk_cmd(secretkey)
+        return b
+

@@ -251,4 +251,14 @@ async def hsmgen_cmd(
         if client is not None:
             res = await client.hsmgen()
             print(res)
-            
+
+ 
+async def hsmpk_cmd(
+    rpc_port: int,
+    secretkey: str,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.hsmpk(secretkey)
+            print(res)
+

@@ -44,8 +44,15 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def hsmgen(self) -> str:
+    async def hsmgen(self) -> Dict[str, Any]:
         response = await self.fetch("hsmgen",{})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def hsmpk(self,
+        secretkey:str) -> Dict[str, Any]:
+        response = await self.fetch("hsmpk",{"secretkey": secretkey})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 

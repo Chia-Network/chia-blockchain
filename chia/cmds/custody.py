@@ -1787,6 +1787,29 @@ def hsmgen_cmd(
 
     run(hsmgen_cmd(custody_rpc_port))
     
+@custody_cmd.command("hsmpk", short_help="Get public key")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "-s",
+    "--secretkey",
+    help="Secret key to be used to return public key",
+    type=str,
+    required=True,
+)
+def hsmpk_cmd(
+    custody_rpc_port: Optional[int],
+    secretkey: str,
+) -> None:
+    from chia.cmds.custody_funcs import hsmpk_cmd
 
+    run(hsmpk_cmd(custody_rpc_port, secretkey))
+ 
 
 
