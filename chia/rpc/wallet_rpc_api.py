@@ -1233,9 +1233,19 @@ class WalletRpcApi:
         :param request:
         :return:
         """
+        input_message: str = request["message"]
+        if request.get("is_chia_signed_message", False):
+            # When signing a message with the sign_message_by_address/sign_message_by_id RPCs,
+            # the actual content being signed is the tree hash of:
+            #   ("Chia Signed Message", message)
+            message_to_verify: bytes32 = Program.to(("Chia Signed Message", input_message)).get_tree_hash()
+        else:
+            # Signed message is expected to be a hex string
+            message_to_verify = bytes.fromhex(input_message)
+
         is_valid = AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
-            bytes.fromhex(request["message"]),
+            message_to_verify,
             G2Element.from_bytes(bytes.fromhex(request["signature"])),
         )
         if "address" in request:
