@@ -167,14 +167,7 @@ class Wallet:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
-        maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
-        if maybe is None:
-            error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
-            self.log.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Get puzzle for pubkey
-        public_key, secret_key = maybe
+        public_key, secret_key = await self.wallet_state_manager.get_keys(puzzle_hash)
 
         # HACK
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)

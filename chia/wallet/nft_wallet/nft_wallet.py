@@ -445,7 +445,6 @@ class NFTWallet:
                     puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
             for ph in puzzle_hashes:
                 keys = await self.wallet_state_manager.get_keys(ph)
-                assert keys
                 pks[bytes(keys[0])] = private = keys[1]
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 synthetic_pk = synthetic_secret_key.get_g1()

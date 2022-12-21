@@ -492,9 +492,6 @@ class CATWallet:
                 _, _, inner_puzzle = args
                 puzzle_hash = inner_puzzle.get_tree_hash()
                 ret = await self.wallet_state_manager.get_keys(puzzle_hash)
-                if ret is None:
-                    # Abort signing the entire SpendBundle - sign all or none
-                    raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
                 pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(

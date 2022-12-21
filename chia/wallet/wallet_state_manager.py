@@ -259,7 +259,7 @@ class WalletStateManager:
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
 
-    async def get_keys(self, puzzle_hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
+    async def get_keys(self, puzzle_hash: bytes32) -> Tuple[G1Element, PrivateKey]:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
