@@ -1452,33 +1452,18 @@ class FullNodeAPI:
     async def register_interest_in_puzzle_hash(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
-        if peer.peer_node_id not in self.full_node.peer_puzzle_hash:
-            self.full_node.peer_puzzle_hash[peer.peer_node_id] = set()
 
-        if peer.peer_node_id not in self.full_node.peer_sub_counter:
-            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
-
-        hint_coin_ids = []
-        # Add peer to the "Subscribed" dictionary
         if self.is_trusted(peer):
             max_items = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
         else:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
+
+        self.full_node.subscriptions.add_ph_subscriptions(peer.peer_node_id, request.puzzle_hashes, max_items)
+
+        hint_coin_ids = []
         for puzzle_hash in request.puzzle_hashes:
-
-            hint_coin_ids.extend(await self.full_node.hint_store.get_coin_ids(puzzle_hash))
-
-            # check subscription limit
-            if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
-                self.log.warning(f"wallet {peer.peer_node_id} exceeded max puzzle_hash subscription limit")
-                continue
-
-            if puzzle_hash not in self.full_node.ph_subscriptions:
-                self.full_node.ph_subscriptions[puzzle_hash] = set()
-            if peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]:
-                self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
-                self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
-                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+            ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
+            hint_coin_ids.extend(ph_hint_coins)
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
@@ -1499,28 +1484,12 @@ class FullNodeAPI:
     async def register_interest_in_coin(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
-        if peer.peer_node_id not in self.full_node.peer_coin_ids:
-            self.full_node.peer_coin_ids[peer.peer_node_id] = set()
 
-        if peer.peer_node_id not in self.full_node.peer_sub_counter:
-            self.full_node.peer_sub_counter[peer.peer_node_id] = 0
         if self.is_trusted(peer):
             max_items = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
         else:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
-        for coin_id in request.coin_ids:
-
-            # check subscription limit
-            if self.full_node.peer_sub_counter[peer.peer_node_id] >= max_items:
-                self.log.warning(f"wallet {peer.peer_node_id} exceeded max coin subscription limit")
-                break
-
-            if coin_id not in self.full_node.coin_subscriptions:
-                self.full_node.coin_subscriptions[coin_id] = set()
-            if peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]:
-                self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
-                self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
-                self.full_node.peer_sub_counter[peer.peer_node_id] += 1
+        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_items)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
             include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height

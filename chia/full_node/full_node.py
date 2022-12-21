@@ -35,6 +35,7 @@ from chia.full_node.hint_store import HintStore
 from chia.full_node.lock_queue import LockClient, LockQueue
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.subscriptions import PeerSubscriptions
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue
 from chia.full_node.weight_proof import WeightProofHandler
@@ -106,17 +107,7 @@ class FullNode:
     multiprocessing_context: Optional[BaseContext]
     _ui_tasks: Set[asyncio.Task[None]]
     db_path: Path
-    # TODO: use NewType all over to describe these various uses of the same types
-    # Puzzle Hash : Set[Peer ID]
-    coin_subscriptions: Dict[bytes32, Set[bytes32]]
-    # Puzzle Hash : Set[Peer ID]
-    ph_subscriptions: Dict[bytes32, Set[bytes32]]
-    # Peer ID: Set[Coin ids]
-    peer_coin_ids: Dict[bytes32, Set[bytes32]]
-    # Peer ID: Set[puzzle_hash]
-    peer_puzzle_hash: Dict[bytes32, Set[bytes32]]
-    # Peer ID: subscription count
-    peer_sub_counter: Dict[bytes32, int]
+    subscriptions: PeerSubscriptions
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
@@ -179,11 +170,8 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions = {}
-        self.ph_subscriptions = {}
-        self.peer_coin_ids = {}
-        self.peer_puzzle_hash = {}
-        self.peer_sub_counter = {}
+
+        self.subscriptions = PeerSubscriptions()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
@@ -887,27 +875,8 @@ class FullNode:
         self._state_changed("sync_mode")
         if self.sync_store is not None:
             self.sync_store.peer_disconnected(connection.peer_node_id)
-        self.remove_subscriptions(connection)
-
-    def remove_subscriptions(self, peer: WSChiaConnection) -> None:
         # Remove all ph | coin id subscription for this peer
-        node_id = peer.peer_node_id
-        if node_id in self.peer_puzzle_hash:
-            puzzle_hashes = self.peer_puzzle_hash[node_id]
-            for ph in puzzle_hashes:
-                if ph in self.ph_subscriptions:
-                    if node_id in self.ph_subscriptions[ph]:
-                        self.ph_subscriptions[ph].remove(node_id)
-
-        if node_id in self.peer_coin_ids:
-            coin_ids = self.peer_coin_ids[node_id]
-            for coin_id in coin_ids:
-                if coin_id in self.coin_subscriptions:
-                    if node_id in self.coin_subscriptions[coin_id]:
-                        self.coin_subscriptions[coin_id].remove(node_id)
-
-        if peer.peer_node_id in self.peer_sub_counter:
-            self.peer_sub_counter.pop(peer.peer_node_id)
+        self.subscriptions.remove_peer(connection.peer_node_id)
 
     def _num_needed_peers(self) -> int:
         assert self.server.all_connections is not None
@@ -1164,7 +1133,9 @@ class FullNode:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
-                        state_change_summary, self.coin_subscriptions, self.ph_subscriptions
+                        state_change_summary,
+                        self.subscriptions.has_coin_sub,
+                        self.subscriptions.has_ph_sub,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                     await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
@@ -1218,18 +1189,19 @@ class FullNode:
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
             cr_name: bytes32 = coin_record.name
-            for peer in self.coin_subscriptions.get(cr_name, []):
+
+            for peer in self.subscriptions.peers_for_coin_id(cr_name):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
 
-            for peer in self.ph_subscriptions.get(coin_record.coin.puzzle_hash, []):
+            for peer in self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
 
             if cr_name in coin_id_to_ph_hint:
-                for peer in self.ph_subscriptions.get(coin_id_to_ph_hint[cr_name], []):
+                for peer in self.subscriptions.peers_for_puzzle_hash(coin_id_to_ph_hint[cr_name]):
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
@@ -1467,7 +1439,9 @@ class FullNode:
             self.full_node_store.previous_generator = None
 
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
-            state_change_summary, self.coin_subscriptions, self.ph_subscriptions
+            state_change_summary,
+            self.subscriptions.has_coin_sub,
+            self.subscriptions.has_ph_sub,
         )
         await self.hint_store.add_hints(hints_to_add)
 
