@@ -10,6 +10,35 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint64
 
+async def init_cmd(
+    rpc_port: int,
+    directory: str,
+    withdrawal_timelock: int,
+    payment_clawback: int,
+    rekey_cancel: int,
+    rekey_timelock: int,
+    slow_penalty: int,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.init(directory, withdrawal_timelock, payment_clawback, rekey_cancel, rekey_timelock, slow_penalty)
+            print(res)
+
+async def derive_cmd(
+    rpc_port: int,
+    configuration: str,
+    db_path: str,
+    pubkeys: str,
+    initial_lock_level: int,
+    minimum_pks: int,
+    validate_against: str,
+    maximum_lock_level: int,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.derive(configuration, db_path, pubkeys, initial_lock_level, minimum_pks, validate_against, maximum_lock_level)
+            print(res)
+
 
 async def create_custody_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))

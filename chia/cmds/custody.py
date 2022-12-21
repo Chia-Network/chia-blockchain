@@ -1,77 +1,11 @@
-import asyncio
-import click
-import dataclasses
-import itertools
+from __future__ import annotations
+
 import json
-import math
-import os
-import segno
-import tempfile
-import time
-import webbrowser
 import logging
-
-from blspy import PrivateKey, G1Element, G2Element
-from clvm.casts import int_to_bytes
-from datetime import datetime
-from operator import attrgetter
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Union, Any, Type, TypeVar, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Union
 
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.announcement import Announcement
-from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    calculate_synthetic_offset,
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-)
-
-from chia.custody.cic import __version__
-from chia.custody.cic.cli.record_types import SingletonRecord, ACHRecord, RekeyRecord
-from chia.custody.cic.cli.sync_store import SyncStore
-from chia.custody.cic.drivers.prefarm_info import PrefarmInfo
-from chia.custody.cic.drivers.prefarm import (
-    SpendType,
-    construct_full_singleton,
-    construct_singleton_inner_puzzle,
-    get_puzzle_root_from_puzzle,
-    get_new_puzzle_root_from_solution,
-    get_withdrawal_spend_info,
-    get_rekey_spend_info,
-    get_ach_clawback_spend_info,
-    get_rekey_clawback_spend_info,
-    get_ach_clawforward_spend_bundle,
-    get_rekey_completion_spend,
-    get_spend_type_for_solution,
-    get_spending_pubkey_for_solution,
-    get_spending_pubkey_for_drop_coin,
-    get_spend_params_for_ach_creation,
-    get_spend_params_for_rekey_creation,
-    get_info_for_ach_drop,
-    get_info_for_rekey_drop,
-    was_rekey_completed,
-)
-from chia.custody.cic.drivers.puzzle_root_construction import RootDerivation, calculate_puzzle_root
-from chia.custody.cic.drivers.singleton import generate_launch_conditions_and_coin_spend, construct_p2_singleton
-
-from chia.custody.hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
-from chia.custody.hsms.process.signing_hints import SumHint
-from chia.custody.hsms.process.unsigned_spend import UnsignedSpend
-from chia.custody.hsms.streamables.coin_spend import CoinSpend as HSMCoinSpend
-from chia.custody.hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
-
-if os.environ.get("TESTING_CIC_CLI", "FALSE") == "TRUE":
-    from tests.cli_clients import get_node_and_wallet_clients, get_node_client, get_additional_data
-else:
-    from chia.custody.cic.cli.clients import get_node_and_wallet_clients, get_node_client, get_additional_data
+import click
 
 _T = TypeVar("_T")
 
@@ -88,86 +22,25 @@ def run(coro: Coroutine[Any, Any, Optional[Dict[str, Any]]]) -> None:
     response = asyncio.run(coro)
 
     success = response is not None and response.get("success", False)
-    logger.info(f"custody cli call response:{success}")
+    logger.info(f"data layer cli call response:{success}")
     # todo make sure all cli methods follow this pattern, uncomment
     # if not success:
     # raise click.ClickException(message=f"query unsuccessful, response: {response}")
 
-
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
-
-
-def load_prefarm_info(configuration: Optional[str]) -> PrefarmInfo:
-    if configuration is None:
-        path: Path = next(Path("./").glob("Configuration (*).txt"))
-    else:
-        path = Path(configuration)
-        if path.is_dir():
-            path = next(path.glob("Configuration (*).txt"))
-    with open(path, "rb") as file:
-        file_bytes = file.read()
-        try:
-            return PrefarmInfo.from_bytes(file_bytes)
-        except AssertionError:
-            try:
-                return RootDerivation.from_bytes(file_bytes).prefarm_info
-            except AssertionError:
-                raise ValueError("The configuration specified is not a recognizable format")
-
-
-def load_root_derivation(configuration: Optional[str]) -> RootDerivation:
-    if configuration is None:
-        path: Path = next(Path("./").glob("Configuration (*).txt"))
-    else:
-        path = Path(configuration)
-        if path.is_dir():
-            path = next(path.glob("Configuration (*).txt"))
-    with open(path, "rb") as file:
-        file_bytes = file.read()
-        try:
-            return RootDerivation.from_bytes(file_bytes)
-        except AssertionError:
-            try:
-                PrefarmInfo.from_bytes(file_bytes)
-                raise ValueError("The specified configuration file can only perform observer actions")
-            except AssertionError:
-                raise ValueError("The configuration specified is not a recognizable format")
-
-
-async def load_db(db_path: str, launcher_id: Optional[bytes32] = None) -> SyncStore:
-    path = Path(db_path)
-    if path.is_dir():
-        existing = list(path.glob("sync (*).sqlite"))
-        if len(existing) == 0:
-            if launcher_id is None:
-                raise ValueError("Insufficient info to initialize DB")
-            else:
-                path = path.joinpath(f"sync ({launcher_id[0:3].hex()}).sqlite")
-        else:
-            path = existing[0]
-    return await SyncStore.create(path)
-
-
-def load_pubkeys(pubkey_files_str: str) -> Iterable[G1Element]:
-    for filepath in pubkey_files_str.split(","):
-        with open(Path(filepath), "r") as file:
-            yield BLSPublicKey.from_bech32m(file.read().strip())._g1
-
-
-def write_unsigned_spend(filename: str, spend: UnsignedSpend) -> None:
-    with open(filename, "w") as file:
-        file.write(b2a_qrint(bytes(spend)))
-
-
-def read_unsigned_spend(filename: str) -> UnsignedSpend:
-    with open(filename, "r") as file:
-        return UnsignedSpend.from_bytes(a2b_qrint(file.read()))
 
 @click.group("custody", short_help="Manage your custody")
 def custody_cmd() -> None:
     pass
 
 @custody_cmd.command("init", short_help="Create a configuration file for the prefarm")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-d",
     "--directory",
@@ -201,6 +74,7 @@ def custody_cmd() -> None:
 )
 @click.option("-sp", "--slow-penalty", help="The time penalty for performing a slow rekey (in seconds)", required=True)
 def init_cmd(
+    custody_rpc_port: Optional[int],
     directory: str,
     withdrawal_timelock: int,
     payment_clawback: int,
@@ -208,12 +82,20 @@ def init_cmd(
     rekey_timelock: int,
     slow_penalty: int,
 ) -> None:
-    from chia.custody.cic.cli.main import init_cmd
+    from chia.cmds.custody_funcs import init_cmd
 
-    run(init_cmd(directory, withdrawal_timelock, payment_clawback, rekey_cancel, rekey_timelock, slow_penalty))
+    run(init_cmd(custody_rpc_port, directory, withdrawal_timelock, payment_clawback, rekey_cancel, rekey_timelock, slow_penalty))
     
 
 @custody_cmd.command("derive_root", short_help="Take an existing configuration and pubkey set to derive a puzzle root")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-c",
     "--configuration",
@@ -256,6 +138,7 @@ def init_cmd(
     default=None,
 )
 def derive_cmd(
+    custody_rpc_port: Optional[int],
     configuration: str,
     db_path: str, 
     pubkeys: str,
@@ -264,9 +147,9 @@ def derive_cmd(
     validate_against: str,
     maximum_lock_level: int,
 ):
-    from chia.custody.cic.cli.main import derive_cmd
+    from chia.cmds.custody_funcs import derive_cmd
 
-    run(derive_cmd(configuration, db_path, pubkeys, initial_lock_level, minimum_pks, validate_against, maximum_lock_level))
+    run(derive_cmd(custody_rpc_port, configuration, db_path, pubkeys, initial_lock_level, minimum_pks, validate_against, maximum_lock_level))
 
 
 @custody_cmd.command("launch_singleton", short_help="Use 1 mojo to launch the singleton that will control the funds")

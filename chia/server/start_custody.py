@@ -34,19 +34,12 @@ def create_custody_service(
 ) -> Service[Custody]:
     service_config = config[SERVICE_NAME]
     self_hostname = config["self_hostname"]
-    wallet_rpc_port = service_config["wallet_peer"]["port"]
-    if wallet_service is None:
-        wallet_root_path = root_path
-        wallet_config = config
-    else:
-        wallet_root_path = wallet_service.root_path
-        wallet_config = wallet_service.config
-    wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
-    custody = Custody(config=service_config, root_path=root_path, wallet_rpc_init=wallet_rpc_init)
+    custody = Custody(config=service_config, root_path=root_path)
     api = CustodyAPI(custody)
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
     rpc_info: Optional[RpcInfo] = None
+    print(f"rpc_port {rpc_port}")
     if rpc_port is not None:
         rpc_info = (CustodyRpcApi, cast(int, service_config["rpc_port"]))
 
