@@ -45,10 +45,10 @@ async def setup_node_and_rpc(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_node_and_rpc_no_blocks_farmed(
-    two_wallet_nodes_services: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools],
+async def one_node_no_blocks(
+    one_node: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
 ) -> Tuple[FullNodeRpcClient, FullNodeRpcApi]:
-    full_nodes, wallets, bt = two_wallet_nodes_services
+    full_nodes, wallets, bt = one_node
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
     full_node_api = full_node_apis[0]
     full_node_service_1 = full_nodes[0]
@@ -81,9 +81,8 @@ async def test_empty_request(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNo
 
 
 @pytest.mark.asyncio
-async def test_empty_peak(setup_node_and_rpc_no_blocks_farmed: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc_no_blocks_farmed
-
+async def test_empty_peak(one_node_no_blocks: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
+    client, full_node_rpc_api = one_node_no_blocks
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": 1})
     del response["node_time_utc"]
     assert response == {
