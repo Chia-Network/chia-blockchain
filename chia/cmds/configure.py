@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Optional
 
 import click
 
-from chia.util.config import lock_and_load_config, save_config, str2bool
+from chia.util.config import load_defaults_for_missing_services, lock_and_load_config, save_config, str2bool
 
 
 def configure(
@@ -23,7 +25,10 @@ def configure(
     seeder_domain_name: str,
     seeder_nameserver: str,
 ):
-    with lock_and_load_config(root_path, "config.yaml") as config:
+    config_yaml = "config.yaml"
+    with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
+        config.update(load_defaults_for_missing_services(config=config, config_name=config_yaml))
+
         change_made = False
         if set_node_introducer:
             try:
@@ -101,6 +106,12 @@ def configure(
                 bootstrap_peers = ["testnet10-node.chia.net"]
                 testnet = "testnet10"
                 config["full_node"]["port"] = int(testnet_port)
+                if config["full_node"]["introducer_peer"] is None:
+                    config["full_node"]["introducer_peer"] = {}
+                assert config["full_node"]["introducer_peer"] is not None  # mypy
+                if config["wallet"]["introducer_peer"] is None:
+                    config["wallet"]["introducer_peer"] = {}
+                assert config["wallet"]["introducer_peer"] is not None  # mypy
                 config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
                 config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
                 config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
@@ -109,6 +120,7 @@ def configure(
                 config["introducer"]["port"] = int(testnet_port)
                 config["full_node"]["introducer_peer"]["host"] = testnet_introducer
                 config["full_node"]["dns_servers"] = [testnet_dns_introducer]
+                config["wallet"]["introducer_peer"]["host"] = testnet_introducer
                 config["wallet"]["dns_servers"] = [testnet_dns_introducer]
                 config["selected_network"] = testnet
                 config["harvester"]["selected_network"] = testnet
@@ -119,6 +131,7 @@ def configure(
                 config["ui"]["selected_network"] = testnet
                 config["introducer"]["selected_network"] = testnet
                 config["wallet"]["selected_network"] = testnet
+                config["data_layer"]["selected_network"] = testnet
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(testnet_port)
@@ -145,6 +158,8 @@ def configure(
                 config["introducer"]["port"] = int(mainnet_port)
                 config["full_node"]["introducer_peer"]["host"] = mainnet_introducer
                 config["full_node"]["dns_servers"] = [mainnet_dns_introducer]
+                config["wallet"]["introducer_peer"]["host"] = mainnet_introducer
+                config["wallet"]["dns_servers"] = [mainnet_dns_introducer]
                 config["selected_network"] = net
                 config["harvester"]["selected_network"] = net
                 config["pool"]["selected_network"] = net
@@ -154,6 +169,7 @@ def configure(
                 config["ui"]["selected_network"] = net
                 config["introducer"]["selected_network"] = net
                 config["wallet"]["selected_network"] = net
+                config["data_layer"]["selected_network"] = net
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(mainnet_port)
@@ -191,7 +207,7 @@ def configure(
             save_config(root_path, "config.yaml", config)
 
 
-@click.command("configure", short_help="Modify configuration")
+@click.command("configure", short_help="Modify configuration", no_args_is_help=True)
 @click.option(
     "--testnet",
     "-t",

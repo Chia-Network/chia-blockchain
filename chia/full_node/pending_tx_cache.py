@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,7 +16,7 @@ class PendingTxCache:
         self._cache_cost = 0
         self._txs = {}
 
-    def add(self, item: MempoolItem):
+    def add(self, item: MempoolItem) -> None:
         """
         Adds SpendBundles that have failed to be added to the pool in potential tx set.
         This is later used to retry to add them.

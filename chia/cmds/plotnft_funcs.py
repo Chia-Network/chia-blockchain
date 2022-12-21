@@ -1,31 +1,32 @@
-from collections import Counter
-from decimal import Decimal
-from dataclasses import replace
+from __future__ import annotations
 
-import aiohttp
 import asyncio
 import functools
 import json
 import time
-
+from dataclasses import replace
+from decimal import Decimal
 from pprint import pprint
-from typing import List, Dict, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
+import aiohttp
+
+from chia.cmds.cmds_util import get_any_service_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
-from chia.pools.pool_config import load_pool_config, PoolWalletConfig, update_pool_config
-from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -100,8 +101,8 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
                 await asyncio.sleep(0.1)
                 tx = await wallet_client.get_transaction(str(1), tx_record.name)
                 if len(tx.sent_to) > 0:
-                    print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
                     return None
         except Exception as e:
             print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
@@ -114,8 +115,7 @@ async def pprint_pool_wallet_state(
     wallet_id: int,
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
-    pool_state_dict: Dict,
-    plot_counts: Counter,
+    pool_state_dict: Optional[Dict[str, Any]],
 ):
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
@@ -128,7 +128,7 @@ async def pprint_pool_wallet_state(
         "Target address (not for plotting): "
         f"{encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}"
     )
-    print(f"Number of plots: {plot_counts[pool_wallet_info.p2_singleton_puzzle_hash]}")
+    print(f"Number of plots: {0 if pool_state_dict is None else pool_state_dict['plot_count']}")
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
 
     print(
@@ -146,12 +146,11 @@ async def pprint_pool_wallet_state(
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
     if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
         print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
-        if pool_wallet_info.launcher_id in pool_state_dict:
-            pool_state = pool_state_dict[pool_wallet_info.launcher_id]
-            print(f"Current difficulty: {pool_state_dict[pool_wallet_info.launcher_id]['current_difficulty']}")
-            print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points']}")
-            points_found_24h = [points for timestamp, points in pool_state["points_found_24h"]]
-            points_acknowledged_24h = [points for timestamp, points in pool_state["points_acknowledged_24h"]]
+        if pool_state_dict is not None:
+            print(f"Current difficulty: {pool_state_dict['current_difficulty']}")
+            print(f"Points balance: {pool_state_dict['current_points']}")
+            points_found_24h = [points for timestamp, points in pool_state_dict["points_found_24h"]]
+            points_acknowledged_24h = [points for timestamp, points in pool_state_dict["points_acknowledged_24h"]]
             summed_points_found_24h = sum(points_found_24h)
             summed_points_acknowledged_24h = sum(points_acknowledged_24h)
             if summed_points_found_24h == 0:
@@ -160,13 +159,13 @@ async def pprint_pool_wallet_state(
                 success_pct = summed_points_acknowledged_24h / summed_points_found_24h
             print(f"Points found (24h): {summed_points_found_24h}")
             print(f"Percent Successful Points (24h): {success_pct:.2%}")
+            payout_instructions: str = pool_state_dict["pool_config"]["payout_instructions"]
+            try:
+                payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
+                print(f"Payout instructions (pool will pay to this address): {payout_address}")
+            except Exception:
+                print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
-        payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
-        try:
-            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
-            print(f"Payout instructions (pool will pay to this address): {payout_address}")
-        except Exception:
-            print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         if pool_wallet_info.target is not None:
@@ -174,98 +173,65 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    self_hostname = config["self_hostname"]
-    farmer_rpc_port = config["farmer"]["rpc_port"]
-    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-    summaries_response = await wallet_client.get_wallets()
-    wallet_id_passed_in = args.get("id", None)
-    plot_counts: Counter = Counter()
-    try:
-        pool_state_list: List = (await farmer_client.get_pool_state())["pool_state"]
-        harvesters = await farmer_client.get_harvesters()
-        for d in harvesters["harvesters"]:
-            for plot in d["plots"]:
-                if plot.get("pool_contract_puzzle_hash", None) is not None:
-                    # Non pooled plots will have a None pool_contract_puzzle_hash
-                    plot_counts[hexstr_to_bytes(plot["pool_contract_puzzle_hash"])] += 1
-    except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(
-                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
-                f" You can run the farmer by:\n    chia start farmer-only"
-            )
-        else:
-            print(f"Exception from 'wallet' {e}")
-        farmer_client.close()
-        await farmer_client.await_closed()
-        return
-    pool_state_dict: Dict[bytes32, Dict] = {
-        bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
-        for pool_state_item in pool_state_list
-    }
-    if wallet_id_passed_in is not None:
-        for summary in summaries_response:
-            typ = WalletType(int(summary["type"]))
-            if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
-                print(f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet. Please provide a different id.")
-                return
-        pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
-        await pprint_pool_wallet_state(
-            wallet_client,
-            wallet_id_passed_in,
-            pool_wallet_info,
-            address_prefix,
-            pool_state_dict,
-            plot_counts,
-        )
-    else:
-        print(f"Wallet height: {await wallet_client.get_height_info()}")
-        print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-        for summary in summaries_response:
-            wallet_id = summary["id"]
-            typ = WalletType(int(summary["type"]))
-            if typ == WalletType.POOLING_WALLET:
-                print(f"Wallet id {wallet_id}: ")
-                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+    farmer_client: Optional[FarmerRpcClient]
+    async with get_any_service_client("farmer") as node_config_fp:
+        farmer_client, config, _ = node_config_fp
+        if farmer_client is not None:
+            address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+            summaries_response = await wallet_client.get_wallets()
+            wallet_id_passed_in = args.get("id", None)
+            pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
+            pool_state_dict: Dict[bytes32, Dict] = {
+                bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
+                for pool_state_item in pool_state_list
+            }
+            if wallet_id_passed_in is not None:
+                for summary in summaries_response:
+                    typ = WalletType(int(summary["type"]))
+                    if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
+                        print(
+                            f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
+                            " Please provide a different id."
+                        )
+                        return
+                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
                 await pprint_pool_wallet_state(
                     wallet_client,
-                    wallet_id,
+                    wallet_id_passed_in,
                     pool_wallet_info,
                     address_prefix,
-                    pool_state_dict,
-                    plot_counts,
+                    pool_state_dict.get(pool_wallet_info.launcher_id),
                 )
-                print("")
-    farmer_client.close()
-    await farmer_client.await_closed()
+            else:
+                print(f"Wallet height: {await wallet_client.get_height_info()}")
+                print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
+                for summary in summaries_response:
+                    wallet_id = summary["id"]
+                    typ = WalletType(int(summary["type"]))
+                    if typ == WalletType.POOLING_WALLET:
+                        print(f"Wallet id {wallet_id}: ")
+                        pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+                        await pprint_pool_wallet_state(
+                            wallet_client,
+                            wallet_id,
+                            pool_wallet_info,
+                            address_prefix,
+                            pool_state_dict.get(pool_wallet_info.launcher_id),
+                        )
+                        print("")
 
 
 async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    self_hostname = config["self_hostname"]
-    farmer_rpc_port = config["farmer"]["rpc_port"]
-    farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
-    try:
-        login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
-        if login_link is None:
-            print("Was not able to get login link.")
-        else:
-            print(login_link)
-    except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(
-                f"Connection error. Check if farmer is running at {farmer_rpc_port}."
-                f" You can run the farmer by:\n    chia start farmer-only"
-            )
-        else:
-            print(f"Exception from 'farmer' {e}")
-    finally:
-        farmer_client.close()
-        await farmer_client.await_closed()
+    farmer_client: Optional[FarmerRpcClient]
+    async with get_any_service_client("farmer") as node_config_fp:
+        farmer_client, _, _ = node_config_fp
+        if farmer_client is not None:
+            login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
+            if login_link is None:
+                print("Was not able to get login link.")
+            else:
+                print(login_link)
 
 
 async def submit_tx_with_confirmation(
@@ -286,8 +252,8 @@ async def submit_tx_with_confirmation(
                 await asyncio.sleep(0.1)
                 tx = await wallet_client.get_transaction(str(1), tx_record.name)
                 if len(tx.sent_to) > 0:
-                    print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
                     return None
         except Exception as e:
             print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
@@ -380,19 +346,22 @@ async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 async def change_payout_instructions(launcher_id: str, address: str) -> None:
     new_pool_configs: List[PoolWalletConfig] = []
     id_found = False
-    if decode_puzzle_hash(address):
-        old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
-        for pool_config in old_configs:
-            if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
-                id_found = True
-                pool_config = replace(pool_config, payout_instructions=decode_puzzle_hash(address).hex())
-            new_pool_configs.append(pool_config)
-        if id_found:
-            print(f"Launcher Id: {launcher_id} Found, Updating Config.")
-            await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
-            print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
-            print(f"You will need to change the payout instructions on every device you use to: {address}.")
-        else:
-            print(f"Launcher Id: {launcher_id} Not found.")
-    else:
+    try:
+        puzzle_hash = decode_puzzle_hash(address)
+    except ValueError:
         print(f"Invalid Address: {address}")
+        return
+
+    old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+    for pool_config in old_configs:
+        if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
+            id_found = True
+            pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
+        new_pool_configs.append(pool_config)
+    if id_found:
+        print(f"Launcher Id: {launcher_id} Found, Updating Config.")
+        await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
+        print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+        print(f"You will need to change the payout instructions on every device you use to: {address}.")
+    else:
+        print(f"Launcher Id: {launcher_id} Not found.")

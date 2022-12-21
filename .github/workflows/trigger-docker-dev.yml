@@ -1,11 +1,15 @@
-name: Trigger Dev Docker Build
+name: 📦🚀 Trigger Dev Docker Build
 
 on:
+  push:
+    branches:
+      - 'long_lived/**'
+      - 'release/**'
   pull_request:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -20,7 +24,7 @@ jobs:
           unset HAS_SECRET
 
           if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_SECRET='true' ; fi
-          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+          echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
         env:
           GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 

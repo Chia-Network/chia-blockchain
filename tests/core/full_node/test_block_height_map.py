@@ -1,20 +1,21 @@
-import pytest
+from __future__ import annotations
+
 import struct
+from typing import Optional
+
+import pytest
+
 from chia.full_node.block_height_map import BlockHeightMap, SesCache
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
-
-from tests.util.db_connection import DBConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
-from typing import Optional
-from chia.util.ints import uint8
 from chia.util.files import write_file_async
+from chia.util.ints import uint8
+from tests.util.db_connection import DBConnection
 
 
 def gen_block_hash(height: int) -> bytes32:
-    # TODO: address hint errors and remove ignores
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return struct.pack(">I", height + 1) * (32 // 4)  # type: ignore[return-value]
+    return bytes32(struct.pack(">I", height + 1) * (32 // 4))
 
 
 def gen_ses(height: int) -> SubEpochSummary:
@@ -31,7 +32,7 @@ async def new_block(
     is_peak: bool,
     ses: Optional[SubEpochSummary],
 ):
-    async with db.write_db() as conn:
+    async with db.writer_maybe_transaction() as conn:
         if db.db_version == 2:
             cursor = await conn.execute(
                 "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
@@ -64,7 +65,7 @@ async def new_block(
 
 async def setup_db(db: DBWrapper2):
 
-    async with db.write_db() as conn:
+    async with db.writer_maybe_transaction() as conn:
         if db.db_version == 2:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS full_blocks("
@@ -173,7 +174,7 @@ class TestBlockHeightMap:
             # in the DB since we keep loading until we find a match of both hash
             # and sub epoch summary. In this test we have a sub epoch summary
             # every 20 blocks, so we generate the 30 last blocks only
-            async with db_wrapper.write_db() as conn:
+            async with db_wrapper.writer_maybe_transaction() as conn:
                 if db_version == 2:
                     await conn.execute("DROP TABLE full_blocks")
                 else:
@@ -371,7 +372,15 @@ class TestBlockHeightMap:
             assert height_map.get_hash(5) == gen_block_hash(5)
 
             height_map.rollback(5)
-
+            assert height_map.contains_height(0)
+            assert height_map.contains_height(1)
+            assert height_map.contains_height(2)
+            assert height_map.contains_height(3)
+            assert height_map.contains_height(4)
+            assert height_map.contains_height(5)
+            assert not height_map.contains_height(6)
+            assert not height_map.contains_height(7)
+            assert not height_map.contains_height(8)
             assert height_map.get_hash(5) == gen_block_hash(5)
 
             assert height_map.get_ses(0) == gen_ses(0)
@@ -401,8 +410,12 @@ class TestBlockHeightMap:
             assert height_map.get_hash(6) == gen_block_hash(6)
 
             height_map.rollback(6)
+            assert height_map.contains_height(6)
+            assert not height_map.contains_height(7)
 
             assert height_map.get_hash(6) == gen_block_hash(6)
+            with pytest.raises(AssertionError) as _:
+                height_map.get_hash(7)
 
             assert height_map.get_ses(0) == gen_ses(0)
             assert height_map.get_ses(2) == gen_ses(2)

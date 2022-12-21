@@ -1,20 +1,24 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from chia.util.ints import uint32
+
+import aiofiles
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from pathlib import Path
-import aiofiles
-from dataclasses import dataclass
-from chia.util.streamable import Streamable, streamable
-from chia.util.files import write_file_async
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.files import write_file_async
+from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SesCache(Streamable):
     content: List[Tuple[uint32, bytes]]
 
@@ -57,7 +61,7 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
-        async with self.db.read_db() as conn:
+        async with self.db.reader_no_transaction() as conn:
             if db.db_version == 2:
                 async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                     peak_row = await cursor.fetchone()
@@ -127,16 +131,15 @@ class BlockHeightMap:
 
         return self
 
-    def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]):
+    def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]) -> None:
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
-        idx = height * 32
-        assert idx <= len(self.__height_to_hash)
-        self.__height_to_hash[idx : idx + 32] = header_hash
+        assert height * 32 <= len(self.__height_to_hash)
+        self.__set_hash(height, header_hash)
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
-    async def maybe_flush(self):
+    async def maybe_flush(self) -> None:
         if self.__dirty < 1000:
             return
 
@@ -153,7 +156,7 @@ class BlockHeightMap:
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can
     # assume all previous blocks have already been populated
-    async def _load_blocks_from(self, height: uint32, prev_hash: bytes32):
+    async def _load_blocks_from(self, height: uint32, prev_hash: bytes32) -> None:
 
         while height > 0:
             # load 5000 blocks at a time
@@ -170,7 +173,7 @@ class BlockHeightMap:
                     "INDEXED BY height WHERE height>=? AND height <?"
                 )
 
-            async with self.db.read_db() as conn:
+            async with self.db.reader_no_transaction() as conn:
                 async with conn.execute(query, (window_end, height)) as cursor:
 
                     # maps block-hash -> (height, prev-hash, sub-epoch-summary)
@@ -184,6 +187,10 @@ class BlockHeightMap:
                             ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
+                if prev_hash not in ordered:
+                    raise ValueError(
+                        f"block with header hash is missing from your blockchain database: {prev_hash.hex()}"
+                    )
                 entry = ordered[prev_hash]
                 assert height == entry[0] + 1
                 height = entry[0]
@@ -204,7 +211,7 @@ class BlockHeightMap:
                 self.__set_hash(height, prev_hash)
                 prev_hash = entry[1]
 
-    def __set_hash(self, height: int, block_hash: bytes32):
+    def __set_hash(self, height: int, block_hash: bytes32) -> None:
         idx = height * 32
         self.__height_to_hash[idx : idx + 32] = block_hash
         self.__dirty += 1
@@ -217,7 +224,7 @@ class BlockHeightMap:
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)
 
-    def rollback(self, fork_height: int):
+    def rollback(self, fork_height: int) -> None:
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []
@@ -226,6 +233,7 @@ class BlockHeightMap:
                 heights_to_delete.append(ses_included_height)
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
+        del self.__height_to_hash[(fork_height + 1) * 32 :]
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])

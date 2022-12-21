@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import random
 from dataclasses import replace
@@ -5,6 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import blspy
 from blspy import G1Element, G2Element
+from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -15,7 +18,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.signage_point import SignagePoint
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -28,16 +31,12 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)
 
 
-# TODO: address hint error and remove ignore
-#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-#       [assignment]
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -53,7 +52,7 @@ def create_foliage(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    seed: bytes32 = b"",  # type: ignore[assignment]
+    seed: bytes = b"",
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
@@ -64,7 +63,7 @@ def create_foliage(
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -95,7 +94,7 @@ def create_foliage(
         height = uint32(prev_block.height + 1)
 
     # Create filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
     tx_additions: List[Coin] = []
     tx_removals: List[bytes32] = []
 
@@ -192,43 +191,33 @@ def create_foliage(
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
         for coin in removals:
-            tx_removals.append(coin.name())
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.name()))  # type: ignore[arg-type]
+            cname = coin.name()
+            tx_removals.append(cname)
+            byte_array_tx.append(bytearray(cname))
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
 
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        # Create removal Merkle set
-        for coin_name in tx_removals:
-            removal_merkle_set.add_already_hashed(coin_name)
+        additions_merkle_items: List[bytes32] = []
 
         # Create addition Merkle set
-        puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
+        puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
 
         for coin in tx_additions:
             if coin.puzzle_hash in puzzlehash_coin_map:
-                puzzlehash_coin_map[coin.puzzle_hash].append(coin)
+                puzzlehash_coin_map[coin.puzzle_hash].append(coin.name())
             else:
-                puzzlehash_coin_map[coin.puzzle_hash] = [coin]
+                puzzlehash_coin_map[coin.puzzle_hash] = [coin.name()]
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        for puzzle, coins in puzzlehash_coin_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+        for puzzle, coin_ids in puzzlehash_coin_map.items():
+            additions_merkle_items.append(puzzle)
+            additions_merkle_items.append(hash_coin_ids(coin_ids))
 
-        additions_root = addition_merkle_set.get_root()
-        removals_root = removal_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
+        removals_root = bytes32(compute_merkle_set_root(tx_removals))
 
         generator_hash = bytes32([0] * 32)
         if block_generator is not None:
@@ -289,9 +278,6 @@ def create_foliage(
     return foliage, foliage_transaction_block, transactions_info
 
 
-# TODO: address hint error and remove ignore
-#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-#       [assignment]
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
@@ -308,13 +294,13 @@ def create_unfinished_block(
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,
-    seed: bytes32 = b"",  # type: ignore[assignment]
+    seed: bytes = b"",
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
     additions: Optional[List[Coin]] = None,
     removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
-    finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
+    finished_sub_slots_input: Optional[List[EndOfSubSlotBundle]] = None,
 ) -> UnfinishedBlock:
     """
     Creates a new unfinished block using all the information available at the signage point. This will have to be
@@ -337,7 +323,7 @@ def create_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         additions: Coins added in spend_bundle
         removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point
@@ -529,8 +515,9 @@ def unfinished_block_to_full_block(
         new_generator,
         new_generator_ref_list,
     )
-    return recursive_replace(
+    ret = recursive_replace(
         ret,
         "foliage.reward_block_hash",
         ret.reward_chain_block.get_hash(),
     )
+    return ret

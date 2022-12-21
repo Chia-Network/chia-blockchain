@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional, Set
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
@@ -11,8 +14,8 @@ from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class FullBlock(Streamable):
     # All the information required to validate a block
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb

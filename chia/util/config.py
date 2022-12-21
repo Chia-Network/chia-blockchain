@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import argparse
 import contextlib
+import copy
 import logging
 import os
 import shutil
@@ -12,10 +15,9 @@ from typing import Any, Callable, Dict, Iterator, Optional, Union
 
 import pkg_resources
 import yaml
-from filelock import FileLock
 from typing_extensions import Literal
 
-from chia.util.path import mkdir
+from chia.util.lock import Lockfile
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
@@ -32,7 +34,7 @@ def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> No
         default_config_file_data: str = initial_config_file(filename)
         path: Path = config_path_for_filename(root_path, filename)
         tmp_path: Path = path.with_suffix("." + str(os.getpid()))
-        mkdir(path.parent)
+        path.parent.mkdir(parents=True, exist_ok=True)
         with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
         try:
@@ -54,15 +56,23 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
     #       configuration file without having loaded it right there.  This usage
     #       should probably be removed and this function made private.
     config_path = config_path_for_filename(root_path, filename)
-    lock_path: Path = config_path.with_name(config_path.name + ".lock")
-    with FileLock(lock_path):
+    with Lockfile.create(config_path):
         yield
 
 
 @contextlib.contextmanager
-def lock_and_load_config(root_path: Path, filename: Union[str, Path]) -> Iterator[Dict[str, Any]]:
+def lock_and_load_config(
+    root_path: Path,
+    filename: Union[str, Path],
+    fill_missing_services: bool = False,
+) -> Iterator[Dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
-        config = _load_config_maybe_locked(root_path=root_path, filename=filename, acquire_lock=False)
+        config = _load_config_maybe_locked(
+            root_path=root_path,
+            filename=filename,
+            acquire_lock=False,
+            fill_missing_services=fill_missing_services,
+        )
         yield config
 
 
@@ -84,6 +94,7 @@ def load_config(
     filename: Union[str, Path],
     sub_config: Optional[str] = None,
     exit_on_error: bool = True,
+    fill_missing_services: bool = False,
 ) -> Dict:
     return _load_config_maybe_locked(
         root_path=root_path,
@@ -91,6 +102,7 @@ def load_config(
         sub_config=sub_config,
         exit_on_error=exit_on_error,
         acquire_lock=True,
+        fill_missing_services=fill_missing_services,
     )
 
 
@@ -100,6 +112,7 @@ def _load_config_maybe_locked(
     sub_config: Optional[str] = None,
     exit_on_error: bool = True,
     acquire_lock: bool = True,
+    fill_missing_services: bool = False,
 ) -> Dict:
     # This must be called under an acquired config lock, or acquire_lock should be True
 
@@ -124,6 +137,8 @@ def _load_config_maybe_locked(
                 log.error(f"yaml.safe_load returned None: {path}")
                 time.sleep(i * 0.1)
                 continue
+            if fill_missing_services:
+                r.update(load_defaults_for_missing_services(config=r, config_name=path.name))
             if sub_config is not None:
                 r = r.get(sub_config)
             return r
@@ -134,14 +149,19 @@ def _load_config_maybe_locked(
     raise RuntimeError("Was not able to read config file successfully")
 
 
-def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> Dict:
+def load_config_cli(
+    root_path: Path,
+    filename: str,
+    sub_config: Optional[str] = None,
+    fill_missing_services: bool = False,
+) -> Dict:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.
     Nested properties in the config file can be used in the command line with ".",
     for example --farmer_peer.host. Does not support lists.
     """
-    config = load_config(root_path, filename, sub_config)
+    config = load_config(root_path, filename, sub_config, fill_missing_services=fill_missing_services)
 
     flattened_props = flatten_properties(config)
     parser = argparse.ArgumentParser()
@@ -181,13 +201,16 @@ def unflatten_properties(config: Dict) -> Dict:
 
 
 def add_property(d: Dict, partial_key: str, value: Any):
-    key_1, key_2 = partial_key.split(".", maxsplit=1)
-    if key_1 not in d:
-        d[key_1] = {}
-    if "." in key_2:
-        add_property(d[key_1], key_2, value)
+    if "." not in partial_key:  # root of dict
+        d[partial_key] = value
     else:
-        d[key_1][key_2] = value
+        key_1, key_2 = partial_key.split(".", maxsplit=1)
+        if key_1 not in d:
+            d[key_1] = {}
+        if "." in key_2:
+            add_property(d[key_1], key_2, value)
+        else:
+            d[key_1][key_2] = value
 
 
 def str2bool(v: Union[str, bool]) -> bool:
@@ -262,3 +285,43 @@ def process_config_start_method(
     log.info(f"Selected multiprocessing start method: {choice}")
 
     return processed_method
+
+
+def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str, Any]]):
+    new_config = copy.deepcopy(config)
+    if config_overrides is None:
+        return new_config
+    for k, v in config_overrides.items():
+        add_property(new_config, k, v)
+    return new_config
+
+
+def selected_network_address_prefix(config: Dict[str, Any]) -> str:
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    return address_prefix
+
+
+def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str) -> Dict[str, Any]:
+    services = ["data_layer"]
+    missing_services = [service for service in services if service not in config]
+    defaulted = {}
+    if len(missing_services) > 0:
+        marshalled_default_config: str = initial_config_file(config_name)
+
+        unmarshalled_default_config = yaml.safe_load(marshalled_default_config)
+
+        for service in missing_services:
+            defaulted[service] = unmarshalled_default_config[service]
+
+            if "logging" in defaulted[service]:
+                to_be_referenced = config.get("logging")
+                if to_be_referenced is not None:
+                    defaulted[service]["logging"] = to_be_referenced
+
+            if "selected_network" in defaulted[service]:
+                to_be_referenced = config.get("selected_network")
+                if to_be_referenced is not None:
+                    # joining to hopefully force a new string of the same value
+                    defaulted[service]["selected_network"] = "".join(to_be_referenced)
+
+    return defaulted

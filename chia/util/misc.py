@@ -1,3 +1,23 @@
+from __future__ import annotations
+
+import dataclasses
+import signal
+import sys
+from pathlib import Path
+from typing import Any, Dict, Sequence, Union
+
+from chia.util.errors import InvalidPathError
+from chia.util.ints import uint16
+from chia.util.streamable import Streamable, recurse_jsonify, streamable
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VersionedBlob(Streamable):
+    version: uint16
+    blob: bytes
+
+
 def format_bytes(bytes: int) -> str:
 
     if not isinstance(bytes, int) or bytes < 0:
@@ -60,11 +80,40 @@ def format_minutes(minutes: int) -> str:
     return "Unknown"
 
 
-def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
+def prompt_yes_no(prompt: str) -> bool:
     while True:
-        response = str(input(prompt)).lower().strip()
+        response = str(input(prompt + " (y/n): ")).lower().strip()
         ch = response[:1]
         if ch == "y":
             return True
         elif ch == "n":
             return False
+
+
+def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
+    return len(list_in) if length else list_in
+
+
+def dataclass_to_json_dict(instance: Any) -> Dict[str, Any]:
+    ret: Dict[str, Any] = recurse_jsonify(instance)
+    return ret
+
+
+def validate_directory_writable(path: Path) -> None:
+    write_test_path = path / ".write_test"
+    try:
+        with write_test_path.open("w"):
+            pass
+        write_test_path.unlink()
+    except FileNotFoundError:
+        raise InvalidPathError(path, "Directory doesn't exist")
+    except OSError:
+        raise InvalidPathError(path, "Directory not writable")
+
+
+if sys.platform == "win32" or sys.platform == "cygwin":
+    termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = [signal.SIGTERM]
+else:
+    termination_signals = [signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = termination_signals

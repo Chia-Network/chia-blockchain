@@ -1,13 +1,21 @@
+from __future__ import annotations
+
 import asyncio
 import copy
+import random
 import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool, Queue, TimeoutError
+from pathlib import Path
+from threading import Thread
+from time import sleep
+from typing import Any, Dict, Optional
 
 import pytest
-import random
 import yaml
 
+from chia.simulator.time_out_assert import adjusted_timeout
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,
@@ -16,14 +24,8 @@ from chia.util.config import (
     lock_and_load_config,
     lock_config,
     save_config,
+    selected_network_address_prefix,
 )
-from chia.util.path import mkdir
-from multiprocessing import Pool, Queue, TimeoutError
-from pathlib import Path
-from threading import Thread
-from time import sleep
-from typing import Dict, Optional
-
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
 # import logging
@@ -138,18 +140,7 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     Subprocess entry point. This function spins-off threads to perform read/write tasks
     concurrently, possibly leading to synchronization issues accessing config data.
     """
-    asyncio.get_event_loop().run_until_complete(create_reader_and_writer_tasks(root_path, default_config))
-
-
-@pytest.fixture(scope="function")
-def root_path_populated_with_config(tmpdir) -> Path:
-    """
-    Create a temp directory and populate it with a default config.yaml.
-    Returns the root path containing the config.
-    """
-    root_path: Path = Path(tmpdir)
-    create_default_chia_config(root_path)
-    return Path(root_path)
+    asyncio.run(create_reader_and_writer_tasks(root_path, default_config))
 
 
 @pytest.fixture(scope="function")
@@ -192,7 +183,7 @@ class TestConfig:
         # When: using a clean directory
         root_path: Path = Path(tmpdir)
         config_file_path: Path = root_path / "config" / "config.yaml"
-        mkdir(config_file_path.parent)
+        config_file_path.parent.mkdir(parents=True, exist_ok=True)
         # When: config.yaml already exists with content
         with open(config_file_path, "w") as f:
             f.write("Some config content")
@@ -228,14 +219,14 @@ class TestConfig:
             == "ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
         )
 
-    def test_load_config_exit_on_error(self, tmpdir):
+    def test_load_config_exit_on_error(self, tmp_path: Path):
         """
         Call load_config() with an invalid path. Behavior should be dependent on the exit_on_error flag.
         """
-        root_path: Path = tmpdir
+        root_path = tmp_path
         config_file_path: Path = root_path / "config" / "config.yaml"
         # When: config file path points to a directory
-        mkdir(config_file_path)
+        config_file_path.mkdir(parents=True, exist_ok=True)
         # When: exit_on_error is True
         # Expect: load_config will exit
         with pytest.raises(SystemExit):
@@ -283,7 +274,7 @@ class TestConfig:
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(run_reader_and_writer_tasks, args)
             try:
-                res.get(timeout=60)
+                res.get(timeout=adjusted_timeout(timeout=60))
             except TimeoutError:
                 pytest.skip("Timed out waiting for reader/writer processes to complete")
 
@@ -314,3 +305,30 @@ class TestConfig:
                         )
                     )
             await asyncio.gather(*all_tasks)
+
+    @pytest.mark.parametrize("prefix", [None])
+    def test_selected_network_address_prefix_default_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+        """
+        Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
+        """
+        config = config_with_address_prefix
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "xch"
+
+    @pytest.mark.parametrize("prefix", ["txch"])
+    def test_selected_network_address_prefix_testnet_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+        """
+        Temp config.yaml created using a modified config. address_prefix is set to "txch"
+        """
+        config = config_with_address_prefix
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "txch"
+
+    def test_selected_network_address_prefix_config_dict(self, default_config_dict: Dict[str, Any]) -> None:
+        """
+        Modified config dictionary has address_prefix set to "customxch"
+        """
+        config = default_config_dict
+        config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = "customxch"
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "customxch"

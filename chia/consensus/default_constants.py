@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 from chia.util.ints import uint64
 
 from .constants import ConsensusConstants
 
-testnet_kwargs = {
+default_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
     "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 16,  # Must be less than half of SLOT_BLOCKS_TARGET
     "MAX_SUB_SLOT_BLOCKS": 128,  # Must be less than half of SUB_EPOCH_BLOCKS
     "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
-    "SUB_SLOT_ITERS_STARTING": 2 ** 27,
+    "SUB_SLOT_ITERS_STARTING": 2**27,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_CONSTANT_FACTOR": 2 ** 67,
+    "DIFFICULTY_CONSTANT_FACTOR": 2**67,
     "DIFFICULTY_STARTING": 7,
     "DIFFICULTY_CHANGE_MAX_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
@@ -38,8 +40,8 @@ testnet_kwargs = {
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Size of mempool = 50x the size of block # temporary change until #9125 gets in
-    "MEMPOOL_BLOCK_BUFFER": 10,
+    # Size of mempool = 50x the size of block
+    "MEMPOOL_BLOCK_BUFFER": 50,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Max block cost in clvm cost units
@@ -50,12 +52,10 @@ testnet_kwargs = {
     "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
-    "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
     "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
     "POOL_SUB_SLOT_ITERS": 37600000000,  # iters limit * NUM_SPS
-    "SOFT_FORK_HEIGHT": 2300000,
 }
 
 
-DEFAULT_CONSTANTS = ConsensusConstants(**testnet_kwargs)  # type: ignore
+DEFAULT_CONSTANTS = ConsensusConstants(**default_kwargs)  # type: ignore

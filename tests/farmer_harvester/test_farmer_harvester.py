@@ -1,27 +1,22 @@
+from __future__ import annotations
+
 import asyncio
 
 import pytest
-import pytest_asyncio
 
 from chia.farmer.farmer import Farmer
+from chia.simulator.time_out_assert import time_out_assert
+from chia.types.peer_info import PeerInfo
 from chia.util.keychain import generate_mnemonic
-from tests.setup_nodes import setup_harvester_farmer, test_constants
-from tests.time_out_assert import time_out_assert
 
 
 def farmer_is_started(farmer):
     return farmer.started
 
 
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment_no_start(bt):
-    async for _ in setup_harvester_farmer(bt, test_constants, start_services=False):
-        yield _
-
-
 @pytest.mark.asyncio
-async def test_start_with_empty_keychain(harvester_farmer_environment_no_start, bt):
-    _, farmer_service = harvester_farmer_environment_no_start
+async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
+    _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
     # First remove all keys from the keychain
     bt.local_keychain.delete_all_keys()
@@ -32,7 +27,7 @@ async def test_start_with_empty_keychain(harvester_farmer_environment_no_start, 
     await asyncio.sleep(5)
     assert not farmer.started
     # Add a key to the keychain, this should lead to the start task passing `setup_keys` and set `Farmer.initialized`
-    bt.local_keychain.add_private_key(generate_mnemonic(), "")
+    bt.local_keychain.add_private_key(generate_mnemonic())
     await time_out_assert(5, farmer_is_started, True, farmer)
     # Stop it and wait for `Farmer.initialized` to become reset
     farmer_service.stop()
@@ -41,8 +36,9 @@ async def test_start_with_empty_keychain(harvester_farmer_environment_no_start, 
 
 
 @pytest.mark.asyncio
-async def test_harvester_handshake(harvester_farmer_environment_no_start, bt):
-    harvester_service, farmer_service = harvester_farmer_environment_no_start
+async def test_harvester_handshake(farmer_one_harvester_not_started):
+    harvesters, farmer_service, bt = farmer_one_harvester_not_started
+    harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer = farmer_service._node
 
@@ -64,6 +60,7 @@ async def test_harvester_handshake(harvester_farmer_environment_no_start, bt):
     # Start both services and wait a bit
     await farmer_service.start()
     await harvester_service.start()
+    harvester_service.add_peer(PeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
     # Handshake task should be started but the handshake should not be done
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
@@ -79,6 +76,7 @@ async def test_harvester_handshake(harvester_farmer_environment_no_start, bt):
     assert len(harvester.plot_manager.farmer_public_keys) == 0
     # Re-start the harvester and make sure the handshake task gets started but the handshake still doesn't go through
     await harvester_service.start()
+    harvester_service.add_peer(PeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
     # Stop the farmer and make sure the handshake_task doesn't block the shutdown
@@ -89,7 +87,7 @@ async def test_harvester_handshake(harvester_farmer_environment_no_start, bt):
     await farmer_service.start()
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
-    bt.local_keychain.add_private_key(generate_mnemonic(), "")
+    bt.local_keychain.add_private_key(generate_mnemonic())
     await time_out_assert(5, farmer_is_started, True, farmer)
     await time_out_assert(5, handshake_task_active, False)
     await time_out_assert(5, handshake_done, True)

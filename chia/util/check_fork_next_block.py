@@ -1,4 +1,6 @@
-from typing import List, Callable
+from __future__ import annotations
+
+from typing import Callable, List
 
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.util.ints import uint32
@@ -15,7 +17,7 @@ async def check_fork_next_block(
         potential_peek = uint32(our_peak_height + 1)
         # This is the fork point in SES in the case where no fork was detected
         if blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
-            for peer in peers_with_peak:
+            for peer in peers_with_peak.copy():
                 if peer.closed:
                     peers_with_peak.remove(peer)
                     continue

@@ -1,0 +1,74 @@
+name: 🚨 Check Dependency Artifacts
+
+on:
+  push:
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
+  release:
+    types: [published]
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  check_dependency_artifacts:
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: Linux
+            matrix: linux
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+          - name: macOS
+            matrix: macos
+            runs-on:
+              intel: macos-10.14
+              arm: [macos, arm64]
+          - name: Windows
+            matrix: windows
+            runs-on:
+              intel: windows-latest
+        arch:
+          - name: ARM64
+            matrix: arm
+          - name: Intel
+            matrix: intel
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        exclude:
+          - os:
+              matrix: macos
+            python-version: '3.7'
+          - os:
+              matrix: macos
+            arch:
+              matrix: arm
+            python-version: '3.8'
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - uses: Chia-Network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python-version }}
+        force-pyenv: ${{ matrix.os.matrix == 'macos' && matrix.arch.matrix == 'intel' }}
+
+    - name: Check Wheel Availability
+      run: python build_scripts/check_dependency_artifacts.py

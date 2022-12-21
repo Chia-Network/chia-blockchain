@@ -1,0 +1,16 @@
+(mod (block_program (block_ref))
+
+    (defconstant local_deserialize_mod
+        ;; this monstrosity is the assembly output of `chialisp_deserialisation.clvm`
+        ;; it's pasted in here because the compiler doesn't yet support nested `mod`
+        ;; my apologies -- RK
+
+        (a (q 5 (a 62 (c 2 (c 5 ()))))
+           (c (q ((-1 . 127) -33 . -65) ((a (i (= 11 (q . -128)) (q 4 () (c 5 ())) (q 2 (i (>s 11 24) (q 2 26 (c 2 (c (a (i (>s 11 28) (q 2 (i (>s 11 20) (q 8) (q 4 (concat (logand (q . 31) 11) (substr 5 () (q . 1))) (c (substr 5 (q . 1)) ()))) 1) (q 4 (logand (q . 63) 11) (c 5 ()))) 1) ()))) (q 4 11 (c 5 ()))) 1)) 1) 4 (substr 21 () 9) (c (substr 21 9) ())) (c (c 5 19) (c 43 ())) (a 22 (c 2 (c 9 (c (a 62 (c 2 (c 21 ()))) ())))) 2 (i (= (substr 5 () (q . 1)) 16) (q 2 46 (c 2 (c (a 62 (c 2 (c (substr 5 (q . 1)) ()))) ()))) (q 2 18 (c 2 (c (substr 5 (q . 1)) (c (substr 5 () (q . 1)) ()))))) 1)
+              1))
+    )
+
+  ; main
+  ; select the first value, and return decompressed block spends.
+  (f (a block_program (list local_deserialize_mod block_ref)))
+)

@@ -1,25 +1,44 @@
-import re
-from typing import Optional, Tuple, List, Union
+from __future__ import annotations
 
-from clvm import SExp
-from clvm_tools import binutils
+import re
+from typing import List, Optional, Tuple, Union
+
+from clvm.casts import int_to_bytes
 
 from chia.full_node.generator import create_compressed_generator
-from chia.types.blockchain_format.program import SerializedProgram, Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32
+
+
+def _serialize_amount(val: int) -> bytes:
+    assert val >= 0
+    assert val < 2**64
+    atom: bytes = int_to_bytes(val)
+    size = len(atom)
+    assert size <= 9
+
+    if size == 0:
+        return b"\x80"
+    if size == 1 and atom[0] <= 0x7F:
+        return atom
+    size_blob = bytes([0x80 | size])
+    return size_blob + atom
 
 
 def spend_bundle_to_serialized_coin_spend_entry_list(bundle: SpendBundle) -> bytes:
     r = b""
+    # ( ( parent-coin-id puzzle-reveal amount solution ) ... )
     for coin_spend in bundle.coin_spends:
         r += b"\xff"
-        r += b"\xff" + SExp.to(coin_spend.coin.parent_coin_info).as_bin()
+        # A0 is the length-prefix for the parent coin ID (which is always 32
+        # bytes long)
+        r += b"\xff\xa0" + coin_spend.coin.parent_coin_info
         r += b"\xff" + bytes(coin_spend.puzzle_reveal)
-        r += b"\xff" + SExp.to(coin_spend.coin.amount).as_bin()
+        r += b"\xff" + _serialize_amount(coin_spend.coin.amount)
         r += b"\xff" + bytes(coin_spend.solution)
         r += b"\x80"
     r += b"\x80"
@@ -31,11 +50,10 @@ def simple_solution_generator(bundle: SpendBundle) -> BlockGenerator:
     Simply quotes the solutions we know.
     """
     cse_list = spend_bundle_to_serialized_coin_spend_entry_list(bundle)
-    block_program = b"\xff"
-
-    block_program += SExp.to(binutils.assemble("#q")).as_bin()
-
-    block_program += b"\xff" + cse_list + b"\x80"
+    # this is the serialized form of the lisp structure below. The "q" operator
+    # is has opcode 1.
+    # (q . ( cse_list ))
+    block_program = b"\xff\x01\xff" + cse_list + b"\x80"
 
     return BlockGenerator(SerializedProgram.from_bytes(block_program), [], [])
 
@@ -72,7 +90,7 @@ def compress_cse_puzzle(puzzle: SerializedProgram) -> Optional[bytes]:
     return match_standard_transaction_exactly_and_return_pubkey(puzzle)
 
 
-def compress_coin_spend(coin_spend: CoinSpend):
+def compress_coin_spend(coin_spend: CoinSpend) -> List[List[Union[bytes, None, int, Program]]]:
     compressed_puzzle = compress_cse_puzzle(coin_spend.puzzle_reveal)
     return [
         [coin_spend.coin.parent_coin_info, coin_spend.coin.amount],
@@ -84,15 +102,12 @@ def puzzle_suitable_for_compression(puzzle: SerializedProgram) -> bool:
     return True if match_standard_transaction_exactly_and_return_pubkey(puzzle) else False
 
 
-def bundle_suitable_for_compression(bundle: SpendBundle):
-    ok = []
-    for coin_spend in bundle.coin_spends:
-        ok.append(puzzle_suitable_for_compression(coin_spend.puzzle_reveal))
-    return all(ok)
+def bundle_suitable_for_compression(bundle: SpendBundle) -> bool:
+    return all(puzzle_suitable_for_compression(coin_spend.puzzle_reveal) for coin_spend in bundle.coin_spends)
 
 
-def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List:
-    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]] = []
+def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List[List[List[Union[bytes, None, int, Program]]]]:
+    compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]] = []
     for coin_spend in bundle.coin_spends:
         compressed_cse_list.append(compress_coin_spend(coin_spend))
     return compressed_cse_list

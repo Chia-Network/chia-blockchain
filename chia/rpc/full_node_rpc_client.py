@@ -1,4 +1,6 @@
-from typing import Dict, List, Optional, Tuple, Any
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.signage_point import SignagePoint
@@ -24,7 +26,7 @@ class FullNodeRpcClient(RpcClient):
     Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
     Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
-    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
+    protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
     to the full node.
     """
 
@@ -200,6 +202,16 @@ class FullNodeRpcClient(RpcClient):
         # TODO: return block records
         return response["block_records"]
 
+    async def get_block_spends(self, header_hash: bytes32) -> Optional[List[CoinSpend]]:
+        try:
+            response = await self.fetch("get_block_spends", {"header_hash": header_hash.hex()})
+            block_spends = []
+            for block_spend in response["block_spends"]:
+                block_spends.append(CoinSpend.from_json_dict(block_spend))
+            return block_spends
+        except Exception:
+            return None
+
     async def push_tx(self, spend_bundle: SpendBundle):
         return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
 
@@ -221,9 +233,11 @@ class FullNodeRpcClient(RpcClient):
             converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
         return converted
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32, include_pending: bool = False) -> Optional[Dict]:
         try:
-            response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
+            response = await self.fetch(
+                "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
+            )
             return response["mempool_item"]
         except Exception:
             return None
@@ -250,3 +264,11 @@ class FullNodeRpcClient(RpcClient):
                 }
         except Exception:
             return None
+
+    async def get_fee_estimate(
+        self,
+        target_times: Optional[List[int]],
+        cost: Optional[int],
+    ) -> Dict[str, Any]:
+        response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
+        return response

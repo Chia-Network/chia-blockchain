@@ -1,23 +1,21 @@
-import asyncio
+from __future__ import annotations
 
 from typing import List, Tuple
 
+import pytest
 from blspy import G2Element
 from clvm_tools import binutils
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
-
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
-
-from tests.core.full_node.test_conditions import bt, check_spend_bundle_validity, initial_blocks
-
+from tests.core.full_node.test_conditions import check_spend_bundle_validity, initial_blocks
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
@@ -96,8 +94,9 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
-def test_only_odd_coins_0():
-    blocks = initial_blocks()
+@pytest.mark.asyncio
+async def test_only_odd_coins_0(bt):
+    blocks = await initial_blocks(bt)
     farmed_coin = list(blocks[-1].get_included_reward_coins())[0]
 
     metadata = [("foo", "bar")]
@@ -113,8 +112,7 @@ def test_only_odd_coins_0():
     conditions = Program.to(condition_list)
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
-    run = asyncio.get_event_loop().run_until_complete
-    coins_added, coins_removed = run(check_spend_bundle_validity(bt.constants, blocks, spend_bundle))
+    coins_added, coins_removed = await check_spend_bundle_validity(bt, blocks, spend_bundle)
 
     coin_set_added = set([_.coin for _ in coins_added])
     coin_set_removed = set([_.coin for _ in coins_removed])

@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, List, Optional, Tuple
+
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
@@ -35,9 +38,7 @@ class WalletBlockchain(BlockchainInterface):
     CACHE_SIZE: int
 
     @staticmethod
-    async def create(
-        _basic_store: KeyValStore, constants: ConsensusConstants, weight_proof_handler: WalletWeightProofHandler
-    ):
+    async def create(_basic_store: KeyValStore, constants: ConsensusConstants):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
@@ -47,8 +48,9 @@ class WalletBlockchain(BlockchainInterface):
         self._basic_store = _basic_store
         self.constants = constants
         self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS * 3
-        self._weight_proof_handler = weight_proof_handler
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
+        self._sub_slot_iters = await self._basic_store.get_object("SUB_SLOT_ITERS", uint64)
+        self._difficulty = await self._basic_store.get_object("DIFFICULTY", uint64)
         self._finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if self._finished_sync_up_to is None:
             self._finished_sync_up_to = uint32(0)
@@ -57,42 +59,35 @@ class WalletBlockchain(BlockchainInterface):
         self._latest_timestamp = uint64(0)
         self._height_to_hash = {}
         self._block_records = {}
-        if self.synced_weight_proof is not None:
-            await self.new_weight_proof(self.synced_weight_proof)
-        else:
-            self._sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
-            self._difficulty = constants.DIFFICULTY_STARTING
+        self._sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
+        self._difficulty = constants.DIFFICULTY_STARTING
 
         return self
 
-    async def new_weight_proof(self, weight_proof: WeightProof, records: Optional[List[BlockRecord]] = None) -> None:
+    async def new_valid_weight_proof(self, weight_proof: WeightProof, records: List[BlockRecord]) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
             # No update, don't change anything
             return None
         self.synced_weight_proof = weight_proof
-        await self._basic_store.set_object("SYNCED_WEIGHT_PROOF", weight_proof)
+        async with self._basic_store.db_wrapper.writer():
+            await self._basic_store.set_object("SYNCED_WEIGHT_PROOF", weight_proof)
+            latest_timestamp = self._latest_timestamp
+            for record in records:
+                self._height_to_hash[record.height] = record.header_hash
+                self.add_block_record(record)
+                if record.is_transaction_block:
+                    assert record.timestamp is not None
+                    if record.timestamp > latest_timestamp:
+                        latest_timestamp = record.timestamp
 
-        latest_timestamp = self._latest_timestamp
-
-        if records is None:
-            success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
-            assert success
-        assert records is not None and len(records) > 1
-
-        for record in records:
-            self._height_to_hash[record.height] = record.header_hash
-            self.add_block_record(record)
-            if record.is_transaction_block:
-                assert record.timestamp is not None
-                if record.timestamp > latest_timestamp:
-                    latest_timestamp = record.timestamp
-
-        self._sub_slot_iters = records[-1].sub_slot_iters
-        self._difficulty = uint64(records[-1].weight - records[-2].weight)
-        await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
-        await self.clean_block_records()
+            self._sub_slot_iters = records[-1].sub_slot_iters
+            self._difficulty = uint64(records[-1].weight - records[-2].weight)
+            await self._basic_store.set_object("SUB_SLOT_ITERS", self._sub_slot_iters)
+            await self._basic_store.set_object("DIFFICULTY", self._difficulty)
+            await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
+            await self.clean_block_records()
 
     async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
@@ -163,13 +158,6 @@ class WalletBlockchain(BlockchainInterface):
 
         await self._basic_store.remove_object("PEAK_BLOCK")
 
-    def get_peak_height(self) -> uint32:
-        # The peak height is the latest height that we know of in the blockchain, it does not mean
-        # that we have downloaded all transactions up to that height.
-        if self._peak is None:
-            return uint32(0)
-        return self._peak.height
-
     async def set_peak_block(self, block: HeaderBlock, timestamp: Optional[uint64] = None):
         await self._basic_store.set_object("PEAK_BLOCK", block)
         self._peak = block
@@ -184,12 +172,12 @@ class WalletBlockchain(BlockchainInterface):
             return self._peak
         return await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
 
-    async def set_finished_sync_up_to(self, height: int, in_transaction=False):
-        if height > await self.get_finished_sync_up_to():
-            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height), in_transaction)
+    async def set_finished_sync_up_to(self, height: int, *, in_rollback=False):
+        if (in_rollback and height >= 0) or (height > await self.get_finished_sync_up_to()):
+            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height))
             await self.clean_block_records()
 
-    async def get_finished_sync_up_to(self):
+    async def get_finished_sync_up_to(self) -> uint32:
         h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if h is None:
             return uint32(0)

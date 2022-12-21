@@ -1,15 +1,24 @@
-from typing import Callable, Optional
+from __future__ import annotations
+
+import io
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple
 
 from blspy import G1Element, G2Element
-from clvm_rs import serialized_length
+from chia_rs import serialized_length
+from chiabip158 import PyBIP158
 
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint32
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
     n = int.from_bytes(buf[:4], "big", signed=False)
     buf = buf[4:]
-    for i in range(n):
+    for _ in range(n):
         buf = skip_item(buf)
     return buf
 
@@ -161,6 +170,16 @@ def skip_foliage(buf: memoryview) -> memoryview:
     return skip_optional(buf, skip_g2_element)  # foliage_transaction_block_signature
 
 
+def prev_hash_from_foliage(buf: memoryview) -> Tuple[memoryview, bytes32]:
+    prev_hash = buf[:32]  # prev_block_hash
+    buf = skip_bytes32(buf)  # prev_block_hash
+    buf = skip_bytes32(buf)  # reward_block_hash
+    buf = skip_foliage_block_data(buf)  # foliage_block_data
+    buf = skip_g2_element(buf)  # foliage_block_data_signature
+    buf = skip_optional(buf, skip_bytes32)  # foliage_transaction_block_hash
+    return skip_optional(buf, skip_g2_element), bytes32(prev_hash)  # foliage_transaction_block_signature
+
+
 def skip_foliage_transaction_block(buf: memoryview) -> memoryview:
     # buf = skip_bytes32(buf)  # prev_transaction_block_hash
     # buf = skip_uint64(buf)  # timestamp
@@ -207,3 +226,100 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
     buf = buf[1:]
     length = serialized_length(buf)
     return SerializedProgram.from_bytes(bytes(buf[:length]))
+
+
+# this implements the BlockInfo protocol
+@dataclass(frozen=True)
+class GeneratorBlockInfo:
+    prev_header_hash: bytes32
+    transactions_generator: Optional[SerializedProgram]
+    transactions_generator_ref_list: List[uint32]
+
+
+def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
+    buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    buf = skip_reward_chain_block(buf)  # reward_chain_block
+    buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf, prev_hash = prev_hash_from_foliage(buf)  # foliage
+    buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
+    buf = skip_optional(buf, skip_transactions_info)  # transactions_info
+
+    # this is the transactions_generator optional
+    generator = None
+    if buf[0] != 0:
+        buf = buf[1:]
+        length = serialized_length(buf)
+        generator = SerializedProgram.from_bytes(bytes(buf[:length]))
+        buf = buf[length:]
+    else:
+        buf = buf[1:]
+
+    refs_length = uint32.from_bytes(buf[:4])
+    buf = buf[4:]
+
+    refs = []
+    for i in range(refs_length):
+        refs.append(uint32.from_bytes(buf[:4]))
+        buf = buf[4:]
+
+    return GeneratorBlockInfo(prev_hash, generator, refs)
+
+
+def header_block_from_block(
+    buf: memoryview, request_filter: bool = True, tx_addition_coins: List[Coin] = [], removal_names: List[bytes32] = []
+) -> bytes:
+    buf2 = buf[:]
+    buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    buf2 = skip_reward_chain_block(buf2)  # reward_chain_block
+    buf2 = skip_optional(buf2, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf2 = skip_vdf_proof(buf2)  # challenge_chain_ip_proof
+    buf2 = skip_optional(buf2, skip_vdf_proof)  # reward_chain_sp_proof
+    buf2 = skip_vdf_proof(buf2)  # reward_chain_ip_proof
+    buf2 = skip_optional(buf2, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf2 = skip_foliage(buf2)  # foliage
+    if buf2[0] == 0:
+        is_transaction_block = False
+    else:
+        is_transaction_block = True
+
+    buf2 = skip_optional(buf2, skip_foliage_transaction_block)  # foliage_transaction_block
+
+    transactions_info: Optional[TransactionsInfo] = None
+    # we make it optional even if it's not by default
+    # if request_filter is True it will read extra bytes and populate it properly
+    transactions_info_optional: bytes = bytes([0])
+    encoded_filter = b"\x00"
+
+    if request_filter:
+        # this is the transactions_info optional
+        if buf2[0] == 0:
+            transactions_info_optional = bytes([0])
+        else:
+            transactions_info_optional = bytes([1])
+            buf3 = buf2[1:]
+            transactions_info = TransactionsInfo.parse(io.BytesIO(buf3))
+        byte_array_tx: List[bytearray] = []
+        if is_transaction_block and transactions_info:
+            addition_coins = tx_addition_coins + list(transactions_info.reward_claims_incorporated)
+            for coin in addition_coins:
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for name in removal_names:
+                byte_array_tx.append(bytearray(name))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+
+    # Takes everything up to but not including transactions info
+    header_block: bytes = bytes(buf[: (len(buf) - len(buf2))])
+    # Transactions filter, potentially with added / removal coins
+    header_block += (len(encoded_filter)).to_bytes(4, "big") + encoded_filter
+    # Add transactions info
+    header_block += transactions_info_optional
+    if transactions_info is not None:
+        header_block += bytes(transactions_info)
+
+    return header_block

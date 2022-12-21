@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys
 from pathlib import Path
 
 import click
+
+from chia.plotting.util import add_plot_directory, validate_plot_size
 
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
@@ -33,7 +37,7 @@ def plots_cmd(ctx: click.Context):
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
-    initialize_logging("", {"log_stdout": True}, root_path)
+    initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
 
 
 @plots_cmd.command("create", short_help="Create plots")
@@ -128,14 +132,12 @@ def create_cmd(
             self.plotid = plotid
             self.memo = memo
             self.nobitfield = nobitfield
-            self.exclude_final_dir = exclude_final_dir
 
-    if size < 32 and not override_k:
-        print("k=32 is the minimum size for farming.")
-        print("If you are testing and you want to use smaller size please add the --override-k flag.")
-        sys.exit(1)
-    elif size < 25 and override_k:
-        print("Error: The minimum k size allowed from the cli is k=25.")
+    root_path: Path = ctx.obj["root_path"]
+    try:
+        validate_plot_size(root_path, size, override_k)
+    except ValueError as e:
+        print(e)
         sys.exit(1)
 
     plot_keys = asyncio.run(
@@ -144,13 +146,18 @@ def create_cmd(
             alt_fingerprint,
             pool_public_key,
             pool_contract_address,
-            ctx.obj["root_path"],
+            root_path,
             log,
             connect_to_daemon,
         )
     )
 
-    asyncio.run(create_plots(Params(), plot_keys, ctx.obj["root_path"]))
+    asyncio.run(create_plots(Params(), plot_keys))
+    if not exclude_final_dir:
+        try:
+            add_plot_directory(root_path, final_dir)
+        except ValueError as e:
+            print(e)
 
 
 @plots_cmd.command("check", short_help="Checks plots")
@@ -187,7 +194,11 @@ def check_cmd(
 def add_cmd(ctx: click.Context, final_dir: str):
     from chia.plotting.util import add_plot_directory
 
-    add_plot_directory(ctx.obj["root_path"], final_dir)
+    try:
+        add_plot_directory(ctx.obj["root_path"], final_dir)
+        print(f"Successfully added: {final_dir}")
+    except ValueError as e:
+        print(e)
 
 
 @plots_cmd.command("remove", short_help="Removes a directory of plots from config.yaml")

@@ -1,22 +1,22 @@
-import dataclasses
-import warnings
+from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
-from typing import List
+from typing import Any, Dict, List
 
 from blspy import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.streamable import Streamable, dataclass_from_dict, recurse_jsonify, streamable
+from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_spend import CoinSpend
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SpendBundle(Streamable):
     """
     This is a list of coins being spent along with their solution programs, and a single
@@ -65,7 +65,7 @@ class SpendBundle(Streamable):
     def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
         debug_spend_bundle(self, agg_sig_additional_data)
 
-    def not_ephemeral_additions(self):
+    def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()
         result: List[Coin] = []
@@ -87,7 +87,7 @@ class SpendBundle(Streamable):
     #  4. remove all code below this point
 
     @classmethod
-    def from_json_dict(cls, json_dict):
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> SpendBundle:
         if "coin_solutions" in json_dict:
             if "coin_spends" not in json_dict:
                 json_dict = dict(
@@ -96,12 +96,12 @@ class SpendBundle(Streamable):
                 warnings.warn("`coin_solutions` is now `coin_spends` in `SpendBundle.from_json_dict`")
             else:
                 raise ValueError("JSON contains both `coin_solutions` and `coin_spends`, just use `coin_spends`")
-        return dataclass_from_dict(cls, json_dict)
+        return streamable_from_dict(cls, json_dict)
 
-    def to_json_dict(self, include_legacy_keys: bool = True, exclude_modern_keys: bool = True):
+    def to_json_dict(self, include_legacy_keys: bool = True, exclude_modern_keys: bool = True) -> Dict[str, Any]:
         if include_legacy_keys is False and exclude_modern_keys is True:
             raise ValueError("`coin_spends` not included in legacy or modern outputs")
-        d = dataclasses.asdict(self)
+        d = recurse_jsonify(self)
         if include_legacy_keys:
             d["coin_solutions"] = d["coin_spends"]
         if exclude_modern_keys:

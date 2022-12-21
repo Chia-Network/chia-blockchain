@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import collections
 import logging
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chiabip158 import PyBIP158
-from clvm.casts import int_from_bytes
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -15,23 +16,20 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_record import CoinRecord
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.name_puzzle_condition import NPC
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util import cached_bls
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
-from chia.util.generator_tools import additions_for_npc, tx_removals_and_additions
+from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +46,7 @@ async def validate_block_body(
     fork_point_with_peak: Optional[uint32],
     get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     *,
-    validate_signature=True,
+    validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
     This assumes the header block has been completely validated.
@@ -151,13 +149,16 @@ async def validate_block_body(
         return Err.INVALID_REWARD_COINS, None
 
     removals: List[bytes32] = []
-    coinbase_additions: List[Coin] = list(expected_reward_coins)
-    additions: List[Coin] = []
-    npc_list: List[NPC] = []
+
+    # we store coins paired with their names in order to avoid computing the
+    # coin name multiple times, we store it next to the coin while validating
+    # the block
+    coinbase_additions: List[Tuple[Coin, bytes32]] = [(c, c.name()) for c in expected_reward_coins]
+    additions: List[Tuple[Coin, bytes32]] = []
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # In header validation we check that timestamp is not more that 5 minutes into the future
+    # In header validation we check that timestamp is not more than 5 minutes into the future
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 
@@ -196,7 +197,6 @@ async def validate_block_body(
 
         assert npc_result is not None
         cost = npc_result.cost
-        npc_list = npc_result.npc_list
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
         log.debug(
@@ -210,11 +210,14 @@ async def validate_block_body(
         if npc_result.error is not None:
             return Err(npc_result.error), None
 
-        for npc in npc_list:
-            removals.append(npc.coin_name)
-            removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
+        assert npc_result.conds is not None
 
-        additions = additions_for_npc(npc_list)
+        for spend in npc_result.conds.spends:
+            removals.append(bytes32(spend.coin_id))
+            removals_puzzle_dic[bytes32(spend.coin_id)] = bytes32(spend.puzzle_hash)
+            for puzzle_hash, amount, _ in spend.create_coin:
+                c = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
+                additions.append((c, c.name()))
     else:
         assert npc_result is None
 
@@ -226,8 +229,8 @@ async def validate_block_body(
     # 10. Check additions for max coin amount
     # Be careful to check for 64 bit overflows in other languages. This is the max 64 bit unsigned integer
     # We will not even reach here because Coins do type checking (uint64)
-    for coin in additions + coinbase_additions:
-        additions_dic[coin.name()] = coin
+    for coin, coin_name in additions + coinbase_additions:
+        additions_dic[coin_name] = coin
         if coin.amount < 0:
             return Err.COIN_AMOUNT_NEGATIVE, None
 
@@ -245,18 +248,12 @@ async def validate_block_body(
         return root_error, None
 
     # 12. The additions and removals must result in the correct filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
 
-    for coin in additions + coinbase_additions:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-        #       [arg-type]
-        byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+    for coin, _ in additions + coinbase_additions:
+        byte_array_tx.append(bytearray(coin.puzzle_hash))
     for coin_name in removals:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-        #       [arg-type]
-        byte_array_tx.append(bytearray(coin_name))  # type: ignore[arg-type]
+        byte_array_tx.append(bytearray(coin_name))
 
     bip158: PyBIP158 = PyBIP158(byte_array_tx)
     encoded_filter = bytes(bip158.GetEncoded())
@@ -266,7 +263,7 @@ async def validate_block_body(
         return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
 
     # 13. Check for duplicate outputs in additions
-    addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
+    addition_counter = collections.Counter(coin_name for _, coin_name in additions + coinbase_additions)
     for k, v in addition_counter.items():
         if v > 1:
             return Err.DUPLICATE_OUTPUT, None
@@ -321,9 +318,8 @@ async def validate_block_body(
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
                     cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
-                    height=curr.height,
                 )
-                removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
+                removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.conds)
             else:
                 removals_in_curr = []
                 additions_in_curr = []
@@ -332,14 +328,16 @@ async def validate_block_body(
                 assert c_name not in removals_since_fork
                 removals_since_fork.add(c_name)
             for c in additions_in_curr:
-                assert c.name() not in additions_since_fork
+                coin_name = c.name()
+                assert coin_name not in additions_since_fork
                 assert curr.foliage_transaction_block is not None
-                additions_since_fork[c.name()] = (c, curr.height, curr.foliage_transaction_block.timestamp)
+                additions_since_fork[coin_name] = (c, curr.height, curr.foliage_transaction_block.timestamp)
 
             for coinbase_coin in curr.get_included_reward_coins():
-                assert coinbase_coin.name() not in additions_since_fork
+                coin_name = coinbase_coin.name()
+                assert coin_name not in additions_since_fork
                 assert curr.foliage_transaction_block is not None
-                additions_since_fork[coinbase_coin.name()] = (
+                additions_since_fork[coin_name] = (
                     coinbase_coin,
                     curr.height,
                     curr.foliage_transaction_block.timestamp,
@@ -350,6 +348,9 @@ async def validate_block_body(
             assert curr is not None
 
     removal_coin_records: Dict[bytes32, CoinRecord] = {}
+    # the removed coins we need to look up from the DB
+    # i.e. all non-ephemeral coins
+    removals_from_db: List[bytes32] = []
     for rem in removals:
         if rem in additions_dic:
             # Ephemeral coin
@@ -363,42 +364,60 @@ async def validate_block_body(
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
-            unspent = await coin_store.get_coin_record(rem)
-            if unspent is not None and unspent.confirmed_block_index <= fork_h:
-                # Spending something in the current chain, confirmed before fork
-                # (We ignore all coins confirmed after fork)
-                if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
-                    # Check for coins spent in an ancestor block
-                    return Err.DOUBLE_SPEND, None
-                removal_coin_records[unspent.name] = unspent
-            else:
-                # This coin is not in the current heaviest chain, so it must be in the fork
-                if rem not in additions_since_fork:
-                    # Check for spending a coin that does not exist in this fork
-                    log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
-                    return Err.UNKNOWN_UNSPENT, None
-                new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
-                new_coin_record: CoinRecord = CoinRecord(
-                    new_coin,
-                    confirmed_height,
-                    uint32(0),
-                    False,
-                    confirmed_timestamp,
-                )
-                removal_coin_records[new_coin_record.name] = new_coin_record
-
             # This check applies to both coins created before fork (pulled from coin_store),
             # and coins created after fork (additions_since_fork)
             if rem in removals_since_fork:
                 # This coin was spent in the fork
                 return Err.DOUBLE_SPEND_IN_FORK, None
+            removals_from_db.append(rem)
+
+    unspent_records = await coin_store.get_coin_records(removals_from_db)
+
+    # some coin spends we need to ensure exist in the fork branch. Both coins we
+    # can't find in the DB, but also coins that were spent after the fork point
+    look_in_fork: List[bytes32] = []
+    for unspent in unspent_records:
+        if unspent.confirmed_block_index <= fork_h:
+            # Spending something in the current chain, confirmed before fork
+            # (We ignore all coins confirmed after fork)
+            if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
+                # Check for coins spent in an ancestor block
+                return Err.DOUBLE_SPEND, None
+            removal_coin_records[unspent.name] = unspent
+        else:
+            look_in_fork.append(unspent.name)
+
+    if len(unspent_records) != len(removals_from_db):
+        # some coins could not be found in the DB. We need to find out which
+        # ones and look for them in additions_since_fork
+        found: Set[bytes32] = set([u.name for u in unspent_records])
+        for rem in removals_from_db:
+            if rem in found:
+                continue
+            look_in_fork.append(rem)
+
+    for rem in look_in_fork:
+        # This coin is not in the current heaviest chain, so it must be in the fork
+        if rem not in additions_since_fork:
+            # Check for spending a coin that does not exist in this fork
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            return Err.UNKNOWN_UNSPENT, None
+        new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
+        new_coin_record: CoinRecord = CoinRecord(
+            new_coin,
+            confirmed_height,
+            uint32(0),
+            False,
+            confirmed_timestamp,
+        )
+        removal_coin_records[new_coin_record.name] = new_coin_record
 
     removed = 0
     for unspent in removal_coin_records.values():
         removed += unspent.coin.amount
 
     added = 0
-    for coin in additions:
+    for coin, _ in additions:
         added += coin.amount
 
     # 16. Check that the total coin amount for added is <= removed
@@ -407,16 +426,13 @@ async def validate_block_body(
 
     fees = removed - added
     assert fees >= 0
-    assert_fee_sum: uint128 = uint128(0)
 
-    for npc in npc_list:
-        if ConditionOpcode.RESERVE_FEE in npc.condition_dict:
-            fee_list: List[ConditionWithArgs] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
-            for cvp in fee_list:
-                fee = int_from_bytes(cvp.vars[0])
-                if fee < 0:
-                    return Err.RESERVE_FEE_CONDITION_FAILED, None
-                assert_fee_sum = uint128(assert_fee_sum + fee)
+    # reserve fee cannot be greater than UINT64_MAX per consensus rule.
+    # run_generator() would fail
+    assert_fee_sum: uint64 = uint64(0)
+    if npc_result:
+        assert npc_result.conds is not None
+        assert_fee_sum = uint64(npc_result.conds.reserve_fee)
 
     # 17. Check that the assert fee sum <= fees, and that each reserved fee is non-negative
     if fees < assert_fee_sum:
@@ -436,12 +452,12 @@ async def validate_block_body(
             return Err.WRONG_PUZZLE_HASH, None
 
     # 21. Verify conditions
-    for npc in npc_list:
-        assert height is not None
-        unspent = removal_coin_records[npc.coin_name]
-        error = mempool_check_conditions_dict(
-            unspent,
-            npc.condition_dict,
+    # verify absolute/relative height/time conditions
+    if npc_result is not None:
+        assert npc_result.conds is not None
+        error = mempool_check_time_locks(
+            removal_coin_records,
+            npc_result.conds,
             prev_transaction_block_height,
             block.foliage_transaction_block.timestamp,
         )
@@ -449,7 +465,11 @@ async def validate_block_body(
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks, pairs_msgs = pkm_pairs(npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+    pairs_pks: List[bytes48] = []
+    pairs_msgs: List[bytes] = []
+    if npc_result:
+        assert npc_result.conds is not None
+        pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
 
     # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster

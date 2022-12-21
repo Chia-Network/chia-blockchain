@@ -1,0 +1,235 @@
+name: test
+
+# This reusable workflow structure was chosen for the sole purpose of working around
+# the 256 job per matrix limit.  The initial total test job count was 290.  This
+# approach shifts the 256 limit to be per OS rather than overall.  A simpler single
+# regular workflow with matrixing against the OS would be preferred.
+
+on:
+  workflow_call:
+    inputs:
+      emoji:
+        required: true
+        type: string
+      matrix:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+      file_name:
+        required: true
+        type: string
+      concurrency_name:
+        required: true
+        type: string
+      configuration:
+        required: true
+        type: string
+      matrix_mode:
+        required: true
+        type: string
+      runs-on:
+        required: true
+        type: string
+
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    runs-on: ${{ matrix.os.runs-on }}
+    timeout-minutes: ${{ matrix.configuration.job_timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: ${{ fromJson(inputs.configuration) }}
+        os:
+          - emoji: ${{ inputs.emoji }}
+            matrix: ${{ inputs.matrix }}
+            name: ${{ inputs.name }}
+            file_name: ${{ inputs.file_name }}
+            runs-on: ${{ inputs.runs-on }}
+        python:
+          - name: '3.7'
+            file_name: '3.7'
+            action: '3.7'
+            apt: '3.7'
+            install_sh: '3.7'
+            matrix: '3.7'
+            exclude_from:
+              limited: True
+          - name: '3.8'
+            file_name: '3.8'
+            action: '3.8'
+            apt: '3.8'
+            install_sh: '3.8'
+            matrix: '3.8'
+            exclude_from:
+              limited: True
+          - name: '3.9'
+            file_name: '3.9'
+            action: '3.9'
+            apt: '3.9'
+            install_sh: '3.9'
+            matrix: '3.9'
+          - name: '3.10'
+            file_name: '3.10'
+            action: '3.10'
+            apt: '3.10'
+            install_sh: '3.10'
+            matrix: '3.10'
+            exclude_from:
+              limited: True
+        exclude:
+          - os:
+              matrix: macos
+            python:
+              matrix: '3.7'
+          - os:
+              matrix: macos
+            python:
+              matrix: '3.8'
+          - os:
+              matrix: windows
+            configuration:
+              install_timelord: true
+          - os:
+              matrix: windows
+            configuration:
+              name: core.full_node
+          - python:
+              exclude_from:
+                ${{ inputs.matrix_mode }}: True
+
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
+      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+
+    steps:
+      - name: Configure git
+        run: |
+          git config --global core.autocrlf false
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python environment
+        uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - name: Create keychain for CI use (macOS)
+        if: matrix.os.matrix == 'macos'
+        run: |
+          security create-keychain -p foo chiachain
+          security default-keychain -s chiachain
+          security unlock-keychain -p foo chiachain
+          security set-keychain-settings -t 7200 -u chiachain
+
+      - name: Cache npm (Ubuntu)
+        if: matrix.os.matrix == 'ubuntu'
+        uses: actions/cache@v3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Get pip cache dir
+        id: pip-cache
+        shell: bash
+        run: |
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
+        with:
+          # Note that new runners may break this https://github.com/actions/cache/issues/292
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache test blocks and plots
+        if: matrix.configuration.checkout_blocks_and_plots
+        uses: actions/cache@v3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
+        id: test-blocks-plots
+        with:
+          path: |
+            ${{ github.workspace }}/.chia/blocks
+            ${{ github.workspace }}/.chia/test-plots
+          key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
+
+      - name: Checkout test blocks and plots (macOS, Ubuntu)
+        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
+        run: |
+          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.tar.gz | tar xzf -
+          mkdir ${{ github.workspace }}/.chia
+          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
+
+      - name: Checkout test blocks and plots (Windows)
+        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
+        run: |
+          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
+          mkdir ${{ github.workspace }}/.chia
+          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
+
+      - name: Install boost (macOS)
+        if: matrix.os.matrix == 'macos'
+        run: |
+          brew install boost
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.install_sh }}
+          development: true
+          legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Install timelord
+        if: matrix.configuration.install_timelord
+        run: |
+          sh install-timelord.sh -n
+          ./vdf_bench square_asm 400000
+
+      - name: Test blockchain code with pytest
+        env:
+          ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
+        run: |
+          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+
+      - name: Process coverage data
+        run: |
+          coverage xml --rcfile=.coveragerc -o coverage.xml
+          mkdir coverage-data
+          cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
+          cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
+          coverage report --rcfile=.coveragerc --show-missing
+
+      - name: Publish coverage data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-data
+          path: coverage-data/*
+          if-no-files-found: error
+
+      - name: Check resource usage
+        if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
+        run: |
+          sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
+          ./tests/check_pytest_monitor_output.py <metrics.out

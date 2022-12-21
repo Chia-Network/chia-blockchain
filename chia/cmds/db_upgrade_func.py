@@ -1,16 +1,18 @@
-from typing import Dict, Optional
+from __future__ import annotations
+
+import os
 import platform
-from pathlib import Path
 import shutil
 import sys
-from time import time
 import textwrap
-import os
+from pathlib import Path
+from time import time
+from typing import Dict, Optional
 
-from chia.util.config import load_config, lock_and_load_config, save_config
-from chia.util.path import mkdir, path_from_root
-from chia.util.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.config import load_config, lock_and_load_config, save_config
+from chia.util.ints import uint32
+from chia.util.path import path_from_root
 
 
 # if either the input database or output database file is specified, the
@@ -44,7 +46,7 @@ def db_upgrade_func(
     if out_db_path is None:
         db_path_replaced = db_pattern.replace("CHALLENGE", selected_network).replace("_v1_", "_v2_")
         out_db_path = path_from_root(root_path, db_path_replaced)
-        mkdir(out_db_path.parent)
+        out_db_path.parent.mkdir(parents=True, exist_ok=True)
 
     total, used, free = shutil.disk_usage(out_db_path.parent)
     in_db_size = in_db_path.stat().st_size
@@ -118,9 +120,9 @@ COIN_COMMIT_RATE = 30000
 
 def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
     import sqlite3
-    import zstd
-
     from contextlib import closing
+
+    import zstd
 
     if not in_path.exists():
         raise RuntimeError(f"input file doesn't exist. {in_path}")

@@ -1,14 +1,20 @@
+from __future__ import annotations
+
 import asyncio
+from pathlib import Path
 from ssl import SSLContext
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import aiohttp
 
-from chia.server.server import NodeType, ssl_context_for_client
+from chia.server.outbound_message import NodeType
+from chia.server.server import ssl_context_for_client
 from chia.server.ssl_context import private_ssl_ca_paths
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
+
+_T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
 
 
 class RpcClient:
@@ -28,7 +34,13 @@ class RpcClient:
     port: uint16
 
     @classmethod
-    async def create(cls, self_hostname: str, port: uint16, root_path, net_config):
+    async def create(
+        cls: Type[_T_RpcClient],
+        self_hostname: str,
+        port: uint16,
+        root_path: Path,
+        net_config: Dict[str, Any],
+    ) -> _T_RpcClient:
         self = cls()
         self.hostname = self_hostname
         self.port = port
@@ -70,9 +82,9 @@ class RpcClient:
     async def healthz(self) -> Dict:
         return await self.fetch("healthz", {})
 
-    def close(self):
+    def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())
 
-    async def await_closed(self):
+    async def await_closed(self) -> None:
         if self.closing_task is not None:
             await self.closing_task

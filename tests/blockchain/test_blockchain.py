@@ -1,13 +1,11 @@
-# flake8: noqa: F811, F401
-import asyncio
-import dataclasses
+from __future__ import annotations
+
 import logging
 import multiprocessing
 import time
 from dataclasses import replace
 from secrets import token_bytes
 from typing import List
-from chia.util.block_cache import BlockCache
 
 import pytest
 from blspy import AugSchemeMPL, G2Element
@@ -15,12 +13,15 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import ReceiveBlockResult, Blockchain
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.simulator.block_tools import create_block_tools_async, test_constants
+from chia.simulator.keyring import TempKeyring
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo
@@ -35,28 +36,24 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.generator_tools import get_block_header
-from tests.block_tools import create_block_tools_async, get_vdf_info_and_proof
 from chia.util.errors import Err
+from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint64, uint32
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.merkle_set import MerkleSet
 from chia.util.recursive_replace import recursive_replace
-from tests.blockchain.blockchain_test_utils import (
-    _validate_and_add_block,
-    _validate_and_add_block_multi_error,
-    _validate_and_add_block_multi_result,
-    check_block_store_invariant,
-    _validate_and_add_block_no_error,
-)
-from tests.wallet_tools import WalletTool
-from tests.setup_nodes import test_constants
-from tests.util.blockchain import create_blockchain
-from tests.util.keyring import TempKeyring
+from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from tests.blockchain.blockchain_test_utils import (
+    _validate_and_add_block,
+    _validate_and_add_block_multi_error,
+    _validate_and_add_block_multi_result,
+    _validate_and_add_block_no_error,
+)
+from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
@@ -187,6 +184,7 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
+                log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
                 )
@@ -245,7 +243,7 @@ class TestBlockHeaderValidation:
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
     @pytest.mark.asyncio
-    async def test_unfinished_blocks(self, empty_blockchain, softfork_height, bt):
+    async def test_unfinished_blocks(self, empty_blockchain, bt):
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(3)
         for block in blocks[:-1]:
@@ -266,7 +264,7 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:
             block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
             block_bytes = bytes(unf)
-            npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator)
 
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         err = validate_res.error
@@ -290,13 +288,12 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:
             block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
             block_bytes = bytes(unf)
-            npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+            npc_result = await blockchain.run_generator(block_bytes, block_generator)
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         assert validate_res.error is None
 
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain, bt):
-        blockchain = empty_blockchain
         for block in bt.get_consecutive_blocks(2, skip_slots=3):
             await _validate_and_add_block(empty_blockchain, block)
 
@@ -336,7 +333,7 @@ class TestBlockHeaderValidation:
         assert blockchain.get_peak().height == num_blocks - 1
 
     @pytest.mark.asyncio
-    async def test_unf_block_overflow(self, empty_blockchain, softfork_height, bt):
+    async def test_unf_block_overflow(self, empty_blockchain, bt):
         blockchain = empty_blockchain
 
         blocks = []
@@ -370,7 +367,7 @@ class TestBlockHeaderValidation:
                 if block.transactions_generator is not None:
                     block_generator: BlockGenerator = await blockchain.get_block_generator(unf)
                     block_bytes = bytes(unf)
-                    npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+                    npc_result = await blockchain.run_generator(block_bytes, block_generator)
                 validate_res = await blockchain.validate_unfinished_block(
                     unf, npc_result, skip_overflow_ss_validation=True
                 )
@@ -536,7 +533,7 @@ class TestBlockHeaderValidation:
 
     async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version):
         bt_high_iters = await create_block_tools_async(
-            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14)),
+            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2**12), DIFFICULTY_STARTING=(2**14)),
             keychain=keychain,
         )
         bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
@@ -741,11 +738,12 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
-    async def test_empty_sub_slots_epoch(self, empty_blockchain, bt):
+    async def test_empty_sub_slots_epoch(self, empty_blockchain, default_400_blocks, bt):
         # 2m
         # Tests adding an empty sub slot after the sub-epoch / epoch.
         # Also tests overflow block in epoch
-        blocks_base = bt.get_consecutive_blocks(test_constants.EPOCH_BLOCKS)
+        blocks_base = default_400_blocks[: test_constants.EPOCH_BLOCKS]
+        assert len(blocks_base) == test_constants.EPOCH_BLOCKS
         blocks_1 = bt.get_consecutive_blocks(1, block_list_input=blocks_base, force_overflow=True)
         blocks_2 = bt.get_consecutive_blocks(1, skip_slots=3, block_list_input=blocks_base, force_overflow=True)
         for block in blocks_base:
@@ -779,10 +777,19 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2q
-        blocks = bt.get_consecutive_blocks(10)
+        blocks: List[FullBlock] = []
+        found_overflow_slot: bool = False
 
-        for block in blocks:
-            if len(block.finished_sub_slots):
+        while not found_overflow_slot:
+            blocks = bt.get_consecutive_blocks(1, blocks)
+            block = blocks[-1]
+            if (
+                len(block.finished_sub_slots)
+                and is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+                and block.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf.output
+                != ClassgroupElement.get_default_element()
+            ):
+                found_overflow_slot = True
                 # Bad iters
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -798,9 +805,11 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss.challenge_chain.get_hash(),
                 )
+                log.warning(f"Num slots: {len(block.finished_sub_slots)}")
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
+                log.warning(f"Signage point index: {block_bad.reward_chain_block.signage_point_index}")
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_EOS_VDF)
 
                 # Bad output
@@ -845,7 +854,9 @@ class TestBlockHeaderValidation:
                 )
 
                 await _validate_and_add_block_multi_error(
-                    empty_blockchain, block_bad_3, [Err.INVALID_CC_EOS_VDF, Err.INVALID_PREV_CHALLENGE_SLOT_HASH]
+                    empty_blockchain,
+                    block_bad_3,
+                    [Err.INVALID_CC_EOS_VDF, Err.INVALID_PREV_CHALLENGE_SLOT_HASH, Err.INVALID_POSPACE],
                 )
 
                 # Bad proof
@@ -864,9 +875,18 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2p
-        blocks = bt.get_consecutive_blocks(10)
-        for block in blocks:
-            if len(block.finished_sub_slots):
+        blocks: List[FullBlock] = []
+        found_block: bool = False
+
+        while not found_block:
+            blocks = bt.get_consecutive_blocks(1, blocks)
+            block = blocks[-1]
+            if (
+                len(block.finished_sub_slots)
+                and block.finished_sub_slots[-1].reward_chain.end_of_slot_vdf.output
+                != ClassgroupElement.get_default_element()
+            ):
+                found_block = True
                 # Bad iters
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -1011,7 +1031,9 @@ class TestBlockHeaderValidation:
 
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-            if len(blocks[-1].finished_sub_slots) > 0:
+            if len(blocks[-1].finished_sub_slots) > 0 and is_overflow_block(
+                test_constants, blocks[-1].reward_chain_block.signage_point_index
+            ):
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
                     "challenge_chain",
@@ -1695,7 +1717,7 @@ class TestPreValidation:
                 assert res[n].error is None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
-                result, err, _, _ = await empty_blockchain.receive_block(block, res[n])
+                result, err, _ = await empty_blockchain.receive_block(block, res[n])
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
@@ -1711,6 +1733,85 @@ class TestPreValidation:
 
 
 class TestBodyValidation:
+
+    # TODO: add test for
+    # ASSERT_COIN_ANNOUNCEMENT,
+    # CREATE_COIN_ANNOUNCEMENT,
+    # CREATE_PUZZLE_ANNOUNCEMENT,
+    # ASSERT_PUZZLE_ANNOUNCEMENT,
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_MY_AMOUNT,
+            ConditionOpcode.ASSERT_MY_PUZZLEHASH,
+            ConditionOpcode.ASSERT_MY_COIN_ID,
+            ConditionOpcode.ASSERT_MY_PARENT_ID,
+        ],
+    )
+    @pytest.mark.parametrize("with_garbage", [True, False])
+    async def test_conditions(self, empty_blockchain, opcode, with_garbage, bt):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+            genesis_timestamp=10000,
+            time_per_block=10,
+        )
+        await _validate_and_add_block(empty_blockchain, blocks[0])
+        await _validate_and_add_block(empty_blockchain, blocks[1])
+        await _validate_and_add_block(empty_blockchain, blocks[2])
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx1: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        coin1: Coin = tx1.additions()[0]
+
+        if opcode == ConditionOpcode.ASSERT_MY_AMOUNT:
+            args = [int_to_bytes(coin1.amount)]
+        elif opcode == ConditionOpcode.ASSERT_MY_PUZZLEHASH:
+            args = [coin1.puzzle_hash]
+        elif opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
+            args = [coin1.name()]
+        elif opcode == ConditionOpcode.ASSERT_MY_PARENT_ID:
+            args = [coin1.parent_coin_info]
+        # elif opcode == ConditionOpcode.RESERVE_FEE:
+        # args = [int_to_bytes(5)]
+        # TODO: since we use the production wallet code, we can't (easily)
+        # create a transaction with fee without also including a valid
+        # RESERVE_FEE condition
+        else:
+            assert False
+
+        conditions = {opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))]}
+
+        tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
+        assert coin1 in tx2.removals()
+
+        bundles = SpendBundle.aggregate([tx1, tx2])
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=bundles,
+            time_per_block=10,
+        )
+
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            [blocks[-1]], {}, validate_signatures=False
+        )
+        # Ignore errors from pre-validation, we are testing block_body_validation
+        repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
+        code, err, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert code == ReceiveBlockResult.NEW_PEAK
+        assert err is None
+        assert state_change.fork_height == 2
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
     @pytest.mark.parametrize(
@@ -1744,14 +1845,11 @@ class TestBodyValidation:
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
         public_key = synthetic_secret_key.get_g1()
 
-        args = [public_key, b"msg"]
-        if with_garbage:
-            args.append(b"garbage")
+        args = [public_key, b"msg"] + ([b"garbage"] if with_garbage else [])
         conditions = {opcode: [ConditionWithArgs(opcode, args)]}
 
         tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
         assert coin1 in tx2.removals()
-        coin2: Coin = tx2.additions()[0]
 
         bundles = SpendBundle.aggregate([tx1, tx2])
         blocks = bt.get_consecutive_blocks(
@@ -1766,32 +1864,38 @@ class TestBodyValidation:
             [blocks[-1]], {}, validate_signatures=False
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
-        repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == expected
+        repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
+        res, error, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "opcode,lock_value,expected",
+        "opcode,lock_value,expected,with_garbage",
         [
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK, False),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK, False),
+            # additional garbage at the end of parameters
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, True),
         ],
     )
-    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, bt):
+    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, with_garbage, bt):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -1807,7 +1911,9 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
+        conditions = {
+            opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)] + ([b"garbage"] if with_garbage else []))]
+        }
 
         tx1: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
@@ -1843,7 +1949,6 @@ class TestBodyValidation:
     @pytest.mark.asyncio
     async def test_not_tx_block_but_has_data(self, empty_blockchain, bt):
         # 1
-        b = empty_blockchain
         blocks = bt.get_consecutive_blocks(1)
         while blocks[-1].foliage_transaction_block is not None:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -1890,12 +1995,10 @@ class TestBodyValidation:
             "transactions_info",
             None,
         )
-        try:
+        with pytest.raises(AssertionError):
             await _validate_and_add_block_multi_error(
                 b, block, [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE]
             )
-        except AssertionError:
-            return None
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_info_hash(self, empty_blockchain, bt):
@@ -2159,7 +2262,7 @@ class TestBodyValidation:
             )
 
     @pytest.mark.asyncio
-    async def test_cost_exceeds_max(self, empty_blockchain, softfork_height, bt):
+    async def test_cost_exceeds_max(self, empty_blockchain, bt):
         # 7
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2193,7 +2296,6 @@ class TestBodyValidation:
             b.constants.MAX_BLOCK_COST_CLVM * 1000,
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
-            height=softfork_height,
         )
         err = (await b.receive_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
@@ -2210,7 +2312,7 @@ class TestBodyValidation:
         pass
 
     @pytest.mark.asyncio
-    async def test_invalid_cost_in_block(self, empty_blockchain, softfork_height, bt):
+    async def test_invalid_cost_in_block(self, empty_blockchain, bt):
         # 9
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2254,9 +2356,8 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
-            height=softfork_height,
         )
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
@@ -2279,9 +2380,8 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
-            height=softfork_height,
         )
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # too high
@@ -2304,10 +2404,9 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
-            height=softfork_height,
         )
 
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # when the CLVM program exceeds cost during execution, it will fail with
@@ -2365,7 +2464,6 @@ class TestBodyValidation:
     @pytest.mark.asyncio
     async def test_invalid_merkle_roots(self, empty_blockchain, bt):
         # 11
-        b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
             guarantee_transaction_block=True,
@@ -2775,16 +2873,15 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain, default_10000_blocks, bt):
+    async def test_long_reorg(self, empty_blockchain, default_1500_blocks, test_long_reorg_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
         num_blocks_chain_1 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 10
         num_blocks_chain_2_start = test_constants.EPOCH_BLOCKS - 20
-        num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 8
 
         assert num_blocks_chain_1 < 10000
-        blocks = default_10000_blocks[:num_blocks_chain_1]
+        blocks = default_1500_blocks[:num_blocks_chain_1]
 
         for block in blocks:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
@@ -2792,15 +2889,15 @@ class TestReorgs:
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
 
-        # These blocks will have less time between them (timestamp) and therefore will make difficulty go up
+        # The reorg blocks will have less time between them (timestamp) and therefore will make difficulty go up
         # This means that the weight will grow faster, and we can get a heavier chain with lower height
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            num_blocks_chain_2 - num_blocks_chain_2_start,
-            blocks[:num_blocks_chain_2_start],
-            seed=b"2",
-            time_per_block=8,
-        )
-        for reorg_block in blocks_reorg_chain:
+
+        # If these assert fail, you probably need to change the fixture in test_long_reorg_blocks to create the
+        # right amount of blocks at the right time
+        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_1500_blocks[num_blocks_chain_2_start - 1]
+        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_1500_blocks[num_blocks_chain_2_start]
+
+        for reorg_block in test_long_reorg_blocks:
             if reorg_block.height < num_blocks_chain_2_start:
                 await _validate_and_add_block(
                     b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
@@ -2820,17 +2917,15 @@ class TestReorgs:
         assert b.get_peak().height < chain_1_height
 
     @pytest.mark.asyncio
-    async def test_long_compact_blockchain(self, empty_blockchain, default_10000_blocks_compact):
+    async def test_long_compact_blockchain(self, empty_blockchain, default_2000_blocks_compact):
         b = empty_blockchain
-        for block in default_10000_blocks_compact:
+        for block in default_2000_blocks_compact:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
-        assert b.get_peak().height == len(default_10000_blocks_compact) - 1
+        assert b.get_peak().height == len(default_2000_blocks_compact) - 1
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain, bt):
         b = empty_blockchain
-        WALLET_A = WalletTool(b.constants)
-        WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
         blocks = bt.get_consecutive_blocks(15)
 
@@ -2949,3 +3044,305 @@ class TestReorgs:
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199
+
+
+@pytest.mark.asyncio
+async def test_reorg_new_ref(empty_blockchain, bt):
+    b = empty_blockchain
+    wallet_a = WalletTool(b.constants)
+    WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+    coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+    blocks = bt.get_consecutive_blocks(
+        5,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+
+    all_coins = []
+    for spend_block in blocks[:5]:
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+    spend_bundle_0 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    blocks = bt.get_consecutive_blocks(
+        15,
+        block_list_input=blocks,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle_0,
+        guarantee_transaction_block=True,
+    )
+
+    for block in blocks:
+        await _validate_and_add_block(b, block)
+    assert b.get_peak().height == 19
+
+    print("first chain done")
+
+    # Make sure a ref back into the reorg chain itself works as expected
+
+    blocks_reorg_chain = bt.get_consecutive_blocks(
+        1,
+        blocks[:10],
+        seed=b"2",
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+    )
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+
+    blocks_reorg_chain = bt.get_consecutive_blocks(
+        2,
+        blocks_reorg_chain,
+        seed=b"2",
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    blocks_reorg_chain = bt.get_consecutive_blocks(
+        4, blocks_reorg_chain, seed=b"2", previous_generator=[uint32(5), uint32(11)], transaction_data=spend_bundle2
+    )
+    blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
+
+    for i, block in enumerate(blocks_reorg_chain):
+        fork_point_with_peak = None
+        if i < 10:
+            expected = ReceiveBlockResult.ALREADY_HAVE_BLOCK
+        elif i < 20:
+            expected = ReceiveBlockResult.ADDED_AS_ORPHAN
+        else:
+            expected = ReceiveBlockResult.NEW_PEAK
+            fork_point_with_peak = uint32(1)
+        await _validate_and_add_block(b, block, expected_result=expected, fork_point_with_peak=fork_point_with_peak)
+    assert b.get_peak().height == 20
+
+
+# this test doesn't reorg, but _reconsider_peak() is passed a stale
+# "fork_height" to make it look like it's in a reorg, but all the same blocks
+# are just added back.
+@pytest.mark.asyncio
+async def test_reorg_stale_fork_height(empty_blockchain, bt):
+    b = empty_blockchain
+    wallet_a = WalletTool(b.constants)
+    WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+    coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+    blocks = bt.get_consecutive_blocks(
+        5,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+
+    all_coins = []
+    for spend_block in blocks:
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+
+    # Make sure a ref back into the reorg chain itself works as expected
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+
+    # make sure we have a transaction block, with at least one transaction in it
+    blocks = bt.get_consecutive_blocks(
+        5,
+        blocks,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    # this block (height 10) refers back to the generator in block 5
+    spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    blocks = bt.get_consecutive_blocks(4, blocks, previous_generator=[uint32(5)], transaction_data=spend_bundle2)
+
+    for block in blocks[:5]:
+        await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.NEW_PEAK)
+
+    # fake the fork_height to make every new block look like a reorg
+    for block in blocks[5:]:
+        await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.NEW_PEAK, fork_point_with_peak=2)
+    assert b.get_peak().height == 13
+
+
+@pytest.mark.asyncio
+async def test_chain_failed_rollback(empty_blockchain, bt):
+    b = empty_blockchain
+    wallet_a = WalletTool(b.constants)
+    WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+    coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+    blocks = bt.get_consecutive_blocks(
+        20,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+    )
+
+    for block in blocks:
+        await _validate_and_add_block(b, block)
+    assert b.get_peak().height == 19
+
+    print("first chain done")
+
+    # Make sure a ref back into the reorg chain itself works as expected
+
+    all_coins = []
+    for spend_block in blocks[:10]:
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+
+    blocks_reorg_chain = bt.get_consecutive_blocks(
+        11,
+        blocks[:10],
+        seed=b"2",
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    for block in blocks_reorg_chain[10:-1]:
+        await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+
+    # Incorrectly set the height as spent in DB to trigger an error
+    print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+    print(spend_bundle.coin_spends[0].coin.name())
+    # await b.coin_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
+    await b.coin_store.rollback_to_block(2)
+    print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+
+    with pytest.raises(ValueError):
+        await _validate_and_add_block(b, blocks_reorg_chain[-1])
+
+    assert b.get_peak().height == 19
+
+
+@pytest.mark.asyncio
+async def test_reorg_flip_flop(empty_blockchain, bt):
+    b = empty_blockchain
+    wallet_a = WalletTool(b.constants)
+    WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+    coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+    chain_a = bt.get_consecutive_blocks(
+        10,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
+    )
+
+    all_coins = []
+    for spend_block in chain_a:
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                all_coins.append(coin)
+
+    # this is a transaction block at height 10
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    chain_a = bt.get_consecutive_blocks(
+        5,
+        chain_a,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    chain_a = bt.get_consecutive_blocks(
+        5,
+        chain_a,
+        previous_generator=[uint32(10)],
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    chain_a = bt.get_consecutive_blocks(
+        20,
+        chain_a,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    # chain A is 40 blocks deep
+    # chain B share the first 20 blocks with chain A
+
+    # add 5 blocks on top of the first 20, to form chain B
+    chain_b = bt.get_consecutive_blocks(
+        5,
+        chain_a[:20],
+        seed=b"2",
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+    )
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+
+    # this is a transaction block at height 15 (in Chain B)
+    chain_b = bt.get_consecutive_blocks(
+        5,
+        chain_b,
+        seed=b"2",
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
+
+    spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+    chain_b = bt.get_consecutive_blocks(
+        10, chain_b, seed=b"2", previous_generator=[uint32(15)], transaction_data=spend_bundle
+    )
+
+    assert len(chain_a) == len(chain_b)
+
+    counter = 0
+    for b1, b2 in zip(chain_a, chain_b):
+
+        # alternate the order we add blocks from the two chains, to ensure one
+        # chain overtakes the other one in weight every other time
+        if counter % 2 == 0:
+            block1, block2 = b2, b1
+        else:
+            block1, block2 = b1, b2
+        counter += 1
+
+        fork_height = 2 if counter > 3 else None
+
+        preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            [block1], {}, validate_signatures=False
+        )
+        result, err, _ = await b.receive_block(block1, preval[0], fork_point_with_peak=fork_height)
+        assert not err
+        preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            [block2], {}, validate_signatures=False
+        )
+        result, err, _ = await b.receive_block(block2, preval[0], fork_point_with_peak=fork_height)
+        assert not err
+
+    assert b.get_peak().height == 39
+
+    chain_b = bt.get_consecutive_blocks(
+        10,
+        chain_b,
+        seed=b"2",
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
+        pool_reward_puzzle_hash=receiver_puzzlehash,
+    )
+
+    for block in chain_b[40:]:
+        await _validate_and_add_block(b, block)

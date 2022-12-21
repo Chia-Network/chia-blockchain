@@ -1,5 +1,6 @@
-import logging
+from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -10,16 +11,19 @@ from chiapos import DiskProver
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
+from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class PlotsRefreshParameter:
-    interval_seconds: int = 120
-    retry_invalid_seconds: int = 1200
-    batch_size: int = 300
-    batch_sleep_milliseconds: int = 1
+@streamable
+@dataclass(frozen=True)
+class PlotsRefreshParameter(Streamable):
+    interval_seconds: uint32 = uint32(120)
+    retry_invalid_seconds: uint32 = uint32(1200)
+    batch_size: uint32 = uint32(300)
+    batch_sleep_milliseconds: uint32 = uint32(1)
 
 
 @dataclass
@@ -65,23 +69,37 @@ class PlotRefreshResult:
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
-    return config["harvester"]["plot_directories"]
+    return config["harvester"]["plot_directories"] or []
 
 
 def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
     # Returns a map from directory to a list of all plots in the directory
     all_files: Dict[Path, List[Path]] = {}
-    for directory_name in get_plot_directories(root_path):
-        directory = Path(directory_name).resolve()
-        all_files[directory] = get_filenames(directory)
+    config = load_config(root_path, "config.yaml")
+    recursive_scan: bool = config["harvester"].get("recursive_plot_scan", False)
+    for directory_name in get_plot_directories(root_path, config):
+        try:
+            directory = Path(directory_name).resolve()
+        except (OSError, RuntimeError):
+            log.exception(f"Failed to resolve {directory_name}")
+            continue
+        all_files[directory] = get_filenames(directory, recursive_scan)
     return all_files
 
 
 def add_plot_directory(root_path: Path, str_path: str) -> Dict:
+    path: Path = Path(str_path).resolve()
+    if not path.exists():
+        raise ValueError(f"Path doesn't exist: {path}")
+    if not path.is_dir():
+        raise ValueError(f"Path is not a directory: {path}")
     log.debug(f"add_plot_directory {str_path}")
     with lock_and_load_config(root_path, "config.yaml") as config:
-        if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
-            config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+        if str(Path(str_path).resolve()) in get_plot_directories(root_path, config):
+            raise ValueError(f"Path already added: {path}")
+        if not config["harvester"]["plot_directories"]:
+            config["harvester"]["plot_directories"] = []
+        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(root_path, "config.yaml", config)
     return config
 
@@ -110,7 +128,7 @@ def remove_plot(path: Path):
         path.unlink()
 
 
-def get_filenames(directory: Path) -> List[Path]:
+def get_filenames(directory: Path, recursive: bool) -> List[Path]:
     try:
         if not directory.exists():
             log.warning(f"Directory: {directory} does not exist.")
@@ -120,13 +138,9 @@ def get_filenames(directory: Path) -> List[Path]:
         return []
     all_files: List[Path] = []
     try:
-        for child in directory.iterdir():
-            if not child.is_dir():
-                # If it is a file ending in .plot, add it - work around MacOS ._ files
-                if child.suffix == ".plot" and not child.name.startswith("._"):
-                    all_files.append(child)
-            else:
-                log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
+        glob_function = directory.rglob if recursive else directory.glob
+        all_files = [child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")]
+        log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
@@ -205,3 +219,15 @@ def find_duplicate_plot_IDs(all_filenames=None) -> None:
         for filename_str in duplicate_filenames:
             log_message += "\t" + filename_str + "\n"
         log.warning(f"{log_message}")
+
+
+def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
+    config = load_config(root_path, "config.yaml")
+    min_k = config["min_mainnet_k_size"]
+    if k < min_k and not override_k:
+        raise ValueError(
+            f"k={min_k} is the minimum size for farming.\n"
+            "If you are testing and you want to use smaller size please add the --override-k flag."
+        )
+    elif k < 25 and override_k:
+        raise ValueError("Error: The minimum k size allowed from the cli is k=25.")

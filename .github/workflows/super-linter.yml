@@ -4,7 +4,7 @@
 ## Linter GitHub Actions ##
 ###########################
 ###########################
-name: GitHub Super Linter
+name: 🚨 GitHub Super Linter
 
 #
 # Documentation:
@@ -18,16 +18,18 @@ name: GitHub Super Linter
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
-    tags:
-        - '**'
+      - 'release/**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 ###############
@@ -55,16 +57,13 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: github/super-linter@v4.9.1
+        uses: github/super-linter@v4.9.3
 #        uses: docker://github/super-linter:v3.10.2
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
           LINTER_RULES_PATH: .
           MARKDOWN_CONFIG_FILE: .markdown-lint.yml
-          PYTHON_FLAKE8_CONFIG_FILE: .flake8
-          PYTHON_ISORT_CONFIG_FILE: .isort.cfg
-          PYTHON_PYLINT_CONFIG_FILE: pylintrc
           VALIDATE_BASH: true
           VALIDATE_CSS: true
           VALIDATE_DOCKER: true
@@ -74,9 +73,6 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_MD: true
           VALIDATE_POWERSHELL: true
-          VALIDATE_PYTHON_PYLINT: true
-          VALIDATE_PYTHON_FLAKE8: true
-#          VALIDATE_PYTHON_ISORT: true
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_YAML: true

@@ -4,7 +4,7 @@ from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -15,7 +15,7 @@ async def check_block_store_invariant(bc: Blockchain):
 
     in_chain = set()
     max_height = -1
-    async with db_wrapper.write_db() as conn:
+    async with db_wrapper.writer_maybe_transaction() as conn:
         async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
             rows = await cursor.fetchall()
             for row in rows:
@@ -42,6 +42,7 @@ async def _validate_and_add_block(
     expected_result: Optional[ReceiveBlockResult] = None,
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
+    fork_point_with_peak: Optional[uint32] = None,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -74,7 +75,11 @@ async def _validate_and_add_block(
         await check_block_store_invariant(blockchain)
         return None
 
-    result, err, _, _ = await blockchain.receive_block(block, results)
+    (
+        result,
+        err,
+        _,
+    ) = await blockchain.receive_block(block, results, fork_point_with_peak=fork_point_with_peak)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != ReceiveBlockResult.INVALID_BLOCK:

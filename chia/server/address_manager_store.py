@@ -1,6 +1,13 @@
-import aiofiles
+from __future__ import annotations
+
 import asyncio
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+from timeit import default_timer as timer
+from typing import Any, Dict, List, Optional, Tuple
+
+import aiofiles
 
 from chia.server.address_manager import (
     BUCKET_SIZE,
@@ -11,18 +18,13 @@ from chia.server.address_manager import (
 )
 from chia.util.files import write_file_async
 from chia.util.ints import uint64
-from chia.util.path import mkdir
-from chia.util.streamable import streamable, Streamable
-from dataclasses import dataclass
-from pathlib import Path
-from timeit import default_timer as timer
-from typing import Any, Dict, List, Optional, Tuple
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PeerDataSerialization(Streamable):
     """
     Serializable property bag for the peer data that was previously stored in sqlite.
@@ -134,7 +136,7 @@ class AddressManagerStore:
 
         try:
             # Ensure the parent directory exists
-            mkdir(peers_file_path.parent)
+            peers_file_path.parent.mkdir(parents=True, exist_ok=True)
             start_time = timer()
             await cls._write_peers(peers_file_path, metadata, nodes, new_table_entries)
             log.debug(f"Serializing peer data took {timer() - start_time} seconds")

@@ -1,4 +1,6 @@
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -17,7 +19,7 @@ def get_signage_point_vdf_info(
     blocks: BlockchainInterface,
     sp_total_iters: uint128,
     sp_iters: uint64,
-):
+) -> Tuple[bytes32, bytes32, ClassgroupElement, ClassgroupElement, uint64, uint64]:
     """
     Returns the following information, for the VDF of the signage point at sp_total_iters.
     cc and rc challenge hash

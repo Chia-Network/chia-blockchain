@@ -1,31 +1,24 @@
-import dataclasses
-from pathlib import Path
+from __future__ import annotations
 
-import aiosqlite
+import dataclasses
+
 import pytest
-import pytest_asyncio
 
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.weight_proof import WeightProof
-from chia.util.db_wrapper import DBWrapper
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from tests.setup_nodes import test_constants, setup_node_and_wallet
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname):
-        yield _
+from tests.util.db_connection import DBConnection
 
 
 class TestWalletBlockchain:
     @pytest.mark.asyncio
     async def test_wallet_blockchain(self, wallet_node, default_1000_blocks):
-        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+        full_node_api, wallet_node, full_node_server, wallet_server, _ = wallet_node
 
         for block in default_1000_blocks[:600]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -47,35 +40,33 @@ class TestWalletBlockchain:
             )
         )
         weight_proof: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
+        success, _, records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
-        weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
-
-        db_filename = Path("wallet_blockchain_store_test.db")
-
-        if db_filename.exists():
-            db_filename.unlink()
-
-        db_connection = await aiosqlite.connect(db_filename)
-        db_wrapper = DBWrapper(db_connection)
-        store = await KeyValStore.create(db_wrapper)
-        chain = await WalletBlockchain.create(
-            store, test_constants, wallet_node.wallet_state_manager.weight_proof_handler
+        success, _, records_short = await wallet_node._weight_proof_handler.validate_weight_proof(
+            weight_proof_short, True
         )
-        try:
+        weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
+        success, _, records_long = await wallet_node._weight_proof_handler.validate_weight_proof(
+            weight_proof_long, True
+        )
+
+        async with DBConnection(1) as db_wrapper:
+            store = await KeyValStore.create(db_wrapper)
+            chain = await WalletBlockchain.create(store, test_constants)
+
             assert (await chain.get_peak_block()) is None
-            assert chain.get_peak_height() == 0
             assert chain.get_latest_timestamp() == 0
 
-            await chain.new_weight_proof(weight_proof)
+            await chain.new_valid_weight_proof(weight_proof, records)
             assert (await chain.get_peak_block()) is not None
-            assert chain.get_peak_height() == 499
+            assert (await chain.get_peak_block()).height == 499
             assert chain.get_latest_timestamp() > 0
 
-            await chain.new_weight_proof(weight_proof_short)
-            assert chain.get_peak_height() == 499
+            await chain.new_valid_weight_proof(weight_proof_short, records_short)
+            assert (await chain.get_peak_block()).height == 499
 
-            await chain.new_weight_proof(weight_proof_long)
-            assert chain.get_peak_height() == 505
+            await chain.new_valid_weight_proof(weight_proof_long, records_long)
+            assert (await chain.get_peak_block()).height == 505
 
             header_blocks = []
             for block in default_1000_blocks:
@@ -99,14 +90,11 @@ class TestWalletBlockchain:
             )
             assert res == ReceiveBlockResult.INVALID_BLOCK
 
-            assert chain.get_peak_height() == 505
+            assert (await chain.get_peak_block()).height == 505
 
             for block in header_blocks[506:]:
                 res, err = await chain.receive_block(block)
                 assert res == ReceiveBlockResult.NEW_PEAK
-                assert chain.get_peak_height() == block.height
+                assert (await chain.get_peak_block()).height == block.height
 
-            assert chain.get_peak_height() == 999
-        finally:
-            await db_connection.close()
-            db_filename.unlink()
+            assert (await chain.get_peak_block()).height == 999

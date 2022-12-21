@@ -1,19 +1,9 @@
-from pathlib import Path
-from chia.util.db_wrapper import DBWrapper2
+from __future__ import annotations
+
 import tempfile
-import aiosqlite
-from datetime import datetime
-import sys
+from pathlib import Path
 
-
-async def log_conn(c: aiosqlite.Connection, name: str) -> aiosqlite.Connection:
-    def sql_trace_callback(req: str):
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        sys.stdout.write(timestamp + " " + name + " " + req + "\n")
-
-    # uncomment this to debug sqlite interactions
-    # await c.set_trace_callback(sql_trace_callback)
-    return c
+from chia.util.db_wrapper import DBWrapper2
 
 
 class DBConnection:
@@ -24,11 +14,8 @@ class DBConnection:
         self.db_path = Path(tempfile.NamedTemporaryFile().name)
         if self.db_path.exists():
             self.db_path.unlink()
-        connection = await aiosqlite.connect(self.db_path)
-        self._db_wrapper = DBWrapper2(await log_conn(connection, "writer"), self.db_version)
+        self._db_wrapper = await DBWrapper2.create(database=self.db_path, reader_count=4, db_version=self.db_version)
 
-        for i in range(4):
-            await self._db_wrapper.add_connection(await log_conn(await aiosqlite.connect(self.db_path), f"reader-{i}"))
         return self._db_wrapper
 
     async def __aexit__(self, exc_t, exc_v, exc_tb) -> None:

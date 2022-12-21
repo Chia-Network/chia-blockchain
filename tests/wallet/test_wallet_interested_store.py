@@ -1,27 +1,20 @@
-from pathlib import Path
+from __future__ import annotations
+
 from secrets import token_bytes
-import aiosqlite
+
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
-from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
-
 from chia.wallet.wallet_interested_store import WalletInterestedStore
+from tests.util.db_connection import DBConnection
 
 
 class TestWalletInterestedStore:
     @pytest.mark.asyncio
     async def test_store(self):
-        db_filename = Path("wallet_interested_store_test.db")
-
-        if db_filename.exists():
-            db_filename.unlink()
-
-        db_connection = await aiosqlite.connect(db_filename)
-        db_wrapper = DBWrapper(db_connection)
-        store = await WalletInterestedStore.create(db_wrapper)
-        try:
+        async with DBConnection(1) as db_wrapper:
+            store = await WalletInterestedStore.create(db_wrapper)
             coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
             coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
             assert (await store.get_interested_coin_ids()) == []
@@ -46,7 +39,3 @@ class TestWalletInterestedStore:
             await store.remove_interested_puzzle_hash(puzzle_hash)
             assert (await store.get_interested_puzzle_hash_wallet_id(puzzle_hash)) is None
             assert len(await store.get_interested_puzzle_hashes()) == 0
-
-        finally:
-            await db_connection.close()
-            db_filename.unlink()

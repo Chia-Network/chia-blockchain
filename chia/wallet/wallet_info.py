@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List
 
@@ -5,8 +7,8 @@ from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class WalletInfo(Streamable):
     """
     This object represents the wallet data as it is stored in DB.
@@ -24,8 +26,8 @@ class WalletInfo(Streamable):
     data: str
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class WalletInfoBackup(Streamable):
     """
     Used for transforming list of WalletInfo objects into bytes.

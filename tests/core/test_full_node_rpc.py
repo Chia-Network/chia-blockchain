@@ -1,73 +1,51 @@
 # flake8: noqa: F811, F401
-import logging
+from __future__ import annotations
+
 from typing import List
 
 import pytest
-import pytest_asyncio
 from blspy import AugSchemeMPL
+from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import NodeType, start_rpc_server
+from chia.server.outbound_message import NodeType
+from chia.simulator.block_tools import get_signage_point, test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.wallet_tools import WalletTool
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint8
+from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import setup_simulators_and_wallets, test_constants
-from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
-from tests.util.socket import find_available_listen_port
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets():
-    async for _ in setup_simulators_and_wallets(2, 0, {}):
-        yield _
 
 
 class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes_sim_and_wallets, bt, self_hostname):
+    async def test1(self, two_nodes_sim_and_wallets_services, self_hostname):
         num_blocks = 5
-        test_rpc_port = find_available_listen_port()
-        nodes, _ = two_nodes_sim_and_wallets
-        full_node_api_1, full_node_api_2 = nodes
-        server_1 = full_node_api_1.full_node.server
+        nodes, _, bt = two_nodes_sim_and_wallets_services
+        full_node_service_1, full_node_service_2 = nodes
+        full_node_api_1 = full_node_service_1._api
+        full_node_api_2 = full_node_service_2._api
         server_2 = full_node_api_2.full_node.server
 
-        def stop_node_cb():
-            full_node_api_1._close()
-            server_1.close_all()
-
-        full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
-
-        config = bt.config
-        hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
-
-        rpc_cleanup = await start_rpc_server(
-            full_node_rpc_api,
-            hostname,
-            daemon_port,
-            test_rpc_port,
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
-            await validate_get_routes(client, full_node_rpc_api)
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.root_path,
+                full_node_service_1.config,
+            )
+            await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]
@@ -162,6 +140,7 @@ class TestRpc:
             assert len(await client.get_all_mempool_items()) == 0
             assert len(await client.get_all_mempool_tx_ids()) == 0
             assert (await client.get_mempool_item_by_tx_id(spend_bundle.name())) is None
+            assert (await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)) is None
 
             await client.push_tx(spend_bundle)
             coin = spend_bundle.additions()[0]
@@ -181,9 +160,37 @@ class TestRpc:
             )
             assert (await client.get_coin_record_by_name(coin.name())) is None
 
+            # Verify that the include_pending arg to get_mempool_item_by_tx_id works
+            coin_to_spend_pending = list(blocks[-1].get_included_reward_coins())[1]
+            ahr = ConditionOpcode.ASSERT_HEIGHT_RELATIVE  # to force pending/potential
+            condition_dic = {ahr: [ConditionWithArgs(ahr, [int_to_bytes(100)])]}
+            spend_bundle_pending = wallet.generate_signed_transaction(
+                coin_to_spend_pending.amount,
+                ph_receiver,
+                coin_to_spend_pending,
+                condition_dic=condition_dic,
+            )
+            await client.push_tx(spend_bundle_pending)
+            assert (
+                await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)
+            ) is None  # not strictly in the mempool
+            assert (
+                SpendBundle.from_json_dict(
+                    (await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True))["spend_bundle"]
+                )
+                == spend_bundle_pending  # pending entry into mempool, so include_pending fetches
+            )
+
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            assert (await client.get_coin_record_by_name(coin.name())).coin == coin
+            coin_record = await client.get_coin_record_by_name(coin.name())
+            assert coin_record.coin == coin
+            assert (
+                coin
+                in (
+                    await client.get_puzzle_and_solution(coin.parent_coin_info, coin_record.confirmed_block_index)
+                ).additions()
+            )
 
             assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1
             assert len(list(filter(lambda cr: not cr.spent, (await client.get_coin_records_by_puzzle_hash(ph))))) == 3
@@ -195,6 +202,31 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 50, 100)) == 0
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
+
+            coin_records = await client.get_coin_records_by_puzzle_hash(ph, False)
+
+            coin_spends = []
+
+            # Spend 3 coins using standard transaction
+            for i in range(3):
+                spend_bundle = wallet.generate_signed_transaction(
+                    coin_records[i].coin.amount, ph_receiver, coin_records[i].coin
+                )
+                await client.push_tx(spend_bundle)
+                coin_spends = coin_spends + spend_bundle.coin_spends
+                await time_out_assert(
+                    5, full_node_api_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
+                )
+
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+            block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
+
+            assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
+
+            block_spends = await client.get_block_spends(block.header_hash)
+
+            assert len(block_spends) == 3
+            assert block_spends == coin_spends
 
             memo = 32 * b"\f"
 
@@ -254,7 +286,7 @@ class TestRpc:
             blocks: List[FullBlock] = await client.get_blocks(0, 5)
             assert len(blocks) == 5
 
-            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32)))
+            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
             new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
             assert len(new_blocks_0) == 7
 
@@ -269,41 +301,28 @@ class TestRpc:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
-            await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain, bt):
-        test_rpc_port = find_available_listen_port()
-        nodes, _ = two_nodes_sim_and_wallets
-        full_node_api_1, full_node_api_2 = nodes
+    async def test_signage_points(self, two_nodes_sim_and_wallets_services, empty_blockchain):
+        nodes, _, bt = two_nodes_sim_and_wallets_services
+        full_node_service_1, full_node_service_2 = nodes
+        full_node_api_1 = full_node_service_1._api
+        full_node_api_2 = full_node_service_2._api
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
 
         config = bt.config
         self_hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-        def stop_node_cb():
-            full_node_api_1._close()
-            server_1.close_all()
-
-        full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
-
-        rpc_cleanup = await start_rpc_server(
-            full_node_rpc_api,
-            self_hostname,
-            daemon_port,
-            test_rpc_port,
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.root_path,
+                full_node_service_1.config,
+            )
 
             # Only provide one
             res = await client.get_recent_signage_point_or_eos(None, None)
@@ -414,4 +433,3 @@ class TestRpc:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
-            await rpc_cleanup()

@@ -1,12 +1,13 @@
+from __future__ import annotations
+
 from typing import List
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.simulator.block_tools import test_constants
 from chia.types.coin_spend import CoinSpend
 from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
 from tests.core.make_block_generator import GROUP_ORDER, int_to_public_key
-from tests.block_tools import test_constants
 
 
 class KeyTool(dict):
@@ -18,12 +19,12 @@ class KeyTool(dict):
         for _ in secret_exponents:
             self[bytes(int_to_public_key(_))] = _ % GROUP_ORDER
 
-    def sign(self, public_key: bytes, message_hash: bytes32) -> G2Element:
+    def sign(self, public_key: bytes, message: bytes) -> G2Element:
         secret_exponent = self.get(public_key)
         if not secret_exponent:
             raise ValueError("unknown pubkey %s" % public_key.hex())
         bls_private_key = PrivateKey.from_bytes(secret_exponent.to_bytes(32, "big"))
-        return AugSchemeMPL.sign(bls_private_key, message_hash)
+        return AugSchemeMPL.sign(bls_private_key, message)
 
     def signature_for_solution(self, coin_spend: CoinSpend, additional_data: bytes) -> AugSchemeMPL:
         signatures = []
@@ -32,12 +33,9 @@ class KeyTool(dict):
         )
         assert conditions is not None
         conditions_dict = conditions_by_opcode(conditions)
-        for public_key, message_hash in pkm_pairs_for_conditions_dict(
+        for public_key, message in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_spend.coin.name(), additional_data
         ):
-            # TODO: address hint error and remove ignore
-            #       error: Argument 2 to "sign" of "KeyTool" has incompatible type "bytes"; expected "bytes32"
-            #       [arg-type]
-            signature = self.sign(public_key, message_hash)  # type: ignore[arg-type]
+            signature = self.sign(public_key, message)
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)
