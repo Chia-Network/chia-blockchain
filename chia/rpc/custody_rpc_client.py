@@ -9,6 +9,7 @@ from chia.util.ints import uint64
 
 
 class CustodyRpcClient(RpcClient):
+
     async def init(self,
         directory: str,
         withdrawal_timelock: uint64,
@@ -25,7 +26,7 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def derive_cmd(
+    async def derive(
         configuration: str,
         db_path: str,
         pubkeys: str,
