@@ -117,3 +117,10 @@ class Custody:
 
         await derive_cmd(configuration, db_path, pubkeys, initial_lock_level, minimum_pks, validate_against, maximum_lock_level)
 
+
+    async def hsmgen_cmd(self) -> str:
+        from chia.custody.hsms.cmds.hsmgen import hsmgen_cmd
+
+        b = await hsmgen_cmd()
+        return b
+

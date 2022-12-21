@@ -75,6 +75,7 @@ class CustodyRpcApi:
             "/audit": self.audit,
             "/examine": self.examine,
             "/which_pubkeys": self.which_pubkeys,
+            "/hsmgen": self.hsmgen,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -116,6 +117,13 @@ class CustodyRpcApi:
             uint64(minimum_pks),
             validate_against,
             uint64(maximum_lock_level))
+        return {"success": "true"}
+
+    async def hsmgen(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+            
+        await self.service.hsmgen_cmd()
         return {"success": "true"}
 
     async def launch(self, request: Dict[str, Any]) -> EndpointResult:

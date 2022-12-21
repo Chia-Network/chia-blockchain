@@ -26,7 +26,7 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def derive(
+    async def derive(self,
         configuration: str,
         db_path: str,
         pubkeys: str,
@@ -41,6 +41,11 @@ class CustodyRpcClient(RpcClient):
             "minimum_pks": minimum_pks,
             "validate_against": validate_against,
             "maximum_lock_level": maximum_lock_level})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+    async def hsmgen(self) -> str:
+        response = await self.fetch("hsmgen",{})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 

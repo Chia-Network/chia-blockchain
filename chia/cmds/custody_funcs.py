@@ -242,3 +242,13 @@ async def get_sync_status_cmd(
         if client is not None:
             res = await client.get_sync_status(store_id=store_id_bytes)
             print(res)
+
+
+async def hsmgen_cmd(
+    rpc_port: int,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.hsmgen()
+            print(res)
+            

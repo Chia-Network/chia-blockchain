@@ -1771,10 +1771,22 @@ def which_pubkeys_cmd(
 
     print("No combinations were found that matched the aggregate with the specified parameters.")
 
+@custody_cmd.command("hsmgen", short_help="Generate key")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+def hsmgen_cmd(
+    custody_rpc_port: Optional[int],
+) -> None:
+    from chia.cmds.custody_funcs import hsmgen_cmd
 
-def main() -> None:
-    cli()  # pylint: disable=no-value-for-parameter
+    run(hsmgen_cmd(custody_rpc_port))
+    
 
 
-if __name__ == "__main__":
-    main()
+
