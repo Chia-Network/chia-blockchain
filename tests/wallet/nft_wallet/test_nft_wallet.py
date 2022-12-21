@@ -25,6 +25,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced
 
@@ -1636,7 +1637,7 @@ async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: Any, trust
     response = await api_0.sign_message_by_id(
         {"id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value), "message": message}
     )
-    puzzle: Program = Program.to(("Chia Signed Message", message))
+    puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
         G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
         puzzle.get_tree_hash(),

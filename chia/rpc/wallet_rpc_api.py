@@ -70,7 +70,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
@@ -1234,24 +1234,27 @@ class WalletRpcApi:
         :return:
         """
         input_message: str = request["message"]
-        if request.get("is_chia_signed_message", False):
-            # When signing a message with the sign_message_by_address/sign_message_by_id RPCs,
-            # the actual content being signed is the tree hash of:
+        signing_mode: Optional[str] = request.get("signing_mode", None)
+        if signing_mode == "chip_0002":
+            # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
-            message_to_verify: bytes32 = Program.to(("Chia Signed Message", input_message)).get_tree_hash()
+            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
         else:
             # Signed message is expected to be a hex string
-            message_to_verify = bytes.fromhex(input_message)
+            message_to_verify = hexstr_to_bytes(input_message)
 
         is_valid = AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(request["pubkey"])),
             message_to_verify,
-            G2Element.from_bytes(bytes.fromhex(request["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
         )
         if "address" in request:
+            # For signatures made by the sign_message_by_address/sign_message_by_id
+            # endpoints, the "address" field should contain the p2_address of the NFT/DID
+            # that was used to sign the message.
             puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
             if puzzle_hash != puzzle_hash_for_synthetic_public_key(
-                G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+                G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             ):
                 return {"isValid": False, "error": "Public key doesn't match the address"}
         if is_valid:
