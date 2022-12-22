@@ -18,6 +18,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -859,7 +860,9 @@ class WalletNode:
             raise ValueError("Not connected to the full node")
         first_node = all_nodes[0]
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
-        coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
+        coin_state: Optional[RespondToPhUpdates] = await first_node.call_api(
+            FullNodeAPI.register_interest_in_puzzle_hash, msg
+        )
         # TODO validate state if received from untrusted peer
         assert coin_state is not None
         return coin_state.coin_states
@@ -1012,7 +1015,7 @@ class WalletNode:
             return
 
         request = wallet_protocol.RequestBlockHeader(new_peak.height)
-        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
             await peer.close(120)
@@ -1207,7 +1210,9 @@ class WalletNode:
 
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
             request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
-            response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
+            response_prev: Optional[RespondBlockHeader] = await peer.call_api(
+                FullNodeAPI.request_block_header, request_prev
+            )
             if response_prev is None or not isinstance(response_prev, RespondBlockHeader):
                 raise RuntimeError("bad block header response from peer while syncing")
             prev_head = response_prev.header_block
@@ -1246,8 +1251,8 @@ class WalletNode:
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-            weight_request, timeout=wp_timeout
+        weight_proof_response: RespondProofOfWeight = await peer.call_api(
+            FullNodeAPI.request_proof_of_weight, weight_request, timeout=wp_timeout
         )
 
         if weight_proof_response is None:
@@ -1595,8 +1600,8 @@ class WalletNode:
         return True
 
     async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        solution_response = await peer.call_api(
+            FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
@@ -1613,7 +1618,7 @@ class WalletNode:
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_interest_in_coin, msg)
         if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
@@ -1633,8 +1638,8 @@ class WalletNode:
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
 
-        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
-            wallet_protocol.RequestChildren(coin_name)
+        response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
+            FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
         )
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
             raise PeerRequestException(f"Was not able to obtain children {response}")

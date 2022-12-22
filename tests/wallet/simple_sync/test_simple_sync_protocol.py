@@ -44,7 +44,7 @@ async def get_all_messages_in_queue(queue):
     all_messages = []
     await asyncio.sleep(2)
     while not queue.empty():
-        message, peer = await queue.get()
+        message = await queue.get()
         all_messages.append(message)
     return all_messages
 

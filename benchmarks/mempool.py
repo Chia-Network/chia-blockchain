@@ -146,9 +146,10 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
         async def add_spend_bundles(spend_bundles: List[SpendBundle]) -> None:
             for tx in spend_bundles:
-                npc = await mempool.pre_validate_spendbundle(tx, None, tx.name())
+                spend_bundle_id = tx.name()
+                npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)
                 assert npc is not None
-                _, status, error = await mempool.add_spend_bundle(tx, npc, tx.name(), height)
+                _, status, error = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
                 assert status == MempoolInclusionStatus.SUCCESS
                 assert error is None
 
@@ -166,8 +167,8 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
         with enable_profiler(True, f"create-{suffix}"):
             start = monotonic()
-            for i in range(2000):
-                await mempool.create_bundle_from_mempool(bytes32(b"a" * 32))
+            for _ in range(2000):
+                mempool.create_bundle_from_mempool(bytes32(b"a" * 32))
             stop = monotonic()
         print(f"create_bundle_from_mempool time: {stop - start:0.4f}s")
 

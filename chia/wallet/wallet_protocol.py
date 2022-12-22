@@ -61,6 +61,9 @@ class WalletProtocol(Protocol):
     def require_derivation_paths(self) -> bool:
         ...
 
+    def get_name(self) -> str:
+        ...
+
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment

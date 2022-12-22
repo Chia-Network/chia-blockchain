@@ -70,6 +70,7 @@ watchdog = "2.1.9"  # Filesystem event watching - watches keyring.yaml
 zstd = "1.5.2.6"
 
 aiohttp_cors = { version = "^0.7.0", optional = true }
+anyio = { version = "^3.6", optional = true }
 # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
 black = { version = "22.10.0", optional = true }
 build = { version = "^0.9", optional = true }
@@ -100,7 +101,7 @@ types-setuptools = { version = "^65.5.0.2", optional = true }
 miniupnpc = { version = "2.2.2", source = "chia", optional = true }
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "anyio", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
@@ -119,7 +120,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version =  ['py37', 'py38', 'py39']
+target-version =  ['py37', 'py38', 'py39', 'py310']
 include = '''
 ^/(
     [^/]*.py

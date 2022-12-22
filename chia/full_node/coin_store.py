@@ -560,7 +560,7 @@ class CoinStore:
                 name_params = ",".join(["?"] * len(coin_names_chunk))
                 if self.db_wrapper.db_version == 2:
                     ret: Cursor = await conn.execute(
-                        f"UPDATE OR FAIL coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                        f"UPDATE coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
                         f"SET spent_index={index} "
                         f"WHERE spent_index=0 "
                         f"AND coin_name IN ({name_params})",
@@ -568,7 +568,7 @@ class CoinStore:
                     )
                 else:
                     ret = await conn.execute(
-                        f"UPDATE OR FAIL coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                        f"UPDATE coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
                         f"SET spent=1, spent_index={index} "
                         f"WHERE spent_index=0 "
                         f"AND coin_name IN ({name_params})",

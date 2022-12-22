@@ -184,7 +184,7 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash is not None
         asset_id = cat_wallet.get_asset_id()
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+        cat_wallet_2: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
             wallet_node_2.wallet_state_manager, wallet2, asset_id
         )
 
@@ -276,10 +276,10 @@ class TestCATWallet:
         # Test that the a default CAT will initialize correctly
         asset = DEFAULT_CATS[next(iter(DEFAULT_CATS))]
         asset_id = asset["asset_id"]
-        cat_wallet_2 = await CATWallet.create_wallet_for_cat(wallet_node.wallet_state_manager, wallet, asset_id)
-        assert await cat_wallet_2.get_name() == asset["name"]
+        cat_wallet_2 = await CATWallet.get_or_create_wallet_for_cat(wallet_node.wallet_state_manager, wallet, asset_id)
+        assert cat_wallet_2.get_name() == asset["name"]
         await cat_wallet_2.set_name("Test Name")
-        assert await cat_wallet_2.get_name() == "Test Name"
+        assert cat_wallet_2.get_name() == "Test Name"
 
     @pytest.mark.parametrize(
         "trusted",
@@ -332,7 +332,7 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash is not None
         asset_id = cat_wallet.get_asset_id()
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+        cat_wallet_2: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
             wallet_node_2.wallet_state_manager, wallet2, asset_id
         )
 
@@ -422,11 +422,11 @@ class TestCATWallet:
         assert cat_wallet_0.cat_info.limitations_program_hash is not None
         asset_id = cat_wallet_0.get_asset_id()
 
-        cat_wallet_1: CATWallet = await CATWallet.create_wallet_for_cat(
+        cat_wallet_1: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
             wallet_node_1.wallet_state_manager, wallet_1, asset_id
         )
 
-        cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+        cat_wallet_2: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
             wallet_node_2.wallet_state_manager, wallet_2, asset_id
         )
 

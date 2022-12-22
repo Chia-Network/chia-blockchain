@@ -16,6 +16,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.util.network import get_host_addr
 from chia.util.task_timing import maybe_manage_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 
@@ -56,8 +57,10 @@ def create_wallet_service(
     fnp = service_config.get("full_node_peer")
 
     if fnp:
-        connect_peers = [PeerInfo(fnp["host"], fnp["port"])]
-        node.full_node_peer = PeerInfo(fnp["host"], fnp["port"])
+        node.full_node_peer = PeerInfo(
+            str(get_host_addr(fnp["host"], prefer_ipv6=config.get("prefer_ipv6", False))), fnp["port"]
+        )
+        connect_peers = [node.full_node_peer]
     else:
         connect_peers = []
         node.full_node_peer = None
