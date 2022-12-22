@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import List, Optional, Set
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,10 +27,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
-
-if TYPE_CHECKING:
-    from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
