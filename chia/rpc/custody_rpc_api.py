@@ -77,7 +77,8 @@ class CustodyRpcApi:
             # "/which_pubkeys": self.which_pubkeys,
             "/hsmgen": self.hsmgen,
             "/hsmpk": self.hsmpk,
-            #x "/hsmmerge": self.hsmmerge,
+            "/hsms": self.hsms,
+            "/hsmmerge": self.hsmmerge,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -165,7 +166,7 @@ class CustodyRpcApi:
         wjb = await self.service.show_cmd(db_path,
             config,
             derivation)
-        return {"wjb": wjb}
+        return {"info": wjb}
 
     async def address(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -175,7 +176,7 @@ class CustodyRpcApi:
                      
         wjb = await self.service.address_cmd(db_path,
             prefix)
-        return {"wjb": wjb}
+        return {"address": wjb}
 
     async def push(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -232,4 +233,21 @@ class CustodyRpcApi:
         publickey = await self.service.hsmpk_cmd(secretkey)
         return {"publickey": publickey}
 
- 
+    async def hsms(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+            
+        message = request.get("message")
+        secretkey = request.get("secretkey")
+        bundle = await self.service.hsms_cmd(message, secretkey)
+        return {"signature": bundle}
+
+    async def hsmmerge(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        
+        bundle = request.get("bundle")
+        sigs = request.get("sigs")
+        bundle = await self.service.hsmmerge_cmd(bundle, sigs)
+        return {"signedbundle": bundle}
+

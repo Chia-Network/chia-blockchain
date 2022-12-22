@@ -12,15 +12,15 @@ import zlib
 
 import segno
 
-from hsms.bls12_381.BLSSecretExponent import BLSSecretExponent, BLSSignature
-from hsms.consensus.conditions import conditions_by_opcode
-from hsms.process.sign import conditions_for_coin_spend, sign
-from hsms.process.unsigned_spend import UnsignedSpend
-from hsms.puzzles import conlang
-from hsms.streamables import bytes32, Program
-from hsms.util.bech32 import bech32_encode
-from hsms.util.byte_chunks import ChunkAssembler
-from hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
+from chia.custody.hsms.bls12_381.BLSSecretExponent import BLSSecretExponent, BLSSignature
+from chia.custody.hsms.consensus.conditions import conditions_by_opcode
+from chia.custody.hsms.process.sign import conditions_for_coin_spend, sign
+from chia.custody.hsms.process.unsigned_spend import UnsignedSpend
+from chia.custody.hsms.puzzles import conlang
+from chia.custody.hsms.streamables import bytes32, Program
+from chia.custody.hsms.util.bech32 import bech32_encode
+from chia.custody.hsms.util.byte_chunks import ChunkAssembler
+from chia.custody.hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
 
 
 XCH_PER_MOJO = Decimal(1e12)
@@ -123,7 +123,11 @@ def check_ok():
     return text.lower() == "ok"
 
 
-def hsms(args, parser):
+async def hsms_cmd(
+    message:str,
+    secretkey:str) -> str:
+    return "NOT DONE"
+    
     wallet = parse_private_key_file(args)
     unsigned_spend_pipeline = create_unsigned_spend_pipeline(args.nochunks)
     for unsigned_spend in unsigned_spend_pipeline:
@@ -143,7 +147,7 @@ def hsms(args, parser):
                 qr.terminal(compact=True)
                 print()
             else:
-                print(encoded_sig)
+                return encoded_sig
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -181,12 +185,3 @@ def create_parser() -> argparse.ArgumentParser:
     )
     return parser
 
-
-def main():
-    parser = create_parser()
-    args = parser.parse_args()
-    return hsms(args, parser)
-
-
-if __name__ == "__main__":
-    main()

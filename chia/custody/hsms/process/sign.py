@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
 from weakref import WeakKeyDictionary
 
-from hsms.atoms import hexbytes
-from hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
-from hsms.consensus.conditions import conditions_by_opcode
-from hsms.streamables import bytes32, CoinSpend, Program
-from hsms.puzzles.conlang import AGG_SIG_ME, AGG_SIG_UNSAFE
+from chia.custody.hsms.atoms import hexbytes
+from chia.custody.hsms.bls12_381 import BLSPublicKey, BLSSecretExponent
+from chia.custody.hsms.consensus.conditions import conditions_by_opcode
+from chia.custody.hsms.streamables import bytes32, CoinSpend, Program
+from chia.custody.hsms.puzzles.conlang import AGG_SIG_ME, AGG_SIG_UNSAFE
 
 from .signing_hints import SumHint, SumHints, PathHint, PathHints
 from .unsigned_spend import SignatureInfo, UnsignedSpend

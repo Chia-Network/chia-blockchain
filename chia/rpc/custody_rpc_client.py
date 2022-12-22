@@ -128,3 +128,19 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+
+    async def hsms(self,
+        message:str,
+        secretkey:str) -> Dict[str, Any]:
+        response = await self.fetch("hsms",{"message": message, "secretkey":secretkey})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def hsmmerge(self,
+        bundle:str,
+        sigs:str) -> Dict[str, Any]:
+        response = await self.fetch("hsmmerge",{"bundle": bundle, "sigs": sigs})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+

@@ -1,6 +1,6 @@
 from typing import Dict, Iterable, List
 
-from hsms.streamables import Program
+from chia.custody.hsms.streamables import Program
 
 
 def iter_program(program: Program) -> Iterable[Program]:

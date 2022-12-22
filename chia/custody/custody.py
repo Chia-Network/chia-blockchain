@@ -209,3 +209,21 @@ class Custody:
         b = await hsmpk_cmd(secretkey)
         return b
 
+
+    async def hsms_cmd(self,
+        message:str,
+        secretkey:str) -> str:
+        from chia.custody.hsms.cmds.hsms import hsms_cmd
+
+        b = await hsms_cmd(message,secretkey)
+        return b
+
+
+    async def hsmmerge_cmd(self,
+        bundle:str,
+        sigs:str) -> str:
+        from chia.custody.hsms.cmds.hsmmerge import hsmmerge_cmd
+
+        b = await hsmmerge_cmd(bundle,sigs)
+        return b
+

@@ -139,3 +139,26 @@ async def hsmpk_cmd(
             res = await client.hsmpk(secretkey)
             print(res)
 
+
+async def hsms_cmd(
+    rpc_port: int,
+    message:str,
+    secretkey: str,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.hsms(message, secretkey)
+            print(res)
+
+
+async def hsmmerge_cmd(
+    rpc_port: int,
+    bundle: str,
+    sigs: str
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.hsmmerge(bundle, sigs)
+            print(res)
+
+

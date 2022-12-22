@@ -1366,4 +1366,68 @@ def hsmpk_cmd(
     run(hsmpk_cmd(custody_rpc_port, secretkey))
  
 
+@custody_cmd.command("hsms", short_help="Sign message")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "-m",
+    "--message",
+    help="Message to be signed",
+    type=str,
+    required=True,
+)
+@click.option(
+    "-s",
+    "--secretkey",
+    help="Secret key to be used for signing",
+    type=str,
+    required=True,
+)
+def hsms_cmd(
+    custody_rpc_port: Optional[int],
+    message:str,
+    secretkey: str,
+) -> None:
+    from chia.cmds.custody_funcs import hsms_cmd
+
+    run(hsms_cmd(custody_rpc_port, message, secretkey))
+ 
+
+
+@custody_cmd.command("hsmmerge", short_help="Merge bundle with signatures")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "-b",
+    "--bundle",
+    help="Bundle to be merged",
+    type=str,
+    required=True,
+)
+@click.option(
+    "-s", "--sigs", help="A comma separated list of sig files to be merged", required=True
+)
+def hsmmerge_cmd(
+    custody_rpc_port: Optional[int],
+    bundle: str,
+    sigs: str
+) -> None:
+    from chia.cmds.custody_funcs import hsmmerge_cmd
+
+    run(hsmmerge_cmd(custody_rpc_port, bundle, sigs))
+ 
+
+
 
