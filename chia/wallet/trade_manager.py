@@ -234,10 +234,8 @@ class TradeManager:
             if wallet is None:
                 continue
 
-            if wallet.type() == WalletType.NFT.value:
-                new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
-            else:
-                new_ph = await wallet.get_new_puzzlehash()
+            # All the wallets currently return the standard wallet puz hash
+            new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
             # This should probably not switch on whether or not we're spending a XCH but it has to for now
             if wallet.type() == WalletType.STANDARD_WALLET.value:
                 if fee_to_pay > coin.amount:
@@ -313,10 +311,8 @@ class TradeManager:
                     self.log.error(f"Cannot find wallet for offer {trade.trade_id}, skip cancellation.")
                     continue
 
-                if wallet.type() == WalletType.NFT.value:
-                    new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
-                else:
-                    new_ph = await wallet.get_new_puzzlehash()
+                # All the wallets currently return the standard wallet puz hash
+                new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET.value:
                     if fee_to_pay > coin.amount:
@@ -462,7 +458,7 @@ class TradeManager:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
-                        p2_ph: bytes32 = await wallet.get_new_puzzlehash()
+                        p2_ph: bytes32 = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
                         if wallet.type() != WalletType.STANDARD_WALLET.value:
                             if isinstance(wallet, CATWallet):
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))

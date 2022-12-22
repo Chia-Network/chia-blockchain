@@ -386,9 +386,6 @@ class CATWallet:
     async def get_new_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    async def get_new_puzzlehash(self) -> bytes32:
-        return await self.standard_wallet.get_new_puzzlehash()
-
     def require_derivation_paths(self) -> bool:
         return True
 
