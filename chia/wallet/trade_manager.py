@@ -237,7 +237,7 @@ class TradeManager:
             # All the wallets currently return the standard wallet puz hash
             new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
             # This should probably not switch on whether or not we're spending a XCH but it has to for now
-            if wallet.type() == WalletType.STANDARD_WALLET.value:
+            if wallet.type() == WalletType.STANDARD_WALLET.value and isinstance(wallet, Wallet):
                 if fee_to_pay > coin.amount:
                     selected_coins: Set[Coin] = await wallet.select_coins(
                         uint64(fee_to_pay - coin.amount),
@@ -256,10 +256,15 @@ class TradeManager:
                 all_txs.append(tx)
             else:
                 # ATTENTION: new_wallets
-                txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
-                )
-                all_txs.extend(txs)
+                if (
+                    isinstance(wallet, CATWallet)
+                    or isinstance(wallet, NFTWallet)
+                    or isinstance(wallet, DataLayerWallet)
+                ):
+                    txs = await wallet.generate_signed_transaction(
+                        [uint64(coin.amount)], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    )
+                    all_txs.extend(txs)
             fee_to_pay = uint64(0)
 
             cancellation_addition = Coin(coin.name(), new_ph, coin.amount)
@@ -314,7 +319,7 @@ class TradeManager:
                 # All the wallets currently return the standard wallet puz hash
                 new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
-                if wallet.type() == WalletType.STANDARD_WALLET.value:
+                if wallet.type() == WalletType.STANDARD_WALLET.value and isinstance(wallet, Wallet):
                     if fee_to_pay > coin.amount:
                         selected_coins: Set[Coin] = await wallet.select_coins(
                             uint64(fee_to_pay - coin.amount),
@@ -335,13 +340,18 @@ class TradeManager:
                         all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 else:
                     # ATTENTION: new_wallets
-                    txs = await wallet.generate_signed_transaction(
-                        [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
-                    )
-                    for tx in txs:
-                        if tx is not None and tx.spend_bundle is not None:
-                            bundles.append(tx.spend_bundle)
-                            all_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                    if (
+                        isinstance(wallet, CATWallet)
+                        or isinstance(wallet, NFTWallet)
+                        or isinstance(wallet, DataLayerWallet)
+                    ):
+                        txs = await wallet.generate_signed_transaction(
+                            [uint64(coin.amount)], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                        )
+                        for tx in txs:
+                            if tx is not None and tx.spend_bundle is not None:
+                                bundles.append(tx.spend_bundle)
+                                all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 fee_to_pay = uint64(0)
 
                 cancellation_addition = Coin(coin.name(), new_ph, coin.amount)
@@ -526,7 +536,8 @@ class TradeManager:
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 requested_payments, all_coins
             )
-            announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
+            # generate_signed_transactions expects a Set
+            announcements_to_assert = set(Offer.calculate_announcements(notarized_payments, driver_dict))
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
@@ -536,19 +547,19 @@ class TradeManager:
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 # This should probably not switch on whether or not we're spending XCH but it has to for now
-                if wallet.type() == WalletType.STANDARD_WALLET.value:
+                if wallet.type() == WalletType.STANDARD_WALLET.value and isinstance(wallet, Wallet):
                     tx = await wallet.generate_signed_transaction(
-                        abs(offer_dict[id]),
+                        uint64(abs(offer_dict[id])),
                         Offer.ph(),
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.append(tx)
-                elif wallet.type() == WalletType.NFT.value:
+                elif wallet.type() == WalletType.NFT.value and isinstance(wallet, NFTWallet):
                     # This is to generate the tx for specific nft assets, i.e. not using
                     # wallet_id as the selector which would select any coins from nft_wallet
-                    amounts = [coin.amount for coin in selected_coins]
+                    amounts = [uint64(coin.amount) for coin in selected_coins]
                     txs = await wallet.generate_signed_transaction(
                         # [abs(offer_dict[id])],
                         amounts,
@@ -560,14 +571,15 @@ class TradeManager:
                     all_transactions.extend(txs)
                 else:
                     # ATTENTION: new_wallets
-                    txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[id])],
-                        [Offer.ph()],
-                        fee=fee_left_to_pay,
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.extend(txs)
+                    if isinstance(wallet, CATWallet) or isinstance(wallet, DataLayerWallet):
+                        txs = await wallet.generate_signed_transaction(
+                            [uint64(abs(offer_dict[id]))],
+                            [Offer.ph()],
+                            fee=fee_left_to_pay,
+                            coins=set(selected_coins),
+                            puzzle_announcements_to_consume=announcements_to_assert,
+                        )
+                        all_transactions.extend(txs)
 
                 fee_left_to_pay = uint64(0)
 
