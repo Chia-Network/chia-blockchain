@@ -1289,11 +1289,13 @@ class WalletNode:
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
         all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        puzzle_store_count = len(all_puzzle_hashes)
         # Get all phs from interested store
         interested_puzzle_hashes = [
             t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
         ]
         all_puzzle_hashes.extend(interested_puzzle_hashes)
+        assert puzzle_store_count + len(interested_puzzle_hashes) == len(set(all_puzzle_hashes))
         return all_puzzle_hashes
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
