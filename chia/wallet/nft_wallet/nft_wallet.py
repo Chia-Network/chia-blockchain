@@ -512,9 +512,6 @@ class NFTWallet:
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
 
-    async def convert_puzzle_hash(self, puzhash: bytes32) -> bytes32:
-        return puzhash
-
     async def get_nft(self, launcher_id: bytes32) -> Optional[NFTCoinInfo]:
         return await self.nft_store.get_nft_by_id(launcher_id)
 

@@ -630,7 +630,9 @@ class TradeManager:
                 wallet_id, _ = wallet_info
                 if addition.parent_coin_info in settlement_coin_ids:
                     wallet = self.wallet_state_manager.wallets[wallet_id]
-                    to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
+                    to_puzzle_hash = await self.wallet_state_manager.convert_puzzle_hash(
+                        wallet_id, addition.puzzle_hash
+                    )  # Use WSM call here rather than adding to wallet
                     txs.append(
                         TransactionRecord(
                             confirmed_at_height=uint32(0),
