@@ -261,7 +261,7 @@ async def launch_cmd(
     
     node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
     
-    return f"s node_client {node_client} wallet_client {wallet_client}"
+    # return f"s node_client {node_client} wallet_client {wallet_client}"
     
     try:
         fund_coins: List[Coin] = await wallet_client.select_coins(amount=(1 + fee), wallet_id=1)
@@ -288,7 +288,7 @@ async def launch_cmd(
             )
         ).spend_bundle
         
-        return fund_bundle
+        # return fund_bundle
         
         result = await node_client.push_tx(SpendBundle.aggregate([creation_bundle, fund_bundle]))
         if not result["success"]:

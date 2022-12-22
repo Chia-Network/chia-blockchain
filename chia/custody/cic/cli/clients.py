@@ -53,11 +53,12 @@ async def get_node_and_wallet_clients(
         assert full_node_client is not None
         _wallet_client = await get_wallet_client(wallet_rpc_port)
         assert _wallet_client is not None
-        return full_node_client, _wallet_client # wjb how best to do get_wallet
-        wallet_client_f = await get_wallet(_wallet_client, fingerprint)
-        assert wallet_client_f is not None
-        wallet_client, _ = wallet_client_f
-        return full_node_client, wallet_client
+        # return full_node_client, _wallet_client # wjb how best to do get_wallet
+        # wallet_client_f = await get_wallet(_wallet_client, fingerprint)
+        # assert wallet_client_f is not None
+        # wallet_client, _ = wallet_client_f
+        wallet_client = await _wallet_client.log_in(fingerprint)
+        return full_node_client, _wallet_client
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
             pprint("Connection error. Check if full node and wallet are running.")
