@@ -263,53 +263,52 @@ async def launch_cmd(
     
     # return f"s node_client {node_client} wallet_client {wallet_client}"
     
-    try:
-        fund_coins: List[Coin] = await wallet_client.select_coins(amount=(1 + fee), wallet_id=1)
-        fund_coin: Coin = fund_coins[0]
-        launcher_coin = Coin(fund_coin.name(), SINGLETON_LAUNCHER_HASH, 1)
-        new_derivation: RootDerivation = calculate_puzzle_root(
-            dataclasses.replace(derivation.prefarm_info, launcher_id=launcher_coin.name()),
-            derivation.pubkey_list,
-            derivation.required_pubkeys,
-            derivation.maximum_pubkeys,
-            derivation.minimum_pubkeys,
+    fund_coins: List[Coin] = await wallet_client.select_coins(amount=(1 + fee), wallet_id=1)
+    fund_coin: Coin = fund_coins[0]
+    launcher_coin = Coin(fund_coin.name(), SINGLETON_LAUNCHER_HASH, 1)
+    new_derivation: RootDerivation = calculate_puzzle_root(
+        dataclasses.replace(derivation.prefarm_info, launcher_id=launcher_coin.name()),
+        derivation.pubkey_list,
+        derivation.required_pubkeys,
+        derivation.maximum_pubkeys,
+        derivation.minimum_pubkeys,
+    )
+    _, launch_spend = generate_launch_conditions_and_coin_spend(
+        fund_coin, construct_singleton_inner_puzzle(new_derivation.prefarm_info), uint64(1)
+    )
+    creation_bundle = SpendBundle([launch_spend], G2Element())
+    announcement = Announcement(launcher_coin.name(), launch_spend.solution.to_program().get_tree_hash())
+    fund_bundle: SpendBundle = (
+        await wallet_client.create_signed_transaction(
+            [{"puzzle_hash": SINGLETON_LAUNCHER_HASH, "amount": 1}],
+            fund_coins,  # I think this is probably imperfect but will work for now
+            fee=uint64(fee),
+            coin_announcements=[announcement],
         )
-        _, launch_spend = generate_launch_conditions_and_coin_spend(
-            fund_coin, construct_singleton_inner_puzzle(new_derivation.prefarm_info), uint64(1)
+    ).spend_bundle
+    
+    # return fund_bundle
+    
+    result = await node_client.push_tx(SpendBundle.aggregate([creation_bundle, fund_bundle]))
+    if not result["success"]:
+        raise ValueError(result["error"])
+
+    with open(Path(configuration), "wb") as file:
+        file.write(bytes(new_derivation))
+    if "awaiting launch" in configuration:
+        os.rename(
+            Path(configuration),
+            Path(
+                new_derivation.prefarm_info.puzzle_root[0:3].hex().join(configuration.split("awaiting launch"))
+            ),
         )
-        creation_bundle = SpendBundle([launch_spend], G2Element())
-        announcement = Announcement(launcher_coin.name(), launch_spend.solution.to_program().get_tree_hash())
-        fund_bundle: SpendBundle = (
-            await wallet_client.create_signed_transaction(
-                [{"puzzle_hash": SINGLETON_LAUNCHER_HASH, "amount": 1}],
-                fund_coins,  # I think this is probably imperfect but will work for now
-                fee=uint64(fee),
-                coin_announcements=[announcement],
-            )
-        ).spend_bundle
-        
-        # return fund_bundle
-        
-        result = await node_client.push_tx(SpendBundle.aggregate([creation_bundle, fund_bundle]))
-        if not result["success"]:
-            raise ValueError(result["error"])
 
-        with open(Path(configuration), "wb") as file:
-            file.write(bytes(new_derivation))
-        if "awaiting launch" in configuration:
-            os.rename(
-                Path(configuration),
-                Path(
-                    new_derivation.prefarm_info.puzzle_root[0:3].hex().join(configuration.split("awaiting launch"))
-                ),
-            )
-
-        print("Singleton successfully launched")
-    finally:
-        node_client.close()
-        wallet_client.close()
-        await node_client.await_closed()
-        await wallet_client.await_closed()
+    print("Singleton successfully launched")
+    
+    node_client.close()
+    wallet_client.close()
+    await node_client.await_closed()
+    await wallet_client.await_closed()
 
     return "hi"
    
@@ -385,255 +384,249 @@ async def sync_cmd(
 ) -> str:
     # Start sync
     # return f"configuration {configuration} db_path {db_path} node_rpc_port {node_rpc_port} show {show}"
-    try:
-        node_client = await get_node_client(node_rpc_port)
+    node_client = await get_node_client(node_rpc_port)
 
-        if configuration is not None:
-            try:
-                db_config = load_root_derivation(configuration)
-                prefarm_info = db_config.prefarm_info
-            except ValueError:
-                db_config = load_prefarm_info(configuration)
-                prefarm_info = db_config
-            # return f"db_path {db_path} prefarm_info {prefarm_info}"
-            sync_store: SyncStore = await load_db(db_path, prefarm_info.launcher_id)
-            # return f"sync_store {sync_store}"
-            await sync_store.add_configuration(db_config)
-        else:
-            sync_store: SyncStore = await load_db(db_path)
-            prefarm_info = await sync_store.get_configuration(public=True, block_outdated=False)
-       
-        current_singleton: Optional[SingletonRecord] = await sync_store.get_latest_singleton()
-        current_coin_record: Optional[CoinRecord] = None
-        if current_singleton is None:
-            launcher_coin = await node_client.get_coin_record_by_name(prefarm_info.launcher_id)
-            # return f"node_client {node_client} prefarm_info.launcher_id {prefarm_info.launcher_id} launcher_coin {launcher_coin}"
-            if launcher_coin is None:
-                raise ValueError(f"The singleton {prefarm_info.launcher_id} has not been launched yet")
-            current_coin_record = (await node_client.get_coin_records_by_parent_ids([prefarm_info.launcher_id]))[0]
-            if current_coin_record.spent_block_index == 0:
-                if construct_full_singleton(prefarm_info).get_tree_hash() != current_coin_record.coin.puzzle_hash:
-                    raise ValueError("The specified config has the incorrect puzzle root")
-                else:
-                    puzzle_root = prefarm_info.puzzle_root
+    if configuration is not None:
+        try:
+            db_config = load_root_derivation(configuration)
+            prefarm_info = db_config.prefarm_info
+        except ValueError:
+            db_config = load_prefarm_info(configuration)
+            prefarm_info = db_config
+        # return f"db_path {db_path} prefarm_info {prefarm_info}"
+        sync_store: SyncStore = await load_db(db_path, prefarm_info.launcher_id)
+        # return f"sync_store {sync_store}"
+        await sync_store.add_configuration(db_config)
+    else:
+        sync_store: SyncStore = await load_db(db_path)
+        prefarm_info = await sync_store.get_configuration(public=True, block_outdated=False)
+   
+    current_singleton: Optional[SingletonRecord] = await sync_store.get_latest_singleton()
+    current_coin_record: Optional[CoinRecord] = None
+    if current_singleton is None:
+        launcher_coin = await node_client.get_coin_record_by_name(prefarm_info.launcher_id)
+        # return f"node_client {node_client} prefarm_info.launcher_id {prefarm_info.launcher_id} launcher_coin {launcher_coin}"
+        if launcher_coin is None:
+            raise ValueError(f"The singleton {prefarm_info.launcher_id} has not been launched yet")
+        current_coin_record = (await node_client.get_coin_records_by_parent_ids([prefarm_info.launcher_id]))[0]
+        if current_coin_record.spent_block_index == 0:
+            if construct_full_singleton(prefarm_info).get_tree_hash() != current_coin_record.coin.puzzle_hash:
+                raise ValueError("The specified config has the incorrect puzzle root")
             else:
-                initial_spend = await node_client.get_puzzle_and_solution(
-                    current_coin_record.coin.name(), current_coin_record.spent_block_index
-                )
-                puzzle_root = get_puzzle_root_from_puzzle(initial_spend.puzzle_reveal.to_program())
-            current_singleton = SingletonRecord(
-                current_coin_record.coin,
-                puzzle_root,
-                LineageProof(parent_name=launcher_coin.coin.parent_coin_info, amount=launcher_coin.coin.amount),
-                current_coin_record.timestamp,
-                uint32(0),
-                None,
-                None,
-                None,
-                None,
-            )
-            await sync_store.add_singleton_record(current_singleton)
-        if current_coin_record is None:
-            current_coin_record = await node_client.get_coin_record_by_name(current_singleton.coin.name())
-
-        p2_singleton_begin_sync: uint32 = current_coin_record.confirmed_block_index
-        # Begin loop
-        while True:
-            latest_spend: Optional[CoinSpend] = await node_client.get_puzzle_and_solution(
+                puzzle_root = prefarm_info.puzzle_root
+        else:
+            initial_spend = await node_client.get_puzzle_and_solution(
                 current_coin_record.coin.name(), current_coin_record.spent_block_index
             )
-            if latest_spend is None:
-                if current_singleton.puzzle_root != prefarm_info.puzzle_root:
-                    outdated: bool = await sync_store.update_config_puzzle_root(current_singleton.puzzle_root)
-                    if outdated:
-                        print("Configuration is outdated, please update it with command cic update_config")
-                break
-
-            # Fill in all of the information about the spent singleton
-            latest_solution: Program = latest_spend.solution.to_program()
-            spend_type: SpendType = get_spend_type_for_solution(latest_solution)
-            await sync_store.add_singleton_record(
-                dataclasses.replace(
-                    current_singleton,
-                    puzzle_reveal=latest_spend.puzzle_reveal,
-                    solution=latest_spend.solution,
-                    spend_type=spend_type,
-                    spending_pubkey=get_spending_pubkey_for_solution(latest_solution),
-                )
-            )
-
-            # Create the new singleton's record
-            all_children: List[CoinRecord] = await node_client.get_coin_records_by_parent_ids(
-                [current_coin_record.coin.name()], include_spent_coins=True
-            )
-            drop_coin: Optional[CoinRecord] = None
-            potential_drop_coins = [cr for cr in all_children if cr.coin.amount % 2 == 0]
-            if len(potential_drop_coins) > 0:
-                drop_coin = potential_drop_coins[0]
-            next_coin_record = [cr for cr in all_children if cr.coin.amount % 2 == 1][0]
-            if next_coin_record.coin.puzzle_hash == current_coin_record.coin.puzzle_hash:
-                next_puzzle_root: bytes32 = current_singleton.puzzle_root
-            else:
-                next_puzzle_root = get_new_puzzle_root_from_solution(latest_solution)
-            next_singleton = SingletonRecord(
-                next_coin_record.coin,
-                next_puzzle_root,
-                LineageProof(
-                    current_coin_record.coin.parent_coin_info,
-                    construct_singleton_inner_puzzle(
-                        dataclasses.replace(prefarm_info, puzzle_root=current_singleton.puzzle_root)
-                    ).get_tree_hash(),
-                    current_coin_record.coin.amount,
-                ),
-                next_coin_record.timestamp,
-                uint32(current_singleton.generation + 1),
-                None,
-                None,
-                None,
-                None,
-            )
-            await sync_store.add_singleton_record(next_singleton)
-            # Detect any drop coins and add records for them
-            if drop_coin is not None:
-                if spend_type == SpendType.HANDLE_PAYMENT:
-                    _, _, p2_ph = get_spend_params_for_ach_creation(latest_solution)
-                    await sync_store.add_ach_record(
-                        ACHRecord(
-                            drop_coin.coin,
-                            current_singleton.puzzle_root,
-                            p2_ph,
-                            drop_coin.timestamp,
-                            None,
-                            None,
-                            None,
-                        )
-                    )
-                elif spend_type == SpendType.START_REKEY:
-                    timelock, new_root = get_spend_params_for_rekey_creation(latest_solution)
-                    await sync_store.add_rekey_record(
-                        RekeyRecord(
-                            drop_coin.coin,
-                            current_singleton.puzzle_root,
-                            new_root,
-                            timelock,
-                            drop_coin.timestamp,
-                            None,
-                            None,
-                            None,
-                        )
-                    )
-            # Loop with the next coin
-            current_coin_record = next_coin_record
-            current_singleton = next_singleton
-        # Mark any p2_singletons spent
-        i: int = 0
-        while True:
-            unspent_p2_singletons: List[bytes32] = [
-                c.name() for c in (await sync_store.get_p2_singletons(start_end=(i, i + 100)))
-            ]
-            if unspent_p2_singletons == []:
-                break
-            p2_singleton_records = await node_client.get_coin_records_by_names(
-                unspent_p2_singletons,
-                include_spent_coins=True,
-            )
-            for p2_singleton in p2_singleton_records:
-                if p2_singleton.spent_block_index > 0:
-                    await sync_store.set_p2_singleton_spent(p2_singleton.coin.name())
-            i += 100
-        # Quickly request all of the new p2_singletons
-        p2_singleton_ph: bytes32 = construct_p2_singleton(prefarm_info.launcher_id).get_tree_hash()
-        await sync_store.add_p2_singletons(
-            [
-                cr.coin
-                for cr in (
-                    await node_client.get_coin_records_by_puzzle_hashes(
-                        [p2_singleton_ph],
-                        include_spent_coins=False,
-                        start_height=p2_singleton_begin_sync,
-                    )
-                )
-            ]
+            puzzle_root = get_puzzle_root_from_puzzle(initial_spend.puzzle_reveal.to_program())
+        current_singleton = SingletonRecord(
+            current_coin_record.coin,
+            puzzle_root,
+            LineageProof(parent_name=launcher_coin.coin.parent_coin_info, amount=launcher_coin.coin.amount),
+            current_coin_record.timestamp,
+            uint32(0),
+            None,
+            None,
+            None,
+            None,
         )
-        # Check the status of any drop coins
-        ach_coins: List[ACHRecord] = await sync_store.get_ach_records(include_completed_coins=False)
-        rekey_coins: List[ACHRecord] = await sync_store.get_rekey_records(include_completed_coins=False)
-        ach_ids: List[bytes32] = [ach.coin.name() for ach in ach_coins]
-        rekey_ids: List[bytes32] = [rekey.coin.name() for rekey in rekey_coins]
-        all_drop_coin_records: List[CoinRecord] = await node_client.get_coin_records_by_names(
-            [*ach_ids, *rekey_ids], include_spent_coins=True
+        await sync_store.add_singleton_record(current_singleton)
+    if current_coin_record is None:
+        current_coin_record = await node_client.get_coin_record_by_name(current_singleton.coin.name())
+
+    p2_singleton_begin_sync: uint32 = current_coin_record.confirmed_block_index
+    # Begin loop
+    while True:
+        latest_spend: Optional[CoinSpend] = await node_client.get_puzzle_and_solution(
+            current_coin_record.coin.name(), current_coin_record.spent_block_index
         )
-        all_spent_drop_coins: List[CoinRecord] = [cr for cr in all_drop_coin_records if cr.spent_block_index > 0]
-        all_unspent_drop_coins: List[CoinRecord] = [cr for cr in all_drop_coin_records if cr.spent_block_index == 0]
-        for spent_drop_coin in all_spent_drop_coins:
-            if spent_drop_coin.coin.name() in ach_ids:
-                current_ach_record: ACHRecord = [
-                    r for r in ach_coins if r.coin.name() == spent_drop_coin.coin.name()
-                ][0]
-                drop_coin_child: CoinRecord = (
-                    await node_client.get_coin_records_by_parent_ids([spent_drop_coin.coin.name()])
-                )[0]
-                if (
-                    drop_coin_child.coin.puzzle_hash
-                    == construct_p2_singleton(prefarm_info.launcher_id).get_tree_hash()
-                ):
-                    completed = False
-                    ach_spend: Optional[CoinSpend] = await node_client.get_puzzle_and_solution(
-                        spent_drop_coin.coin.name(), spent_drop_coin.spent_block_index
-                    )
-                    assert ach_spend is not None
-                    spending_pubkey: Optional[G1Element] = get_spending_pubkey_for_drop_coin(
-                        ach_spend.solution.to_program()
-                    )
-                else:
-                    completed = True
-                    spending_pubkey = None
+        if latest_spend is None:
+            if current_singleton.puzzle_root != prefarm_info.puzzle_root:
+                outdated: bool = await sync_store.update_config_puzzle_root(current_singleton.puzzle_root)
+                if outdated:
+                    print("Configuration is outdated, please update it with command cic update_config")
+            break
+
+        # Fill in all of the information about the spent singleton
+        latest_solution: Program = latest_spend.solution.to_program()
+        spend_type: SpendType = get_spend_type_for_solution(latest_solution)
+        await sync_store.add_singleton_record(
+            dataclasses.replace(
+                current_singleton,
+                puzzle_reveal=latest_spend.puzzle_reveal,
+                solution=latest_spend.solution,
+                spend_type=spend_type,
+                spending_pubkey=get_spending_pubkey_for_solution(latest_solution),
+            )
+        )
+
+        # Create the new singleton's record
+        all_children: List[CoinRecord] = await node_client.get_coin_records_by_parent_ids(
+            [current_coin_record.coin.name()], include_spent_coins=True
+        )
+        drop_coin: Optional[CoinRecord] = None
+        potential_drop_coins = [cr for cr in all_children if cr.coin.amount % 2 == 0]
+        if len(potential_drop_coins) > 0:
+            drop_coin = potential_drop_coins[0]
+        next_coin_record = [cr for cr in all_children if cr.coin.amount % 2 == 1][0]
+        if next_coin_record.coin.puzzle_hash == current_coin_record.coin.puzzle_hash:
+            next_puzzle_root: bytes32 = current_singleton.puzzle_root
+        else:
+            next_puzzle_root = get_new_puzzle_root_from_solution(latest_solution)
+        next_singleton = SingletonRecord(
+            next_coin_record.coin,
+            next_puzzle_root,
+            LineageProof(
+                current_coin_record.coin.parent_coin_info,
+                construct_singleton_inner_puzzle(
+                    dataclasses.replace(prefarm_info, puzzle_root=current_singleton.puzzle_root)
+                ).get_tree_hash(),
+                current_coin_record.coin.amount,
+            ),
+            next_coin_record.timestamp,
+            uint32(current_singleton.generation + 1),
+            None,
+            None,
+            None,
+            None,
+        )
+        await sync_store.add_singleton_record(next_singleton)
+        # Detect any drop coins and add records for them
+        if drop_coin is not None:
+            if spend_type == SpendType.HANDLE_PAYMENT:
+                _, _, p2_ph = get_spend_params_for_ach_creation(latest_solution)
                 await sync_store.add_ach_record(
-                    dataclasses.replace(
-                        current_ach_record,
-                        spent_at_height=spent_drop_coin.spent_block_index,
-                        completed=completed,
-                        clawback_pubkey=spending_pubkey,
+                    ACHRecord(
+                        drop_coin.coin,
+                        current_singleton.puzzle_root,
+                        p2_ph,
+                        drop_coin.timestamp,
+                        None,
+                        None,
+                        None,
                     )
                 )
-            else:
-                current_rekey_record: ACHRecord = [
-                    r for r in rekey_coins if r.coin.name() == spent_drop_coin.coin.name()
-                ][0]
-                rekey_spend: Optional[CoinSpend] = await node_client.get_puzzle_and_solution(
+            elif spend_type == SpendType.START_REKEY:
+                timelock, new_root = get_spend_params_for_rekey_creation(latest_solution)
+                await sync_store.add_rekey_record(
+                    RekeyRecord(
+                        drop_coin.coin,
+                        current_singleton.puzzle_root,
+                        new_root,
+                        timelock,
+                        drop_coin.timestamp,
+                        None,
+                        None,
+                        None,
+                    )
+                )
+        # Loop with the next coin
+        current_coin_record = next_coin_record
+        current_singleton = next_singleton
+    # Mark any p2_singletons spent
+    i: int = 0
+    while True:
+        unspent_p2_singletons: List[bytes32] = [
+            c.name() for c in (await sync_store.get_p2_singletons(start_end=(i, i + 100)))
+        ]
+        if unspent_p2_singletons == []:
+            break
+        p2_singleton_records = await node_client.get_coin_records_by_names(
+            unspent_p2_singletons,
+            include_spent_coins=True,
+        )
+        for p2_singleton in p2_singleton_records:
+            if p2_singleton.spent_block_index > 0:
+                await sync_store.set_p2_singleton_spent(p2_singleton.coin.name())
+        i += 100
+    # Quickly request all of the new p2_singletons
+    p2_singleton_ph: bytes32 = construct_p2_singleton(prefarm_info.launcher_id).get_tree_hash()
+    await sync_store.add_p2_singletons(
+        [
+            cr.coin
+            for cr in (
+                await node_client.get_coin_records_by_puzzle_hashes(
+                    [p2_singleton_ph],
+                    include_spent_coins=False,
+                    start_height=p2_singleton_begin_sync,
+                )
+            )
+        ]
+    )
+    # Check the status of any drop coins
+    ach_coins: List[ACHRecord] = await sync_store.get_ach_records(include_completed_coins=False)
+    rekey_coins: List[ACHRecord] = await sync_store.get_rekey_records(include_completed_coins=False)
+    ach_ids: List[bytes32] = [ach.coin.name() for ach in ach_coins]
+    rekey_ids: List[bytes32] = [rekey.coin.name() for rekey in rekey_coins]
+    all_drop_coin_records: List[CoinRecord] = await node_client.get_coin_records_by_names(
+        [*ach_ids, *rekey_ids], include_spent_coins=True
+    )
+    all_spent_drop_coins: List[CoinRecord] = [cr for cr in all_drop_coin_records if cr.spent_block_index > 0]
+    all_unspent_drop_coins: List[CoinRecord] = [cr for cr in all_drop_coin_records if cr.spent_block_index == 0]
+    for spent_drop_coin in all_spent_drop_coins:
+        if spent_drop_coin.coin.name() in ach_ids:
+            current_ach_record: ACHRecord = [
+                r for r in ach_coins if r.coin.name() == spent_drop_coin.coin.name()
+            ][0]
+            drop_coin_child: CoinRecord = (
+                await node_client.get_coin_records_by_parent_ids([spent_drop_coin.coin.name()])
+            )[0]
+            if (
+                drop_coin_child.coin.puzzle_hash
+                == construct_p2_singleton(prefarm_info.launcher_id).get_tree_hash()
+            ):
+                completed = False
+                ach_spend: Optional[CoinSpend] = await node_client.get_puzzle_and_solution(
                     spent_drop_coin.coin.name(), spent_drop_coin.spent_block_index
                 )
-                assert rekey_spend is not None
-                completed = was_rekey_completed(rekey_spend.solution.to_program())
-                if completed:
-                    spending_pubkey = None
-                else:
-                    spending_pubkey = get_spending_pubkey_for_drop_coin(rekey_spend.solution.to_program())
-                await sync_store.add_rekey_record(
-                    dataclasses.replace(
-                        current_rekey_record,
-                        spent_at_height=spent_drop_coin.spent_block_index,
-                        completed=completed,
-                        clawback_pubkey=spending_pubkey,
-                    )
+                assert ach_spend is not None
+                spending_pubkey: Optional[G1Element] = get_spending_pubkey_for_drop_coin(
+                    ach_spend.solution.to_program()
                 )
-        for outdated_rekey in [
-            r
-            for r in rekey_coins
-            if r.coin.name() in (cr.coin.name() for cr in all_unspent_drop_coins)
-            and r.from_root != current_singleton.puzzle_root
-        ]:
-            await sync_store.add_rekey_record(dataclasses.replace(outdated_rekey, completed=False))
-    except Exception as e:
-        print(str(e))
-        return str(e)
-    finally:
-        node_client.close()
-        await node_client.await_closed()
-        await sync_store.db_wrapper.close()
+            else:
+                completed = True
+                spending_pubkey = None
+            await sync_store.add_ach_record(
+                dataclasses.replace(
+                    current_ach_record,
+                    spent_at_height=spent_drop_coin.spent_block_index,
+                    completed=completed,
+                    clawback_pubkey=spending_pubkey,
+                )
+            )
+        else:
+            current_rekey_record: ACHRecord = [
+                r for r in rekey_coins if r.coin.name() == spent_drop_coin.coin.name()
+            ][0]
+            rekey_spend: Optional[CoinSpend] = await node_client.get_puzzle_and_solution(
+                spent_drop_coin.coin.name(), spent_drop_coin.spent_block_index
+            )
+            assert rekey_spend is not None
+            completed = was_rekey_completed(rekey_spend.solution.to_program())
+            if completed:
+                spending_pubkey = None
+            else:
+                spending_pubkey = get_spending_pubkey_for_drop_coin(rekey_spend.solution.to_program())
+            await sync_store.add_rekey_record(
+                dataclasses.replace(
+                    current_rekey_record,
+                    spent_at_height=spent_drop_coin.spent_block_index,
+                    completed=completed,
+                    clawback_pubkey=spending_pubkey,
+                )
+            )
+    for outdated_rekey in [
+        r
+        for r in rekey_coins
+        if r.coin.name() in (cr.coin.name() for cr in all_unspent_drop_coins)
+        and r.from_root != current_singleton.puzzle_root
+    ]:
+        await sync_store.add_rekey_record(dataclasses.replace(outdated_rekey, completed=False))
 
-    if show:
-        show_cmd(db_path, False, False)
+    node_client.close()
+    await node_client.await_closed()
+    await sync_store.db_wrapper.close()
+
     return "OK!"
 
 
@@ -652,55 +645,51 @@ async def push_cmd(
     node_rpc_port: Optional[int],
     fee: int,
 ):
+    node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
+
     try:
-        node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
+        if "." in spend_bundle:
+            with open(Path(spend_bundle), "r") as file:
+                spend_hex = file.read()
+        else:
+            spend_hex = spend_bundle
+        push_bundle = SpendBundle.from_bytes(bytes.fromhex(spend_hex))
+    except Exception:
+        raise ValueError(f"Spend bundle cannot be recognized.  Please make sure this spend bundle is signed and try again.")
 
-        try:
-            if "." in spend_bundle:
-                with open(Path(spend_bundle), "r") as file:
-                    spend_hex = file.read()
-            else:
-                spend_hex = spend_bundle
-            push_bundle = SpendBundle.from_bytes(bytes.fromhex(spend_hex))
-        except Exception:
-            print("Spend bundle cannot be recognized.  Please make sure this spend bundle is signed and try again.")
-            return
+    spends: List[SpendBundle] = [push_bundle]
 
-        spends: List[SpendBundle] = [push_bundle]
+    if fee > 0:
+        fee_announcement: Optional[Announcement] = None
+        for coin_spend in push_bundle.coin_spends:
+            _, conditions = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
+            for condition in conditions.as_python():
+                if condition[0] == int_to_bytes(60):  # CREATE_COIN_ANNOUNCEMENT
+                    fee_announcement = Announcement(coin_spend.coin.name(), condition[1])
+                    break
+        if fee_announcement is None:
+            raise ValueError("Cannot find a way to link fee to this transaction. Please specify 0 fee and try again.")
+        else:
+            spends.append(
+                (
+                    await wallet_client.create_signed_transaction(
+                        [
+                            {"puzzle_hash": bytes32([0] * 32), "amount": 0}
+                        ],  # This is dust but the RPC requires it
+                        fee=uint64(fee),
+                        coin_announcements=[fee_announcement],
+                    )
+                ).spend_bundle
+            )
 
-        if fee > 0:
-            fee_announcement: Optional[Announcement] = None
-            for coin_spend in push_bundle.coin_spends:
-                _, conditions = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
-                for condition in conditions.as_python():
-                    if condition[0] == int_to_bytes(60):  # CREATE_COIN_ANNOUNCEMENT
-                        fee_announcement = Announcement(coin_spend.coin.name(), condition[1])
-                        break
-            if fee_announcement is None:
-                print("Cannot find a way to link fee to this transaction. Please specify 0 fee and try again.")
-                return
-            else:
-                spends.append(
-                    (
-                        await wallet_client.create_signed_transaction(
-                            [
-                                {"puzzle_hash": bytes32([0] * 32), "amount": 0}
-                            ],  # This is dust but the RPC requires it
-                            fee=uint64(fee),
-                            coin_announcements=[fee_announcement],
-                        )
-                    ).spend_bundle
-                )
+    result = await node_client.push_tx(SpendBundle.aggregate(spends))
+    print(result)
 
-        result = await node_client.push_tx(SpendBundle.aggregate(spends))
-        print(result)
-
-    finally:
-        node_client.close()
-        wallet_client.close()
-        await node_client.await_closed()
-        await wallet_client.await_closed()
-    return "OK!"
+    node_client.close()
+    wallet_client.close()
+    await node_client.await_closed()
+    await wallet_client.await_closed()
+    return result
 
 
 async def payments_cmd(
@@ -1127,73 +1116,70 @@ async def show_cmd(
 ) -> str:
     info = ""
     sync_store: SyncStore = await load_db(db_path)
-    try:
-        current_time = int(time.time())
-        latest_singleton = await sync_store.get_latest_singleton()
-        ach_records = await sync_store.get_ach_records()
-        rekey_records = await sync_store.get_rekey_records()
-        prefarm_info = await sync_store.get_configuration(True, block_outdated=False)
 
-        p2_sum: int = 0
-        i: int = 0
-        while True:
-            p2_singletons = await sync_store.get_p2_singletons(start_end=(uint32(i), uint32(i + 100)))
-            if p2_singletons == []:
-                break
-            p2_sum += sum(c.amount for c in p2_singletons)
-            i += 100
+    current_time = int(time.time())
+    latest_singleton = await sync_store.get_latest_singleton()
+    ach_records = await sync_store.get_ach_records()
+    rekey_records = await sync_store.get_rekey_records()
+    prefarm_info = await sync_store.get_configuration(True, block_outdated=False)
 
-        
-        info = (f"Current time: {current_time} ({datetime.fromtimestamp(current_time).strftime('%m/%d/%Y, %H:%M:%S')})" +
-            f"Config up to date: {not (await sync_store.is_configuration_outdated())}"+
-            "Singleton:"+
-            f"  - launcher ID: {prefarm_info.launcher_id}"+
-            f"  - amount left: {latest_singleton.coin.amount - 1}"+
-            f"  - amount to claim: {p2_sum}"+
-            "Outstanding events:"+
-            "  PAYMENTS:")
-        for ach in ach_records:
-            ach_ready_date: int = ach.confirmed_at_time + prefarm_info.payment_clawback_period
-            ach_time_left: int = ach_ready_date - current_time
-            if ach_time_left > 0:
-                ready_str = f"(Ready at: {datetime.fromtimestamp(ach_ready_date).strftime('%m/%d/%Y, %H:%M:%S')})"
-            else:
-                ready_str = "(Ready)"
-            info = info + f"- PAYMENT to {encode_puzzle_hash(ach.p2_ph, 'xch')} of amount {ach.coin.amount} {ready_str}"
-        info = info + "  REKEYS:"
-        for rekey in rekey_records:
-            rekey_ready_date: int = rekey.confirmed_at_time + prefarm_info.rekey_clawback_period
-            rekey_time_left: int = rekey_ready_date - current_time
-            if rekey_time_left > 0:
-                ready_str = f"(Ready at: {datetime.fromtimestamp(rekey_ready_date).strftime('%m/%d/%Y, %H:%M:%S')})"
-            else:
-                ready_str = "(Ready)"
-            info = info + f"- REKEY from {rekey.from_root} to {rekey.to_root} {ready_str}"
+    p2_sum: int = 0
+    i: int = 0
+    while True:
+        p2_singletons = await sync_store.get_p2_singletons(start_end=(uint32(i), uint32(i + 100)))
+        if p2_singletons == []:
+            break
+        p2_sum += sum(c.amount for c in p2_singletons)
+        i += 100
 
-        if config:
-            print()
-            print("Config:")
-            print(f" - current root: {prefarm_info.puzzle_root}")
-            print(f" - withdrawal timelock: {prefarm_info.withdrawal_timelock} seconds")
-            print(f" - payment clawback period: {prefarm_info.payment_clawback_period} seconds")
-            print(f" - rekey cancellation period: {prefarm_info.rekey_clawback_period} seconds")
+    
+    info = (f"Current time: {current_time} ({datetime.fromtimestamp(current_time).strftime('%m/%d/%Y, %H:%M:%S')})" +
+        f"Config up to date: {not (await sync_store.is_configuration_outdated())}"+
+        "Singleton:"+
+        f"  - launcher ID: {prefarm_info.launcher_id}"+
+        f"  - amount left: {latest_singleton.coin.amount - 1}"+
+        f"  - amount to claim: {p2_sum}"+
+        "Outstanding events:"+
+        "  PAYMENTS:")
+    for ach in ach_records:
+        ach_ready_date: int = ach.confirmed_at_time + prefarm_info.payment_clawback_period
+        ach_time_left: int = ach_ready_date - current_time
+        if ach_time_left > 0:
+            ready_str = f"(Ready at: {datetime.fromtimestamp(ach_ready_date).strftime('%m/%d/%Y, %H:%M:%S')})"
+        else:
+            ready_str = "(Ready)"
+        info = info + f"- PAYMENT to {encode_puzzle_hash(ach.p2_ph, 'xch')} of amount {ach.coin.amount} {ready_str}"
+    info = info + "  REKEYS:"
+    for rekey in rekey_records:
+        rekey_ready_date: int = rekey.confirmed_at_time + prefarm_info.rekey_clawback_period
+        rekey_time_left: int = rekey_ready_date - current_time
+        if rekey_time_left > 0:
+            ready_str = f"(Ready at: {datetime.fromtimestamp(rekey_ready_date).strftime('%m/%d/%Y, %H:%M:%S')})"
+        else:
+            ready_str = "(Ready)"
+        info = info + f"- REKEY from {rekey.from_root} to {rekey.to_root} {ready_str}"
 
-        if derivation:
-            print()
-            root_derivation = await sync_store.get_configuration(False, block_outdated=False)
-            print("Derivation Info:")
-            print(f" - lock level: {root_derivation.required_pubkeys}")
-            print(f" - max lock level: {root_derivation.maximum_pubkeys}")
-            print(f" - min keys to rekey: {root_derivation.minimum_pubkeys}")
-            print(f" - standard rekey timelock: {root_derivation.prefarm_info.rekey_increments} seconds")
-            print(f" - slow rekey penalty: {root_derivation.prefarm_info.slow_rekey_timelock} seconds")
-            print(" - pubkeys: ")
-            for pk in root_derivation.pubkey_list:
-                as_bech32m: str = BLSPublicKey(pk).as_bech32m()
-                print(f"    - {as_bech32m}")
+    if config:
+        info = info + ("Config:" +
+            " - current root: {prefarm_info.puzzle_root}" +
+            f" - withdrawal timelock: {prefarm_info.withdrawal_timelock} seconds" +
+            f" - payment clawback period: {prefarm_info.payment_clawback_period} seconds" +
+            f" - rekey cancellation period: {prefarm_info.rekey_clawback_period} seconds")
 
-    finally:
-        await sync_store.db_wrapper.close()
+    if derivation:
+        root_derivation = await sync_store.get_configuration(False, block_outdated=False)
+        info = info + ("Derivation Info:" +
+            f" - lock level: {root_derivation.required_pubkeys}"+
+            f" - max lock level: {root_derivation.maximum_pubkeys}"+
+            f" - min keys to rekey: {root_derivation.minimum_pubkeys}"+
+            f" - standard rekey timelock: {root_derivation.prefarm_info.rekey_increments} seconds"+
+            f" - slow rekey penalty: {root_derivation.prefarm_info.slow_rekey_timelock} seconds"+
+            " - pubkeys: ")
+        for pk in root_derivation.pubkey_list:
+            as_bech32m: str = BLSPublicKey(pk).as_bech32m()
+            info = info + f"    - {as_bech32m}"
+
+    await sync_store.db_wrapper.close()
         
     return info
 

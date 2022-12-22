@@ -134,9 +134,9 @@ class CustodyRpcApi:
                     
         wjb = await self.service.launch_cmd(configuration,
             db_path,
-            uint64(wallet_rpc_port),
+            wallet_rpc_port,
             uint64(fingerprint),
-            uint64(node_rpc_port),
+            node_rpc_port,
             uint64(fee))
         return {"wjb": wjb}
 
@@ -151,7 +151,7 @@ class CustodyRpcApi:
                     
         wjb = await self.service.sync_cmd(configuration,
             db_path,
-            uint64(node_rpc_port),
+            node_rpc_port,
             show)
         return {"wjb": wjb}
 

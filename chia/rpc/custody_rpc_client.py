@@ -77,9 +77,9 @@ class CustodyRpcClient(RpcClient):
 
     async def show(self,
         db_path: str,
-        config: bool,
-        derivation: bool) -> Dict[str, Any]:
-        response = await self.fetch("show", {"db_path": db_path, "config": False, "derivation": False})
+        configopt: bool,
+        derivationopt: bool) -> Dict[str, Any]:
+        response = await self.fetch("show", {"db_path": db_path, "config": True, "derivation": True})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
