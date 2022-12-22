@@ -79,7 +79,46 @@ async def show_cmd(
             res = await client.show(db_path, config, derivation)
             print(res)
 
+async def address_cmd(
+    rpc_port: int,
+    db_path: str,
+    prefix: str,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.address(db_path, prefix)
+            print(res)
 
+
+async def push_cmd(
+    rpc_port: int,
+    spend_bundle: str,
+    wallet_rpc_port: Optional[int],
+    fingerprint: Optional[int],
+    node_rpc_port: Optional[int],
+    fee: int,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.push(spend_bundle, wallet_rpc_port, fingerprint, node_rpc_port, fee)
+            print(res)
+
+
+async def payments_cmd(
+    rpc_port: int,
+    db_path: str,
+    pubkeys: str,
+    amount: int,
+    recipient_address: str,
+    absorb_available_payments: bool,
+    maximum_extra_cost: Optional[int],
+    amount_threshold: int,
+    filename: Optional[str],
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.payments(db_path, pubkeys, amount, recipient_address, absorb_available_payments, maximum_extra_cost, amount_threshold, filename)
+            print(res)
 
 
 async def hsmgen_cmd(

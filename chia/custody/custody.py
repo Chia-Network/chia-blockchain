@@ -155,6 +155,45 @@ class Custody:
         b = await show_cmd(db_path, config, derivation)
         return b
 
+    async def address_cmd(
+        self,
+        db_path: str,
+        prefix: str,
+    ) -> str:
+        from chia.custody.cic.cli.main import address_cmd
+
+        b = await address_cmd(db_path, prefix)
+        return b
+        
+    async def push_cmd(
+        self,
+        spend_bundle: str,
+        wallet_rpc_port: Optional[int],
+        fingerprint: Optional[int],
+        node_rpc_port: Optional[int],
+        fee: int,
+    ) -> str:
+        from chia.custody.cic.cli.main import push_cmd
+
+        b = await push_cmd(spend_bundle, wallet_rpc_port, fingerprint, node_rpc_port, fee)
+        return b
+        
+    async def payments_cmd(
+        self,
+        db_path: str,
+        pubkeys: str,
+        amount: int,
+        recipient_address: str,
+        absorb_available_payments: bool,
+        maximum_extra_cost: Optional[int],
+        amount_threshold: int,
+        filename: Optional[str],
+    ) -> str:
+        from chia.custody.cic.cli.main import payments_cmd
+
+        b = await payments_cmd(db_path, pubkeys, amount, recipient_address, absorb_available_payments, maximum_extra_cost, amount_threshold, filename)
+        return b
+        
 
     async def hsmgen_cmd(self) -> str:
         from chia.custody.hsms.cmds.hsmgen import hsmgen_cmd

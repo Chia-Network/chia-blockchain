@@ -64,9 +64,9 @@ class CustodyRpcApi:
             # "/update": self.update,
             # "/export": self.export,
             "/sync": self.sync,
-            # "/address": self.address,
-            # "/push": self.push,
-            # "/payments": self.payments,
+            "/address": self.address,
+            "/push": self.push,
+            "/payments": self.payments,
             # "/start_rekey": self.start_rekey,
             # "/clawback": self.clawback,
             # "/complete": self.complete,
@@ -77,6 +77,7 @@ class CustodyRpcApi:
             # "/which_pubkeys": self.which_pubkeys,
             "/hsmgen": self.hsmgen,
             "/hsmpk": self.hsmpk,
+            #x "/hsmmerge": self.hsmmerge,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -164,6 +165,54 @@ class CustodyRpcApi:
         wjb = await self.service.show_cmd(db_path,
             config,
             derivation)
+        return {"wjb": wjb}
+
+    async def address(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        prefix = request.get("prefix")
+                     
+        wjb = await self.service.address_cmd(db_path,
+            prefix)
+        return {"wjb": wjb}
+
+    async def push(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        spend_bundle = request.get("spend_bundle")
+        wallet_rpc_port = request.get("wallet_rpc_port")
+        fingerprint = request.get("fingerprint")
+        node_rpc_port = request.get("node_rpc_port")
+        fee = request.get("fee")
+
+        wjb = await self.service.push_cmd(spend_bundle,
+            wallet_rpc_port,
+            fingerprint,
+            node_rpc_port,
+            fee)
+        return {"wjb": wjb}
+
+    async def payments(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        pubkeys = request.get("pubkeys")
+        amount = request.get("amount")
+        recipient_address = request.get("recipient_address")
+        absorb_available_payments = request.get("absorb_available_payments")
+        maximum_extra_cost = request.get("maximum_extra_cost")
+        amount_threshold = request.get("amount_threshold")
+        filename = request.get("filename")
+              
+        wjb = await self.service.payments_cmd(db_path,
+            pubkeys,
+            amount,
+            recipient_address,
+            absorb_available_payments,
+            maximum_extra_cost,
+            amount_threshold,
+            filename)
         return {"wjb": wjb}
 
 

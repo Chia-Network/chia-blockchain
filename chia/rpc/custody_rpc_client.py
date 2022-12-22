@@ -83,6 +83,38 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+    async def address(self,
+        db_path: str,
+        prefix: str) -> Dict[str, Any]:
+        response = await self.fetch("address", {"db_path": db_path, "prefix": prefix})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def push(self,
+        spend_bundle: str,
+        wallet_rpc_port: Optional[int],
+        fingerprint: Optional[int],
+        node_rpc_port: Optional[int],
+        fee: int) -> Dict[str, Any]:
+        response = await self.fetch("push", {"spend_bundle": spend_bundle, "wallet_rpc_port": wallet_rpc_port, "fingerprint": fingerprint, "node_rpc_port": node_rpc_port, "fee": fee})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def payments(self,
+        db_path: str,
+        pubkeys: str,
+        amount: int,
+        recipient_address: str,
+        absorb_available_payments: bool,
+        maximum_extra_cost: Optional[int],
+        amount_threshold: int,
+        filename: Optional[str]) -> Dict[str, Any]:
+        response = await self.fetch("payments", {"db_path": db_path, "pubkeys": pubkeys, "amount": amount, "recipient_address": recipient_address, "absorb_available_payments": absorb_available_payments, "maximum_extra_cost": maximum_extra_cost, "amount_threshold": amount_threshold, "filename": filename})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
         
     async def hsmgen(self) -> Dict[str, Any]:
         response = await self.fetch("hsmgen",{})

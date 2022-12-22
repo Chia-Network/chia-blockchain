@@ -354,6 +354,14 @@ def sync_cmd(
 
 @custody_cmd.command("p2_address", short_help="Print the address to pay to the singleton")
 @click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-db",
     "--db-path",
     help="The file path to the sync DB (default: ./sync (******).sqlite)",
@@ -367,19 +375,23 @@ def sync_cmd(
     default="xch",
     show_default=True,
 )
-def address_cmd(db_path: str, prefix: str):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
-        try:
-            prefarm_info = await sync_store.get_configuration(True, block_outdated=False)
-            print(encode_puzzle_hash(construct_p2_singleton(prefarm_info.launcher_id).get_tree_hash(), prefix))
-        finally:
-            await sync_store.db_connection.close()
+def address_cmd(custody_rpc_port: Optional[int],
+    db_path: str,
+    prefix: str):
+    from chia.cmds.custody_funcs import address_cmd
 
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(address_cmd(custody_rpc_port, db_path, prefix))
 
 
 @custody_cmd.command("push_tx", short_help="Push a signed spend bundle to the network")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-b",
     "--spend-bundle",
@@ -409,66 +421,27 @@ def address_cmd(db_path: str, prefix: str):
     default=0,
 )
 def push_cmd(
+    custody_rpc_port: Optional[int],
     spend_bundle: str,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     node_rpc_port: Optional[int],
     fee: int,
 ):
-    async def do_command():
-        try:
-            node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
+    from chia.cmds.custody_funcs import push_cmd
 
-            try:
-                if "." in spend_bundle:
-                    with open(Path(spend_bundle), "r") as file:
-                        spend_hex = file.read()
-                else:
-                    spend_hex = spend_bundle
-                push_bundle = SpendBundle.from_bytes(bytes.fromhex(spend_hex))
-            except Exception:
-                print("Spend bundle cannot be recognized.  Please make sure this spend bundle is signed and try again.")
-                return
-
-            spends: List[SpendBundle] = [push_bundle]
-
-            if fee > 0:
-                fee_announcement: Optional[Announcement] = None
-                for coin_spend in push_bundle.coin_spends:
-                    _, conditions = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
-                    for condition in conditions.as_python():
-                        if condition[0] == int_to_bytes(60):  # CREATE_COIN_ANNOUNCEMENT
-                            fee_announcement = Announcement(coin_spend.coin.name(), condition[1])
-                            break
-                if fee_announcement is None:
-                    print("Cannot find a way to link fee to this transaction. Please specify 0 fee and try again.")
-                    return
-                else:
-                    spends.append(
-                        (
-                            await wallet_client.create_signed_transaction(
-                                [
-                                    {"puzzle_hash": bytes32([0] * 32), "amount": 0}
-                                ],  # This is dust but the RPC requires it
-                                fee=uint64(fee),
-                                coin_announcements=[fee_announcement],
-                            )
-                        ).spend_bundle
-                    )
-
-            result = await node_client.push_tx(SpendBundle.aggregate(spends))
-            print(result)
-
-        finally:
-            node_client.close()
-            wallet_client.close()
-            await node_client.await_closed()
-            await wallet_client.await_closed()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(push_cmd(custody_rpc_port, spend_bundle, wallet_rpc_port, fingerprint, node_rpc_port, fee))
 
 
 @custody_cmd.command("payment", short_help="Absorb/Withdraw money into/from the singleton")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-db",
     "--db-path",
@@ -522,6 +495,7 @@ def push_cmd(
     show_default=True,
 )
 def payments_cmd(
+    custody_rpc_port: Optional[int],
     db_path: str,
     pubkeys: str,
     amount: int,
@@ -531,79 +505,9 @@ def payments_cmd(
     amount_threshold: int,
     filename: Optional[str],
 ):
-    # Check to make sure we've been given a correct set of parameters
-    if amount % 2 == 1:
-        raise ValueError("You can not make payments of an odd amount")
+    from chia.cmds.custody_funcs import payments_cmd
 
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
-        try:
-            derivation = await sync_store.get_configuration(False, block_outdated=True)
-            # Collect some relevant information
-            current_singleton: Optional[SingletonRecord] = await sync_store.get_latest_singleton()
-            if current_singleton is None:
-                raise RuntimeError("No singleton is found for this configuration.  Try `cic sync` then try again.")
-            pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
-            clawforward_ph: bytes32 = decode_puzzle_hash(recipient_address)
-            fee_conditions: List[Program] = [Program.to([60, b""])]
-
-            # Get any p2_singletons to spend
-            if absorb_available_payments:
-                max_num: Optional[uint32] = (
-                    (uint32(0), uint32(math.floor(maximum_extra_cost / 10))) if maximum_extra_cost is not None else None
-                )
-                p2_singletons: List[Coin] = await sync_store.get_p2_singletons(amount_threshold, start_end=max_num)
-                if sum(c.amount for c in p2_singletons) % 2 == 1:
-                    smallest_odd_coin: Coin = sorted(
-                        [c for c in p2_singletons if c.amount % 2 == 1], key=attrgetter("amount")
-                    )[0]
-                    p2_singletons = [c for c in p2_singletons if c.name() != smallest_odd_coin.name()]
-            else:
-                p2_singletons = []
-
-            # Get the spend bundle
-            singleton_bundle, data_to_sign = get_withdrawal_spend_info(
-                current_singleton.coin,
-                pubkey_list,
-                derivation,
-                current_singleton.lineage_proof,
-                amount,
-                clawforward_ph,
-                p2_singletons_to_claim=p2_singletons,
-                additional_conditions=fee_conditions,
-            )
-
-            # Cast everything into HSM types
-            as_bls_pubkey_list = [BLSPublicKey(pk) for pk in pubkey_list]
-            agg_pk = sum(as_bls_pubkey_list, start=BLSPublicKey.zero())
-            synth_sk = BLSSecretExponent(
-                PrivateKey.from_bytes(
-                    calculate_synthetic_offset(agg_pk, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big")
-                )
-            )
-            coin_spends = [
-                HSMCoinSpend(cs.coin, cs.puzzle_reveal.to_program(), cs.solution.to_program())
-                for cs in singleton_bundle.coin_spends
-            ]
-            unsigned_spend = UnsignedSpend(
-                coin_spends,
-                [SumHint(as_bls_pubkey_list, synth_sk)],
-                [],
-                get_additional_data(),
-            )
-
-            # Print the result
-            if filename is not None:
-                write_unsigned_spend(filename, unsigned_spend)
-                print(f"Successfully wrote spend to {filename}")
-            else:
-                for chunk in unsigned_spend.chunk(255):
-                    print(str(b2a_qrint(chunk)))
-        finally:
-            await sync_store.db_connection.close()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
-
+    run(payments_cmd(custody_rpc_port, db_path, pubkeys, amount, recipient_address, absorb_available_payments, maximum_extra_cost, amount_threshold, filename))
 
 @custody_cmd.command("start_rekey", short_help="Rekey the singleton to a new set of keys/options")
 @click.option(
