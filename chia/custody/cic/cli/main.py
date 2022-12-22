@@ -407,8 +407,9 @@ async def sync_cmd(
         current_coin_record: Optional[CoinRecord] = None
         if current_singleton is None:
             launcher_coin = await node_client.get_coin_record_by_name(prefarm_info.launcher_id)
+            # return f"node_client {node_client} prefarm_info.launcher_id {prefarm_info.launcher_id} launcher_coin {launcher_coin}"
             if launcher_coin is None:
-                raise ValueError("The singleton has not been launched yet")
+                raise ValueError(f"The singleton {prefarm_info.launcher_id} has not been launched yet")
             current_coin_record = (await node_client.get_coin_records_by_parent_ids([prefarm_info.launcher_id]))[0]
             if current_coin_record.spent_block_index == 0:
                 if construct_full_singleton(prefarm_info).get_tree_hash() != current_coin_record.coin.puzzle_hash:
@@ -625,7 +626,7 @@ async def sync_cmd(
             await sync_store.add_rekey_record(dataclasses.replace(outdated_rekey, completed=False))
     except Exception as e:
         print(str(e))
-        return
+        return str(e)
     finally:
         node_client.close()
         await node_client.await_closed()
