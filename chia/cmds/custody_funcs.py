@@ -40,6 +40,22 @@ async def derive_cmd(
             print(res)
 
 
+async def launch_cmd(
+    rpc_port: int,
+    configuration: str,
+    db_path: str,
+    wallet_rpc_port: int,
+    fingerprint: int,
+    node_rpc_port: int,
+    fee: int,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.launch(configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee)
+            print(res)
+
+
+
 async def create_custody_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client("custody_layer", rpc_port) as (client, config, _):

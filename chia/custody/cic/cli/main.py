@@ -68,10 +68,10 @@ from chia.custody.hsms.process.unsigned_spend import UnsignedSpend
 from chia.custody.hsms.streamables.coin_spend import CoinSpend as HSMCoinSpend
 from chia.custody.hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
 
-if os.environ.get("TESTING_CIC_CLI", "FALSE") == "TRUE":
-    from tests.cli_clients import get_node_and_wallet_clients, get_node_client, get_additional_data
-else:
-    from chia.custody.cic.cli.clients import get_node_and_wallet_clients, get_node_client, get_additional_data
+#if os.environ.get("TESTING_CIC_CLI", "FALSE") == "TRUE":
+#    from tests.cli_clients import get_node_and_wallet_clients, get_node_client, get_additional_data
+#else:
+from chia.custody.cic.cli.clients import get_node_and_wallet_clients, get_node_client, get_additional_data
 
 _T = TypeVar("_T")
 
@@ -248,66 +248,71 @@ async def derive_cmd(
             print("Configuration does not match specified parameters")
 
 
-def launch_cmd(
+async def launch_cmd(
     configuration: str,
     db_path: str,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     node_rpc_port: Optional[int],
     fee: int,
-):
+) -> str:
     with open(Path(configuration), "rb") as file:
         derivation = RootDerivation.from_bytes(file.read())
-
-    async def do_command():
-        node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
-        try:
-            fund_coins: List[Coin] = await wallet_client.select_coins(amount=(1 + fee), wallet_id=1)
-            fund_coin: Coin = fund_coins[0]
-            launcher_coin = Coin(fund_coin.name(), SINGLETON_LAUNCHER_HASH, 1)
-            new_derivation: RootDerivation = calculate_puzzle_root(
-                dataclasses.replace(derivation.prefarm_info, launcher_id=launcher_coin.name()),
-                derivation.pubkey_list,
-                derivation.required_pubkeys,
-                derivation.maximum_pubkeys,
-                derivation.minimum_pubkeys,
+    
+    node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
+    
+    return f"s node_client {node_client} wallet_client {wallet_client}"
+    
+    try:
+        fund_coins: List[Coin] = await wallet_client.select_coins(amount=(1 + fee), wallet_id=1)
+        fund_coin: Coin = fund_coins[0]
+        launcher_coin = Coin(fund_coin.name(), SINGLETON_LAUNCHER_HASH, 1)
+        new_derivation: RootDerivation = calculate_puzzle_root(
+            dataclasses.replace(derivation.prefarm_info, launcher_id=launcher_coin.name()),
+            derivation.pubkey_list,
+            derivation.required_pubkeys,
+            derivation.maximum_pubkeys,
+            derivation.minimum_pubkeys,
+        )
+        _, launch_spend = generate_launch_conditions_and_coin_spend(
+            fund_coin, construct_singleton_inner_puzzle(new_derivation.prefarm_info), uint64(1)
+        )
+        creation_bundle = SpendBundle([launch_spend], G2Element())
+        announcement = Announcement(launcher_coin.name(), launch_spend.solution.to_program().get_tree_hash())
+        fund_bundle: SpendBundle = (
+            await wallet_client.create_signed_transaction(
+                [{"puzzle_hash": SINGLETON_LAUNCHER_HASH, "amount": 1}],
+                fund_coins,  # I think this is probably imperfect but will work for now
+                fee=uint64(fee),
+                coin_announcements=[announcement],
             )
-            _, launch_spend = generate_launch_conditions_and_coin_spend(
-                fund_coin, construct_singleton_inner_puzzle(new_derivation.prefarm_info), uint64(1)
+        ).spend_bundle
+        
+        return fund_bundle
+        
+        result = await node_client.push_tx(SpendBundle.aggregate([creation_bundle, fund_bundle]))
+        if not result["success"]:
+            raise ValueError(result["error"])
+
+        with open(Path(configuration), "wb") as file:
+            file.write(bytes(new_derivation))
+        if "awaiting launch" in configuration:
+            os.rename(
+                Path(configuration),
+                Path(
+                    new_derivation.prefarm_info.puzzle_root[0:3].hex().join(configuration.split("awaiting launch"))
+                ),
             )
-            creation_bundle = SpendBundle([launch_spend], G2Element())
-            announcement = Announcement(launcher_coin.name(), launch_spend.solution.to_program().get_tree_hash())
-            fund_bundle: SpendBundle = (
-                await wallet_client.create_signed_transaction(
-                    [{"puzzle_hash": SINGLETON_LAUNCHER_HASH, "amount": 1}],
-                    fund_coins,  # I think this is probably imperfect but will work for now
-                    fee=uint64(fee),
-                    coin_announcements=[announcement],
-                )
-            ).spend_bundle
-            result = await node_client.push_tx(SpendBundle.aggregate([creation_bundle, fund_bundle]))
-            if not result["success"]:
-                raise ValueError(result["error"])
 
-            with open(Path(configuration), "wb") as file:
-                file.write(bytes(new_derivation))
-            if "awaiting launch" in configuration:
-                os.rename(
-                    Path(configuration),
-                    Path(
-                        new_derivation.prefarm_info.puzzle_root[0:3].hex().join(configuration.split("awaiting launch"))
-                    ),
-                )
+        print("Singleton successfully launched")
+    finally:
+        node_client.close()
+        wallet_client.close()
+        await node_client.await_closed()
+        await wallet_client.await_closed()
 
-            print("Singleton successfully launched")
-        finally:
-            node_client.close()
-            wallet_client.close()
-            await node_client.await_closed()
-            await wallet_client.await_closed()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
-
+    return "hi"
+   
 
 def update_cmd(
     configuration: Optional[str],

@@ -61,20 +61,20 @@ class CustodyRpcApi:
             "/init": self.init,
             "/derive": self.derive,
             "/launch": self.launch,
-            "/update": self.update,
-            "/export": self.export,
-            "/sync": self.sync,
-            "/address": self.address,
-            "/push": self.push,
-            "/payments": self.payments,
-            "/start_rekey": self.start_rekey,
-            "/clawback": self.clawback,
-            "/complete": self.complete,
-            "/increase": self.increase,
-            "/show": self.show,
-            "/audit": self.audit,
-            "/examine": self.examine,
-            "/which_pubkeys": self.which_pubkeys,
+            # "/update": self.update,
+            # "/export": self.export,
+            # "/sync": self.sync,
+            # "/address": self.address,
+            # "/push": self.push,
+            # "/payments": self.payments,
+            # "/start_rekey": self.start_rekey,
+            # "/clawback": self.clawback,
+            # "/complete": self.complete,
+            # "/increase": self.increase,
+            # "/show": self.show,
+            # "/audit": self.audit,
+            # "/examine": self.examine,
+            # "/which_pubkeys": self.which_pubkeys,
             "/hsmgen": self.hsmgen,
             "/hsmpk": self.hsmpk,
         }
@@ -120,6 +120,27 @@ class CustodyRpcApi:
             uint64(maximum_lock_level))
         return {"success": "true"}
 
+
+    async def launch(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        configuration = request.get("configuration")
+        db_path = request.get("db_path")
+        wallet_rpc_port = request.get("wallet_rpc_port")
+        fingerprint = request.get("fingerprint")
+        node_rpc_port = request.get("node_rpc_port")
+        fee = request.get("fee")
+                    
+        wjb = await self.service.launch_cmd(configuration,
+            db_path,
+            uint64(wallet_rpc_port),
+            uint64(fingerprint),
+            uint64(node_rpc_port),
+            uint64(fee))
+        return {"wjb": wjb}
+
+
+
     async def hsmgen(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
@@ -135,49 +156,4 @@ class CustodyRpcApi:
         publickey = await self.service.hsmpk_cmd(secretkey)
         return {"publickey": publickey}
 
-    async def launch(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def update(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def export(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def sync(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def address(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def push(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def payments(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def start_rekey(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def clawback(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def complete(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def increase(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def show(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def audit(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-        
-    async def examine(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-    async def which_pubkeys(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"success": "true"}
-
-  
+ 

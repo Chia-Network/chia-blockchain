@@ -154,6 +154,14 @@ def derive_cmd(
 
 @custody_cmd.command("launch_singleton", short_help="Use 1 mojo to launch the singleton that will control the funds")
 @click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-c",
     "--configuration",
     help="The configuration file with which to launch the singleton",
@@ -184,6 +192,7 @@ def derive_cmd(
 )
 @click.option("--fee", help="Fee to use for the launch transaction (in mojos)", default=0)
 def launch_cmd(
+    custody_rpc_port: Optional[int],
     configuration: str,
     db_path: str,
     wallet_rpc_port: Optional[int],
@@ -191,58 +200,16 @@ def launch_cmd(
     node_rpc_port: Optional[int],
     fee: int,
 ):
-    with open(Path(configuration), "rb") as file:
-        derivation = RootDerivation.from_bytes(file.read())
+    # from chia.custody.cic.cli.main import launch_cmd
 
-    async def do_command():
-        node_client, wallet_client = await get_node_and_wallet_clients(node_rpc_port, wallet_rpc_port, fingerprint)
-        try:
-            fund_coins: List[Coin] = await wallet_client.select_coins(amount=(1 + fee), wallet_id=1)
-            fund_coin: Coin = fund_coins[0]
-            launcher_coin = Coin(fund_coin.name(), SINGLETON_LAUNCHER_HASH, 1)
-            new_derivation: RootDerivation = calculate_puzzle_root(
-                dataclasses.replace(derivation.prefarm_info, launcher_id=launcher_coin.name()),
-                derivation.pubkey_list,
-                derivation.required_pubkeys,
-                derivation.maximum_pubkeys,
-                derivation.minimum_pubkeys,
-            )
-            _, launch_spend = generate_launch_conditions_and_coin_spend(
-                fund_coin, construct_singleton_inner_puzzle(new_derivation.prefarm_info), uint64(1)
-            )
-            creation_bundle = SpendBundle([launch_spend], G2Element())
-            announcement = Announcement(launcher_coin.name(), launch_spend.solution.to_program().get_tree_hash())
-            fund_bundle: SpendBundle = (
-                await wallet_client.create_signed_transaction(
-                    [{"puzzle_hash": SINGLETON_LAUNCHER_HASH, "amount": 1}],
-                    fund_coins,  # I think this is probably imperfect but will work for now
-                    fee=uint64(fee),
-                    coin_announcements=[announcement],
-                )
-            ).spend_bundle
-            result = await node_client.push_tx(SpendBundle.aggregate([creation_bundle, fund_bundle]))
-            if not result["success"]:
-                raise ValueError(result["error"])
+    # launch_cmd(configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee)
 
-            with open(Path(configuration), "wb") as file:
-                file.write(bytes(new_derivation))
-            if "awaiting launch" in configuration:
-                os.rename(
-                    Path(configuration),
-                    Path(
-                        new_derivation.prefarm_info.puzzle_root[0:3].hex().join(configuration.split("awaiting launch"))
-                    ),
-                )
+    from chia.cmds.custody_funcs import launch_cmd
 
-            print("Singleton successfully launched")
-        finally:
-            node_client.close()
-            wallet_client.close()
-            await node_client.await_closed()
-            await wallet_client.await_closed()
+    run(launch_cmd(custody_rpc_port, configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee))
 
-    asyncio.get_event_loop().run_until_complete(do_command())
 
+   
 
 @custody_cmd.command("update_config", short_help="Update an outdated config in a sync DB with a new config")
 @click.option(

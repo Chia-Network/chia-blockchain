@@ -44,6 +44,24 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+
+    async def launch(self,
+        configuration: str,
+        db_path: str,
+        wallet_rpc_port: int,
+        fingerprint: int,
+        node_rpc_port: int,
+        fee: int) -> Dict[str, Any]:
+        response = await self.fetch("launch", {"configuration": configuration,
+            "db_path": db_path,
+            "wallet_rpc_port": wallet_rpc_port,
+            "fingerprint": fingerprint,
+            "node_rpc_port": node_rpc_port,
+            "fee": fee})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+        
+        
     async def hsmgen(self) -> Dict[str, Any]:
         response = await self.fetch("hsmgen",{})
         # TODO: better hinting for .fetch() (probably a TypedDict)

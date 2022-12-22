@@ -117,6 +117,19 @@ class Custody:
 
         await derive_cmd(configuration, db_path, pubkeys, initial_lock_level, minimum_pks, validate_against, maximum_lock_level)
 
+    async def launch_cmd(
+        self,
+        configuration: str,
+        db_path: str,
+        wallet_rpc_port: int,
+        fingerprint: int,
+        node_rpc_port: int,
+        fee: str,
+    ) -> str:
+        from chia.custody.cic.cli.main import launch_cmd
+
+        b = await launch_cmd(configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee)
+        return b
 
     async def hsmgen_cmd(self) -> str:
         from chia.custody.hsms.cmds.hsmgen import hsmgen_cmd
