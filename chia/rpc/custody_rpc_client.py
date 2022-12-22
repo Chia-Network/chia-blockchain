@@ -60,7 +60,20 @@ class CustodyRpcClient(RpcClient):
             "fee": fee})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
-        
+
+
+    async def sync(self,
+        configuration: str,
+        db_path: str,
+        node_rpc_port: int,
+        show: bool) -> Dict[str, Any]:
+        response = await self.fetch("sync", {"configuration": configuration,
+            "db_path": db_path,
+            "node_rpc_port": node_rpc_port,
+            "show": show})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
         
     async def hsmgen(self) -> Dict[str, Any]:
         response = await self.fetch("hsmgen",{})

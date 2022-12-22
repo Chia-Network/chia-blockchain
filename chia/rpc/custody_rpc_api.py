@@ -63,7 +63,7 @@ class CustodyRpcApi:
             "/launch": self.launch,
             # "/update": self.update,
             # "/export": self.export,
-            # "/sync": self.sync,
+            "/sync": self.sync,
             # "/address": self.address,
             # "/push": self.push,
             # "/payments": self.payments,
@@ -137,6 +137,21 @@ class CustodyRpcApi:
             uint64(fingerprint),
             uint64(node_rpc_port),
             uint64(fee))
+        return {"wjb": wjb}
+
+
+    async def sync(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        configuration = request.get("configuration")
+        db_path = request.get("db_path")
+        node_rpc_port = request.get("node_rpc_port")
+        show = request.get("show")
+                    
+        wjb = await self.service.sync_cmd(configuration,
+            db_path,
+            uint64(node_rpc_port),
+            show)
         return {"wjb": wjb}
 
 

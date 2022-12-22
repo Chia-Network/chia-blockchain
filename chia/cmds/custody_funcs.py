@@ -55,6 +55,19 @@ async def launch_cmd(
             print(res)
 
 
+async def sync_cmd(
+    rpc_port: int,
+    configuration: Optional[str],
+    db_path: str,
+    node_rpc_port: Optional[int],
+    show: bool,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.sync(configuration, db_path, node_rpc_port, show)
+            print(res)
+
+
 
 async def create_custody_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))

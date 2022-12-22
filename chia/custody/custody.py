@@ -131,6 +131,21 @@ class Custody:
         b = await launch_cmd(configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee)
         return b
 
+
+    async def sync_cmd(
+        self,
+        configuration: str,
+        db_path: str,
+        node_rpc_port: int,
+        show: bool,
+    ) -> str:
+        from chia.custody.cic.cli.main import sync_cmd
+
+        b = await sync_cmd(configuration, db_path, node_rpc_port, show)
+        return b
+
+
+
     async def hsmgen_cmd(self) -> str:
         from chia.custody.hsms.cmds.hsmgen import hsmgen_cmd
 
