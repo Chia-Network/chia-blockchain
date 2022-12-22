@@ -414,7 +414,7 @@ class TestPoolWalletRpc:
         def mempool_empty() -> bool:
             return len(full_node_api.full_node.mempool_manager.mempool.spends.keys()) == 0
 
-        await client.delete_unconfirmed_transactions("1")
+        await client.delete_unconfirmed_transactions(1)
         await farm_blocks(full_node_api, our_ph_2, 1)
         await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
