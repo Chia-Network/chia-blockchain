@@ -19,104 +19,104 @@ from chia.custody.cic.drivers.puzzle_root_construction import RootDerivation, ca
 
 
 class SyncStore:
-    db_connection: aiosqlite.Connection
     db_wrapper: DBWrapper2
 
     @classmethod
     async def create(cls, db_path: Path):
         self = cls()
 
-        wrapper = DBWrapper2(await aiosqlite.connect(db_path))
-        self.db_connection = wrapper.db
+        wrapper = DBWrapper(await aiosqlite.connect(db_path))
         self.db_wrapper = wrapper
 
-        await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS singletons("
-            "   coin_id blob PRIMARY KEY,"
-            "   parent_id blob,"
-            "   puzzle_hash blob,"
-            "   amount blob,"
-            "   puzzle_root blob,"
-            "   lineage_proof blob,"
-            "   confirmed_at_time bigint,"
-            "   generation bigint,"
-            "   puzzle_reveal blob,"
-            "   solution blob,"
-            "   spend_type int,"
-            "   spending_pubkey blob"
-            ")"
-        )
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS singletons("
+                "   coin_id blob PRIMARY KEY,"
+                "   parent_id blob,"
+                "   puzzle_hash blob,"
+                "   amount blob,"
+                "   puzzle_root blob,"
+                "   lineage_proof blob,"
+                "   confirmed_at_time bigint,"
+                "   generation bigint,"
+                "   puzzle_reveal blob,"
+                "   solution blob,"
+                "   spend_type int,"
+                "   spending_pubkey blob"
+                ")"
+            )
 
-        await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS p2_singletons("
-            "   coin_id blob PRIMARY KEY,"
-            "   parent_id blob,"
-            "   puzzle_hash blob,"
-            "   amount blob,"
-            "   spent tinyint"
-            ")"
-        )
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS p2_singletons("
+                "   coin_id blob PRIMARY KEY,"
+                "   parent_id blob,"
+                "   puzzle_hash blob,"
+                "   amount blob,"
+                "   spent tinyint"
+                ")"
+            )
 
-        await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS achs("
-            "   coin_id blob PRIMARY KEY,"
-            "   parent_id blob,"
-            "   puzzle_hash blob,"
-            "   amount blob,"
-            "   from_root blob,"
-            "   p2_ph blob,"
-            "   confirmed_at_time bigint,"
-            "   spent_at_height bigint,"
-            "   completed tinyint,"
-            "   spending_pubkey blob"
-            ")"
-        )
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS achs("
+                "   coin_id blob PRIMARY KEY,"
+                "   parent_id blob,"
+                "   puzzle_hash blob,"
+                "   amount blob,"
+                "   from_root blob,"
+                "   p2_ph blob,"
+                "   confirmed_at_time bigint,"
+                "   spent_at_height bigint,"
+                "   completed tinyint,"
+                "   spending_pubkey blob"
+                ")"
+            )
 
-        await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS rekeys("
-            "   coin_id blob PRIMARY KEY,"
-            "   parent_id blob,"
-            "   puzzle_hash blob,"
-            "   amount blob,"
-            "   from_root blob,"
-            "   to_root blob,"
-            "   timelock blob,"
-            "   confirmed_at_time bigint,"
-            "   spent_at_height bigint,"
-            "   completed tinyint,"
-            "   spending_pubkey blob"
-            ")"
-        )
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS rekeys("
+                "   coin_id blob PRIMARY KEY,"
+                "   parent_id blob,"
+                "   puzzle_hash blob,"
+                "   amount blob,"
+                "   from_root blob,"
+                "   to_root blob,"
+                "   timelock blob,"
+                "   confirmed_at_time bigint,"
+                "   spent_at_height bigint,"
+                "   completed tinyint,"
+                "   spending_pubkey blob"
+                ")"
+            )
 
-        await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS configuration_info("
-            "   launcher_id blob PRIMARY KEY,"  # This table should only ever have one entry
-            "   info blob,"
-            "   outdated tinyint"
-            ")"
-        )
-        await self.db_connection.commit()
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS configuration_info("
+                "   launcher_id blob PRIMARY KEY,"  # This table should only ever have one entry
+                "   info blob,"
+                "   outdated tinyint"
+                ")"
+            )
+        
         return self
 
     async def add_singleton_record(self, record: SingletonRecord) -> None:
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO singletons VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                record.coin.name(),
-                record.coin.parent_coin_info,
-                record.coin.puzzle_hash,
-                bytes(record.coin.amount),
-                record.puzzle_root,
-                bytes(record.lineage_proof),
-                record.confirmed_at_time,
-                record.generation,
-                bytes([0]) if record.puzzle_reveal is None else bytes(record.puzzle_reveal),
-                bytes([0]) if record.solution is None else bytes(record.solution),
-                0 if record.spend_type is None else record.spend_type.value,
-                bytes([0]) if record.spending_pubkey is None else bytes(record.spending_pubkey),
-            ),
-        )
-        await cursor.close()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO singletons VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record.coin.name(),
+                    record.coin.parent_coin_info,
+                    record.coin.puzzle_hash,
+                    bytes(record.coin.amount),
+                    record.puzzle_root,
+                    bytes(record.lineage_proof),
+                    record.confirmed_at_time,
+                    record.generation,
+                    bytes([0]) if record.puzzle_reveal is None else bytes(record.puzzle_reveal),
+                    bytes([0]) if record.solution is None else bytes(record.solution),
+                    0 if record.spend_type is None else record.spend_type.value,
+                    bytes([0]) if record.spending_pubkey is None else bytes(record.spending_pubkey),
+                ),
+            )
+            await cursor.close()
 
     async def add_ach_record(self, record: ACHRecord) -> None:
         completed_int: int
@@ -126,22 +126,23 @@ class SyncStore:
             completed_int = 0
         else:
             completed_int = -1
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO achs VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                record.coin.name(),
-                record.coin.parent_coin_info,
-                record.coin.puzzle_hash,
-                bytes(record.coin.amount),
-                record.from_root,
-                record.p2_ph,
-                record.confirmed_at_time,
-                0 if record.spent_at_height is None else record.spent_at_height,
-                completed_int,
-                b"" if record.clawback_pubkey is None else bytes(record.clawback_pubkey),
-            ),
-        )
-        await cursor.close()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO achs VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record.coin.name(),
+                    record.coin.parent_coin_info,
+                    record.coin.puzzle_hash,
+                    bytes(record.coin.amount),
+                    record.from_root,
+                    record.p2_ph,
+                    record.confirmed_at_time,
+                    0 if record.spent_at_height is None else record.spent_at_height,
+                    completed_int,
+                    b"" if record.clawback_pubkey is None else bytes(record.clawback_pubkey),
+                ),
+            )
+            await cursor.close()
 
     async def add_rekey_record(self, record: RekeyRecord) -> None:
         completed_int: int
@@ -151,42 +152,45 @@ class SyncStore:
             completed_int = 0
         else:
             completed_int = -1
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO rekeys VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                record.coin.name(),
-                record.coin.parent_coin_info,
-                record.coin.puzzle_hash,
-                bytes(record.coin.amount),
-                record.from_root,
-                record.to_root,
-                record.timelock,
-                record.confirmed_at_time,
-                0 if record.spent_at_height is None else record.spent_at_height,
-                completed_int,
-                b"" if record.clawback_pubkey is None else bytes(record.clawback_pubkey),
-            ),
-        )
-        await cursor.close()
-
-    async def add_p2_singletons(self, coins: List[Coin]) -> None:
-        for p2_singleton in coins:
-            cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO p2_singletons VALUES(?, ?, ?, ?, ?)",
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO rekeys VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    p2_singleton.name(),
-                    p2_singleton.parent_coin_info,
-                    p2_singleton.puzzle_hash,
-                    bytes(p2_singleton.amount),
-                    0,
+                    record.coin.name(),
+                    record.coin.parent_coin_info,
+                    record.coin.puzzle_hash,
+                    bytes(record.coin.amount),
+                    record.from_root,
+                    record.to_root,
+                    record.timelock,
+                    record.confirmed_at_time,
+                    0 if record.spent_at_height is None else record.spent_at_height,
+                    completed_int,
+                    b"" if record.clawback_pubkey is None else bytes(record.clawback_pubkey),
                 ),
             )
-        if len(coins) > 0:
             await cursor.close()
 
+    async def add_p2_singletons(self, coins: List[Coin]) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            for p2_singleton in coins:
+                cursor = await conn.execute(
+                    "INSERT OR REPLACE INTO p2_singletons VALUES(?, ?, ?, ?, ?)",
+                    (
+                        p2_singleton.name(),
+                        p2_singleton.parent_coin_info,
+                        p2_singleton.puzzle_hash,
+                        bytes(p2_singleton.amount),
+                        0,
+                    ),
+                )
+            if len(coins) > 0:
+                await cursor.close()
+
     async def set_p2_singleton_spent(self, coin_id: bytes32) -> None:
-        cursor = await self.db_connection.execute("UPDATE p2_singletons SET spent = 1 WHERE coin_id==?", (coin_id,))
-        await cursor.close()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("UPDATE p2_singletons SET spent = 1 WHERE coin_id==?", (coin_id,))
+            await cursor.close()
 
     def _singleton_record_from_row(self, record) -> SingletonRecord:
         return SingletonRecord(
@@ -206,29 +210,33 @@ class SyncStore:
         )
 
     async def get_latest_singleton(self) -> Optional[SingletonRecord]:
-        cursor = await self.db_connection.execute("SELECT * from singletons ORDER BY generation DESC LIMIT 1")
-        record = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * from singletons ORDER BY generation DESC LIMIT 1")
+            record = await cursor.fetchone()
+            await cursor.close()
         return self._singleton_record_from_row(record) if record is not None else None
 
     async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
-        cursor = await self.db_connection.execute("SELECT * from singletons WHERE coin_id=?", (coin_id,))
-        record = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * from singletons WHERE coin_id=?", (coin_id,))
+            record = await cursor.fetchone()
+            await cursor.close()
         return self._singleton_record_from_row(record) if record is not None else None
 
     async def get_all_singletons(self) -> List[SingletonRecord]:
-        cursor = await self.db_connection.execute("SELECT * from singletons")
-        records = await cursor.fetchall()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * from singletons")
+            records = await cursor.fetchall()
         return [self._singleton_record_from_row(record) for record in records]
 
     async def get_ach_records(self, include_completed_coins: bool = False) -> List[ACHRecord]:
         optional_unspent_str: str = "" if include_completed_coins else " WHERE completed==0"
-        cursor = await self.db_connection.execute(
-            f"SELECT * from achs{optional_unspent_str} ORDER BY confirmed_at_time DESC"
-        )
-        records = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(
+                f"SELECT * from achs{optional_unspent_str} ORDER BY confirmed_at_time DESC"
+            )
+            records = await cursor.fetchall()
+            await cursor.close()
         return [
             ACHRecord(
                 Coin(
@@ -248,11 +256,12 @@ class SyncStore:
 
     async def get_rekey_records(self, include_completed_coins: bool = False) -> List[RekeyRecord]:
         optional_unspent_str: str = "" if include_completed_coins else " WHERE completed==0"
-        cursor = await self.db_connection.execute(
-            f"SELECT * from rekeys{optional_unspent_str} ORDER BY confirmed_at_time DESC"
-        )
-        records = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(
+                f"SELECT * from rekeys{optional_unspent_str} ORDER BY confirmed_at_time DESC"
+            )
+            records = await cursor.fetchall()
+            await cursor.close()
         return [
             RekeyRecord(
                 Coin(
@@ -280,12 +289,13 @@ class SyncStore:
             limit_str: str = f" LIMIT {start}, {limit}"
         else:
             limit_str = ""
-        cursor = await self.db_connection.execute(
-            f"SELECT * from p2_singletons WHERE amount>=? AND spent==0 ORDER BY amount DESC{limit_str}",
-            (minimum_amount,),
-        )
-        coins = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(
+                f"SELECT * from p2_singletons WHERE amount>=? AND spent==0 ORDER BY amount DESC{limit_str}",
+                (minimum_amount,),
+            )
+            coins = await cursor.fetchall()
+            await cursor.close()
 
         return [Coin(coin[1], coin[2], uint64.from_bytes(coin[3])) for coin in coins]
 
@@ -293,9 +303,10 @@ class SyncStore:
         self, configuration: Union[PrefarmInfo, RootDerivation], outdated: bool = False
     ) -> None:
         # Validate this is not a second configuration
-        cursor = await self.db_connection.execute("SELECT * FROM configuration_info")
-        info = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * FROM configuration_info")
+            info = await cursor.fetchone()
+            await cursor.close()
         if info is not None:
             try:
                 valid = PrefarmInfo.from_bytes(info[1]).is_valid_update(configuration)
@@ -310,18 +321,20 @@ class SyncStore:
             launcher_id = configuration.launcher_id
         elif isinstance(configuration, RootDerivation):
             launcher_id = configuration.prefarm_info.launcher_id
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO configuration_info VALUES(?, ?, ?)",
-            (launcher_id, bytes(configuration), 1 if outdated else 0),
-        )
-        await cursor.close()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO configuration_info VALUES(?, ?, ?)",
+                (launcher_id, bytes(configuration), 1 if outdated else 0),
+            )
+            await cursor.close()
 
     async def get_configuration(
         self, public: bool, block_outdated: bool = False
     ) -> Optional[Union[PrefarmInfo, RootDerivation]]:
-        cursor = await self.db_connection.execute("SELECT * FROM configuration_info")
-        info = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * FROM configuration_info")
+            info = await cursor.fetchone()
+            await cursor.close()
 
         if info is None:
             return None
@@ -336,15 +349,16 @@ class SyncStore:
             else:
                 return derivation
         except AssertionError:
-            if public:
-                return PrefarmInfo.from_bytes(info[1])
+            if not public:
+                raise ValueError("The configuration file is not a public configuration file")
             else:
-                raise ValueError("The configuration file is not a private configuration file")
+                return PrefarmInfo.from_bytes(info[1])
 
     async def is_configuration_outdated(self) -> bool:
-        cursor = await self.db_connection.execute("SELECT * FROM configuration_info")
-        info = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * FROM configuration_info")
+            info = await cursor.fetchone()
+            await cursor.close()
 
         if info is None:
             raise ValueError("No configuration present")
@@ -352,9 +366,10 @@ class SyncStore:
         return True if info[2] == 1 else False
 
     async def update_config_puzzle_root(self, puzzle_root: bytes32, outdate_private: bool = True) -> bool:
-        cursor = await self.db_connection.execute("SELECT * FROM configuration_info")
-        info = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT * FROM configuration_info")
+            info = await cursor.fetchone()
+            await cursor.close()
 
         if info is None:
             raise ValueError("No configuration present")
@@ -380,10 +395,11 @@ class SyncStore:
             new_configuration = dataclasses.replace(prefarm_info, puzzle_root=puzzle_root)
             public = True
 
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO configuration_info VALUES(?, ?, ?)",
-            (info[0], bytes(new_configuration), 1 if outdate_private and not public else info[2]),
-        )
-        await cursor.close()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO configuration_info VALUES(?, ?, ?)",
+                (info[0], bytes(new_configuration), 1 if outdate_private and not public else info[2]),
+            )
+            await cursor.close()
 
         return (outdate_private and not public) or info[2] == 1

@@ -395,8 +395,9 @@ async def sync_cmd(
             except ValueError:
                 db_config = load_prefarm_info(configuration)
                 prefarm_info = db_config
-            return f"db_path {db_path} prefarm_info {prefarm_info}"
+            # return f"db_path {db_path} prefarm_info {prefarm_info}"
             sync_store: SyncStore = await load_db(db_path, prefarm_info.launcher_id)
+            return f"sync_store {sync_store}"
             await sync_store.db_wrapper.begin_transaction()
             await sync_store.add_configuration(db_config)
         else:
