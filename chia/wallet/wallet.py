@@ -579,12 +579,14 @@ class Wallet:
     async def get_coins_to_offer(
         self,
         asset_id: Optional[bytes32],
-        amount: uint64,
+        amount: Optional[uint64],
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
+        if amount is None:
+            raise ValueError("The standard wallet cannot offer coins without an amount")
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")

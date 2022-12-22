@@ -980,6 +980,15 @@ class PoolWallet:
     def get_name(self) -> str:
         return self.wallet_info.name
 
+    async def get_coins_to_offer(
+        self,
+        asset_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("PoolWallet does not support offering coins")
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

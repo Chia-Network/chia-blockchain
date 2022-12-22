@@ -1474,6 +1474,15 @@ class DIDWallet:
     def require_derivation_paths(self) -> bool:
         return True
 
+    async def get_coins_to_offer(
+        self,
+        asset_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("DID Wallet does not support offering coins")
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
