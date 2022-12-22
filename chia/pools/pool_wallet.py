@@ -45,6 +45,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -969,13 +970,13 @@ class PoolWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("PoolWallet does not support select_coins()")
+        raise NotImplementedError("Pool Wallet does not support select_coins()")
 
     def require_derivation_paths(self) -> bool:
         return False
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        raise RuntimeError("PoolWallet does not support puzzle_hash_for_pk")
+        raise NotImplementedError("Pool Wallet does not support puzzle_hash_for_pk")
 
     def get_name(self) -> str:
         return self.wallet_info.name
@@ -987,7 +988,10 @@ class PoolWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("PoolWallet does not support offering coins")
+        raise NotImplementedError("Pool Wallet does not support offering coins")
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+        raise NotImplementedError("Pool wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:

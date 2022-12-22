@@ -494,8 +494,8 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
+                    coins_to_offer[id] = list(
+                        await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount)
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -536,7 +536,7 @@ class TradeManager:
             fee_left_to_pay: uint64 = fee
             for id, selected_coins in coins_to_offer.items():
                 if isinstance(id, int):
-                    wallet = self.wallet_state_manager.wallets[id]
+                    wallet = self.wallet_state_manager.wallets[uint32(id)]
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 # This should probably not switch on whether or not we're spending XCH but it has to for now

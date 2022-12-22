@@ -9,6 +9,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 if TYPE_CHECKING:
@@ -71,6 +72,9 @@ class WalletProtocol(Protocol):
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
+        ...
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
         ...
 
     # WalletStateManager is only imported for type hinting thus leaving pylint

@@ -20,6 +20,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -600,6 +601,9 @@ class Wallet:
 
     def get_name(self) -> str:
         return "Standard Wallet"
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+        raise NotImplementedError("Standard wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:

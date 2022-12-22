@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -1481,7 +1482,10 @@ class DIDWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("DID Wallet does not support offering coins")
+        raise NotImplementedError("DID Wallet does not support offering coins")
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+        raise NotImplementedError("DID wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:
