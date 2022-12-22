@@ -71,7 +71,7 @@ class CustodyRpcApi:
             # "/clawback": self.clawback,
             # "/complete": self.complete,
             # "/increase": self.increase,
-            # "/show": self.show,
+            "/show": self.show,
             # "/audit": self.audit,
             # "/examine": self.examine,
             # "/which_pubkeys": self.which_pubkeys,
@@ -152,6 +152,18 @@ class CustodyRpcApi:
             db_path,
             uint64(node_rpc_port),
             show)
+        return {"wjb": wjb}
+
+    async def show(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        config = request.get("config")
+        derivation = request.get("derivation")
+                    
+        wjb = await self.service.show_cmd(db_path,
+            config,
+            derivation)
         return {"wjb": wjb}
 
 

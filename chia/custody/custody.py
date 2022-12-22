@@ -144,6 +144,16 @@ class Custody:
         b = await sync_cmd(configuration, db_path, node_rpc_port, show)
         return b
 
+    async def show_cmd(
+        self,
+        db_path: str,
+        config: bool,
+        derivation: bool,
+    ) -> str:
+        from chia.custody.cic.cli.main import show_cmd
+
+        b = await show_cmd(db_path, config, derivation)
+        return b
 
 
     async def hsmgen_cmd(self) -> str:
