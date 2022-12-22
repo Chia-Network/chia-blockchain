@@ -104,6 +104,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     transaction_id = bytes32.from_hexstr(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = selected_network_address_prefix(config)
+    # The wallet id parameter is required by the client but unused by the RPC.
     this_is_unused = 37
     tx: TransactionRecord = await wallet_client.get_transaction(this_is_unused, transaction_id=transaction_id)
 
