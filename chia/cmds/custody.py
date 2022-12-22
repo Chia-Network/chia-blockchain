@@ -200,10 +200,6 @@ def launch_cmd(
     node_rpc_port: Optional[int],
     fee: int,
 ):
-    # from chia.custody.cic.cli.main import launch_cmd
-
-    # launch_cmd(configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee)
-
     from chia.cmds.custody_funcs import launch_cmd
 
     run(launch_cmd(custody_rpc_port, configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee))

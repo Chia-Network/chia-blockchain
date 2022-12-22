@@ -68,10 +68,10 @@ from chia.custody.hsms.process.unsigned_spend import UnsignedSpend
 from chia.custody.hsms.streamables.coin_spend import CoinSpend as HSMCoinSpend
 from chia.custody.hsms.util.qrint_encoding import a2b_qrint, b2a_qrint
 
-#if os.environ.get("TESTING_CIC_CLI", "FALSE") == "TRUE":
-#    from tests.cli_clients import get_node_and_wallet_clients, get_node_client, get_additional_data
-#else:
-from chia.custody.cic.cli.clients import get_node_and_wallet_clients, get_node_client, get_additional_data
+if os.environ.get("TESTING_CIC_CLI", "FALSE") == "TRUE":
+    from tests.cli_clients import get_node_and_wallet_clients, get_node_client, get_additional_data
+else:
+    from chia.custody.cic.cli.clients import get_node_and_wallet_clients, get_node_client, get_additional_data
 
 _T = TypeVar("_T")
 
