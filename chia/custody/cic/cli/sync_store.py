@@ -25,7 +25,7 @@ class SyncStore:
     async def create(cls, db_path: Path):
         self = cls()
 
-        wrapper = DBWrapper(await aiosqlite.connect(db_path))
+        wrapper = DBWrapper2(await aiosqlite.connect(db_path))
         self.db_wrapper = wrapper
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:

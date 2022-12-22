@@ -397,7 +397,7 @@ async def sync_cmd(
                 prefarm_info = db_config
             # return f"db_path {db_path} prefarm_info {prefarm_info}"
             sync_store: SyncStore = await load_db(db_path, prefarm_info.launcher_id)
-            return f"sync_store {sync_store}"
+            # return f"sync_store {sync_store}"
             await sync_store.db_wrapper.begin_transaction()
             await sync_store.add_configuration(db_config)
         else:
@@ -626,15 +626,12 @@ async def sync_cmd(
         ]:
             await sync_store.add_rekey_record(dataclasses.replace(outdated_rekey, completed=False))
     except Exception as e:
-        await sync_store.db_connection.close()
         print(str(e))
         return
     finally:
         node_client.close()
         await node_client.await_closed()
-
-    await sync_store.db_wrapper.commit_transaction()
-    await sync_store.db_connection.close()
+        await sync_store.db_wrapper.close()
 
     if show:
         show_cmd(db_path, False, False)
