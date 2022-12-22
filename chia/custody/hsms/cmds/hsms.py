@@ -79,7 +79,8 @@ def replace_with_gpg_pipe(args, f: BinaryIO) -> TextIO:
 
 def parse_private_key_file(args) -> List[BLSSecretExponent]:
     secret_exponents = []
-    for f in args.private_key_file:
+    for key in args.split(","):
+        f = open(key, "r")
         if f.name.endswith(".gpg"):
             f = replace_with_gpg_pipe(args, f)
         for line in f.readlines():
@@ -126,62 +127,22 @@ def check_ok():
 async def hsms_cmd(
     message:str,
     secretkey:str) -> str:
-    return "NOT DONE"
-    
-    wallet = parse_private_key_file(args)
-    unsigned_spend_pipeline = create_unsigned_spend_pipeline(args.nochunks)
-    for unsigned_spend in unsigned_spend_pipeline:
-        if not args.yes:
-            summarize_unsigned_spend(unsigned_spend)
-            if not check_ok():
-                continue
-        signature_info = sign(unsigned_spend, wallet)
-        if signature_info:
-            signature = sum(
-                [_.signature for _ in signature_info], start=BLSSignature.zero()
-            )
-            encoded_sig = b2a_qrint(bytes(signature))
-            if args.qr:
-                qr = segno.make_qr(encoded_sig)
-                print()
-                qr.terminal(compact=True)
-                print()
-            else:
-                return encoded_sig
+    wallet = parse_private_key_file(secretkey)
+    f=open(message,"r")
+    data=f.read()
+    unsigned_spend = unsigned_spend_from_blob(a2b_qrint(data))
+    f.close()
 
+    # return data
 
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Manage private keys and process signing requests"
-    )
-    parser.add_argument(
-        "-y",
-        "--yes",
-        help="skip confirmations",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--qr",
-        help="show signature as QR code",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--nochunks",
-        help="read the spend in its entirety rather than as chunks (testing only)",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-g", "--gpg-argument", help="argument to pass to gpg (besides -d).", default=""
-    )
-    parser.add_argument(
-        # "-f",
-        "private_key_file",
-        metavar="path-to-private-keys",
-        action="append",
-        default=[],
-        help="file containing bech32m-encoded secret exponents. If file name ends with .gpg, "
-        '"gpg -d" will be invoked automatically. File is read one line at a time.',
-        type=argparse.FileType("r"),
-    )
-    return parser
+    signature_info = sign(unsigned_spend, wallet)
+    if signature_info:
+        signature = sum(
+           [_.signature for _ in signature_info], start=BLSSignature.zero()
+        )
+        encoded_sig = b2a_qrint(bytes(signature))
+        return encoded_sig
+
+    return "BAD"
+
 
