@@ -209,6 +209,14 @@ def launch_cmd(
 
 @custody_cmd.command("update_config", short_help="Update an outdated config in a sync DB with a new config")
 @click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-c",
     "--configuration",
     help="The configuration file update the sync database with (default: ./Configuration (******).txt)",
@@ -222,38 +230,24 @@ def launch_cmd(
     required=True,
 )
 def update_cmd(
+    custody_rpc_port: Optional[int],
     configuration: Optional[str],
     db_path: str,
 ):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
-        try:
-            if not await sync_store.is_configuration_outdated():
-                print("The configuration of this sync DB is not outdated")
-            else:
-                try:
-                    db_config = load_root_derivation(configuration)
-                    puzzle_root = db_config.prefarm_info.puzzle_root
-                except ValueError:
-                    db_config = load_prefarm_info(configuration)
-                    puzzle_root = db_config.puzzle_root
-                latest_singleton = await sync_store.get_latest_singleton()
-                if latest_singleton.puzzle_root != puzzle_root:
-                    print("Completing update, but configuration is still outdated")
-                    outdated = True
-                else:
-                    outdated = False
-                await sync_store.db_wrapper.begin_transaction()
-                await sync_store.add_configuration(db_config, outdated)
-                await sync_store.db_wrapper.commit_transaction()
-                print("Configuration update successful")
-        finally:
-            await sync_store.db_connection.close()
+    from chia.cmds.custody_funcs import update_cmd
 
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(update_cmd(custody_rpc_port, configuration, db_path))
 
 
 @custody_cmd.command("export_config", short_help="Export a copy of the current DB's config")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-f",
     "--filename",
@@ -274,34 +268,14 @@ def update_cmd(
     is_flag=True,
 )
 def export_cmd(
+    custody_rpc_port: Optional[int],
     filename: Optional[str],
     db_path: str,
     public: bool,
 ):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
-        try:
-            if not public:
-                try:
-                    configuration = await sync_store.get_configuration(False, block_outdated=False)
-                    puzzle_root = configuration.prefarm_info.puzzle_root
-                except ValueError:
-                    configuration = await sync_store.get_configuration(True, block_outdated=False)
-                    puzzle_root = configuration.puzzle_root
-            else:
-                configuration = await sync_store.get_configuration(True, block_outdated=False)
-                puzzle_root = configuration.puzzle_root
-            if filename is None:
-                _filename = f"Configuration Export ({puzzle_root[0:3].hex()}).txt"
-            else:
-                _filename = filename
-            with open(Path(_filename), "wb") as file:
-                file.write(bytes(configuration))
-            print(f"Config successfully exported to {_filename}")
-        finally:
-            await sync_store.db_connection.close()
+    from chia.cmds.custody_funcs import export_cmd
 
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(export_cmd(custody_rpc_port, filename, db_path, public))
 
 
 @custody_cmd.command("sync", short_help="Sync a singleton from an existing configuration")

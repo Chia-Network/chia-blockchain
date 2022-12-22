@@ -54,6 +54,28 @@ async def launch_cmd(
             res = await client.launch(configuration, db_path, wallet_rpc_port, fingerprint, node_rpc_port, fee)
             print(res)
 
+async def update_cmd(
+    rpc_port: int,
+    configuration: str,
+    db_path: str,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.update(configuration, db_path)
+            print(res)
+
+async def export_cmd(
+    rpc_port: int,
+    filename: Optional[str],
+    db_path: str,
+    public: bool,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.export(filename, db_path, public)
+            print(res)
+
+
 
 async def sync_cmd(
     rpc_port: int,

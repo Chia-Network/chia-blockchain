@@ -132,6 +132,30 @@ class Custody:
         return b
 
 
+    async def update_cmd(
+        self,
+        configuration: str,
+        db_path: str,
+    ) -> str:
+        from chia.custody.cic.cli.main import update_cmd
+
+        b = await update_cmd(configuration, db_path)
+        return b
+
+
+    async def export_cmd(
+        self,
+        filename: Optional[str],
+        db_path: str,
+        public: bool
+    ) -> str:
+        from chia.custody.cic.cli.main import export_cmd
+
+        b = await export_cmd(filename, db_path, public)
+        return b
+
+
+
     async def sync_cmd(
         self,
         configuration: str,

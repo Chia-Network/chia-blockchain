@@ -61,8 +61,8 @@ class CustodyRpcApi:
             "/init": self.init,
             "/derive": self.derive,
             "/launch": self.launch,
-            # "/update": self.update,
-            # "/export": self.export,
+            "/update": self.update,
+            "/export": self.export,
             "/sync": self.sync,
             "/address": self.address,
             "/push": self.push,
@@ -141,6 +141,29 @@ class CustodyRpcApi:
             uint64(fee))
         return {"wjb": wjb}
 
+    async def update(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        configuration = request.get("configuration")
+        db_path = request.get("db_path")
+                    
+        wjb = await self.service.update_cmd(configuration,
+            db_path)
+        return {"wjb": wjb}
+        
+    async def export(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        filename = request.get("filename")
+        db_path = request.get("db_path")
+        public = request.get("public")
+                      
+        wjb = await self.service.export_cmd(filename,
+            db_path,
+            public)
+        return {"wjb": wjb}
+        
+        
 
     async def sync(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:

@@ -313,67 +313,66 @@ async def launch_cmd(
     return "hi"
    
 
-def update_cmd(
+async def update_cmd(
     configuration: Optional[str],
     db_path: str,
-):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
+) -> str:
+    sync_store: SyncStore = await load_db(db_path)
+
+    info = "Update failed"
+    
+    if not await sync_store.is_configuration_outdated():
+        info = "The configuration of this sync DB is not outdated"
+    else:
         try:
-            if not await sync_store.is_configuration_outdated():
-                print("The configuration of this sync DB is not outdated")
-            else:
-                try:
-                    db_config = load_root_derivation(configuration)
-                    puzzle_root = db_config.prefarm_info.puzzle_root
-                except ValueError:
-                    db_config = load_prefarm_info(configuration)
-                    puzzle_root = db_config.puzzle_root
-                latest_singleton = await sync_store.get_latest_singleton()
-                if latest_singleton.puzzle_root != puzzle_root:
-                    print("Completing update, but configuration is still outdated")
-                    outdated = True
-                else:
-                    outdated = False
-                await sync_store.db_wrapper.begin_transaction()
-                await sync_store.add_configuration(db_config, outdated)
-                await sync_store.db_wrapper.commit_transaction()
-                print("Configuration update successful")
-        finally:
-            await sync_store.db_connection.close()
+            db_config = load_root_derivation(configuration)
+            puzzle_root = db_config.prefarm_info.puzzle_root
+        except ValueError:
+            db_config = load_prefarm_info(configuration)
+            puzzle_root = db_config.puzzle_root
+        latest_singleton = await sync_store.get_latest_singleton()
+        if latest_singleton.puzzle_root != puzzle_root:
+            info = "Completing update, but configuration is still outdated"
+            outdated = True
+        else:
+            outdated = False
+        await sync_store.db_wrapper.begin_transaction()
+        await sync_store.add_configuration(db_config, outdated)
+        await sync_store.db_wrapper.commit_transaction()
+        info = "Configuration update successful"
 
-    asyncio.get_event_loop().run_until_complete(do_command())
+    await sync_store.db_wrapper.close()
+    return info
 
 
-def export_cmd(
+
+async def export_cmd(
     filename: Optional[str],
     db_path: str,
     public: bool,
-):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
+) -> str:
+    sync_store: SyncStore = await load_db(db_path)
+    if not public:
         try:
-            if not public:
-                try:
-                    configuration = await sync_store.get_configuration(False, block_outdated=False)
-                    puzzle_root = configuration.prefarm_info.puzzle_root
-                except ValueError:
-                    configuration = await sync_store.get_configuration(True, block_outdated=False)
-                    puzzle_root = configuration.puzzle_root
-            else:
-                configuration = await sync_store.get_configuration(True, block_outdated=False)
-                puzzle_root = configuration.puzzle_root
-            if filename is None:
-                _filename = f"Configuration Export ({puzzle_root[0:3].hex()}).txt"
-            else:
-                _filename = filename
-            with open(Path(_filename), "wb") as file:
-                file.write(bytes(configuration))
-            print(f"Config successfully exported to {_filename}")
-        finally:
-            await sync_store.db_connection.close()
+            configuration = await sync_store.get_configuration(False, block_outdated=False)
+            puzzle_root = configuration.prefarm_info.puzzle_root
+        except ValueError:
+            configuration = await sync_store.get_configuration(True, block_outdated=False)
+            puzzle_root = configuration.puzzle_root
+    else:
+        configuration = await sync_store.get_configuration(True, block_outdated=False)
+        puzzle_root = configuration.puzzle_root
+    if filename is None:
+        _filename = f"Configuration Export ({puzzle_root[0:3].hex()}).txt"
+    else:
+        _filename = filename
+    with open(Path(_filename), "wb") as file:
+        file.write(bytes(configuration))
+    print(f"Config successfully exported to {_filename}")
 
-    asyncio.get_event_loop().run_until_complete(do_command())
+    await sync_store.db_wrapper.close()
+
+    return "OK"
 
 
 async def sync_cmd(

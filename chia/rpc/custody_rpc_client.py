@@ -61,6 +61,26 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+    async def update(self,
+        configuration: str,
+        db_path: str) -> Dict[str, Any]:
+        response = await self.fetch("update", {"configuration": configuration,
+            "db_path": db_path})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def export(self,
+        filename: Optional[str],
+        db_path: str,
+        public: bool) -> Dict[str, Any]:
+        response = await self.fetch("export", {"filename": filename,
+            "db_path": db_path,
+            "public": public})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
 
     async def sync(self,
         configuration: str,
