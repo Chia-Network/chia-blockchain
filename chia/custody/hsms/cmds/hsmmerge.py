@@ -32,16 +32,15 @@ def file_or_string(p) -> str:
 
 
 async def hsmmerge_cmd(
-    bundle:str,
+    unsigned_spend:str,
     sigs:str) -> str:
-    return "NOT DONE"
-    blob = a2b_qrint(file_or_string(args.unsigned_spend))
+    blob = a2b_qrint(file_or_string(unsigned_spend))
     unsigned_spend = UnsignedSpend.from_bytes(blob)
     signatures = [
-        BLSSignature.from_bytes(a2b_qrint(file_or_string(_))) for _ in args.signature
+        BLSSignature.from_bytes(a2b_qrint(file_or_string(_))) for _ in sigs.split(",")
     ]
     spend_bundle = create_spend_bundle(unsigned_spend, signatures)
-    print(bytes(spend_bundle).hex())
+    return bytes(spend_bundle).hex()
 
 
 def create_parser():
