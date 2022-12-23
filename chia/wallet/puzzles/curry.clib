@@ -87,18 +87,49 @@
   )
 
 
-  ;; this is included for future compilers that handle it properly. If you get weird
-  ;; errors using this, it may be your tooling. Use `curry` above instead, or inline manually.
+  ;; This is the macro version that inlines everything and expects varargs parameters.
+  ;; It may be more efficient in some cases.
 
-  (defun-inline curry_hashes_inline (mod_hash . curry_parameter_hashes)
-     (tree_hash_of_apply mod_hash
-                         (calculate_hash_of_curried_parameters curry_parameter_hashes))
+  (defmacro curry_hashes_inline (mod_hash . curry_parameter_hashes)
+    (qq
+      (sha256
+        ; apply
+        (two_sha256_one_a_kw)
+        (sha256 TWO
+          ; func
+          (sha256 TWO
+            (sha256_one_one)
+            (unquote mod_hash)
+          )
+          (sha256 TWO
+            ; args
+            (unquote (c build_pre_hashed_environment curry_parameter_hashes))
+            (sha256_one)
+          )
+        )
+      )
+    )
   )
 
-  ;; `curry_mod_hashes_inline` takes exactly two parameters rather than varags, and it can be inlined
 
-  (defun-inline curry_mod_hashes_inline (mod_hash curry_parameter_hashes)
-     (tree_hash_of_apply mod_hash
-                         (calculate_hash_of_curried_parameters curry_parameter_hashes))
+  ;; helper macro
+
+  (defmacro build_pre_hashed_environment curry_parameter_hashes
+    (qq
+      (sha256
+        (two_sha256_one_c_kw)
+        (sha256 TWO
+          (sha256 TWO
+            (sha256_one_one)
+            (unquote (f curry_parameter_hashes))
+          )
+          (sha256 TWO
+            (unquote (if (r curry_parameter_hashes) (c build_pre_hashed_environment (r curry_parameter_hashes)) (q . (sha256_one_one))))
+            (sha256_one)
+          )
+        )
+      )
+    )
   )
+
 )
