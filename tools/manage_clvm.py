@@ -185,24 +185,28 @@ def main() -> None:
 
 
 @main.command()
-def check() -> int:
+@click.option("--use-cache/--no-cache", default=True, show_default=True, envvar="USE_CACHE")
+def check(use_cache: bool) -> int:
     used_excludes = set()
     overall_fail = False
 
     cache: Cache
-    try:
-        print(f"Attempting to load cache from: {cache_path}")
-        with cache_path.open(mode="r") as file:
-            cache = load_cache(file=file)
-    except FileNotFoundError:
-        print("Cache not found, starting fresh")
+    if not use_cache:
         cache = create_empty_cache()
-    except NoCacheVersionError:
-        print("Ignoring cache due to lack of version")
-        cache = create_empty_cache()
-    except WrongCacheVersionError as e:
-        print(f"Ignoring cache due to incorrect version, expected {e.expected_version!r} got: {e.found_version!r}")
-        cache = create_empty_cache()
+    else:
+        try:
+            print(f"Attempting to load cache from: {cache_path}")
+            with cache_path.open(mode="r") as file:
+                cache = load_cache(file=file)
+        except FileNotFoundError:
+            print("Cache not found, starting fresh")
+            cache = create_empty_cache()
+        except NoCacheVersionError:
+            print("Ignoring cache due to lack of version")
+            cache = create_empty_cache()
+        except WrongCacheVersionError as e:
+            print(f"Ignoring cache due to incorrect version, expected {e.expected_version!r} got: {e.found_version!r}")
+            cache = create_empty_cache()
 
     cache_entries = cache["entries"]
     cache_modified = False
@@ -287,7 +291,7 @@ def check() -> int:
         for exclude in unused_excludes:
             print(f"    {exclude}")
 
-    if cache_modified:
+    if use_cache and cache_modified:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with cache_path.open(mode="w") as file:
             dump_cache(cache=cache, file=file)
@@ -343,4 +347,4 @@ def build() -> int:
     return 1 if overall_fail else 0
 
 
-sys.exit(main())
+sys.exit(main(auto_envvar_prefix="CHIA_MANAGE_CLVM"))
