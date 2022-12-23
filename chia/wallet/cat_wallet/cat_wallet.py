@@ -59,7 +59,6 @@ from chia.wallet.wallet_info import WalletInfo
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
-
 # This should probably not live in this file but it's for experimental right now
 
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
