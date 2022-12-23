@@ -491,14 +491,14 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
 
-                    if asset_id is None and isinstance(wallet, (CATWallet, Wallet)):
+                    if isinstance(wallet, (CATWallet, Wallet)):
                         coins_to_offer[id] = list(
                             await wallet.get_coins_to_offer(uint64(abs(amount)), min_coin_amount, max_coin_amount)
                         )
                     elif asset_id is not None and isinstance(wallet, (NFTWallet, DataLayerWallet)):
                         coins_to_offer[id] = list(await wallet.get_coins_to_offer(asset_id))
                     else:
-                        raise ValueError(f"Cannot offer coins from wallet type {wallet.type()} with id {wallet.id()}")
+                        raise ValueError(f"Cannot offer coins from wallet {wallet.get_name()} with id {wallet.id()}")
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
