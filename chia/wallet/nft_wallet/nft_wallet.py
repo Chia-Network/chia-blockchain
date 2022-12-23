@@ -540,13 +540,8 @@ class NFTWallet:
 
     async def get_coins_to_offer(
         self,
-        nft_id: Optional[bytes32],
-        amount: Optional[uint64],
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
+        nft_id: bytes32,
     ) -> Set[Coin]:
-        if nft_id is None:
-            raise ValueError("An NFT ID must be specified")
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")

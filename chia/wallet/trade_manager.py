@@ -256,11 +256,7 @@ class TradeManager:
                 all_txs.append(tx)
             else:
                 # ATTENTION: new_wallets
-                if (
-                    isinstance(wallet, CATWallet)
-                    or isinstance(wallet, NFTWallet)
-                    or isinstance(wallet, DataLayerWallet)
-                ):
+                if isinstance(wallet, (CATWallet, NFTWallet, DataLayerWallet)):
                     txs = await wallet.generate_signed_transaction(
                         [uint64(coin.amount)], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                     )
@@ -340,11 +336,7 @@ class TradeManager:
                         all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 else:
                     # ATTENTION: new_wallets
-                    if (
-                        isinstance(wallet, CATWallet)
-                        or isinstance(wallet, NFTWallet)
-                        or isinstance(wallet, DataLayerWallet)
-                    ):
+                    if isinstance(wallet, (CATWallet, NFTWallet, DataLayerWallet)):
                         txs = await wallet.generate_signed_transaction(
                             [uint64(coin.amount)], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                         )
@@ -498,11 +490,15 @@ class TradeManager:
                     else:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                    if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
-                        raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = list(
-                        await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount)
-                    )
+
+                    if asset_id is None and isinstance(wallet, (CATWallet, Wallet)):
+                        coins_to_offer[id] = list(
+                            await wallet.get_coins_to_offer(uint64(abs(amount)), min_coin_amount, max_coin_amount)
+                        )
+                    elif asset_id is not None and isinstance(wallet, (NFTWallet, DataLayerWallet)):
+                        coins_to_offer[id] = list(await wallet.get_coins_to_offer(asset_id))
+                    else:
+                        raise ValueError(f"Cannot offer coins from wallet type {wallet.type()} with id {wallet.id()}")
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
@@ -571,7 +567,7 @@ class TradeManager:
                     all_transactions.extend(txs)
                 else:
                     # ATTENTION: new_wallets
-                    if isinstance(wallet, CATWallet) or isinstance(wallet, DataLayerWallet):
+                    if isinstance(wallet, (CATWallet, DataLayerWallet)):
                         txs = await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],

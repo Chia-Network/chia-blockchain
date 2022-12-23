@@ -65,15 +65,6 @@ class WalletProtocol(Protocol):
     def get_name(self) -> str:
         ...
 
-    async def get_coins_to_offer(
-        self,
-        asset_id: Optional[bytes32],
-        amount: Optional[uint64],
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
-    ) -> Set[Coin]:
-        ...
-
     async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
         ...
 

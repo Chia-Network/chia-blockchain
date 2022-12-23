@@ -870,14 +870,11 @@ class CATWallet:
 
     async def get_coins_to_offer(
         self,
-        asset_id: Optional[bytes32],
-        amount: Optional[uint64],
+        amount: uint64,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
-        if amount is None:
-            raise ValueError("The CAT wallet cannot offer coins without an amount")
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)
