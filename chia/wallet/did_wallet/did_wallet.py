@@ -23,7 +23,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 
@@ -1141,9 +1140,7 @@ class DIDWallet:
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
+        record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
