@@ -256,11 +256,7 @@ class TradeManager:
                 all_txs.append(tx)
             else:
                 # ATTENTION: new_wallets
-                if (
-                    isinstance(wallet, CATWallet)
-                    or isinstance(wallet, NFTWallet)
-                    or isinstance(wallet, DataLayerWallet)
-                ):
+                if isinstance(wallet, (CATWallet, NFTWallet, DataLayerWallet)):
                     txs = await wallet.generate_signed_transaction(
                         [uint64(coin.amount)], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                     )
@@ -340,11 +336,7 @@ class TradeManager:
                         all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 else:
                     # ATTENTION: new_wallets
-                    if (
-                        isinstance(wallet, CATWallet)
-                        or isinstance(wallet, NFTWallet)
-                        or isinstance(wallet, DataLayerWallet)
-                    ):
+                    if isinstance(wallet, (CATWallet, NFTWallet, DataLayerWallet)):
                         txs = await wallet.generate_signed_transaction(
                             [uint64(coin.amount)], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                         )
@@ -571,7 +563,7 @@ class TradeManager:
                     all_transactions.extend(txs)
                 else:
                     # ATTENTION: new_wallets
-                    if isinstance(wallet, CATWallet) or isinstance(wallet, DataLayerWallet):
+                    if isinstance(wallet, (CATWallet, DataLayerWallet)):
                         txs = await wallet.generate_signed_transaction(
                             [uint64(abs(offer_dict[id]))],
                             [Offer.ph()],
