@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from ssl import SSLContext
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
@@ -33,7 +34,13 @@ class RpcClient:
     port: uint16
 
     @classmethod
-    async def create(cls: Type[_T_RpcClient], self_hostname: str, port: uint16, root_path, net_config) -> _T_RpcClient:
+    async def create(
+        cls: Type[_T_RpcClient],
+        self_hostname: str,
+        port: uint16,
+        root_path: Path,
+        net_config: Dict[str, Any],
+    ) -> _T_RpcClient:
         self = cls()
         self.hostname = self_hostname
         self.port = port

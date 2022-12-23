@@ -789,13 +789,19 @@ class FullNodeRpcApi:
         mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
-        peak_height = blockchain_state["blockchain_state"]["peak"].height
-        last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
-        peak_with_timestamp = peak_height
-        while last_peak_timestamp is None:
-            peak_with_timestamp -= 1
-            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-            last_peak_timestamp = block_record.timestamp
+        peak = blockchain_state["blockchain_state"]["peak"]
+
+        if peak is None:
+            peak_height = uint32(0)
+            last_peak_timestamp = uint64(0)
+        else:
+            peak_height = peak.height
+            last_peak_timestamp = peak.timestamp
+            peak_with_timestamp = peak_height
+            while last_peak_timestamp is None:
+                peak_with_timestamp -= 1
+                block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+                last_peak_timestamp = block_record.timestamp
 
         dt = datetime.now(timezone.utc)
         utc_time = dt.replace(tzinfo=timezone.utc)

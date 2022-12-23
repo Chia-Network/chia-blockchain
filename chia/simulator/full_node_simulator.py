@@ -66,7 +66,7 @@ async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet, timeout: Op
         coins: The coins expected to be received.
         wallet: The wallet expected to receive the coins.
     """
-    with anyio.fail_after(delay=timeout):
+    with anyio.fail_after(delay=adjusted_timeout(timeout)):
         for backoff in backoff_times():
             spendable_wallet_coin_records = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(
                 wallet_id=wallet.id()
@@ -323,7 +323,7 @@ class FullNodeSimulator(FullNodeAPI):
             timeout = count * timeout_per_block
             timeout += 1
 
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             rewards = 0
 
             if count == 0:
@@ -362,7 +362,7 @@ class FullNodeSimulator(FullNodeAPI):
             timeout = (count + 1) * timeout_per_block
             timeout += 15
 
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             if count == 0:
                 return 0
 
@@ -445,7 +445,7 @@ class FullNodeSimulator(FullNodeAPI):
         if isinstance(timeout, _Default):
             timeout = (count + 1) * timeout_per_block
 
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             await self.farm_blocks_to_wallet(count=count, wallet=wallet, timeout=None)
             return rewards
 
@@ -460,7 +460,7 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to wait for.
         """
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             ids_to_check: Set[bytes32] = set()
             for record in records:
                 if record.spend_bundle is None:
@@ -492,7 +492,7 @@ class FullNodeSimulator(FullNodeAPI):
         Arguments:
             records: The transaction records to process.
         """
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             coins_to_wait_for: Set[Coin] = set()
             for record in records:
                 if record.spend_bundle is None:
@@ -516,7 +516,7 @@ class FullNodeSimulator(FullNodeAPI):
             bundles: The spend bundles to process.
         """
 
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
             return await self.process_coin_spends(coins=coins_to_wait_for, timeout=None)
 
@@ -532,7 +532,7 @@ class FullNodeSimulator(FullNodeAPI):
             coin_names: The coin names to process.
         """
 
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             coin_set = set(coins)
             coin_store = self.full_node.coin_store
 
@@ -593,7 +593,7 @@ class FullNodeSimulator(FullNodeAPI):
             A set of the generated coins.  Note that this does not include any change
             coins that were created.
         """
-        with anyio.fail_after(delay=timeout):
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
             invalid_amounts = [amount for amount in amounts if amount <= 0]
             if len(invalid_amounts) > 0:
                 invalid_amounts_string = ", ".join(str(amount) for amount in invalid_amounts)

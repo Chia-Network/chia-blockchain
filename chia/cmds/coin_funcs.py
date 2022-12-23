@@ -163,10 +163,10 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     if total_amount - final_fee <= 0:
         print("Total amount is less than 0 after fee, exiting.")
         return
-    target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), False))
+    target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
     additions = [{"amount": total_amount - final_fee, "puzzle_hash": target_ph}]
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-        str(wallet_id), additions, removals, final_fee
+        wallet_id, additions, removals, final_fee
     )
     tx_id = transaction.name.hex()
     print(f"Transaction sent: {tx_id}")
@@ -208,10 +208,10 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     additions: List[Dict[str, Union[uint64, bytes32]]] = []
     for i in range(number_of_coins):  # for readability.
         # we always use new addresses
-        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), new_address=True))
+        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, new_address=True))
         additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-        str(wallet_id), additions, [removal_coin_record.coin], final_fee
+        wallet_id, additions, [removal_coin_record.coin], final_fee
     )
     tx_id = transaction.name.hex()
     print(f"Transaction sent: {tx_id}")
