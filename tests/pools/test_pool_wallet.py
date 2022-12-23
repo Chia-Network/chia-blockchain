@@ -97,7 +97,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
 
     # Create an empty PoolWallet and populate only the required fields
     wallet = PoolWallet(
-        wallet_state_manager=MockWalletStateManager(),  # type: ignore
+        wallet_state_manager=cast(WalletStateManager, MockWalletStateManager()),
         standard_wallet=cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph)),
         log=MagicMock(),
         wallet_info=MagicMock(),
@@ -180,7 +180,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
 
     # Create an empty PoolWallet and populate only the required fields
     wallet = PoolWallet(
-        wallet_state_manager=MockWalletStateManager(),  # type: ignore
+        wallet_state_manager=cast(WalletStateManager, MockWalletStateManager()),
         standard_wallet=cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph)),
         log=MagicMock(),
         wallet_info=MagicMock(),

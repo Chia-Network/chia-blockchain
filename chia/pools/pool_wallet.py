@@ -970,13 +970,13 @@ class PoolWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("Pool Wallet does not support select_coins()")
+        raise RuntimeError("Pool wallet does not support select_coins()")
 
     def require_derivation_paths(self) -> bool:
         return False
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        raise RuntimeError("Pool Wallet does not support puzzle_hash_for_pk")
+        raise RuntimeError("Pool wallet does not support puzzle_hash_for_pk")
 
     def get_name(self) -> str:
         return self.wallet_info.name
