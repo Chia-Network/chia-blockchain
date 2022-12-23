@@ -168,16 +168,6 @@ class Custody:
         b = await sync_cmd(configuration, db_path, node_rpc_port, show)
         return b
 
-    async def show_cmd(
-        self,
-        db_path: str,
-        config: bool,
-        derivation: bool,
-    ) -> str:
-        from chia.custody.cic.cli.main import show_cmd
-
-        b = await show_cmd(db_path, config, derivation)
-        return b
 
     async def address_cmd(
         self,
@@ -265,6 +255,52 @@ class Custody:
         b = await increase_cmd(db_path, pubkeys, filename)
         return b
         
+        
+    async def show_cmd(
+        self,
+        db_path: str,
+        config: bool,
+        derivation: bool,
+    ) -> str:
+        from chia.custody.cic.cli.main import show_cmd
+
+        b = await show_cmd(db_path, config, derivation)
+        return b
+        
+        
+    async def audit_cmd(
+        self,
+        db_path: str,
+        filepath: Optional[str],
+        diff: Optional[str],
+    ) -> str:
+        from chia.custody.cic.cli.main import audit_cmd
+
+        b = await audit_cmd(db_path, filepath, diff)
+        return b
+        
+    async def examine_cmd(
+        self,
+        spend_file: str,
+        qr_density: int,
+        validate_against: str,
+    ) -> str:
+        from chia.custody.cic.cli.main import examine_cmd
+
+        b = await examine_cmd(spend_file, qr_density, validate_against)
+        return b
+        
+    async def which_pubkeys_cmd(
+        self,
+        aggregate_pubkey: str,
+        pubkeys: str,
+        num_pubkeys: Optional[int],
+        no_offset: bool
+    ) -> str:
+        from chia.custody.cic.cli.main import which_pubkeys_cmd
+
+        b = await which_pubkeys_cmd(aggregate_pubkey, pubkeys, num_pubkeys, no_offset)
+        return b
         
     async def hsmgen_cmd(self) -> str:
         from chia.custody.hsms.cmds.hsmgen import hsmgen_cmd

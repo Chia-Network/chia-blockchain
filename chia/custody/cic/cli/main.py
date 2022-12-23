@@ -1171,11 +1171,13 @@ async def show_cmd(
     return info
 
 
-def audit_cmd(
+async def audit_cmd(
     db_path: str,
     filepath: Optional[str],
     diff: Optional[str],
-):
+) -> str:
+    return "audit"
+    
     if diff is not None:
         with open(diff, "r") as file:
             old_dict = json.load(file)
@@ -1275,11 +1277,13 @@ def audit_cmd(
     asyncio.get_event_loop().run_until_complete(do_command())
 
 
-def examine_cmd(
+async def examine_cmd(
     spend_file: str,
     qr_density: int,
     validate_against: str,
-):
+) -> str:
+    return "examine"
+    
     bundle = read_unsigned_spend(spend_file)
 
     singleton_spends: List[HSMCoinSpend] = [cs for cs in bundle.coin_spends if cs.coin.amount % 2 == 1]
@@ -1447,12 +1451,14 @@ def examine_cmd(
         os.unlink(tmp.name)
 
 
-def which_pubkeys_cmd(
+async def which_pubkeys_cmd(
     aggregate_pubkey: str,
     pubkeys: str,
     num_pubkeys: Optional[int],
     no_offset: bool,
-):
+) -> str:
+    return "which"
+    
     agg_pk: G1Element = list(load_pubkeys(aggregate_pubkey))[0]
     pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
 

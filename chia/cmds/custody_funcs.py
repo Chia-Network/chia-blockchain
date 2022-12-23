@@ -90,17 +90,6 @@ async def sync_cmd(
             print(res)
 
 
-async def show_cmd(
-    rpc_port: int,
-    db_path: str,
-    config: bool,
-    derivation: bool,
-) -> None:
-    async with get_any_service_client("custody", rpc_port) as (client, config, _):
-        if client is not None:
-            res = await client.show(db_path, config, derivation)
-            print(res)
-
 async def address_cmd(
     rpc_port: int,
     db_path: str,
@@ -189,6 +178,53 @@ async def increase_cmd(
     async with get_any_service_client("custody", rpc_port) as (client, config, _):
         if client is not None:
             res = await client.increase(db_path, pubkeys, filename)
+            print(res)
+
+async def show_cmd(
+    rpc_port: int,
+    db_path: str,
+    config: bool,
+    derivation: bool,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.show(db_path, config, derivation)
+            print(res)
+
+async def audit_cmd(
+    rpc_port: int,
+    db_path: str,
+    filepath: Optional[str],
+    diff: Optional[str],
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.audit(db_path, filepath, diff)
+            print(res)
+
+
+async def examine_cmd(
+    rpc_port: int,
+    spend_file: str,
+    qr_density: int,
+    validate_against: str,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.examine(spend_file, qr_density, validate_against)
+            print(res)
+
+
+async def which_pubkeys_cmd(
+    rpc_port: int,
+    aggregate_pubkey: str,
+    pubkeys: str,
+    num_pubkeys: Optional[int],
+    no_offset: bool,
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.which_pubkeys(aggregate_pubkey, pubkeys, num_pubkeys, no_offset)
             print(res)
 
 

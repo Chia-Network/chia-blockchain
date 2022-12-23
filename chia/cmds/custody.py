@@ -681,6 +681,14 @@ def show_cmd(
 
 @custody_cmd.command("audit", short_help="Export a history of the singleton to a CSV")
 @click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-db",
     "--db-path",
     help="The file path to the sync DB (default: ./sync (******).sqlite)",
@@ -700,110 +708,25 @@ def show_cmd(
     required=False,
 )
 def audit_cmd(
+    custody_rpc_port: Optional[int],
     db_path: str,
     filepath: Optional[str],
     diff: Optional[str],
 ):
-    if diff is not None:
-        with open(diff, "r") as file:
-            old_dict = json.load(file)
+    from chia.cmds.custody_funcs import audit_cmd
 
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
-        try:
-            singletons: List[SingletonRecord] = await sync_store.get_all_singletons()
-            achs: List[ACHRecord] = await sync_store.get_ach_records(include_completed_coins=True)
-            rekeys: List[RekeyRecord] = await sync_store.get_rekey_records(include_completed_coins=True)
-
-            # Make dictionaries for easy lookup of coins from the singleton that created them
-            singleton_parent_dict: Dict[bytes32, SingletonRecord] = {}
-            singleton_dict: Dict[bytes32, SingletonRecord] = {}
-            for singleton in singletons:
-                singleton_parent_dict[singleton.coin.parent_coin_info] = singleton
-                singleton_dict[singleton.coin.name()] = singleton
-            ach_dict: Dict[bytes32, ACHRecord] = {}
-            for ach in achs:
-                ach_dict[ach.coin.parent_coin_info] = ach
-            rekey_dict: Dict[bytes32, RekeyRecord] = {}
-            for rekey in rekeys:
-                rekey_dict[rekey.coin.parent_coin_info] = rekey
-
-            audit_dict: List[Dict[str, Union[str, Dict[str, Union[str, int, bool]]]]] = []
-            for singleton in singletons:
-                coin_id = singleton.coin.name()
-                if singleton.spend_type is None:
-                    continue
-                if singleton.spend_type == SpendType.HANDLE_PAYMENT:
-                    params: Dict[str, Union[str, int, bool]] = {}
-                    out_amount, in_amount, p2_ph = get_spend_params_for_ach_creation(singleton.solution.to_program())
-                    if out_amount > 0:
-                        params["out_amount"] = out_amount
-                        params["recipient_ph"] = p2_ph.hex()
-                    if in_amount > 0:
-                        params["in_amount"] = in_amount
-                    if coin_id in ach_dict:
-                        ach_record: ACHRecord = ach_dict[coin_id]
-                        if ach_record.completed is not None:
-                            params["completed"] = ach_record.completed
-                            params["spent_at_height"] = ach_record.spent_at_height
-                            if not ach_record.completed and ach_record.clawback_pubkey is not None:
-                                params["clawback_pubkey"] = BLSPublicKey(ach_record.clawback_pubkey).as_bech32m()
-                elif singleton.spend_type == SpendType.START_REKEY:
-                    params = {}
-                    timelock, new_root = get_spend_params_for_rekey_creation(singleton.solution.to_program())
-                    rekey_record: RekeyRecord = rekey_dict[coin_id]
-                    params["from_root"] = rekey_record.from_root.hex()
-                    params["to_root"] = rekey_record.to_root.hex()
-                    if rekey_record.completed is not None:
-                        params["completed"] = rekey_record.completed
-                        params["spent_at_height"] = rekey_record.spent_at_height
-                        if not rekey_record.completed and rekey_record.clawback_pubkey is not None:
-                            params["clawback_pubkey"] = BLSPublicKey(rekey_record.clawback_pubkey).as_bech32m()
-                elif singleton.spend_type == SpendType.FINISH_REKEY:
-                    params = {
-                        "from_root": singleton_dict[singleton.coin.parent_coin_info].puzzle_root.hex(),
-                        "to_root": singleton.puzzle_root.hex(),
-                    }
-
-                audit_dict.append(
-                    {
-                        "time": singleton_parent_dict[coin_id].confirmed_at_time,
-                        "action": singleton.spend_type.name,
-                        "params": params,
-                    }
-                )
-
-            sorted_audit_dict = sorted(audit_dict, key=lambda e: e["time"])
-
-            if diff is not None:
-                diff_dict = []
-                for i in range(0, len(sorted_audit_dict)):
-                    if i >= len(old_dict):
-                        diff_dict.append({"new": sorted_audit_dict[i]})
-                    elif old_dict[i] != sorted_audit_dict[i]:
-                        diff_dict.append(
-                            {
-                                "old": old_dict[i],
-                                "new": sorted_audit_dict[i],
-                            }
-                        )
-                final_dict = diff_dict
-            else:
-                final_dict = sorted_audit_dict
-
-            if filepath is None:
-                print(json.dumps(final_dict))
-            else:
-                with open(filepath, "w") as file:
-                    file.write(json.dumps(final_dict))
-
-        finally:
-            await sync_store.db_connection.close()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(audit_cmd(custody_rpc_port, db_path, filepath, diff))
 
 
 @custody_cmd.command("examine_spend", short_help="Examine an unsigned spend to see the details before you sign it")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.argument("spend_file", nargs=1, required=True)
 @click.option(
     "--qr-density", help="The amount of bytes to pack into a single QR code", default=250, show_default=True, type=int
@@ -816,178 +739,25 @@ def audit_cmd(
     default=None,
 )
 def examine_cmd(
+    custody_rpc_port: Optional[int],
     spend_file: str,
     qr_density: int,
     validate_against: str,
 ):
-    bundle = read_unsigned_spend(spend_file)
+    from chia.cmds.custody_funcs import examine_cmd
 
-    singleton_spends: List[HSMCoinSpend] = [cs for cs in bundle.coin_spends if cs.coin.amount % 2 == 1]
-    drop_coin_spends: List[HSMCoinSpend] = [cs for cs in bundle.coin_spends if cs.coin.amount % 2 == 0]
-    if len(singleton_spends) > 1:
-        names: List[bytes32] = [cs.coin.name() for cs in singleton_spends]
-        spend: HSMCoinSpend = next(cs for cs in singleton_spends if cs.coin.parent_coin_info not in names)
-        spend_type: str = "LOCK"
-    elif len(singleton_spends) == 1:
-        spend = singleton_spends[0]
-        spend_type = get_spend_type_for_solution(Program.from_bytes(bytes(spend.solution))).name
-    else:
-        spend = drop_coin_spends[0]
-        if spend.coin.amount == 0:
-            spend_type = "REKEY_CANCEL"
-        else:
-            spend_type = "PAYMENT_CLAWBACK"
-
-    # HSM type conversions
-    puzzle = Program.from_bytes(bytes(spend.puzzle_reveal))
-    solution = Program.from_bytes(bytes(spend.solution))
-
-    spend_summary: str
-    if spend_type == "HANDLE_PAYMENT":
-        spending_pubkey: G1Element = get_spending_pubkey_for_solution(solution)
-        out_amount, in_amount, p2_ph = get_spend_params_for_ach_creation(solution)
-        print("Type: Payment")
-        print(f"Incoming: {in_amount}")
-        print(f"Outgoing: {out_amount}")
-        print(f"To: {encode_puzzle_hash(p2_ph, 'xch')}")
-        print(f"Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}")
-        spend_summary = f"""
-        <div>
-          <ul>
-            <li>Type: Payment</li>
-            <li>Incoming: {in_amount}</li>
-            <li>Outgoing: {out_amount}</li>
-            <li>To: {encode_puzzle_hash(p2_ph, 'xch')}</li>
-            <li>Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}</li>
-          </ul>
-        </div>
-        """
-    elif spend_type == "LOCK":
-        spending_pubkey = get_spending_pubkey_for_solution(solution)
-        print("Type: Lock level increase")
-        print(f"Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}")
-        spend_summary = f"""
-        <div>
-          <ul>
-            <li>Type: Lock level increase</li>
-            <li>Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}</li>
-          </ul>
-        </div>
-        """
-    elif spend_type == "START_REKEY":
-        spending_pubkey = get_spending_pubkey_for_solution(solution)
-        from_root = get_puzzle_root_from_puzzle(puzzle)
-        timelock, new_root = get_spend_params_for_rekey_creation(solution)
-        print("Type: Rekey")
-        print(f"From: {from_root}")
-        print(f"To: {new_root}")
-        print(f"Slow factor: {timelock}")
-        print(f"Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}")
-        spend_summary = f"""
-        <div>
-          <ul>
-            <li>Type: Rekey</li>
-            <li>From: {from_root}</li>
-            <li>To: {new_root}</li>
-            <li>Slow factor: {timelock}</li>
-            <li>Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}</li>
-          </ul>
-        </div>
-        """
-        if validate_against is not None:
-            derivation = load_root_derivation(validate_against)
-            re_derivation = calculate_puzzle_root(
-                derivation.prefarm_info,
-                derivation.pubkey_list,
-                derivation.required_pubkeys,
-                derivation.maximum_pubkeys,
-                derivation.minimum_pubkeys,
-            )
-            if re_derivation.prefarm_info.puzzle_root == new_root and re_derivation == derivation:
-                print(f"Configuration successfully validated against root: {new_root}")
-            elif re_derivation == derivation:
-                expected: bytes32 = new_root
-                got: bytes32 = re_derivation.prefarm_info.puzzle_root
-                print(f"Configuration does not validate. Expected {expected}, got {got}.")
-            else:
-                print("Configuration is malformed, could not validate")
-    elif spend_type == "REKEY_CANCEL":
-        spending_pubkey = get_spending_pubkey_for_drop_coin(solution)
-        new_root, old_root, timelock = get_info_for_rekey_drop(puzzle)
-        print("Type: Rekey Cancel")
-        print(f"From: {old_root}")
-        print(f"To: {new_root}")
-        print(f"Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}")
-        spend_summary = f"""
-        <div>
-          <ul>
-            <li>Type: Rekey Cancel</li>
-            <li>From: {old_root}</li>
-            <li>To: {new_root}</li>
-            <li>Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}</li>
-          </ul>
-        </div>
-        """
-    elif spend_type == "PAYMENT_CLAWBACK":
-        spending_pubkey = get_spending_pubkey_for_drop_coin(solution)
-        _, p2_ph = get_info_for_ach_drop(puzzle)
-        print("Type: Payment Clawback")
-        print(f"Amount: {spend.coin.amount}")
-        print(f"To: {encode_puzzle_hash(p2_ph, 'xch')}")
-        print(f"Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}")
-        spend_summary = f"""
-        <div>
-          <ul>
-            <li>Type: Payment Clawback</li>
-            <li>Amount: {spend.coin.amount}</li>
-            <li>To: {encode_puzzle_hash(p2_ph, 'xch')}</li>
-            <li>Spenders: {BLSPublicKey(spending_pubkey).as_bech32m()}</li>
-          </ul>
-        </div>
-        """
-    else:
-        print("Spend is not signable")
-        return
-
-    # Transform the bundle in qr codes and then inline them in a div
-    all_qr_divs = ""
-    normal_qr_width: Optional[float] = None
-    for segment in bundle.chunk(qr_density):
-        qr_int = b2a_qrint(segment)
-        qr = segno.make_qr(qr_int)
-        if len(segment) == qr_density or normal_qr_width is None:
-            normal_qr_width = qr.symbol_size()[0]
-            scale: float = 3
-        else:
-            scale = 3 * (normal_qr_width / qr.symbol_size()[0])
-        all_qr_divs += f"<div>{qr.svg_inline(scale=scale)}</div>"
-
-    total_doc = f"""
-    <html width='100%' height='100%'>
-        <body width='100%' height='100%'>
-            <div width='100%' height='100%'>
-              {spend_summary}
-              <div style='display:flex; flex-wrap: wrap; width:100%;'>
-                {all_qr_divs}
-              </div>
-            </div>
-        </body>
-    </html>
-    """
-
-    # Write to a temporary file and open in a browser
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
-    try:
-        tmp_path = Path(tmp.name)
-        tmp.write(bytes(total_doc, "utf-8"))
-        tmp.close()
-        webbrowser.open(f"file://{tmp_path}", new=2)
-        input("Press Enter to exit")
-    finally:
-        os.unlink(tmp.name)
+    run(examine_cmd(custody_rpc_port, spend_file, qr_density, validate_against))
 
 
 @custody_cmd.command("which_pubkeys", short_help="Determine which pubkeys make up an aggregate pubkey")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.argument("aggregate_pubkey", nargs=1, required=True)
 @click.option(
     "-pks",
@@ -1008,38 +778,16 @@ def examine_cmd(
     is_flag=True,
 )
 def which_pubkeys_cmd(
+    custody_rpc_port: Optional[int],
     aggregate_pubkey: str,
     pubkeys: str,
     num_pubkeys: Optional[int],
     no_offset: bool,
 ):
-    agg_pk: G1Element = list(load_pubkeys(aggregate_pubkey))[0]
-    pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
+    from chia.cmds.custody_funcs import which_pubkeys_cmd
 
-    pubkey_file_dict: Dict[str, str] = {}
-    for pk, file in zip(pubkey_list, pubkeys.split(",")):
-        pubkey_file_dict[str(pk)] = file
+    run(which_pubkeys_cmd(custody_rpc_port, aggregate_pubkey, pubkeys, num_pubkeys, no_offset))
 
-    search_range = range(1, len(pubkey_list) + 1) if num_pubkeys is None else range(num_pubkeys, num_pubkeys + 1)
-    for m in search_range:
-        for subset in itertools.combinations(pubkey_list, m):
-            aggregated_pubkey = G1Element()
-            for pk in subset:
-                aggregated_pubkey += pk
-            if aggregated_pubkey == agg_pk or (
-                not no_offset
-                and PrivateKey.from_bytes(
-                    calculate_synthetic_offset(aggregated_pubkey, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big")
-                ).get_g1()
-                + aggregated_pubkey
-                == agg_pk
-            ):
-                print("The following pubkeys match the specified aggregate:")
-                for pk in subset:
-                    print(f" - {pubkey_file_dict[str(pk)]}")
-                return
-
-    print("No combinations were found that matched the aggregate with the specified parameters.")
 
 @custody_cmd.command("hsmgen", short_help="Generate key")
 @click.option(

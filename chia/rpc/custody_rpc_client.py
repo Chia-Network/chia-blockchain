@@ -95,14 +95,6 @@ class CustodyRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
 
-    async def show(self,
-        db_path: str,
-        configopt: bool,
-        derivationopt: bool) -> Dict[str, Any]:
-        response = await self.fetch("show", {"db_path": db_path, "config": True, "derivation": True})
-        # TODO: better hinting for .fetch() (probably a TypedDict)
-        return response  # type: ignore[no-any-return]
-
     async def address(self,
         db_path: str,
         prefix: str) -> Dict[str, Any]:
@@ -168,6 +160,43 @@ class CustodyRpcClient(RpcClient):
         pubkeys: str,
         filename: Optional[str]) -> Dict[str, Any]:
         response = await self.fetch("increase", {"db_path": db_path, "pubkeys": pubkeys, "filename": filename})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def show(self,
+        db_path: str,
+        configopt: bool,
+        derivationopt: bool) -> Dict[str, Any]:
+        response = await self.fetch("show", {"db_path": db_path, "config": True, "derivation": True})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def audit(self,
+        db_path: str,
+        filepath: Optional[str],
+        diff: Optional[str]) -> Dict[str, Any]:
+        response = await self.fetch("audit", {"db_path": db_path, "filepath": filepath, "diff": diff})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def examine(self,
+        spend_file: str,
+        qr_density: int,
+        validate_against: str) -> Dict[str, Any]:
+        response = await self.fetch("examine", {"spend_file": spend_file, "qr_density": qr_density, "validate_against": validate_against})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def which_pubkeys(self,
+        aggregate_pubkey: str,
+        pubkeys: str,
+        num_pubkeys: Optional[int],
+        no_offset: bool) -> Dict[str, Any]:
+        response = await self.fetch("which_pubkeys", {"aggregate_pubkey": aggregate_pubkey, "pubkeys": pubkeys, "num_pubkeys": num_pubkeys, "no_offset": no_offset})
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 

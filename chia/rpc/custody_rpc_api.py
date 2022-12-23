@@ -72,9 +72,9 @@ class CustodyRpcApi:
             "/complete": self.complete,
             "/increase": self.increase,
             "/show": self.show,
-            # "/audit": self.audit,
-            # "/examine": self.examine,
-            # "/which_pubkeys": self.which_pubkeys,
+            "/audit": self.audit,
+            "/examine": self.examine,
+            "/which_pubkeys": self.which_pubkeys,
             "/hsmgen": self.hsmgen,
             "/hsmpk": self.hsmpk,
             "/hsms": self.hsms,
@@ -179,18 +179,6 @@ class CustodyRpcApi:
             show)
         return {"wjb": wjb}
 
-    async def show(self, request: Dict[str, Any]) -> EndpointResult:
-        if self.service is None:
-            raise Exception("Data layer not created")
-        db_path = request.get("db_path")
-        config = request.get("config")
-        derivation = request.get("derivation")
-                    
-        wjb = await self.service.show_cmd(db_path,
-            config,
-            derivation)
-        return {"info": wjb}
-
     async def address(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
@@ -291,6 +279,59 @@ class CustodyRpcApi:
             filename)
         return {"wjb": wjb}
 
+    async def show(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        config = request.get("config")
+        derivation = request.get("derivation")
+                    
+        wjb = await self.service.show_cmd(db_path,
+            config,
+            derivation)
+        return {"info": wjb}
+
+
+
+    async def audit(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        filepath = request.get("filepath")
+        diff = request.get("diff")
+                    
+        wjb = await self.service.audit_cmd(db_path,
+            filepath,
+            diff)
+        return {"info": wjb}
+
+
+    async def examine(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        spend_file = request.get("spend_file")
+        qr_density = request.get("qr_density")
+        validate_against = request.get("validate_against")
+                    
+        wjb = await self.service.examine_cmd(spend_file,
+            qr_density,
+            validate_against)
+        return {"info": wjb}
+
+
+    async def which_pubkeys(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        aggregate_pubkey = request.get("aggregate_pubkey")
+        pubkeys = request.get("pubkeys")
+        num_pubkeys = request.get("num_pubkeys")
+        no_offset = request.get("no_offset")
+                    
+        wjb = await self.service.which_pubkeys_cmd(aggregate_pubkey,
+            pubkeys,
+            num_pubkeys,
+            no_offset)
+        return {"info": wjb}
 
 
 
