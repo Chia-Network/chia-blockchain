@@ -67,10 +67,10 @@ class CustodyRpcApi:
             "/address": self.address,
             "/push": self.push,
             "/payments": self.payments,
-            # "/start_rekey": self.start_rekey,
-            # "/clawback": self.clawback,
-            # "/complete": self.complete,
-            # "/increase": self.increase,
+            "/start_rekey": self.start_rekey,
+            "/clawback": self.clawback,
+            "/complete": self.complete,
+            "/increase": self.increase,
             "/show": self.show,
             # "/audit": self.audit,
             # "/examine": self.examine,
@@ -238,6 +238,59 @@ class CustodyRpcApi:
             amount_threshold,
             filename)
         return {"wjb": wjb}
+
+
+    async def start_rekey(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        pubkeys = request.get("pubkeys")
+        new_configuration = request.get("new_configuration")
+        filename = request.get("filename")
+                
+        wjb = await self.service.start_rekey_cmd(db_path,
+            pubkeys,
+            new_configuration,
+            filename)
+        return {"wjb": wjb}
+
+
+    async def clawback(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        pubkeys = request.get("pubkeys")
+        filename = request.get("filename")
+              
+        wjb = await self.service.clawback_cmd(db_path,
+            pubkeys,
+            filename)
+        return {"wjb": wjb}
+
+
+    async def complete(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        filename = request.get("filename")
+              
+        wjb = await self.service.complete_cmd(db_path,
+            filename)
+        return {"wjb": wjb}
+
+
+    async def increase(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        db_path = request.get("db_path")
+        pubkeys = request.get("pubkeys")
+        filename = request.get("filename")
+              
+        wjb = await self.service.increase_cmd(db_path,
+            pubkeys,
+            filename)
+        return {"wjb": wjb}
+
 
 
 

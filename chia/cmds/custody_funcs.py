@@ -143,6 +143,55 @@ async def payments_cmd(
             print(res)
 
 
+async def start_rekey_cmd(
+    rpc_port: int,
+    db_path: str,
+    pubkeys: str,
+    new_configuration: str,
+    filename: Optional[str],
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.start_rekey(db_path, pubkeys, new_configuration, filename)
+            print(res)
+
+
+async def clawback_cmd(
+    rpc_port: int,
+    db_path: str,
+    pubkeys: str,
+    filename: Optional[str],
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.clawback(db_path, pubkeys, filename)
+            print(res)
+
+
+
+async def complete_cmd(
+    rpc_port: int,
+    db_path: str,
+    filename: Optional[str],
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.complete(db_path,filename)
+            print(res)
+
+
+async def increase_cmd(
+    rpc_port: int,
+    db_path: str,
+    pubkeys: str,
+    filename: Optional[str],
+) -> None:
+    async with get_any_service_client("custody", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.increase(db_path, pubkeys, filename)
+            print(res)
+
+
 async def hsmgen_cmd(
     rpc_port: int,
 ) -> None:

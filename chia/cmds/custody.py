@@ -485,6 +485,14 @@ def payments_cmd(
 
 @custody_cmd.command("start_rekey", short_help="Rekey the singleton to a new set of keys/options")
 @click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-db",
     "--db-path",
     help="The file path to the sync DB (default: ./sync (******).sqlite)",
@@ -510,75 +518,26 @@ def payments_cmd(
     required=True,
 )
 def start_rekey_cmd(
+    custody_rpc_port: Optional[int],
     db_path: str,
     pubkeys: str,
     new_configuration: str,
     filename: Optional[str],
 ):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
+    from chia.cmds.custody_funcs import start_rekey_cmd
 
-        try:
-            derivation = await sync_store.get_configuration(False, block_outdated=True)
-            new_derivation: RootDerivation = load_root_derivation(new_configuration)
-
-            # Quick sanity check that everything except the puzzle root is the same
-            if not derivation.prefarm_info.is_valid_update(new_derivation.prefarm_info):
-                raise ValueError(
-                    "This configuration has more changed than the keys."
-                    "Please derive a configuration with the same values for everything except key-related info."
-                )
-
-            # Collect some relevant information
-            current_singleton: Optional[SingletonRecord] = await sync_store.get_latest_singleton()
-            if current_singleton is None:
-                raise RuntimeError("No singleton is found for this configuration.  Try `cic sync` then try again.")
-            pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
-            fee_conditions: List[Program] = [Program.to([60, b""])]
-
-            # Get the spend bundle
-            singleton_bundle, data_to_sign = get_rekey_spend_info(
-                current_singleton.coin,
-                pubkey_list,
-                derivation,
-                current_singleton.lineage_proof,
-                new_derivation,
-                fee_conditions,
-            )
-
-            # Cast everything into HSM types
-            as_bls_pubkey_list = [BLSPublicKey(pk) for pk in pubkey_list]
-            agg_pk = sum(as_bls_pubkey_list, start=BLSPublicKey.zero())
-            synth_sk = BLSSecretExponent(
-                PrivateKey.from_bytes(
-                    calculate_synthetic_offset(agg_pk, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big")
-                )
-            )
-            coin_spends = [
-                HSMCoinSpend(cs.coin, cs.puzzle_reveal.to_program(), cs.solution.to_program())
-                for cs in singleton_bundle.coin_spends
-            ]
-            unsigned_spend = UnsignedSpend(
-                coin_spends,
-                [SumHint(as_bls_pubkey_list, synth_sk)],
-                [],
-                get_additional_data(),
-            )
-
-            # Print the result
-            if filename is not None:
-                write_unsigned_spend(filename, unsigned_spend)
-                print(f"Successfully wrote spend to {filename}")
-            else:
-                for chunk in unsigned_spend.chunk(255):
-                    print(str(b2a_qrint(chunk)))
-        finally:
-            await sync_store.db_connection.close()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(start_rekey_cmd(custody_rpc_port, db_path, pubkeys, new_configuration, filename))
 
 
 @custody_cmd.command("clawback", short_help="Clawback a withdrawal or rekey attempt (will be prompted which one)")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-db",
     "--db-path",
@@ -599,117 +558,25 @@ def start_rekey_cmd(
     required=True,
 )
 def clawback_cmd(
+    custody_rpc_port: Optional[int],
     db_path: str,
     pubkeys: str,
     filename: Optional[str],
 ):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
+    from chia.cmds.custody_funcs import clawback_cmd
 
-        try:
-            derivation = await sync_store.get_configuration(False, block_outdated=True)
-
-            achs: List[ACHRecord] = await sync_store.get_ach_records(include_completed_coins=False)
-            rekeys: List[RekeyRecord] = await sync_store.get_rekey_records(include_completed_coins=False)
-
-            # Prompt the user for the action to cancel
-            if len(achs) == 0 and len(rekeys) == 0:
-                print("No actions outstanding")
-                return
-            print("Which actions would you like to cancel?:")
-            print()
-            index: int = 1
-            selectable_records: Dict[int, Union[ACHRecord, RekeyRecord]] = {}
-            for ach in achs:
-                print(f"{index}) PAYMENT to {encode_puzzle_hash(ach.p2_ph, 'xch')} of amount {ach.coin.amount}")
-                selectable_records[index] = ach
-                index += 1
-            for rekey in rekeys:
-                print(f"{index}) REKEY from {rekey.from_root} to {rekey.to_root}")
-                selectable_records[index] = rekey
-                index += 1
-            selected_action = int(input("(Enter index of action to cancel): "))
-            if selected_action not in range(1, index):
-                print("Invalid index specified.")
-                return
-
-            # Construct the spend for the selected index
-            pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
-            fee_conditions: List[Program] = [Program.to([60, b""])]
-            record = selectable_records[selected_action]
-            if isinstance(record, ACHRecord):
-                # Validate we have enough keys
-                if len(pubkey_list) != derivation.required_pubkeys:
-                    print("Incorrect number of keys to claw back selected payment")
-                    return
-
-                # Get the spend bundle
-                clawback_bundle, data_to_sign = get_ach_clawback_spend_info(
-                    record.coin,
-                    pubkey_list,
-                    derivation,
-                    record.p2_ph,
-                    fee_conditions,
-                )
-            else:
-                # Validate we have enough keys
-                timelock: uint64 = record.timelock
-                required_pubkeys: Optional[int] = None
-                if timelock == uint8(1):
-                    required_pubkeys = derivation.required_pubkeys
-                else:
-                    for i in range(derivation.minimum_pubkeys, derivation.required_pubkeys):
-                        if timelock == uint8(1 + derivation.required_pubkeys - i):
-                            required_pubkeys = i
-                            break
-                if required_pubkeys is None or len(pubkey_list) != required_pubkeys:
-                    print("Incorrect number of keys to claw back selected rekey")
-                    return
-
-                # Get the spend bundle
-                clawback_bundle, data_to_sign = get_rekey_clawback_spend_info(
-                    record.coin,
-                    pubkey_list,
-                    derivation,
-                    record.timelock,
-                    dataclasses.replace(
-                        derivation,
-                        prefarm_info=dataclasses.replace(derivation.prefarm_info, puzzle_root=record.to_root),
-                    ),
-                    fee_conditions,
-                )
-
-            as_bls_pubkey_list = [BLSPublicKey(pk) for pk in pubkey_list]
-            agg_pk = sum(as_bls_pubkey_list, start=BLSPublicKey.zero())
-            synth_sk = BLSSecretExponent(
-                PrivateKey.from_bytes(
-                    calculate_synthetic_offset(agg_pk, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big")
-                )
-            )
-            coin_spends = [
-                HSMCoinSpend(cs.coin, cs.puzzle_reveal.to_program(), cs.solution.to_program())
-                for cs in clawback_bundle.coin_spends
-            ]
-            unsigned_spend = UnsignedSpend(
-                coin_spends,
-                [SumHint(as_bls_pubkey_list, synth_sk)],
-                [],
-                get_additional_data(),
-            )
-
-            if filename is not None:
-                write_unsigned_spend(filename, unsigned_spend)
-                print(f"Successfully wrote spend to {filename}")
-            else:
-                for chunk in unsigned_spend.chunk(255):
-                    print(str(b2a_qrint(chunk)))
-        finally:
-            await sync_store.db_connection.close()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(clawback_cmd(custody_rpc_port, db_path, pubkeys, filename))
 
 
 @custody_cmd.command("complete", short_help="Complete a withdrawal or rekey attempt (will be prompted which one)")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-db",
     "--db-path",
@@ -724,106 +591,24 @@ def clawback_cmd(
     default=None,
 )
 def complete_cmd(
+    custody_rpc_port: Optional[int],
     db_path: str,
     filename: Optional[str],
 ):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
+    from chia.cmds.custody_funcs import complete_cmd
 
-        try:
-            derivation = await sync_store.get_configuration(False, block_outdated=True)
-
-            achs: List[ACHRecord] = await sync_store.get_ach_records(include_completed_coins=False)
-            rekeys: List[RekeyRecord] = await sync_store.get_rekey_records(include_completed_coins=False)
-
-            # Prompt the user for the action to complete
-            if len(achs) == 0 and len(rekeys) == 0:
-                print("No actions outstanding")
-                return
-            print("Which actions would you like to complete?:")
-            print()
-            index: int = 1
-            selectable_records: Dict[int, Union[ACHRecord, RekeyRecord]] = {}
-            for ach in achs:
-                if ach.confirmed_at_time + derivation.prefarm_info.payment_clawback_period < time.time():
-                    prefix = f"{index})"
-                    selectable_records[index] = ach
-                    index += 1
-                else:
-                    prefix = "-)"
-                print(f"{prefix} PAYMENT to {encode_puzzle_hash(ach.p2_ph, 'xch')} of amount {ach.coin.amount}")
-
-            for rekey in rekeys:
-                if rekey.confirmed_at_time + derivation.prefarm_info.rekey_clawback_period < time.time():
-                    prefix = f"{index})"
-                    selectable_records[index] = rekey
-                    index += 1
-                else:
-                    prefix = "-)"
-                print(f"{prefix} REKEY from {rekey.from_root} to {rekey.to_root}")
-            if index == 1:
-                print("No actions can be completed at this time.")
-                return
-            selected_action = int(input("(Enter index of action to complete): "))
-            if selected_action not in range(1, index):
-                print("Invalid index specified.")
-                return
-
-            # Construct the spend for the selected index
-            record = selectable_records[selected_action]
-            if isinstance(record, ACHRecord):
-                # Get the spend bundle
-                completion_bundle = get_ach_clawforward_spend_bundle(
-                    record.coin,
-                    dataclasses.replace(
-                        derivation,
-                        prefarm_info=dataclasses.replace(derivation.prefarm_info, puzzle_root=record.from_root),
-                    ),
-                    record.p2_ph,
-                )
-            else:
-                current_singleton: Optional[SingletonRecord] = await sync_store.get_latest_singleton()
-                if current_singleton is None:
-                    raise RuntimeError("No singleton is found for this configuration.  Try `cic sync` then try again.")
-                parent_singleton: Optional[SingletonRecord] = await sync_store.get_singleton_record(
-                    record.coin.parent_coin_info
-                )
-                if parent_singleton is None:
-                    raise RuntimeError("Bad sync information. Please try a resync.")
-
-                num_pubkeys: int = derivation.required_pubkeys - (record.timelock - 1)
-
-                # Get the spend bundle
-                completion_bundle = get_rekey_completion_spend(
-                    current_singleton.coin,
-                    record.coin,
-                    derivation.pubkey_list[0:num_pubkeys],
-                    derivation,
-                    current_singleton.lineage_proof,
-                    LineageProof(
-                        parent_singleton.coin.parent_coin_info,
-                        construct_singleton_inner_puzzle(derivation.prefarm_info).get_tree_hash(),
-                        parent_singleton.coin.amount,
-                    ),
-                    dataclasses.replace(
-                        derivation,
-                        prefarm_info=dataclasses.replace(derivation.prefarm_info, puzzle_root=record.to_root),
-                    ),
-                )
-
-            if filename is not None:
-                with open(filename, "w") as file:
-                    file.write(bytes(completion_bundle).hex())
-                print(f"Successfully wrote spend to {filename}")
-            else:
-                print(bytes(completion_bundle).hex())
-        finally:
-            await sync_store.db_connection.close()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(complete_cmd(custody_rpc_port, db_path, filename))
 
 
 @custody_cmd.command("increase_security_level", short_help="Initiate an increase of the number of keys required for withdrawal")
+@click.option(
+    "-cp",
+    "--custody-rpc-port",
+    help="Set the port where Custody is hosting the RPC interface. See the rpc_port under custody in config.yaml",
+    type=int,
+    default=None,
+    show_default=True,
+)
 @click.option(
     "-db",
     "--db-path",
@@ -844,57 +629,14 @@ def complete_cmd(
     default=None,
 )
 def increase_cmd(
+    custody_rpc_port: Optional[int],
     db_path: str,
     pubkeys: str,
     filename: Optional[str],
 ):
-    async def do_command():
-        sync_store: SyncStore = await load_db(db_path)
-        try:
-            derivation = await sync_store.get_configuration(False, block_outdated=True)
+    from chia.cmds.custody_funcs import increase_cmd
 
-            current_singleton: Optional[SingletonRecord] = await sync_store.get_latest_singleton()
-            if current_singleton is None:
-                raise RuntimeError("No singleton is found for this configuration.  Try `cic sync` then try again.")
-            pubkey_list: List[G1Element] = list(load_pubkeys(pubkeys))
-            fee_conditions: List[Program] = [Program.to([60, b""])]
-
-            # Validate we have enough pubkeys
-            if len(pubkey_list) < derivation.required_pubkeys + 1:
-                print("Not enough keys to increase the security level")
-                return
-
-            # Create the spend
-            lock_bundle, data_to_sign = get_rekey_spend_info(
-                current_singleton.coin,
-                pubkey_list,
-                derivation,
-                current_singleton.lineage_proof,
-                additional_conditions=fee_conditions,
-            )
-
-            as_bls_pubkey_list = [BLSPublicKey(pk) for pk in pubkey_list]
-            coin_spends = [
-                HSMCoinSpend(cs.coin, cs.puzzle_reveal.to_program(), cs.solution.to_program())
-                for cs in lock_bundle.coin_spends
-            ]
-            unsigned_spend = UnsignedSpend(
-                coin_spends,
-                [SumHint(as_bls_pubkey_list, BLSSecretExponent.zero())],
-                [],
-                get_additional_data(),
-            )
-
-            if filename is not None:
-                write_unsigned_spend(filename, unsigned_spend)
-                print(f"Successfully wrote spend to {filename}")
-            else:
-                for chunk in unsigned_spend.chunk(255):
-                    print(str(b2a_qrint(chunk)))
-        finally:
-            await sync_store.db_connection.close()
-
-    asyncio.get_event_loop().run_until_complete(do_command())
+    run(increase_cmd(custody_rpc_port, db_path, pubkeys, filename))
 
 
 @custody_cmd.command("show", short_help="Show the status of the singleton, payments, and rekeys")

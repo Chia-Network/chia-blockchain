@@ -217,8 +217,55 @@ class Custody:
 
         b = await payments_cmd(db_path, pubkeys, amount, recipient_address, absorb_available_payments, maximum_extra_cost, amount_threshold, filename)
         return b
-        
 
+
+    async def start_rekey_cmd(
+        self,
+        db_path: str,
+        pubkeys: str,
+        new_configuration: str,
+        filename: Optional[str],
+    ) -> str:
+        from chia.custody.cic.cli.main import start_rekey_cmd
+
+        b = await start_rekey_cmd(db_path, pubkeys, new_configuration, filename)
+        return b
+
+
+    async def clawback_cmd(
+        self,
+        db_path: str,
+        pubkeys: str,
+        filename: Optional[str],
+    ) -> str:
+        from chia.custody.cic.cli.main import clawback_cmd
+
+        b = await clawback_cmd(db_path, pubkeys, filename)
+        return b
+
+
+    async def complete_cmd(
+        self,
+        db_path: str,
+        filename: Optional[str],
+    ) -> str:
+        from chia.custody.cic.cli.main import complete_cmd
+
+        b = await complete_cmd(db_path, filename)
+        return b
+
+    async def increase_cmd(
+        self,
+        db_path: str,
+        pubkeys: str,
+        filename: Optional[str],
+    ) -> str:
+        from chia.custody.cic.cli.main import increase_cmd
+
+        b = await increase_cmd(db_path, pubkeys, filename)
+        return b
+        
+        
     async def hsmgen_cmd(self) -> str:
         from chia.custody.hsms.cmds.hsmgen import hsmgen_cmd
 

@@ -135,7 +135,44 @@ class CustodyRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-        
+
+    async def start_rekey(self,
+        db_path: str,
+        pubkeys: str,
+        new_configuration: str,
+        filename: Optional[str]) -> Dict[str, Any]:
+        response = await self.fetch("start_rekey", {"db_path": db_path, "pubkeys": pubkeys, "new_configuration": new_configuration, "filename": filename})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def clawback(self,
+        db_path: str,
+        pubkeys: str,
+        filename: Optional[str]) -> Dict[str, Any]:
+        response = await self.fetch("clawback", {"db_path": db_path, "pubkeys": pubkeys, "filename": filename})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def complete(self,
+        db_path: str,
+        filename: Optional[str]) -> Dict[str, Any]:
+        response = await self.fetch("complete", {"db_path": db_path, "filename": filename})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+    async def increase(self,
+        db_path: str,
+        pubkeys: str,
+        filename: Optional[str]) -> Dict[str, Any]:
+        response = await self.fetch("increase", {"db_path": db_path, "pubkeys": pubkeys, "filename": filename})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
+
+
     async def hsmgen(self) -> Dict[str, Any]:
         response = await self.fetch("hsmgen",{})
         # TODO: better hinting for .fetch() (probably a TypedDict)
