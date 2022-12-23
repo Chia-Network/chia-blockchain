@@ -595,7 +595,7 @@ class Wallet:
         return "Standard Wallet"
 
     async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
-        raise NotImplementedError("Standard wallet does not support get_puzzle_info")
+        raise RuntimeError("Standard wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:

@@ -1326,7 +1326,7 @@ class DataLayerWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
-        raise NotImplementedError("Datalayer Wallet does not support select_coins")
+        raise RuntimeError("DataLayer Wallet does not support select_coins")
 
 
 def verify_offer(

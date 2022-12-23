@@ -1476,7 +1476,7 @@ class DIDWallet:
         return True
 
     async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
-        raise NotImplementedError("DID wallet does not support get_puzzle_info")
+        raise RuntimeError("DID wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:
