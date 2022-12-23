@@ -490,8 +490,7 @@ class TradeManager:
                     else:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                    if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
-                        raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+
                     coins_to_offer[id] = list(
                         await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount)
                     )
