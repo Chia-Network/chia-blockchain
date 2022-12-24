@@ -46,7 +46,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "build",
     # [toml] only added as a workaround for https://github.com/pypa/pip/issues/11565
-    "coverage[toml]==7.0.0b1",
+    "coverage[toml]~=7.0",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
