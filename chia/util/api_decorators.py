@@ -44,7 +44,7 @@ def get_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
 
 
 def _get_incomplete_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
-    return getattr(function, metadata_attribute_name, None)
+    return getattr(function, incomplete_metadata_attribute_name, None)
 
 
 def _set_metadata(function: Callable[..., object], metadata: ApiMetadata) -> None:
