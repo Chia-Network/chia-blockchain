@@ -165,9 +165,6 @@ class DataLayerWallet:
         self.wallet_id = uint8(self.wallet_info.id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-        await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            create_mirror_puzzle().get_tree_hash(), self.id()
-        )
 
         return self
 
@@ -844,17 +841,18 @@ class DataLayerWallet:
             launcher_id, urls = get_mirror_info(
                 parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program()
             )
-            ours: bool = await self.wallet_state_manager.get_wallet_for_coin(coin.parent_coin_info) is not None
-            await self.wallet_state_manager.dl_store.add_mirror(
-                Mirror(
-                    coin.name(),
-                    launcher_id,
-                    uint64(coin.amount),
-                    urls,
-                    ours,
+            if await self.wallet_state_manager.dl_store.is_launcher_tracked(launcher_id):
+                ours: bool = await self.wallet_state_manager.get_wallet_for_coin(coin.parent_coin_info) is not None
+                await self.wallet_state_manager.dl_store.add_mirror(
+                    Mirror(
+                        coin.name(),
+                        launcher_id,
+                        uint64(coin.amount),
+                        urls,
+                        ours,
+                    )
                 )
-            )
-            await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+                await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
         parent_name = parent_spend.coin.name()
@@ -1104,6 +1102,9 @@ class DataLayerWallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
+    def get_name(self) -> str:
+        return self.wallet_info.name
+
     ##########
     # OFFERS #
     ##########
@@ -1125,7 +1126,7 @@ class DataLayerWallet:
             }
         )
 
-    async def get_coins_to_offer(self, launcher_id: bytes32, amount: uint64, _: Optional[uint128]) -> Set[Coin]:
+    async def get_coins_to_offer(self, launcher_id: bytes32, *args: Any, **kwargs: Any) -> Set[Coin]:
         record = await self.get_latest_singleton(launcher_id)
         if record is None:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
@@ -1320,6 +1321,7 @@ class DataLayerWallet:
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         raise RuntimeError("DataLayerWallet does not support select_coins()")
 

@@ -48,7 +48,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
     else:
         print("\nSearching for an initial chain\n")
-        print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+        print("You may be able to expedite with 'chia peer full_node -a host:port' using a known node.\n")
 
     if peak is not None:
         if peak.is_transaction_block:
@@ -86,7 +86,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
             print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
-    return True
+    return False
 
 
 async def print_block_from_hash(

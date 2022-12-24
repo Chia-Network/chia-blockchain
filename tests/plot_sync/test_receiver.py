@@ -22,7 +22,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.ws_connection import NodeType
+from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import get_list_or_len
@@ -78,7 +78,8 @@ def create_payload(payload_type: Any, start: bool, *args: Any) -> Any:
 def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
     connection = plot_sync.connection()
     assert connection is not None
-    message = connection.last_sent_message
+    # WSChiaConnection doesn't have last_sent_message its part of the WSChiaConnectionDummy class used for testing
+    message = connection.last_sent_message  # type: ignore[attr-defined]
     assert message is not None
     response: PlotSyncResponse = PlotSyncResponse.from_bytes(message.data)
     assert response.error is not None

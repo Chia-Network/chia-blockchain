@@ -128,12 +128,6 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
-    async def notify_keyring_migration_completed(self, passphrase: Optional[str]) -> WsRpcMessage:
-        data: Dict[str, Any] = {"key": passphrase}
-        request: WsRpcMessage = self.format_request("notify_keyring_migration_completed", data)
-        response: WsRpcMessage = await self._get(request)
-        return response
-
     async def ping(self) -> WsRpcMessage:
         request = self.format_request("ping", {})
         response = await self._get(request)

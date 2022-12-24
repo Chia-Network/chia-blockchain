@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, TypeVar, Union, get_type_hints
+from typing import Callable, List, Optional, Type, TypeVar, Union, get_type_hints
 
 from typing_extensions import Concatenate, ParamSpec
 
@@ -22,20 +22,16 @@ metadata_attribute_name = "_chia_api_metadata"
 
 @dataclass
 class ApiMetadata:
-    api_function: bool = False
+    request_type: ProtocolMessageTypes
+    message_class: Type[Streamable]
     peer_required: bool = False
     bytes_required: bool = False
     execute_task: bool = False
     reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
-    message_class: Optional[Any] = None
 
 
-def get_metadata(function: Callable[..., object]) -> ApiMetadata:
-    maybe_metadata: Optional[ApiMetadata] = getattr(function, metadata_attribute_name, None)
-    if maybe_metadata is None:
-        return ApiMetadata()
-
-    return maybe_metadata
+def get_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
+    return getattr(function, metadata_attribute_name, None)
 
 
 def _set_metadata(function: Callable[..., object], metadata: ApiMetadata) -> None:
@@ -76,7 +72,7 @@ def api_request(
         message_name_bytes = f"{message_name}_bytes"
 
         metadata = ApiMetadata(
-            api_function=True,
+            request_type=getattr(ProtocolMessageTypes, f.__name__),
             peer_required=peer_required,
             bytes_required=bytes_required,
             execute_task=execute_task,

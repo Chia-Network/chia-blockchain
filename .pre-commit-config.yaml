@@ -3,7 +3,7 @@ repos:
     hooks:
     -   id: check-sql
         name: Validate SQL statements
-        entry: ./tests/check_sql_statements.py
+        entry: python3 -m tests.check_sql_statements
         language: python
         pass_filenames: false
 -   repo: local
@@ -15,10 +15,9 @@ repos:
         pass_filenames: false
         additional_dependencies: [click~=7.1]
 -   repo: https://github.com/psf/black
-    rev: 22.8.0
+    rev: 22.10.0
     hooks:
     -   id: black
-        additional_dependencies: ['click<8.1']
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
     hooks:
@@ -64,7 +63,7 @@ repos:
         args: ['--filter-files']
         minimum_pre_commit_version: '2.9.2'
         additional_dependencies: [isort==5.10.1]
--   repo: https://gitlab.com/pycqa/flake8
+-   repo: https://github.com/pycqa/flake8
     rev: 5.0.4
     hooks:
     - id: flake8

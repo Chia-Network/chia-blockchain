@@ -66,6 +66,7 @@ class NotificationManager:
                         uint64(coin_state.coin.amount),
                     )
                 )
+                self.wallet_state_manager.state_changed("new_on_chain_notification")
             return True
 
     async def send_new_notification(

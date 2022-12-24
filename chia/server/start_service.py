@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import asyncio
-import os
 import logging
 import logging.config
+import os
+from pathlib import Path
 from types import FrameType
-from typing import Any, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.daemon.server import service_launch_lock_path
-from chia.util.lock import Lockfile, LockfileError
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
+from chia.server.ws_connection import WSChiaConnection
+from chia.util.lock import Lockfile, LockfileError
+
 from ..protocols.shared_protocol import capabilities
 
 try:
@@ -16,17 +21,16 @@ except ImportError:
     uvloop = None
 
 from chia.cmds.init_funcs import chia_full_version_str
-from chia.rpc.rpc_server import RpcApiProtocol, RpcServiceProtocol, start_rpc_server, RpcServer
+from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
-from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
 from chia.util.misc import setup_sync_signal_handler
+from chia.util.setproctitle import setproctitle
 
 from .reconnect_task import start_reconnect_task
-
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -45,7 +49,7 @@ class ServiceException(Exception):
 class Service(Generic[_T_RpcServiceProtocol]):
     def __init__(
         self,
-        root_path,
+        root_path: Path,
         node: _T_RpcServiceProtocol,
         peer_api: Any,
         node_type: NodeType,
@@ -57,9 +61,9 @@ class Service(Generic[_T_RpcServiceProtocol]):
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
-        on_connect_callback: Optional[Callable] = None,
+        on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo] = None,
-        connect_to_daemon=True,
+        connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
@@ -73,7 +77,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._node_type = node_type
         self._service_name = service_name
         self.rpc_server: Optional[RpcServer] = None
-        self._rpc_close_task: Optional[asyncio.Task] = None
+        self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
 
@@ -95,7 +99,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
-        self._server = ChiaServer(
+        self._server = ChiaServer.create(
             advertised_port,
             node,
             peer_api,
@@ -128,7 +132,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
-        self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task]] = {peer: None for peer in connect_peers}
+        self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task[None]]] = {peer: None for peer in connect_peers}
         self.upnp: UPnP = UPnP()
 
     async def start(self) -> None:
@@ -186,9 +190,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         if self._reconnect_tasks.get(peer) is not None:
             raise ServiceException(f"Peer {peer} already added")
 
-        self._reconnect_tasks[peer] = start_reconnect_task(
-            self._server, peer, self._log, self.config.get("prefer_ipv6")
-        )
+        self._reconnect_tasks[peer] = start_reconnect_task(self._server, peer, self._log)
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is

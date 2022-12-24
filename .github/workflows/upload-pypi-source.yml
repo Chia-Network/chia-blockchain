@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - uses: actions/setup-python@v3
+    - uses: Chia-Network/actions/setup-python@main
       name: Install Python
       with:
         python-version: '3.8'
@@ -41,14 +41,16 @@ jobs:
       run: |
         unset HAS_SECRET
         if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
       env:
         SECRET: "${{ secrets.test_pypi_password }}"
 
-    - name: Install lint requirements
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install .[dev]
+    - uses: ./.github/actions/install
+      with:
+        python-version: '3.8'
+        development: true
+
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Lint source with black
       run: |

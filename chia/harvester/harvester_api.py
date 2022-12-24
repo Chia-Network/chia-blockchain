@@ -16,7 +16,12 @@ from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import (
+    ProofOfSpace,
+    calculate_pos_challenge,
+    generate_plot_public_key,
+    passes_plot_filter,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
@@ -81,7 +86,7 @@ class HarvesterAPI:
             # so it should be run in a thread pool.
             try:
                 plot_id = plot_info.prover.get_id()
-                sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
+                sp_challenge_hash = calculate_pos_challenge(
                     plot_id,
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
@@ -183,7 +188,7 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-                if ProofOfSpace.passes_plot_filter(
+                if passes_plot_filter(
                     self.harvester.constants,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
@@ -269,7 +274,7 @@ class HarvesterAPI:
             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
             include_taproot = True
 
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+        agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.

@@ -10,7 +10,6 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_off_chain import get_off_chain_metadata
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
@@ -81,13 +80,12 @@ def create_full_puzzle(
 
 
 async def get_nft_info_from_puzzle(
-    nft_coin_info: NFTCoinInfo, config: Dict = None, include_off_chain: bool = False, ignore_size_limit: bool = False
+    nft_coin_info: NFTCoinInfo, config: Dict = None, ignore_size_limit: bool = False
 ) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
     :param nft_coin_info NFTCoinInfo in local database
     :param config Wallet config
-    :param include_off_chain If load the off-chain metadata
     :param ignore_size_limit Ignore the off-chain metadata loading size limit
     :return: NFTInfo
     """
@@ -104,8 +102,6 @@ async def get_nft_info_from_puzzle(
     for uri in uncurried_nft.license_uris.as_python():  # pylint: disable=E1133
         license_uris.append(str(uri, "utf-8"))
     off_chain_metadata: Optional[str] = None
-    if include_off_chain:
-        off_chain_metadata = await get_off_chain_metadata(nft_coin_info, config, ignore_size_limit)
     nft_info = NFTInfo(
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),

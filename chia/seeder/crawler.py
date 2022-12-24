@@ -1,26 +1,29 @@
+from __future__ import annotations
+
 import asyncio
+import ipaddress
 import logging
 import time
 import traceback
-import ipaddress
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 
-import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.rpc.rpc_server import default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.path import path_from_root
 from chia.util.ints import uint32, uint64
+from chia.util.path import path_from_root
 
 log = logging.getLogger(__name__)
 
@@ -96,14 +99,14 @@ class Crawler:
         return await self.server.start_client(peer_info, on_connect)
 
     async def connect_task(self, peer):
-        async def peer_action(peer: ws.WSChiaConnection):
+        async def peer_action(peer: WSChiaConnection):
 
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:
                 self.version_cache.append((peer_info.host, version))
             # Ask peer for peers
-            response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=3)
+            response = await peer.call_api(FullNodeAPI.request_peers, full_node_protocol.RequestPeers(), timeout=3)
             # Add peers to DB
             if isinstance(response, full_node_protocol.RespondPeers):
                 self.peers_retrieved.append(response)
@@ -344,7 +347,7 @@ class Crawler:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection):
         try:
             peer_info = peer.get_peer_info()
             tls_version = peer.get_tls_version()
@@ -359,7 +362,7 @@ class Crawler:
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: WSChiaConnection):
         pass
 
     def _close(self):

@@ -11,6 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "electron-builder": "^23.5.1",
-    "lerna": "^5.5.2"
+    "lerna": "^5.6.2"
   }
 }

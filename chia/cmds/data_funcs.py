@@ -202,3 +202,14 @@ async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
         if client is not None:
             res = await client.get_owned_stores()
             print(res)
+
+
+async def get_sync_status_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    async with get_any_service_client("data_layer", rpc_port) as (client, config, _):
+        if client is not None:
+            res = await client.get_sync_status(store_id=store_id_bytes)
+            print(res)

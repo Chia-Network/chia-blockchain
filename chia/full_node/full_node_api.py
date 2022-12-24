@@ -1,44 +1,47 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
+import functools
 import logging
 import time
 import traceback
-import functools
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
 
-import chia.server.ws_connection as ws
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
-from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.full_node.signage_point import SignagePoint
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.signage_point import SignagePoint
+from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
+    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
-    CoinState,
     RespondFeeEstimates,
     RespondSESInfo,
 )
-from chia.server.server import ChiaServer
-from concurrent.futures import ThreadPoolExecutor
-from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
+from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
@@ -55,8 +58,13 @@ from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
+else:
+    FullNode = object
 
 
 class FullNodeAPI:
@@ -82,7 +90,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
     async def request_peers(
-        self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection
+        self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
     ) -> Optional[Message]:
         if peer.peer_server_port is None:
             return None
@@ -94,7 +102,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
     ) -> Optional[Message]:
         self.log.debug(f"Received {len(request.peer_list)} peers")
         if self.full_node.full_node_peers is not None:
@@ -103,7 +111,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def respond_peers_introducer(
-        self, request: introducer_protocol.RespondPeersIntroducer, peer: ws.WSChiaConnection
+        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ) -> Optional[Message]:
         self.log.debug(f"Received {len(request.peer_list)} peers from introducer")
         if self.full_node.full_node_peers is not None:
@@ -113,29 +121,24 @@ class FullNodeAPI:
         return None
 
     @api_request(peer_required=True, execute_task=True)
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> None:
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> None:
         """
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
-        new_peak_sem = self.full_node.new_peak_sem
-        waiter_count = 0 if new_peak_sem._waiters is None else len(new_peak_sem._waiters)
-
-        if waiter_count > 0:
-            self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
-
-        if waiter_count > 20:
+        try:
+            async with self.full_node.new_peak_sem.acquire():
+                await self.full_node.new_peak(request, peer)
+        except LimitedSemaphoreFullError:
             return None
 
-        async with new_peak_sem:
-            await self.full_node.new_peak(request, peer)
         return None
 
     @api_request(peer_required=True)
     async def new_transaction(
-        self, transaction: full_node_protocol.NewTransaction, peer: ws.WSChiaConnection
+        self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection
     ) -> Optional[Message]:
         """
         A peer notifies us of a new transaction.
@@ -235,7 +238,7 @@ class FullNodeAPI:
     async def respond_transaction(
         self,
         tx: full_node_protocol.RespondTransaction,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
         tx_bytes: bytes = b"",
         test: bool = False,
     ) -> Optional[Message]:
@@ -250,15 +253,13 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        if self.full_node.transaction_queue.qsize() % 100 == 0 and not self.full_node.transaction_queue.empty():
-            self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
-
-        if self.full_node.transaction_queue.full():
-            return None
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
-        await self.full_node.transaction_queue.put(
-            (1, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
-        )
+        try:
+            await self.full_node.transaction_queue.put(
+                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+            )
+        except TransactionQueueFull:
+            pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
         return None
 
     @api_request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
@@ -396,7 +397,7 @@ class FullNodeAPI:
     async def respond_block(
         self,
         respond_block: full_node_protocol.RespondBlock,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -456,7 +457,7 @@ class FullNodeAPI:
     async def respond_unfinished_block(
         self,
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
         respond_unfinished_block_bytes: bytes = b"",
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
@@ -468,7 +469,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
-        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: ws.WSChiaConnection
+        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -502,7 +503,9 @@ class FullNodeAPI:
                     full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                         challenge_hash_to_request, uint8(0), last_rc
                     )
-                    response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
+                    response = await peer.call_api(
+                        FullNodeAPI.request_signage_point_or_end_of_sub_slot, full_node_request, timeout=10
+                    )
                     if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
                         self.full_node.log.debug(f"Invalid response for slot {response}")
                         return None
@@ -593,7 +596,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def respond_signage_point(
-        self, request: full_node_protocol.RespondSignagePoint, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondSignagePoint, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -648,7 +651,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def respond_end_of_sub_slot(
-        self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -659,7 +662,7 @@ class FullNodeAPI:
     async def request_mempool_transactions(
         self,
         request: full_node_protocol.RequestMempoolTransactions,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
@@ -674,7 +677,7 @@ class FullNodeAPI:
     # FARMER PROTOCOL
     @api_request(peer_required=True)
     async def declare_proof_of_space(
-        self, request: farmer_protocol.DeclareProofOfSpace, peer: ws.WSChiaConnection
+        self, request: farmer_protocol.DeclareProofOfSpace, peer: WSChiaConnection
     ) -> Optional[Message]:
         """
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
@@ -724,8 +727,8 @@ class FullNodeAPI:
             # 3. In a future sub-slot that we already know of
 
             # Checks that the proof of space is valid
-            quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-                self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
+            quality_string: Optional[bytes32] = verify_and_get_quality_string(
+                request.proof_of_space, self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
             )
             assert quality_string is not None and len(quality_string) == 32
 
@@ -742,7 +745,7 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                        mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(
                             curr_l_tb.header_hash
                         )
                     except Exception as e:
@@ -963,7 +966,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def signed_values(
-        self, farmer_request: farmer_protocol.SignedValues, peer: ws.WSChiaConnection
+        self, farmer_request: farmer_protocol.SignedValues, peer: WSChiaConnection
     ) -> Optional[Message]:
         """
         Signature of header hash, by the harvester. This is enough to create an unfinished
@@ -1029,7 +1032,7 @@ class FullNodeAPI:
     # TIMELORD PROTOCOL
     @api_request(peer_required=True)
     async def new_infusion_point_vdf(
-        self, request: timelord_protocol.NewInfusionPointVDF, peer: ws.WSChiaConnection
+        self, request: timelord_protocol.NewInfusionPointVDF, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1039,7 +1042,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def new_signage_point_vdf(
-        self, request: timelord_protocol.NewSignagePointVDF, peer: ws.WSChiaConnection
+        self, request: timelord_protocol.NewSignagePointVDF, peer: WSChiaConnection
     ) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1055,7 +1058,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def new_end_of_sub_slot_vdf(
-        self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: ws.WSChiaConnection
+        self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -1250,7 +1253,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
+            TransactionQueueEntry(request.transaction, None, spend_name, None, test), peer_id=None, high_priority=True
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
@@ -1406,15 +1409,9 @@ class FullNodeAPI:
 
     @api_request(peer_required=True, bytes_required=True, execute_task=True)
     async def new_compact_vdf(
-        self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection, request_bytes: bytes = b""
+        self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection, request_bytes: bytes = b""
     ) -> None:
         if self.full_node.sync_store.get_sync_mode():
-            return None
-
-        compact_vdf_sem = self.full_node.compact_vdf_sem
-        waiter_count = 0 if compact_vdf_sem._waiters is None else len(compact_vdf_sem._waiters)
-        if waiter_count > 20:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
             return None
 
         name = std_hash(request_bytes)
@@ -1425,26 +1422,27 @@ class FullNodeAPI:
 
         # this semaphore will only allow a limited number of tasks call
         # new_compact_vdf() at a time, since it can be expensive
-        async with self.full_node.compact_vdf_sem:
-            try:
-                await self.full_node.new_compact_vdf(request, peer)
-            finally:
-                self.full_node.compact_vdf_requests.remove(name)
+        try:
+            async with self.full_node.compact_vdf_sem.acquire():
+                try:
+                    await self.full_node.new_compact_vdf(request, peer)
+                finally:
+                    self.full_node.compact_vdf_requests.remove(name)
+        except LimitedSemaphoreFullError:
+            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
+            return None
+
         return None
 
     @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
-    async def request_compact_vdf(
-        self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection
-    ) -> None:
+    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.request_compact_vdf(request, peer)
         return None
 
     @api_request(peer_required=True)
-    async def respond_compact_vdf(
-        self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection
-    ) -> None:
+    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.respond_compact_vdf(request, peer)
@@ -1452,7 +1450,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def register_interest_in_puzzle_hash(
-        self, request: wallet_protocol.RegisterForPhUpdates, peer: ws.WSChiaConnection
+        self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
         if peer.peer_node_id not in self.full_node.peer_puzzle_hash:
             self.full_node.peer_puzzle_hash[peer.peer_node_id] = set()
@@ -1493,7 +1491,7 @@ class FullNodeAPI:
 
     @api_request(peer_required=True)
     async def register_interest_in_coin(
-        self, request: wallet_protocol.RegisterForCoinUpdates, peer: ws.WSChiaConnection
+        self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
         if peer.peer_node_id not in self.full_node.peer_coin_ids:
             self.full_node.peer_coin_ids[peer.peer_node_id] = set()

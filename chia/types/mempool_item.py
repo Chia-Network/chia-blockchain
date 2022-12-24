@@ -20,7 +20,6 @@ class MempoolItem(Streamable):
     cost: uint64
     spend_bundle_name: bytes32
     additions: List[Coin]
-    removals: List[Coin]
     height_added_to_mempool: uint32
 
     def __lt__(self, other: MempoolItem) -> bool:
@@ -33,3 +32,7 @@ class MempoolItem(Streamable):
     @property
     def name(self) -> bytes32:
         return self.spend_bundle_name
+
+    @property
+    def removals(self) -> List[Coin]:
+        return self.spend_bundle.removals()

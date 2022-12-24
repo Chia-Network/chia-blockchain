@@ -56,8 +56,9 @@ jobs:
 
     - name: Get npm cache directory
       id: npm-cache
+      shell: bash
       run: |
-        echo "::set-output name=dir::$(npm config get cache)"
+        echo "dir=$(npm config get cache)" >>$GITHUB_OUTPUT
 
     - name: Cache npm
       uses: actions/cache@v3
@@ -69,8 +70,9 @@ jobs:
 
     - name: Get pip cache dir
       id: pip-cache
+      shell: bash
       run: |
-        echo "::set-output name=dir::$(pip cache dir)"
+        echo "dir=$(pip cache dir)" >>$GITHUB_OUTPUT
 
     - name: Cache pip
       uses: actions/cache@v3
@@ -80,7 +82,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - uses: actions/setup-python@v3
+    - uses: Chia-Network/actions/setup-python@main
       name: Install Python ${{ matrix.python-version }}
       with:
         python-version: ${{ matrix.python-version }}
@@ -99,13 +101,13 @@ jobs:
         unset HAS_GLUE_SECRET
 
         if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
-        echo "::set-output name=HAS_SIGNING_SECRET::${HAS_SIGNING_SECRET}"
+        echo "HAS_SIGNING_SECRET=${HAS_SIGNING_SECRET}" >>$GITHUB_OUTPUT
 
         if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-        echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >>$GITHUB_OUTPUT
 
         if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-        echo ::set-output name=HAS_GLUE_SECRET::${HAS_GLUE_SECRET}
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >>$GITHUB_OUTPUT
       env:
         SIGNING_SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
         AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
@@ -121,13 +123,14 @@ jobs:
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
       id: version_number
+      shell: bash
       run: |
-        python -m venv ..\venv
-        . ..\venv\Scripts\Activate.ps1
+        python -m venv ../venv
+        source ../venv/Scripts/activate
         pip3 install setuptools_scm
-        $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
-        echo "$env:CHIA_INSTALLER_VERSION"
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$env:CHIA_INSTALLER_VERSION"
+        CHIA_INSTALLER_VERSION=$(python ./build_scripts/installer-version.py)
+        echo "$CHIA_INSTALLER_VERSION"
+        echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >>$GITHUB_OUTPUT
         deactivate
 
       # Get the most recent release from chia-plotter-madmax
@@ -189,15 +192,17 @@ jobs:
       run: |
         .\Install.ps1 -d
 
+    - uses: chia-network/actions/activate-venv@main
+
     - name: Prepare GUI cache
       id: gui-ref
+      shell: bash
       run: |
-        $gui_ref = git submodule status chia-blockchain-gui
-        $gui_ref = $gui_ref -replace "^ | chia-blockchain-gui.*$",""
-        echo $gui_ref
-        echo "::set-output name=GUI_REF::$gui_ref"
-        echo "Remove-Item -Recurse -Force .\chia-blockchain-gui"
-        Remove-Item -Recurse -Force .\chia-blockchain-gui
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+        echo "${gui_ref}"
+        echo "GUI_REF=${gui_ref}" >>$GITHUB_OUTPUT
+        echo "rm -rf ./chia-blockchain-gui"
+        rm -rf ./chia-blockchain-gui
 
     - name: Cache GUI
       uses: actions/cache@v3
@@ -221,7 +226,6 @@ jobs:
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
-        .\venv\Scripts\Activate.ps1
         cd .\build_scripts
         .\build_windows-2-installer.ps1
 
@@ -238,7 +242,7 @@ jobs:
 
     - name: Configure AWS Credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v1-node16
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
@@ -252,7 +256,7 @@ jobs:
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-        echo ::set-output name=CHIA_DEV_BUILD::${CHIA_DEV_BUILD}
+        echo CHIA_DEV_BUILD=${CHIA_DEV_BUILD} >>$GITHUB_OUTPUT
         echo ${CHIA_DEV_BUILD}
         pwd
         aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download.chia.net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
@@ -263,11 +267,6 @@ jobs:
       run: |
          certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256
          ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
-
-    - name: Install py3createtorrent
-      if: env.FULL_RELEASE == 'true'
-      run: |
-        pip3 install py3createtorrent
 
     - name: Create torrent
       if: env.FULL_RELEASE == 'true'
@@ -299,9 +298,10 @@ jobs:
     - name: Get tag name
       if: startsWith(github.ref, 'refs/tags/')
       id: tag-name
+      shell: bash
       run: |
-        echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
-        echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
+        echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >>$GITHUB_OUTPUT
+        echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >>$GITHUB_OUTPUT
 
     - name: Upload release artifacts
       if: env.RELEASE == 'true'

@@ -615,3 +615,11 @@ class CancelOfferResponse:
         return {
             "success": self.success,
         }
+
+
+@dataclasses.dataclass(frozen=True)
+class SyncStatus:
+    root_hash: bytes32
+    generation: int
+    target_root_hash: bytes32
+    target_generation: int
