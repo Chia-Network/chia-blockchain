@@ -59,7 +59,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 
 class FakeServer:
-    async def send_to_all(self, messages: List[Message], node_type: NodeType, exclude: Optional[bytes32]):
+    async def send_to_all(self, messages: List[Message], node_type: NodeType, exclude: Optional[bytes32] = None):
         pass
 
     def set_received_message_callback(self, callback: Callable):
