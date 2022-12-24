@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_message_types import ProtocolMessageTypes as pmt
+from chia.util.api_decorators import ApiMetadata
 
 NO_REPLY_EXPECTED = [
     # full_node -> full_node messages
@@ -60,9 +61,6 @@ def message_requires_reply(sent: ProtocolMessageTypes) -> bool:
     """Return True if message has an entry in the full node P2P message map"""
     # If we knew the peer NodeType is FULL_NODE, we could also check `sent not in NO_REPLY_EXPECTED`
     return sent in VALID_REPLY_MESSAGE_MAP
-
-
-from chia.util.api_decorators import ApiMetadata
 
 
 def message_response_ok(sent_metadata: ApiMetadata, received: ProtocolMessageTypes) -> bool:

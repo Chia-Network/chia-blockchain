@@ -2619,8 +2619,6 @@ class FullNode:
                 if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
                     for new_pot in broadcast_list:
-                        from chia.timelord.timelord_api import TimelordAPI
-
                         await self.server.send_to_all(TimelordAPI.request_compact_proof_of_time, new_pot)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:

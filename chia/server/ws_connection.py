@@ -16,7 +16,7 @@ from typing_extensions import Protocol, final
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_requires_reply, message_response_ok
+from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.capabilities import known_active_capabilities
