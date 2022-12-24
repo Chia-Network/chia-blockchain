@@ -515,9 +515,6 @@ class TradeManager:
                         coin_set = await wallet.get_coins_to_offer(launcher_id=asset_id)
                     else:
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
-                    )
                     coins_to_offer[id] = list(coin_set)
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
