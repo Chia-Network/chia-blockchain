@@ -43,6 +43,10 @@ def get_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
     return getattr(function, metadata_attribute_name, None)
 
 
+def _get_incomplete_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
+    return getattr(function, metadata_attribute_name, None)
+
+
 def _set_metadata(function: Callable[..., object], metadata: ApiMetadata) -> None:
     setattr(function, metadata_attribute_name, metadata)
 
@@ -105,7 +109,7 @@ def api_request(
 def api_node() -> Callable[[Type[_T_NodeProtocol]], Type[_T_NodeProtocol]]:
     def decorator(cls: Type[_T_NodeProtocol]) -> Type[_T_NodeProtocol]:
         for attribute in vars(cls).values():
-            metadata = get_metadata(attribute)
+            metadata = _get_incomplete_metadata(attribute)
 
             if metadata is None:
                 continue
