@@ -458,7 +458,7 @@ class WSChiaConnection:
         if self.connection_type is None:
             raise ValueError("handshake not done yet")
         request_metadata = get_metadata(request_method)
-        assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
+        assert request_metadata is not None, f"ApiEndpointMetadata unavailable for {request_method}"
         attribute = getattr(class_for_type(self.connection_type), request_metadata.request_type.name, None)
         if attribute is None:
             raise AttributeError(
@@ -485,7 +485,7 @@ class WSChiaConnection:
 
         recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
         receive_metadata = get_metadata(recv_method)
-        assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
+        assert receive_metadata is not None, f"ApiEndpointMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
     async def send_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:

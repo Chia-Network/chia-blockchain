@@ -34,7 +34,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.condition_tools import conditions_for_solution, pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -159,7 +159,10 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-@api_request(peer_required=True, bytes_required=True)
+_api_node_metadata = ApiNodeMetadata()
+
+
+@_api_node_metadata.request(peer_required=True, bytes_required=True)
 async def respond_transaction(
     self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
