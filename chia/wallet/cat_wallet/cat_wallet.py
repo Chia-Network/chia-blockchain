@@ -875,7 +875,6 @@ class CATWallet:
 
     async def get_coins_to_offer(
         self,
-        asset_id: Optional[bytes32],
         amount: uint64,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,

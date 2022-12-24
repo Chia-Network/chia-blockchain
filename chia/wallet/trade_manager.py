@@ -18,6 +18,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -460,7 +461,8 @@ class TradeManager:
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
                         if wallet.type() != WalletType.STANDARD_WALLET:
-                            if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                            # ATTENTION: new wallets
+                            if isinstance(wallet, CATWallet):
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                                 memos = [p2_ph]
                             else:
@@ -479,7 +481,8 @@ class TradeManager:
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         if wallet.type() != WalletType.STANDARD_WALLET:
-                            if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                            # ATTENTION: new wallets
+                            if isinstance(wallet, CATWallet):
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             else:
                                 raise ValueError(
@@ -488,11 +491,34 @@ class TradeManager:
                     else:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                    if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
+                    # ATTENTION: new wallets
+                    # TODO: can we move some 'generic' code above into the wallet specific section below?
+                    if isinstance(wallet, Wallet):
+                        coin_set = await wallet.get_coins_to_offer(
+                            amount=uint64(abs(amount)),
+                            min_coin_amount=min_coin_amount,
+                            max_coin_amount=max_coin_amount,
+                        )
+                    elif isinstance(wallet, CATWallet):
+                        coin_set = await wallet.get_coins_to_offer(
+                            amount=uint64(abs(amount)),
+                            min_coin_amount=min_coin_amount,
+                            max_coin_amount=max_coin_amount,
+                        )
+                    elif isinstance(wallet, NFTWallet):
+                        if asset_id is None:
+                            raise RuntimeError("failed to identify an asset ID while building an NFT offer")
+                        coin_set = await wallet.get_coins_to_offer(nft_id=asset_id)
+                    elif isinstance(wallet, DataLayerWallet):
+                        if asset_id is None:
+                            raise RuntimeError("failed to identify an asset ID while building a DataLayer offer")
+                        coin_set = await wallet.get_coins_to_offer(launcher_id=asset_id)
+                    else:
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
                     coins_to_offer[id] = await wallet.get_coins_to_offer(
                         asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
                     )
+                    coins_to_offer[id] = list(coin_set)
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
@@ -500,7 +526,7 @@ class TradeManager:
                 offer_dict_no_ints[asset_id] = amount
 
                 if asset_id is not None and wallet is not None:  # if this asset is not XCH
-                    if callable(getattr(wallet, "get_puzzle_info", None)):
+                    if isinstance(wallet, (CATWallet, NFTWallet, DataLayerWallet)):
                         puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
                             # ignore the case if we're an nft transferring the did owner

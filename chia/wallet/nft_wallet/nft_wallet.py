@@ -542,12 +542,7 @@ class NFTWallet:
         else:
             raise ValueError("Invalid NFT puzzle.")
 
-    async def get_coins_to_offer(
-        self,
-        nft_id: bytes32,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Set[Coin]:
+    async def get_coins_to_offer(self, nft_id: bytes32) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
