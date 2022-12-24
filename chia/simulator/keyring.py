@@ -125,7 +125,7 @@ class TempKeyring:
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.cleanup()
 
-    def get_keychain(self):
+    def get_keychain(self) -> Keychain:
         return self.keychain
 
     def cleanup(self) -> None:

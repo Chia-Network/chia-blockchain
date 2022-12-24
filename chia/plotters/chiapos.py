@@ -2,13 +2,16 @@
 NOTE: This contains duplicate code from `chia.cmds.plots`.
 After `chia plots create` becomes obsolete, consider removing it from there.
 """
+from __future__ import annotations
+
 import asyncio
 import logging
-import pkg_resources
-from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import pkg_resources
+
+from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from chia.plotting.util import add_plot_directory, validate_plot_size
 
 log = logging.getLogger(__name__)

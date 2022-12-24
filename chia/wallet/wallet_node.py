@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import logging
@@ -9,26 +11,18 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
-from chia.daemon.keychain_proxy import (
-    KeychainProxy,
-    connect_to_keychain_and_validate,
-    wrap_local_keychain,
-)
+from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import (
-    CoinState,
-    RespondBlockHeader,
-    RespondToCoinUpdates,
-    RespondToPhUpdates,
-)
+from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates, RespondToPhUpdates
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -45,7 +39,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.errors import KeychainIsLocked, KeychainProxyConnectionFailure, KeychainIsEmpty, KeychainKeyNotFound
+from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
@@ -54,10 +48,10 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
 from chia.wallet.util.wallet_sync_utils import (
+    PeerRequestException,
     fetch_header_blocks_in_range,
     fetch_last_tx_from_peer,
     last_change_height_cs,
-    PeerRequestException,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
@@ -65,7 +59,7 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_phs,
 )
 from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point, WalletWeightProofHandler
+from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
 
 def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint: str) -> Path:
@@ -433,9 +427,9 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.debug("Pulled from queue: %s", item)
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data)
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
                     # state updates until we are sure that we subscribed to everything that we need to. Otherwise,
                     # we might not be able to process some state.
@@ -446,6 +440,7 @@ class WalletNode:
                             async with self.wallet_state_manager.lock:
                                 await self.receive_state_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION:
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data)
                     puzzle_hashes: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         # Puzzle hash subscription
@@ -456,11 +451,13 @@ class WalletNode:
                 elif item.item_type == NewPeakQueueTypes.FULL_NODE_STATE_UPDATED:
                     # Note: this can take a while when we have a lot of transactions. We want to process these
                     # before new_peaks, since new_peak_wallet requires that we first obtain the state for that peak.
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
                     request: wallet_protocol.CoinStateUpdate = item.data[0]
                     peer = item.data[1]
                     assert peer is not None
                     await self.state_update_received(request, peer)
                 elif item.item_type == NewPeakQueueTypes.NEW_PEAK_WALLET:
+                    self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
                     # This can take a VERY long time, because it might trigger a long sync. It is OK if we miss some
                     # subscriptions or state updates, since all subscriptions and state updates will be handled by
                     # long_sync (up to the target height).
@@ -469,6 +466,7 @@ class WalletNode:
                     assert peer is not None
                     await self.new_peak_wallet(request, peer)
                 else:
+                    self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)
                     assert False
             except asyncio.CancelledError:
                 self.log.info("Queue task cancelled, exiting.")
@@ -862,7 +860,9 @@ class WalletNode:
             raise ValueError("Not connected to the full node")
         first_node = all_nodes[0]
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
-        coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
+        coin_state: Optional[RespondToPhUpdates] = await first_node.call_api(
+            FullNodeAPI.register_interest_in_puzzle_hash, msg
+        )
         # TODO validate state if received from untrusted peer
         assert coin_state is not None
         return coin_state.coin_states
@@ -1015,7 +1015,7 @@ class WalletNode:
             return
 
         request = wallet_protocol.RequestBlockHeader(new_peak.height)
-        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
             await peer.close(120)
@@ -1210,7 +1210,9 @@ class WalletNode:
 
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
             request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
-            response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
+            response_prev: Optional[RespondBlockHeader] = await peer.call_api(
+                FullNodeAPI.request_block_header, request_prev
+            )
             if response_prev is None or not isinstance(response_prev, RespondBlockHeader):
                 raise RuntimeError("bad block header response from peer while syncing")
             prev_head = response_prev.header_block
@@ -1249,8 +1251,8 @@ class WalletNode:
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-            weight_request, timeout=wp_timeout
+        weight_proof_response: RespondProofOfWeight = await peer.call_api(
+            FullNodeAPI.request_proof_of_weight, weight_request, timeout=wp_timeout
         )
 
         if weight_proof_response is None:
@@ -1598,8 +1600,8 @@ class WalletNode:
         return True
 
     async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        solution_response = await peer.call_api(
+            FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
@@ -1616,7 +1618,7 @@ class WalletNode:
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_interest_in_coin, msg)
         if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
@@ -1636,8 +1638,8 @@ class WalletNode:
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
 
-        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
-            wallet_protocol.RequestChildren(coin_name)
+        response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
+            FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
         )
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
             raise PeerRequestException(f"Was not able to obtain children {response}")

@@ -155,15 +155,17 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
-                    "UPDATE OR FAIL full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
+                    "UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
                 )
 
     async def set_in_chain(self, header_hashes: List[Tuple[bytes32]]) -> None:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.executemany(
-                    "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
-                )
+                async with await conn.executemany(
+                    "UPDATE full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
+                ) as cursor:
+                    if cursor.rowcount != len(header_hashes):
+                        raise RuntimeError(f"The blockchain database is corrupt. All of {header_hashes} should exist")
 
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
 

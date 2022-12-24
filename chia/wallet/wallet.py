@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -600,6 +601,9 @@ class Wallet:
         self, coin: Coin, height: uint32, peer: WSChiaConnection
     ) -> None:  # pylint: disable=used-before-assignment
         pass
+
+    def get_name(self) -> str:
+        return "Standard Wallet"
 
 
 if TYPE_CHECKING:

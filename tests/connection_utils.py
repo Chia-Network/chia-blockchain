@@ -14,7 +14,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -28,7 +28,7 @@ async def disconnect_all(server: ChiaServer) -> None:
     connections = list(server.all_connections.values())
     await asyncio.gather(*(connection.close() for connection in connections))
 
-    await asyncio.sleep(5)  # 5 seconds to allow connections and tasks to all drain
+    await asyncio.sleep(adjusted_timeout(5))  # 5 seconds to allow connections and tasks to all drain
 
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
@@ -41,7 +41,6 @@ async def add_dummy_connection(
 ) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    incoming_queue: asyncio.Queue = asyncio.Queue()
     config = load_config(server.root_path, "config.yaml")
     chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server.root_path, config)
     dummy_crt_path = server.root_path / "dummy.crt"
@@ -58,12 +57,12 @@ async def add_dummy_connection(
     wsc = WSChiaConnection.create(
         type,
         ws,
+        server.api,
         server._port,
         log,
         True,
-        False,
+        server.received_message_callback,
         self_hostname,
-        incoming_queue,
         None,
         peer_id,
         100,
@@ -71,7 +70,9 @@ async def add_dummy_connection(
         local_capabilities_for_handshake=capabilities,
     )
     await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
-    return incoming_queue, peer_id
+    if wsc.incoming_message_task is not None:
+        wsc.incoming_message_task.cancel()
+    return wsc.incoming_queue, peer_id
 
 
 async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer, self_hostname: str) -> WSChiaConnection:

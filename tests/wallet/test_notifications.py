@@ -23,7 +23,7 @@ from tests.util.wallet_is_synced import wallets_are_synced
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
-async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -49,8 +49,8 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     for i in range(0, 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))

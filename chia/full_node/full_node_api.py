@@ -9,7 +9,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from secrets import token_bytes
-from typing import Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
@@ -20,9 +20,9 @@ from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iteratio
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -60,6 +60,11 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
+else:
+    FullNode = object
 
 
 class FullNodeAPI:
@@ -248,15 +253,13 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        if self.full_node.transaction_queue.qsize() % 100 == 0 and not self.full_node.transaction_queue.empty():
-            self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
-
-        if self.full_node.transaction_queue.full():
-            return None
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
-        await self.full_node.transaction_queue.put(
-            (1, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
-        )
+        try:
+            await self.full_node.transaction_queue.put(
+                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+            )
+        except TransactionQueueFull:
+            pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
         return None
 
     @api_request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
@@ -500,7 +503,9 @@ class FullNodeAPI:
                     full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                         challenge_hash_to_request, uint8(0), last_rc
                     )
-                    response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
+                    response = await peer.call_api(
+                        FullNodeAPI.request_signage_point_or_end_of_sub_slot, full_node_request, timeout=10
+                    )
                     if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
                         self.full_node.log.debug(f"Invalid response for slot {response}")
                         return None
@@ -740,7 +745,7 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                        mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(
                             curr_l_tb.header_hash
                         )
                     except Exception as e:
@@ -1248,7 +1253,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
+            TransactionQueueEntry(request.transaction, None, spend_name, None, test), peer_id=None, high_priority=True
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None

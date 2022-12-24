@@ -1,22 +1,17 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, List, Tuple, Optional
+from typing import IO, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
-from chia.full_node.weight_proof import (
-    _validate_sub_epoch_summaries,
-    validate_weight_proof_inner,
-)
+from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-
-from chia.types.weight_proof import (
-    WeightProof,
-)
-
+from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
 from chia.util.setproctitle import getproctitle, setproctitle
 
