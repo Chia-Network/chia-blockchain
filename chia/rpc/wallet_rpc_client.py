@@ -87,9 +87,6 @@ class WalletRpcClient(RpcClient):
 
         return await self.fetch("push_transactions", {"transactions": transactions})
 
-    async def farm_block(self, address: str) -> Dict[str, Any]:
-        return await self.fetch("farm_block", {"address": address})
-
     # Wallet Management APIs
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> Dict:
         request: Dict[str, Any] = {}

@@ -17,7 +17,6 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -107,7 +106,6 @@ class WalletRpcApi:
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
-            "/farm_block": self.farm_block,  # Only when node simulator is running
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
@@ -530,15 +528,6 @@ class WalletRpcApi:
             for tx in txs:
                 await wallet.push_transaction(tx)
 
-        return {}
-
-    async def farm_block(self, request) -> EndpointResult:
-        raw_puzzle_hash = decode_puzzle_hash(request["address"])
-        request = FarmNewBlockProtocol(raw_puzzle_hash)
-
-        from chia.simulator.full_node_simulator import FullNodeSimulator
-
-        await self.service.server.send_to_all(FullNodeSimulator.farm_new_block, request)
         return {}
 
     ##########################################################################################
