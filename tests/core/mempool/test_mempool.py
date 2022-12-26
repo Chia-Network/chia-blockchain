@@ -17,7 +17,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
-from chia.server.outbound_message import Message
+from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
@@ -159,7 +159,8 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-_api_node_metadata = ApiNodeMetadata()
+# TODO: full node.  'ish
+_api_node_metadata = ApiNodeMetadata(type=NodeType.FULL_NODE)
 
 
 @_api_node_metadata.request(peer_required=True, bytes_required=True)

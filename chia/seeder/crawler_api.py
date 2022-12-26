@@ -4,12 +4,13 @@ from typing import ClassVar, Optional
 
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.seeder.crawler import Crawler
-from chia.server.outbound_message import Message
+from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.api_decorators import ApiNodeMetadata
 
-_api_node_metadata = ApiNodeMetadata()
+# TODO: full node.  'ish
+_api_node_metadata = ApiNodeMetadata(type=NodeType.FULL_NODE)
 
 
 class CrawlerAPI:

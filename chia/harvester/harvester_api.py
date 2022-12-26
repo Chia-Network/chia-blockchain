@@ -14,7 +14,7 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
@@ -27,7 +27,7 @@ from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
-_api_node_metadata = ApiNodeMetadata()
+_api_node_metadata = ApiNodeMetadata(type=NodeType.HARVESTER)
 
 
 class HarvesterAPI:

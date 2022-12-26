@@ -5,6 +5,7 @@ import time
 from typing import Callable, ClassVar, Optional
 
 from chia.protocols import timelord_protocol
+from chia.server.outbound_message import NodeType
 from chia.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
 from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.ints import uint64
@@ -12,7 +13,7 @@ from chia.util.ints import uint64
 log = logging.getLogger(__name__)
 
 
-_api_node_metadata = ApiNodeMetadata()
+_api_node_metadata = ApiNodeMetadata(type=NodeType.TIMELORD)
 
 
 class TimelordAPI:

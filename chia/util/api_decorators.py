@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional, Type, TypeVar, Union, get_typ
 from typing_extensions import Concatenate, ParamSpec
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType
 from chia.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ def _set_metadata(function: Callable[..., object], metadata: ApiEndpointMetadata
 
 @dataclass
 class ApiNodeMetadata:
+    type: NodeType
     name_to_endpoint: Dict[str, ApiEndpointMetadata] = field(default_factory=dict)
 
     # TODO: This hinting does not express that the returned callable *_bytes parameter

@@ -5,13 +5,13 @@ from typing import Callable, ClassVar, Optional
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, make_msg
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.ints import uint64
 
-_api_node_metadata = ApiNodeMetadata()
+_api_node_metadata = ApiNodeMetadata(type=NodeType.INTRODUCER)
 
 
 class IntroducerAPI:

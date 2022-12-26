@@ -10,7 +10,7 @@ from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.errors import Err
 from chia.wallet.wallet_node import WalletNode
 
-_api_node_metadata = ApiNodeMetadata()
+_api_node_metadata = ApiNodeMetadata(type=NodeType.WALLET)
 
 
 class WalletNodeAPI:

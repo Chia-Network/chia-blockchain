@@ -35,7 +35,7 @@ from chia.protocols.wallet_protocol import (
     RespondFeeEstimates,
     RespondSESInfo,
 )
-from chia.server.outbound_message import Message, make_msg
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
@@ -67,7 +67,7 @@ else:
     FullNode = object
 
 
-_api_node_metadata = ApiNodeMetadata()
+_api_node_metadata = ApiNodeMetadata(type=NodeType.FULL_NODE)
 
 
 class FullNodeAPI:
