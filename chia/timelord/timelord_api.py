@@ -15,7 +15,6 @@ log = logging.getLogger(__name__)
 _api_node_metadata = ApiNodeMetadata()
 
 
-@_api_node_metadata.node()
 class TimelordAPI:
     metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
     timelord: Timelord

@@ -70,7 +70,6 @@ else:
 _api_node_metadata = ApiNodeMetadata()
 
 
-@_api_node_metadata.node()
 class FullNodeAPI:
     metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
     full_node: FullNode

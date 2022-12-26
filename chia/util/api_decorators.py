@@ -43,12 +43,6 @@ def _set_metadata(function: Callable[..., object], metadata: ApiEndpointMetadata
 class ApiNodeMetadata:
     name_to_endpoint: Dict[str, ApiEndpointMetadata] = field(default_factory=dict)
 
-    def node(self) -> Callable[[Type[T]], Type[T]]:
-        def decorator(cls: Type[T]) -> Type[T]:
-            return cls
-
-        return decorator
-
     # TODO: This hinting does not express that the returned callable *_bytes parameter
     #       corresponding to the first parameter name will be filled in by the wrapper.
     def request(
