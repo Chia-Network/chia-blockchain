@@ -277,9 +277,9 @@ class TestCATWallet:
         asset = DEFAULT_CATS[next(iter(DEFAULT_CATS))]
         asset_id = asset["asset_id"]
         cat_wallet_2 = await CATWallet.get_or_create_wallet_for_cat(wallet_node.wallet_state_manager, wallet, asset_id)
-        assert await cat_wallet_2.get_name() == asset["name"]
+        assert cat_wallet_2.get_name() == asset["name"]
         await cat_wallet_2.set_name("Test Name")
-        assert await cat_wallet_2.get_name() == "Test Name"
+        assert cat_wallet_2.get_name() == "Test Name"
 
     @pytest.mark.parametrize(
         "trusted",

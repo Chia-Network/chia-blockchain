@@ -83,7 +83,7 @@ class TestDLWallet:
 
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
+        funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -133,7 +133,7 @@ class TestDLWallet:
 
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
+        funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -192,7 +192,7 @@ class TestDLWallet:
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
+        funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -267,7 +267,7 @@ class TestDLWallet:
 
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
+        funds = await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_0)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
@@ -367,8 +367,8 @@ class TestDLWallet:
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
-        await full_node_api.farm_blocks(count=5, wallet=wallet_1)
+        funds = await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_0)
+        await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_1)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)

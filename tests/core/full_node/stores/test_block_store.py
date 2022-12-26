@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 async def test_block_store(tmp_dir, db_version, bt):
-    assert sqlite3.threadsafety == 1
+    assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
@@ -282,7 +282,7 @@ async def test_get_generator(bt, db_version):
 
 @pytest.mark.asyncio
 async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
-    assert sqlite3.threadsafety == 1
+    assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
@@ -320,7 +320,7 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
 
 @pytest.mark.asyncio
 async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
-    assert sqlite3.threadsafety == 1
+    assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper_2:

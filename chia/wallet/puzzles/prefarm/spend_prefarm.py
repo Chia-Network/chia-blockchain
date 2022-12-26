@@ -37,8 +37,11 @@ async def main() -> None:
     config = load_config(path, "config.yaml")
     client = await FullNodeRpcClient.create(self_hostname, rpc_port, path, config)
     try:
-        farmer_prefarm = (await client.get_block_record_by_height(1)).reward_claims_incorporated[1]
-        pool_prefarm = (await client.get_block_record_by_height(1)).reward_claims_incorporated[0]
+        block_record = await client.get_block_record_by_height(1)
+        assert block_record is not None
+        assert block_record.reward_claims_incorporated is not None
+        farmer_prefarm = block_record.reward_claims_incorporated[1]
+        pool_prefarm = block_record.reward_claims_incorporated[0]
 
         pool_amounts = int(calculate_pool_reward(uint32(0)) / 2)
         farmer_amounts = int(calculate_base_farmer_reward(uint32(0)) / 2)
