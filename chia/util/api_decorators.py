@@ -22,6 +22,24 @@ metadata_attribute_name = "_chia_api_metadata"
 
 
 @dataclass
+class ApiEndpointMetadata:
+    request_type: ProtocolMessageTypes
+    message_class: Type[Streamable]
+    peer_required: bool = False
+    bytes_required: bool = False
+    execute_task: bool = False
+    reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
+
+
+def get_metadata(function: Callable[..., object]) -> Optional[ApiEndpointMetadata]:
+    return getattr(function, metadata_attribute_name, None)
+
+
+def _set_metadata(function: Callable[..., object], metadata: ApiEndpointMetadata) -> None:
+    setattr(function, metadata_attribute_name, metadata)
+
+
+@dataclass
 class ApiNodeMetadata:
     name_to_endpoint: Dict[str, ApiEndpointMetadata] = field(default_factory=dict)
 
@@ -47,6 +65,8 @@ class ApiNodeMetadata:
             non_optional_reply_types = reply_types
 
         def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
+            # TODO: Consider making this a more explicit property of the decorator
+            #       instead of pulling from the method name.
             name = f.__name__
             if name in self.name_to_endpoint:
                 raise Exception(f"endpoint name already registered: {name}")
@@ -84,21 +104,3 @@ class ApiNodeMetadata:
             return wrapper
 
         return inner
-
-
-@dataclass
-class ApiEndpointMetadata:
-    request_type: ProtocolMessageTypes
-    message_class: Type[Streamable]
-    peer_required: bool = False
-    bytes_required: bool = False
-    execute_task: bool = False
-    reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
-
-
-def get_metadata(function: Callable[..., object]) -> Optional[ApiEndpointMetadata]:
-    return getattr(function, metadata_attribute_name, None)
-
-
-def _set_metadata(function: Callable[..., object], metadata: ApiEndpointMetadata) -> None:
-    setattr(function, metadata_attribute_name, metadata)
