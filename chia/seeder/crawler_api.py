@@ -9,12 +9,10 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.api_decorators import ApiNodeMetadata
 
-# TODO: full node.  'ish
-_api_node_metadata = ApiNodeMetadata(type=NodeType.FULL_NODE)
-
 
 class CrawlerAPI:
-    metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
+    # TODO: full node.  'ish
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.FULL_NODE)
     crawler: Crawler
 
     def __init__(self, crawler):

@@ -67,11 +67,8 @@ else:
     FullNode = object
 
 
-_api_node_metadata = ApiNodeMetadata(type=NodeType.FULL_NODE)
-
-
 class FullNodeAPI:
-    metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.FULL_NODE)
     full_node: FullNode
     executor: ThreadPoolExecutor
 

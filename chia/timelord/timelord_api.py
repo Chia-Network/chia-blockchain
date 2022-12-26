@@ -13,11 +13,8 @@ from chia.util.ints import uint64
 log = logging.getLogger(__name__)
 
 
-_api_node_metadata = ApiNodeMetadata(type=NodeType.TIMELORD)
-
-
 class TimelordAPI:
-    metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.TIMELORD)
     timelord: Timelord
 
     def __init__(self, timelord) -> None:

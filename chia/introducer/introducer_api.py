@@ -11,11 +11,9 @@ from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.ints import uint64
 
-_api_node_metadata = ApiNodeMetadata(type=NodeType.INTRODUCER)
-
 
 class IntroducerAPI:
-    metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.INTRODUCER)
     introducer: Introducer
 
     def __init__(self, introducer) -> None:

@@ -27,11 +27,9 @@ from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
-_api_node_metadata = ApiNodeMetadata(type=NodeType.HARVESTER)
-
 
 class HarvesterAPI:
-    metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.HARVESTER)
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):

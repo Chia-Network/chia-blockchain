@@ -50,11 +50,8 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
     return []
 
 
-_api_node_metadata = ApiNodeMetadata(type=NodeType.FARMER)
-
-
 class FarmerAPI:
-    metadata: ClassVar[ApiNodeMetadata] = _api_node_metadata
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.FARMER)
     farmer: Farmer
 
     def __init__(self, farmer) -> None:
