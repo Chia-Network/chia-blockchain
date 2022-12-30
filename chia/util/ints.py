@@ -59,5 +59,5 @@ class int512(StructStream):
     # note that the boundaries for int512 is not what you might expect. We
     # encode these with one extra byte, but only allow a range of
     # [-INT512_MAX, INT512_MAX]
-    MAXIMUM_EXCLUSIVE = 2 ** BITS
-    MINIMUM = -(2 ** BITS) + 1
+    MAXIMUM_EXCLUSIVE = 2**BITS
+    MINIMUM = -(2**BITS) + 1

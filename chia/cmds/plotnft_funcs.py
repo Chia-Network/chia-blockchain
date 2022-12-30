@@ -1,31 +1,32 @@
-from decimal import Decimal
-from dataclasses import replace
+from __future__ import annotations
 
-import aiohttp
 import asyncio
 import functools
 import json
 import time
-
+from dataclasses import replace
+from decimal import Decimal
 from pprint import pprint
-from typing import Any, List, Dict, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
+import aiohttp
+
+from chia.cmds.cmds_util import get_any_service_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
-from chia.pools.pool_config import load_pool_config, PoolWalletConfig, update_pool_config
-from chia.pools.pool_wallet_info import PoolWalletInfo, PoolSingletonState
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg, get_any_service_client
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -98,7 +99,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(str(1), tx_record.name)
+                tx = await wallet_client.get_transaction(1, tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
@@ -138,7 +139,7 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances: Dict = await wallet_client.get_wallet_balance(str(wallet_id))
+        balances: Dict = await wallet_client.get_wallet_balance(wallet_id)
         balance = balances["confirmed_wallet_balance"]
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
@@ -249,7 +250,7 @@ async def submit_tx_with_confirmation(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(str(1), tx_record.name)
+                tx = await wallet_client.get_transaction(1, tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))

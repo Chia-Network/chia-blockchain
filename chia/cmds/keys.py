@@ -1,9 +1,8 @@
-import asyncio
-
-import click
-import sys
+from __future__ import annotations
 
 from typing import Optional, Tuple
+
+import click
 
 
 @click.group("keys", short_help="Manage your keys")
@@ -11,27 +10,31 @@ from typing import Optional, Tuple
 def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
     from pathlib import Path
-    from .keys_funcs import migrate_keys
 
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
 
-    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(root_path, True)):
-        sys.exit(1)
-
 
 @keys_cmd.command("generate", short_help="Generates and adds a key to keychain")
+@click.option(
+    "--label",
+    "-l",
+    default=None,
+    help="Enter the label for the key",
+    type=str,
+    required=False,
+)
 @click.pass_context
-def generate_cmd(ctx: click.Context):
+def generate_cmd(ctx: click.Context, label: Optional[str]):
     from .init_funcs import check_keys
     from .keys_funcs import generate_and_add
 
-    generate_and_add()
+    generate_and_add(label)
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("show", short_help="Displays all the keys in keychain")
+@keys_cmd.command("show", short_help="Displays all the keys in keychain or the key with the given fingerprint")
 @click.option(
     "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
 )
@@ -46,10 +49,27 @@ def generate_cmd(ctx: click.Context):
     show_default=True,
     is_flag=True,
 )
-def show_cmd(show_mnemonic_seed, non_observer_derivation):
-    from .keys_funcs import show_all_keys
+@click.option(
+    "--json",
+    "-j",
+    help=("Displays all the keys in keychain as JSON"),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+@click.option(
+    "--fingerprint",
+    "-f",
+    help="Enter the fingerprint of the key you want to view",
+    type=int,
+    required=False,
+    default=None,
+)
+@click.pass_context
+def show_cmd(ctx: click.Context, show_mnemonic_seed, non_observer_derivation, json, fingerprint):
+    from .keys_funcs import show_keys
 
-    show_all_keys(show_mnemonic_seed, non_observer_derivation)
+    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
@@ -61,21 +81,74 @@ def show_cmd(show_mnemonic_seed, non_observer_derivation):
     type=str,
     required=False,
 )
+@click.option(
+    "--label",
+    "-l",
+    default=None,
+    help="Enter the label for the key",
+    type=str,
+    required=False,
+)
 @click.pass_context
-def add_cmd(ctx: click.Context, filename: str):
+def add_cmd(ctx: click.Context, filename: str, label: Optional[str]):
     from .init_funcs import check_keys
+    from .keys_funcs import query_and_add_private_key_seed
 
+    mnemonic = None
     if filename:
         from pathlib import Path
-        from .keys_funcs import add_private_key_seed
 
         mnemonic = Path(filename).read_text().rstrip()
-        add_private_key_seed(mnemonic)
-    else:
-        from .keys_funcs import query_and_add_private_key_seed
 
-        query_and_add_private_key_seed()
+    query_and_add_private_key_seed(mnemonic, label)
     check_keys(ctx.obj["root_path"])
+
+
+@keys_cmd.group("label", short_help="Manage your key labels")
+def label_cmd():
+    pass
+
+
+@label_cmd.command("show", short_help="Show the labels of all available keys")
+def show_label_cmd():
+    from .keys_funcs import show_all_key_labels
+
+    show_all_key_labels()
+
+
+@label_cmd.command("set", short_help="Set the label of a key")
+@click.option(
+    "--fingerprint",
+    "-f",
+    help="Enter the fingerprint of the key you want to use",
+    type=int,
+    required=True,
+)
+@click.option(
+    "--label",
+    "-l",
+    help="Enter the new label for the key",
+    type=str,
+    required=True,
+)
+def set_label_cmd(fingerprint: int, label: str):
+    from .keys_funcs import set_key_label
+
+    set_key_label(fingerprint, label)
+
+
+@label_cmd.command("delete", short_help="Delete the label of a key")
+@click.option(
+    "--fingerprint",
+    "-f",
+    help="Enter the fingerprint of the key you want to use",
+    type=int,
+    required=True,
+)
+def delete_label_cmd(fingerprint: int):
+    from .keys_funcs import delete_key_label
+
+    delete_key_label(fingerprint)
 
 
 @keys_cmd.command("delete", short_help="Delete a key by its pk fingerprint in hex form")
@@ -154,14 +227,6 @@ def verify_cmd(message: str, public_key: str, signature: str):
     verify(message, public_key, signature)
 
 
-@keys_cmd.command("migrate", short_help="Attempt to migrate keys to the Chia keyring")
-@click.pass_context
-def migrate_cmd(ctx: click.Context):
-    from .keys_funcs import migrate_keys
-
-    asyncio.run(migrate_keys(ctx.obj["root_path"]))
-
-
 @keys_cmd.group("derive", short_help="Derive child keys or wallet addresses")
 @click.option(
     "--fingerprint",
@@ -235,8 +300,10 @@ def search_cmd(
     prefix: Optional[str],
 ):
     import sys
-    from .keys_funcs import search_derive, resolve_derivation_master_key
+
     from blspy import PrivateKey
+
+    from .keys_funcs import resolve_derivation_master_key, search_derive
 
     private_key: Optional[PrivateKey] = None
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)

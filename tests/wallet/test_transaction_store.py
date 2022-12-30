@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 from secrets import token_bytes
 from typing import Any, List

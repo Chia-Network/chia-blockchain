@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 if __name__ == "__main__":
-    from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.simulator.block_tools import create_block_tools, test_constants
-    from tests.util.keyring import TempKeyring
+    from chia.simulator.keyring import TempKeyring
+    from chia.util.default_root import DEFAULT_ROOT_PATH
 
     with TempKeyring() as keychain:
         # TODO: mariano: fix this with new consensus

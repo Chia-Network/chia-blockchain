@@ -1,15 +1,25 @@
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from __future__ import annotations
 
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
+from dataclasses import dataclass
+from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+
+from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
+
+T = TypeVar("T")
+
+
+@dataclass
+class ItemAndTransactionRecords(Generic[T]):
+    item: T
+    transaction_records: List["TransactionRecord"]
 
 
 @streamable

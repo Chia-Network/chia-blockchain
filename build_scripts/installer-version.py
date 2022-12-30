@@ -1,11 +1,10 @@
-import sys
+from __future__ import annotations
 
 from setuptools_scm import get_version
 
 
 # example: 1.0b5.dev225
 def main():
-    windows = len(sys.argv) > 1 and "win" in sys.argv[1]  # Special case windows to 0.1.6225
 
     scm_full_version = get_version(root="..", relative_to=__file__)
     # scm_full_version = "1.0.5.dev22"
@@ -58,9 +57,6 @@ def main():
     if len(patch_release_number) > 0:
         install_release_number += "." + patch_release_number
     if len(dev_release_number) > 0:
-        if windows:
-            dev_release_number_digits = "".join([i for i in dev_release_number if i.isdigit()])
-            dev_release_number = dev_release_number_digits
         install_release_number += dev_release_number
 
     print(str(install_release_number))

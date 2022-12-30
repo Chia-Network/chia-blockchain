@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Optional
 
 import click
 
-from chia.util.config import lock_and_load_config, save_config, str2bool
+from chia.util.config import load_defaults_for_missing_services, lock_and_load_config, save_config, str2bool
 
 
 def configure(
@@ -23,7 +25,10 @@ def configure(
     seeder_domain_name: str,
     seeder_nameserver: str,
 ):
-    with lock_and_load_config(root_path, "config.yaml") as config:
+    config_yaml = "config.yaml"
+    with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
+        config.update(load_defaults_for_missing_services(config=config, config_name=config_yaml))
+
         change_made = False
         if set_node_introducer:
             try:
@@ -126,6 +131,7 @@ def configure(
                 config["ui"]["selected_network"] = testnet
                 config["introducer"]["selected_network"] = testnet
                 config["wallet"]["selected_network"] = testnet
+                config["data_layer"]["selected_network"] = testnet
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(testnet_port)
@@ -163,6 +169,7 @@ def configure(
                 config["ui"]["selected_network"] = net
                 config["introducer"]["selected_network"] = net
                 config["wallet"]["selected_network"] = net
+                config["data_layer"]["selected_network"] = net
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(mainnet_port)

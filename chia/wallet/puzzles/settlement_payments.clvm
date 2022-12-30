@@ -7,6 +7,7 @@
   ;; `settlement_payments` puzzle hash as a condition of one or more coin spends.
 
   (include condition_codes.clvm)
+  (include utility_macros.clib)
 
   (defun sha256tree (TREE)
      (if (l TREE)
@@ -17,7 +18,10 @@
 
   (defun create_coins_for_payment (payment_params so_far)
     (if payment_params
-        (c (c CREATE_COIN (f payment_params)) (create_coins_for_payment (r payment_params) so_far))
+        (assert (> (f (r (f payment_params))) 0)  ; assert the amount is positive
+          ; then
+          (c (c CREATE_COIN (f payment_params)) (create_coins_for_payment (r payment_params) so_far))
+        )
         so_far
     )
   )

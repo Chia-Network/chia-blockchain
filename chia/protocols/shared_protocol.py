@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import List, Tuple
@@ -25,6 +27,9 @@ class Capability(IntEnum):
     # (BASE, RATE_LIMITS_V2, RATE_LIMITS_V3), and (BASE, RATE_LIMITS_V2) respectively. They will use the V2 limits.
     RATE_LIMITS_V2 = 3
 
+    # a node can handle a None response and not wait the full timeout
+    NONE_RESPONSE = 4
+
 
 @streamable
 @dataclass(frozen=True)
@@ -42,4 +47,5 @@ capabilities = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+    (uint16(Capability.NONE_RESPONSE.value), "1"),
 ]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List
 
 from chia.types.blockchain_format.coin import Coin
@@ -21,6 +23,7 @@ spends: List[Spend] = [
             (phs[4], uint64(0), b"1" * 300),
         ],
         [],
+        0,
     ),
     Spend(
         coin_ids[1],
@@ -33,6 +36,7 @@ spends: List[Spend] = [
             (phs[7], uint64(0), b"1" * 300),
         ],
         [],
+        0,
     ),
 ]
 

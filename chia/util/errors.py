@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from enum import Enum
+from pathlib import Path
 from typing import Any, List
 
 
@@ -197,11 +200,6 @@ class KeychainSecretsMissing(KeychainException):
     pass
 
 
-class KeychainRequiresMigration(KeychainException):
-    def __init__(self) -> None:
-        super().__init__("Keychain requires migration")
-
-
 class KeychainCurrentPassphraseIsInvalid(KeychainException):
     def __init__(self) -> None:
         super().__init__("Invalid current passphrase")
@@ -281,3 +279,14 @@ class KeychainLabelExists(KeychainLabelError):
     def __init__(self, label: str, fingerprint: int) -> None:
         super().__init__(label, f"label {label!r} already exists for fingerprint {str(fingerprint)!r}")
         self.fingerprint = fingerprint
+
+
+##
+#  Miscellaneous errors
+##
+
+
+class InvalidPathError(Exception):
+    def __init__(self, path: Path, error_message: str):
+        super().__init__(f"{error_message}: {str(path)!r}")
+        self.path = path

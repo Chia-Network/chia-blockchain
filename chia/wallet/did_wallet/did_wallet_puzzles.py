@@ -1,21 +1,26 @@
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
-from typing import List, Optional, Tuple, Iterator, Dict
+from __future__ import annotations
+
+from typing import Dict, Iterator, List, Optional, Tuple
+
 from blspy import G1Element
+
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.ints import uint64
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
-
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
-DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
-SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
-SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
+SINGLETON_TOP_LAYER_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
+SINGLETON_TOP_LAYER_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(SINGLETON_TOP_LAYER_MOD_HASH)
+LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
+DID_INNERPUZ_MOD = load_clvm_maybe_recompile("did_innerpuz.clvm")
+LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clvm")
 
 
 def create_innerpuz(
@@ -24,6 +29,7 @@ def create_innerpuz(
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
+    recovery_list_hash: bytes32 = None,
 ) -> Program:
     """
     Create DID inner puzzle
@@ -32,10 +38,13 @@ def create_innerpuz(
     :param num_of_backup_ids_needed: Need how many DIDs for the recovery
     :param launcher_id: ID of the launch coin
     :param metadata: DID customized metadata
+    :param recovery_list_hash: Recovery list hash
     :return: DID inner puzzle
     """
     backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
+    if recovery_list_hash is not None:
+        backup_ids_hash = recovery_list_hash
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return DID_INNERPUZ_MOD.curry(p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata)
 
 
@@ -55,11 +64,20 @@ def get_inner_puzhash_by_p2(
     :param metadata: DID customized metadata
     :return: DID inner puzzle hash
     """
+
     backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
-    return DID_INNERPUZ_MOD.curry(
-        p2_puzhash, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata
-    ).get_tree_hash_precalc(p2_puzhash)
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
+
+    quoted_mod_hash = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
+
+    return curry_and_treehash(
+        quoted_mod_hash,
+        p2_puzhash,
+        Program.to(backup_ids_hash).get_tree_hash(),
+        Program.to(num_of_backup_ids_needed).get_tree_hash(),
+        Program.to(singleton_struct).get_tree_hash(),
+        metadata.get_tree_hash(),
+    )
 
 
 def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:
@@ -69,10 +87,22 @@ def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:
     :param launcher_id:
     :return: DID full puzzle
     """
-    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    singleton_struct = Program.to((mod_hash, (launcher_id, LAUNCHER_PUZZLE.get_tree_hash())))
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
+
+
+def create_fullpuz_hash(innerpuz_hash: bytes32, launcher_id: bytes32) -> bytes32:
+    """
+    Create a full puzzle of DID
+    :param innerpuz_hash: DID inner puzzle tree hash
+    :param launcher_id: launcher coin name
+    :return: DID full puzzle hash
+    """
+    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
+
+    return curry_and_treehash(SINGLETON_TOP_LAYER_MOD_HASH_QUOTED, singleton_struct.get_tree_hash(), innerpuz_hash)
 
 
 def is_did_innerpuz(inner_f: Program) -> bool:

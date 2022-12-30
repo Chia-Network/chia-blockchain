@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import logging
+
 import pytest
 from clvm.casts import int_to_bytes
 
 from chia.full_node.hint_store import HintStore
 from chia.protocols.full_node_protocol import RespondBlock
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -11,8 +15,6 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from tests.util.db_connection import DBConnection
-from chia.simulator.wallet_tools import WalletTool
-
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +142,7 @@ class TestHintStore:
         for block in blocks[-10:]:
             await full_node_1.full_node.respond_block(RespondBlock(block), None)
 
-        get_hint = await full_node_1.full_node.blockchain.hint_store.get_coin_ids(hint)
+        get_hint = await full_node_1.full_node.hint_store.get_coin_ids(hint)
 
         assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
 

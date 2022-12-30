@@ -12,7 +12,7 @@
   "dependencies": {
     "@chia-network/notarize-cli": "^0.2.2",
     "dmg-license": "^1.0.11",
-    "electron-builder": "^23.3.3",
-    "lerna": "^5.4.0"
+    "electron-builder": "^23.5.1",
+    "lerna": "^5.5.2"
   }
 }

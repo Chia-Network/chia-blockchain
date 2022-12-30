@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from typing import Any, List, Optional, Tuple
 
@@ -27,7 +29,7 @@ def assert_sb_not_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     mempool_item = node.full_node.mempool_manager.mempool.spends[sb.name()]
-    node.full_node.mempool_manager.mempool.remove_from_pool(mempool_item)
+    node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name])
     node.full_node.mempool_manager.remove_seen(sb.name())
 
 

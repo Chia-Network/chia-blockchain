@@ -1,13 +1,21 @@
+from __future__ import annotations
+
 import asyncio
 import copy
+import random
 import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool, Queue, TimeoutError
+from pathlib import Path
+from threading import Thread
+from time import sleep
+from typing import Any, Dict, Optional
 
 import pytest
-import random
 import yaml
 
+from chia.simulator.time_out_assert import adjusted_timeout
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,
@@ -18,12 +26,6 @@ from chia.util.config import (
     save_config,
     selected_network_address_prefix,
 )
-from multiprocessing import Pool, Queue, TimeoutError
-from pathlib import Path
-from threading import Thread
-from time import sleep
-from typing import Any, Dict, Optional
-
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
 # import logging
@@ -272,7 +274,7 @@ class TestConfig:
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(run_reader_and_writer_tasks, args)
             try:
-                res.get(timeout=60)
+                res.get(timeout=adjusted_timeout(timeout=60))
             except TimeoutError:
                 pytest.skip("Timed out waiting for reader/writer processes to complete")
 

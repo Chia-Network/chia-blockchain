@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 import time
 from collections import Counter
-from typing import Dict, List
+from typing import List
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
@@ -17,17 +19,17 @@ class RateLimiter:
     incoming: bool
     reset_seconds: int
     current_minute: int
-    message_counts: Counter
-    message_cumulative_sizes: Counter
+    message_counts: Counter[ProtocolMessageTypes]
+    message_cumulative_sizes: Counter[ProtocolMessageTypes]
     percentage_of_limit: int
     non_tx_message_counts: int = 0
     non_tx_cumulative_size: int = 0
 
-    def __init__(self, incoming: bool, reset_seconds=60, percentage_of_limit=100):
+    def __init__(self, incoming: bool, reset_seconds: int = 60, percentage_of_limit: int = 100):
         """
         The incoming parameter affects whether counters are incremented
         unconditionally or not. For incoming messages, the counters are always
-        incremeneted. For outgoing messages, the counters are only incremented
+        incremented. For outgoing messages, the counters are only incremented
         if they are allowed to be sent by the rate limiter, since we won't send
         the messages otherwise.
         """
@@ -67,7 +69,7 @@ class RateLimiter:
         proportion_of_limit: float = self.percentage_of_limit / 100
 
         ret: bool = False
-        rate_limits: Dict = get_rate_limits_to_use(our_capabilities, peer_capabilities)
+        rate_limits = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
 

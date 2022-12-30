@@ -17,6 +17,7 @@ jobs:
   pre-commit:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +54,10 @@ jobs:
       uses: Chia-Network/actions/clean-workspace@main
 
     - uses: Chia-Network/actions/git-mark-workspace-safe@main
+
+    - name: disable git autocrlf
+      run: |
+        git config --global core.autocrlf false
 
     - uses: actions/checkout@v3
 

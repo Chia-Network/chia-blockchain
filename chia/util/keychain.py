@@ -1,29 +1,31 @@
 from __future__ import annotations
-import pkg_resources
+
 import sys
 import unicodedata
-
-from bitstring import BitArray  # pyright: reportMissingImports=false
-from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import (
-    KeychainNotSet,
-    KeychainKeyDataMismatch,
-    KeychainFingerprintExists,
-    KeychainFingerprintNotFound,
-    KeychainSecretsMissing,
-    KeychainUserNotFound,
-)
-from chia.util.hash import std_hash
-from chia.util.ints import uint32
-from chia.util.keyring_wrapper import KeyringWrapper
-from chia.util.streamable import streamable, Streamable
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
+import pkg_resources
+from bitstring import BitArray  # pyright: reportMissingImports=false
+from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
+
+from chia.util.errors import (
+    KeychainException,
+    KeychainFingerprintExists,
+    KeychainFingerprintNotFound,
+    KeychainKeyDataMismatch,
+    KeychainNotSet,
+    KeychainSecretsMissing,
+    KeychainUserNotFound,
+)
+from chia.util.hash import std_hash
+from chia.util.ints import uint32
+from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.streamable import Streamable, streamable
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
@@ -192,6 +194,7 @@ class KeyDataSecrets(Streamable):
 class KeyData(Streamable):
     fingerprint: uint32
     public_key: G1Element
+    label: Optional[str]
     secrets: Optional[KeyDataSecrets]
 
     def __post_init__(self) -> None:
@@ -203,21 +206,22 @@ class KeyData(Streamable):
             raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
-    def from_mnemonic(cls, mnemonic: str) -> KeyData:
+    def from_mnemonic(cls, mnemonic: str, label: Optional[str] = None) -> KeyData:
         private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
         return cls(
             fingerprint=private_key.get_g1().get_fingerprint(),
             public_key=private_key.get_g1(),
+            label=label,
             secrets=KeyDataSecrets.from_mnemonic(mnemonic),
         )
 
     @classmethod
-    def from_entropy(cls, entropy: bytes) -> KeyData:
-        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
+    def from_entropy(cls, entropy: bytes, label: Optional[str] = None) -> KeyData:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy), label)
 
     @classmethod
-    def generate(cls) -> KeyData:
-        return cls.from_mnemonic(generate_mnemonic())
+    def generate(cls, label: Optional[str] = None) -> KeyData:
+        return cls.from_mnemonic(generate_mnemonic(), label)
 
     @property
     def mnemonic(self) -> List[str]:
@@ -254,16 +258,14 @@ class Keychain:
     list of all keys.
     """
 
-    def __init__(self, user: Optional[str] = None, service: Optional[str] = None, force_legacy: bool = False):
+    def __init__(self, user: Optional[str] = None, service: Optional[str] = None):
         self.user = user if user is not None else default_keychain_user()
         self.service = service if service is not None else default_keychain_service()
 
-        keyring_wrapper: Optional[KeyringWrapper] = (
-            KeyringWrapper.get_legacy_instance() if force_legacy else KeyringWrapper.get_shared_instance()
-        )
+        keyring_wrapper: Optional[KeyringWrapper] = KeyringWrapper.get_shared_instance()
 
         if keyring_wrapper is None:
-            raise KeychainNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
+            raise KeychainNotSet("KeyringWrapper not set")
 
         self.keyring_wrapper = keyring_wrapper
 
@@ -279,11 +281,13 @@ class Keychain:
         str_bytes = bytes.fromhex(read_str)
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
+        fingerprint = public_key.get_fingerprint()
         entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
         return KeyData(
-            fingerprint=public_key.get_fingerprint(),
+            fingerprint=fingerprint,
             public_key=public_key,
+            label=self.keyring_wrapper.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
         )
 
@@ -299,7 +303,7 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
-    def add_private_key(self, mnemonic: str) -> PrivateKey:
+    def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
         keychain itself will store the public key, and the entropy bytes,
@@ -315,12 +319,36 @@ class Keychain:
             # Prevents duplicate add
             raise KeychainFingerprintExists(fingerprint)
 
-        self.keyring_wrapper.set_passphrase(
-            self.service,
-            get_private_key_user(self.user, index),
-            bytes(key.get_g1()).hex() + entropy.hex(),
-        )
+        # Try to set the label first, it may fail if the label is invalid or already exists.
+        # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
+        if label is not None:
+            self.keyring_wrapper.set_label(fingerprint, label)
+
+        try:
+            self.keyring_wrapper.set_passphrase(
+                self.service,
+                get_private_key_user(self.user, index),
+                bytes(key.get_g1()).hex() + entropy.hex(),
+            )
+        except Exception:
+            if label is not None:
+                self.keyring_wrapper.delete_label(fingerprint)
+            raise
+
         return key
+
+    def set_label(self, fingerprint: int, label: str) -> None:
+        """
+        Assigns the given label to the first key with the given fingerprint.
+        """
+        self.get_key(fingerprint)  # raise if the fingerprint doesn't exist
+        self.keyring_wrapper.set_label(fingerprint, label)
+
+    def delete_label(self, fingerprint: int) -> None:
+        """
+        Removes the label assigned to the key with the given fingerprint.
+        """
+        self.keyring_wrapper.delete_label(fingerprint)
 
     def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
         """
@@ -410,6 +438,11 @@ class Keychain:
                 key_data = self._get_key_data(index, include_secrets=False)
                 if key_data.fingerprint == fingerprint:
                     try:
+                        self.keyring_wrapper.delete_label(key_data.fingerprint)
+                    except (KeychainException, NotImplementedError):
+                        # Just try to delete the label and move on if there wasn't one
+                        pass
+                    try:
                         self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
@@ -437,9 +470,9 @@ class Keychain:
         """
         for index in range(MAX_KEYS + 1):
             try:
-                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            except Exception:
-                # Some platforms might throw on no existing key
+                key_data = self._get_key_data(index)
+                self.delete_key_by_fingerprint(key_data.fingerprint)
+            except KeychainUserNotFound:
                 pass
 
     @staticmethod
@@ -457,44 +490,6 @@ class Keychain:
 
         # Locked: Everything else
         return True
-
-    @staticmethod
-    def needs_migration() -> bool:
-        """
-        Returns a bool indicating whether the underlying keyring needs to be migrated to the new
-        format for passphrase support.
-        """
-        return KeyringWrapper.get_shared_instance().using_legacy_keyring()
-
-    @staticmethod
-    def handle_migration_completed():
-        """
-        When migration completes outside of the current process, we rely on a notification to inform
-        the current process that it needs to reset/refresh its keyring. This allows us to stop using
-        the legacy keyring in an already-running daemon if migration is completed using the CLI.
-        """
-        KeyringWrapper.get_shared_instance().refresh_keyrings()
-
-    @staticmethod
-    def migrate_legacy_keyring(
-        passphrase: Optional[str] = None,
-        passphrase_hint: Optional[str] = None,
-        save_passphrase: bool = False,
-        cleanup_legacy_keyring: bool = False,
-    ) -> None:
-        """
-        Begins legacy keyring migration in a non-interactive manner
-        """
-        if passphrase is not None and passphrase != "":
-            KeyringWrapper.get_shared_instance().set_master_passphrase(
-                current_passphrase=None,
-                new_passphrase=passphrase,
-                write_to_keyring=False,
-                passphrase_hint=passphrase_hint,
-                save_passphrase=save_passphrase,
-            )
-
-        KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
 
     @staticmethod
     def passphrase_is_optional() -> bool:

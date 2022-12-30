@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import ssl
@@ -124,12 +126,6 @@ class DaemonProxy:
         data = {"key": passphrase}
         request = self.format_request("unlock_keyring", data)
         response = await self._get(request)
-        return response
-
-    async def notify_keyring_migration_completed(self, passphrase: Optional[str]) -> WsRpcMessage:
-        data: Dict[str, Any] = {"key": passphrase}
-        request: WsRpcMessage = self.format_request("notify_keyring_migration_completed", data)
-        response: WsRpcMessage = await self._get(request)
         return response
 
     async def ping(self) -> WsRpcMessage:

@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import ipaddress
 import logging
 import random
 import time
-from typing import List, Dict
+from typing import Dict, List
 
 import aiosqlite
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -29,7 +31,7 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
     import sqlite3
     from contextlib import closing
 
-    # VACUUM INTO is only avaiable starting with SQLite version 3.27.0
+    # VACUUM INTO is only available starting with SQLite version 3.27.0
     if not no_indexes and sqlite3.sqlite_version_info < (3, 27, 0):
         raise RuntimeError(
             f"SQLite {sqlite3.sqlite_version} not supported. Version needed is 3.27.0"

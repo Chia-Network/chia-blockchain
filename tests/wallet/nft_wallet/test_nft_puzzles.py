@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 from typing import Tuple
 
@@ -15,6 +17,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from tests.core.make_block_generator import int_to_public_key
 
 SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -64,7 +67,7 @@ def test_nft_transfer_puzzle_hashes():
 
     nft_puz = SINGLETON_MOD.curry(SINGLETON_STRUCT, metadata_puz)
 
-    nft_info = match_puzzle(nft_puz)
+    nft_info = match_puzzle(uncurry_puzzle(nft_puz))
     assert nft_info.also().also() is not None
 
     unft = uncurry_nft.UncurriedNFT.uncurry(*nft_puz.uncurry())

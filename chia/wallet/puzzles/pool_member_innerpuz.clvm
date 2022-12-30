@@ -13,7 +13,7 @@
   ; P2_SINGLETON_PUZZLE_HASH is the puzzle hash for your pay to singleton puzzle
   ; OWNER_PUBKEY is the farmer pubkey which authorises a travel
   ; POOL_REWARD_PREFIX is network-specific data (mainnet vs testnet) that helps determine if a coin is a pool reward
-  ; WAITINGROOM_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
+  ; WAITINGROOM_PUZHASH is the puzzle_hash you'll go to when you initiate the leaving process
 
   ; Absorbing money if pool_reward_height is an atom
   ; Escaping if pool_reward_height is ()

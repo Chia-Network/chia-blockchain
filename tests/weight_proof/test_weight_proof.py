@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from typing import Dict, List, Optional, Tuple
 
@@ -7,21 +9,17 @@ import pytest
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.block_store import BlockStore
+from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
+from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.util.block_cache import BlockCache
-from chia.simulator.block_tools import test_constants
-from chia.util.generator_tools import get_block_header
-
-from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (
-    WeightProofHandler,
-    _map_sub_epoch_summaries,
-    _validate_summaries_weight,
-)
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
+from chia.util.block_cache import BlockCache
+from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint32, uint64
 
 
@@ -75,7 +73,8 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
+        quality_string: Optional[bytes32] = verify_and_get_quality_string(
+            block.reward_chain_block.proof_of_space,
             test_constants,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,

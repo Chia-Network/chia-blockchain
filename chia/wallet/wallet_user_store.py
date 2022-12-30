@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone

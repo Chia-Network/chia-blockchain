@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import os
 import random
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
 import aiosqlite
 import click
@@ -173,7 +175,7 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: str, db_version: int) -> DBWrapper2:
+async def setup_db(name: Union[str, os.PathLike], db_version: int) -> DBWrapper2:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
