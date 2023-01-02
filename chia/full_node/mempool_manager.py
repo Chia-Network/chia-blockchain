@@ -398,11 +398,6 @@ class MempoolManager:
         cost = npc_result.cost
         log.debug(f"Cost: {cost}")
 
-        if cost > self.max_block_clvm_cost:
-            # we shouldn't ever end up here, since the cost is limited when we
-            # execute the CLVM program.
-            return Err.BLOCK_COST_EXCEEDS_MAX, None, []
-
         assert npc_result.conds is not None
         # build removal list
         removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
