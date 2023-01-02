@@ -113,10 +113,12 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
             else:
                 AMOUNT = uint64(750000000000)
             FEE = uint64(1)
+        peak = full_node_api.full_node.blockchain.get_peak()
+        assert peak is not None
         if case == "allow":
-            allow_height = full_node_api.full_node.blockchain.get_peak().height + 1
+            allow_height = peak.height + 1
         if case == "allow_larger":
-            allow_larger_height = full_node_api.full_node.blockchain.get_peak().height + 1
+            allow_larger_height = peak.height + 1
         tx = await notification_manager_1.send_new_notification(ph_2, bytes(case, "utf8"), AMOUNT, fee=FEE)
         await wsm_1.add_pending_transaction(tx)
         await time_out_assert_not_none(
