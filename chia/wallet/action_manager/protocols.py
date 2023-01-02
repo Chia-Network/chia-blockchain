@@ -8,7 +8,6 @@ from typing_extensions import Protocol
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -48,6 +47,7 @@ class WalletAction(Protocol):
         For example, if this action is a DirectPayment, a more base action is a Condition
         """
         ...
+
 
 class ActionAlias(WalletAction, Protocol):
     @staticmethod
@@ -261,6 +261,7 @@ class SpendDescription:
     A SpendDescription should contain enough information to create a coin spend. The individual parts of it are more
     accessible that they would be in a coin spend to prevent lots of duplicate code parsing the same information.
     """
+
     coin: Coin
     outer_puzzle_description: PuzzleDescription
     outer_solution_description: SolutionDescription

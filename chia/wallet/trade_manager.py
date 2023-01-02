@@ -894,9 +894,7 @@ class TradeManager:
                         # that we're signing the proper thing. During an optimization pass, we should figure out
                         # how to avoid this.
                         signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
-                            offer_to_spend(
-                                await spend_to_offer(self.wallet_state_manager, unsigned_spend)
-                            )
+                            offer_to_spend(await spend_to_offer(self.wallet_state_manager, unsigned_spend))
                         )
                         return await spend_to_offer(self.wallet_state_manager, signed_spend)
 

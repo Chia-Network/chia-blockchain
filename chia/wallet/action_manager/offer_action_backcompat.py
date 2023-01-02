@@ -689,11 +689,7 @@ async def generate_summary_complement(
                             "with": {"asset_types": requested_payment.asset_types, "amount": str(total_amount)},
                             "do": [
                                 OfferedAmount(offered_amount).to_solver(),
-                                *(
-                                    [Fee(fee).to_solver()]
-                                    if pay_fee_now
-                                    else []
-                                ),
+                                *([Fee(fee).to_solver()] if pay_fee_now else []),
                             ],
                         }
                     )

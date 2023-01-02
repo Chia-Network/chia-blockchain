@@ -84,8 +84,8 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    calculate_synthetic_public_key,
     DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_public_key,
 )
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager

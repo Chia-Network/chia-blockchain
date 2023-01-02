@@ -38,7 +38,8 @@ _T_RequestPayment = TypeVar("_T_RequestPayment", bound="RequestPayment")
 
 @dataclass(frozen=True)
 class DirectPayment:
-    """ An alias for CREATE_COIN """
+    """An alias for CREATE_COIN"""
+
     payment: Payment
     hints: List[bytes]  # Hints are just additional memos that are guaranteed to get prepended
 
@@ -109,7 +110,8 @@ class DirectPayment:
 
 @dataclass(frozen=True)
 class OfferedAmount:
-    """ An alias for a CREATE_COIN that goes to the offer ph w/ no memos"""
+    """An alias for a CREATE_COIN that goes to the offer ph w/ no memos"""
+
     amount: int
 
     @staticmethod
@@ -152,7 +154,8 @@ class OfferedAmount:
 
 @dataclass(frozen=True)
 class Fee:
-    """ An alias for RESERVE_FEE """
+    """An alias for RESERVE_FEE"""
+
     amount: int
 
     @staticmethod
@@ -194,7 +197,8 @@ class Fee:
 
 @dataclass(frozen=True)
 class MakeAnnouncement:
-    """ An alias for CREATE_*_ANNOUNCEMENT """
+    """An alias for CREATE_*_ANNOUNCEMENT"""
+
     type: str  # coin | puzzle  # maybe should be enum?
     data: Program
 
@@ -247,7 +251,8 @@ class MakeAnnouncement:
 
 @dataclass(frozen=True)
 class AssertAnnouncement:
-    """ An alias for ASSERT_*_ANNOUNCEMENT """
+    """An alias for ASSERT_*_ANNOUNCEMENT"""
+
     type: str
     # Maybe you know origin & data, but it's possible you only know hash(origin + data), in which case that will be data
     data: bytes
@@ -332,6 +337,7 @@ class RequestPayment:
     overhead for this relatively large program, we instead simplify the graftroot to a puzzle which simply prepends
     the inevitable condition to the output of the inner puzzle.
     """
+
     asset_types: List[Solver]
     nonce: Optional[bytes32]
     payments: List[Payment]

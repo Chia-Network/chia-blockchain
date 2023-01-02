@@ -14,6 +14,8 @@ _T_Graftroot = TypeVar("_T_Graftroot", bound="Graftroot")
 """
 See chia/wallet/protocols.py for descriptions of the methods on the following classes (WalletAction)
 """
+
+
 @dataclass(frozen=True)
 class Condition:
     condition: Program
