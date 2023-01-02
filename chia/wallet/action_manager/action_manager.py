@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Tuple, Type, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
@@ -17,8 +17,6 @@ from chia.util.ints import uint64
 from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
 from chia.wallet.action_manager.protocols import (
     ActionAlias,
-    PuzzleDescription,
-    SolutionDescription,
     SpendDescription,
     WalletAction,
 )
@@ -220,41 +218,7 @@ class WalletActionManager:
         final_actions: List[Solver] = []
         final_signatures: List[Tuple[bytes32, G1Element, bytes, bool]] = []
         for spend in bundle.coin_spends:
-            # Through trial and error, take note of every valid spend description we can make
-            # First, we see if any outer drivers can match the puzzle/solution, noting their guess for the inner puz/sol
-            # Then, we do the same for the inner drivers using the outer drivers' guesses
-            matches: List[SpendDescription] = []
-            for outer_wallet in self.wallet_state_manager.outer_wallets:
-                puzzle_reveal: Program = spend.puzzle_reveal.to_program()
-                outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await outer_wallet.match_puzzle(
-                    puzzle_reveal, *puzzle_reveal.uncurry()
-                )
-                if outer_puzzle_match is not None:
-                    solution: Program = spend.solution.to_program()
-                    outer_solution_match: Optional[
-                        Tuple[SolutionDescription, Program]
-                    ] = await outer_wallet.match_solution(solution)
-                    if outer_solution_match is not None:
-                        outer_puzzle_description, inner_puzzle = outer_puzzle_match
-                        outer_solution_description, inner_solution = outer_solution_match
-                        for inner_wallet in self.wallet_state_manager.inner_wallets:
-                            inner_puzzle_description: Optional[PuzzleDescription] = await inner_wallet.match_puzzle(
-                                inner_puzzle, *inner_puzzle.uncurry()
-                            )
-                            if inner_puzzle_description is not None:
-                                inner_solution_description: Optional[
-                                    SolutionDescription
-                                ] = await inner_wallet.match_solution(inner_solution)
-                                if inner_solution_description is not None:
-                                    matches.append(
-                                        SpendDescription(
-                                            spend.coin,
-                                            outer_puzzle_description,
-                                            outer_solution_description,
-                                            inner_puzzle_description,
-                                            inner_solution_description,
-                                        )
-                                    )
+            matches: List[SpendDescription] = await SpendDescription.match(spend, self.wallet_state_manager)
 
             if matches == []:
                 continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -370,38 +334,7 @@ class WalletActionManager:
         spend_descriptions: List[SpendDescription] = []
         for spend in bundle.coin_spends:
             # Step 2: Get any wallets that claim to identify the puzzle
-            matches: List[SpendDescription] = []
-            for outer_wallet in self.wallet_state_manager.outer_wallets:
-                puzzle_reveal: Program = spend.puzzle_reveal.to_program()
-                outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await outer_wallet.match_puzzle(
-                    puzzle_reveal, *puzzle_reveal.uncurry()
-                )
-                if outer_puzzle_match is not None:
-                    solution: Program = spend.solution.to_program()
-                    outer_solution_match: Optional[
-                        Tuple[SolutionDescription, Program]
-                    ] = await outer_wallet.match_solution(solution)
-                    if outer_solution_match is not None:
-                        outer_puzzle_description, inner_puzzle = outer_puzzle_match
-                        outer_solution_description, inner_solution = outer_solution_match
-                        for inner_wallet in self.wallet_state_manager.inner_wallets:
-                            inner_puzzle_description: Optional[PuzzleDescription] = await inner_wallet.match_puzzle(
-                                inner_puzzle, *inner_puzzle.uncurry()
-                            )
-                            if inner_puzzle_description is not None:
-                                inner_solution_description: Optional[
-                                    SolutionDescription
-                                ] = await inner_wallet.match_solution(inner_solution)
-                                if inner_solution_description is not None:
-                                    matches.append(
-                                        SpendDescription(
-                                            spend.coin,
-                                            outer_puzzle_description,
-                                            outer_solution_description,
-                                            inner_puzzle_description,
-                                            inner_solution_description,
-                                        )
-                                    )
+            matches: List[SpendDescription] = await SpendDescription.match(spend, self.wallet_state_manager)
 
             if matches == []:
                 continue  # We skip spends we can't identify, if they're important, the spend will fail on chain

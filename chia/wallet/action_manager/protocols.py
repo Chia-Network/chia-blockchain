@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from blspy import G1Element
 from typing_extensions import Protocol
@@ -449,3 +449,45 @@ class SpendDescription:
         )
 
         return CoinSpend(self.coin, outer_puzzle, outer_solution)
+
+    @classmethod
+    async def match(cls, spend: CoinSpend, wallet_state_manager: Any) -> List[SpendDescription]:
+        """
+        Through trial and error, take note of every valid spend description we can make
+        First, we see if any outer drivers can match the puzzle/solution, noting their guess for the inner puz/sol
+        Then, we do the same for the inner drivers using the outer drivers' guesses
+        """
+        matches: List[SpendDescription] = []
+        for outer_wallet in wallet_state_manager.outer_wallets:
+            puzzle_reveal: Program = spend.puzzle_reveal.to_program()
+            outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await outer_wallet.match_puzzle(
+                puzzle_reveal, *puzzle_reveal.uncurry()
+            )
+            if outer_puzzle_match is not None:
+                solution: Program = spend.solution.to_program()
+                outer_solution_match: Optional[Tuple[SolutionDescription, Program]] = await outer_wallet.match_solution(
+                    solution
+                )
+                if outer_solution_match is not None:
+                    outer_puzzle_description, inner_puzzle = outer_puzzle_match
+                    outer_solution_description, inner_solution = outer_solution_match
+                    for inner_wallet in wallet_state_manager.inner_wallets:
+                        inner_puzzle_description: Optional[PuzzleDescription] = await inner_wallet.match_puzzle(
+                            inner_puzzle, *inner_puzzle.uncurry()
+                        )
+                        if inner_puzzle_description is not None:
+                            inner_solution_description: Optional[
+                                SolutionDescription
+                            ] = await inner_wallet.match_solution(inner_solution)
+                            if inner_solution_description is not None:
+                                matches.append(
+                                    cls(
+                                        spend.coin,
+                                        outer_puzzle_description,
+                                        outer_solution_description,
+                                        inner_puzzle_description,
+                                        inner_solution_description,
+                                    )
+                                )
+
+        return matches

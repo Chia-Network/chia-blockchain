@@ -17,7 +17,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.action_aliases import Fee, MakeAnnouncement, OfferedAmount, RequestPayment
-from chia.wallet.action_manager.protocols import PuzzleDescription, SolutionDescription, SpendDescription
+from chia.wallet.action_manager.protocols import SolutionDescription, SpendDescription
 from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU_PH,
@@ -380,38 +380,7 @@ async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offe
     environment: Solver = Solver({})
     for spend in bundle.coin_spends:
         # Step 1: Get any wallets that claim to identify the puzzle
-        matches: List[SpendDescription] = []
-        for outer_wallet in wallet_state_manager.outer_wallets:
-            puzzle_reveal: Program = spend.puzzle_reveal.to_program()
-            outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await outer_wallet.match_puzzle(
-                puzzle_reveal, *puzzle_reveal.uncurry()
-            )
-            if outer_puzzle_match is not None:
-                solution: Program = spend.solution.to_program()
-                outer_solution_match: Optional[Tuple[SolutionDescription, Program]] = await outer_wallet.match_solution(
-                    solution
-                )
-                if outer_solution_match is not None:
-                    outer_puzzle_description, inner_puzzle = outer_puzzle_match
-                    outer_solution_description, inner_solution = outer_solution_match
-                    for inner_wallet in wallet_state_manager.inner_wallets:
-                        inner_puzzle_description: Optional[PuzzleDescription] = await inner_wallet.match_puzzle(
-                            inner_puzzle, *inner_puzzle.uncurry()
-                        )
-                        if inner_puzzle_description is not None:
-                            inner_solution_description: Optional[
-                                SolutionDescription
-                            ] = await inner_wallet.match_solution(inner_solution)
-                            if inner_solution_description is not None:
-                                matches.append(
-                                    SpendDescription(
-                                        spend.coin,
-                                        outer_puzzle_description,
-                                        outer_solution_description,
-                                        inner_puzzle_description,
-                                        inner_solution_description,
-                                    )
-                                )
+        matches: List[SpendDescription] = await SpendDescription.match(spend, wallet_state_manager)
 
         if matches == []:
             continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
