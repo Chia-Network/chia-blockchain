@@ -913,17 +913,20 @@ class CATWallet:
         else:
             return [], coin_spec
 
+        # First, get all of the spends that create coins that are not also consumed in this bundle
         non_ephemeral_parents: List[bytes32] = [
             coin.parent_coin_info for coin in SpendBundle(previous_actions, G2Element()).not_ephemeral_additions()
         ]
         parent_spends: List[CoinSpend] = [cs for cs in previous_actions if cs.coin.name() in non_ephemeral_parents]
 
+        # Loop through spends looking for spends of this type of CAT
         selected_coins: List[SpendDescription] = []
         for parent_spend in parent_spends:
             curried_args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
             if curried_args is not None:
                 mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
                 if genesis_coin_checker_hash.as_python() == expected_tail:
+                    # Once we've found one, start adding new coins to selected_coins until we reach the target amount
                     parent_lineage = LineageProof(
                         parent_spend.coin.parent_coin_info,
                         inner_puzzle.get_tree_hash(),
@@ -964,6 +967,7 @@ class CATWallet:
             if sum(c.coin.amount for c in selected_coins) >= target_amount and len(selected_coins) > 0:
                 break
 
+        # Need to select_new_coins for any remaining balance
         remaining_balance: int = target_amount - sum(c.coin.amount for c in selected_coins)
         return (
             selected_coins,
@@ -1045,6 +1049,7 @@ class OuterDriver:
         local_environment: Solver,
         optimize: bool = False,
     ) -> Program:
+        # We only do all the ring logic when we're ready to push to chain
         if optimize and "spends" in global_environment:
             all_spends: List[CoinSpend] = [
                 CoinSpend(
@@ -1128,6 +1133,7 @@ class OuterDriver:
             )
             return full_solution
         else:
+            # We use a placeholder in the non-optimal case to leave just enough information to infer the driver later
             placeholder: Program = Program.to(
                 [inner_solution, local_environment["lineage_proof"], None, local_environment["my_id"], None, None, None]
             )
@@ -1191,6 +1197,7 @@ class OuterDriver:
     def get_asset_types(request: Solver) -> List[Solver]:
         return [
             Solver(
+                # solution template: (CAT_MOD_HASH TAIL_HASH INNER_PUZZLE . rest_of_solution)
                 {
                     "mod": disassemble(CAT_MOD),
                     "solution_template": f"(1 {'1' if 'tail' in request else '-1'} 0 . $)",
