@@ -1038,10 +1038,10 @@ class OuterDriver:
     def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {}  # TODO: RunTail or something should be here
 
-    async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
+    def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
         return construct_cat_puzzle(CAT_MOD, self.tail, inner_puzzle)
 
-    async def construct_outer_solution(
+    def construct_outer_solution(
         self,
         actions: List[WalletAction],
         inner_solution: Program,
@@ -1139,7 +1139,7 @@ class OuterDriver:
             )
             return placeholder
 
-    async def check_and_modify_actions(
+    def check_and_modify_actions(
         self,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
@@ -1147,7 +1147,7 @@ class OuterDriver:
         return outer_actions, inner_actions
 
     @classmethod
-    async def match_puzzle(
+    def match_puzzle(
         cls, puzzle: Program, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleDescription, Program]]:
         args = match_cat_puzzle(UncurriedPuzzle(mod, curried_args))
@@ -1170,7 +1170,7 @@ class OuterDriver:
         return None
 
     @classmethod
-    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+    def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
         this_coin_info: Program = solution.at("rrrf")
         if this_coin_info.atom is None:
             parent_id, puzzle_hash, amount = this_coin_info.as_iter()
@@ -1210,7 +1210,7 @@ class OuterDriver:
         ]
 
     @staticmethod
-    async def match_asset_types(asset_types: List[Solver]) -> bool:
+    def match_asset_types(asset_types: List[Solver]) -> bool:
         if len(asset_types) == 1 and asset_types[0]["mod"] == CAT_MOD:
             return True
         return False

@@ -372,7 +372,7 @@ def request_payment_to_legacy_encoding(action: RequestPayment, add_nonce: Option
     )
 
 
-async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
+def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offer:
     """
     This converts from new action-style spend bundle -> Offer class
     """
@@ -380,7 +380,7 @@ async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offe
     environment: Solver = Solver({})
     for spend in bundle.coin_spends:
         # Step 1: Get any wallets that claim to identify the puzzle
-        matches: List[SpendDescription] = await SpendDescription.match(spend, wallet_state_manager)
+        matches: List[SpendDescription] = SpendDescription.match(spend, wallet_state_manager)
 
         if matches == []:
             continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -418,15 +418,18 @@ async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offe
 
         sorted_actions: List[Solver] = [*all_other_actions, *dl_graftroot_actions]
 
-        remaining_actions, new_description = await matches[0].apply_actions(
+        remaining_actions, new_description = matches[0].apply_actions(
             sorted_actions, default_aliases=wallet_state_manager.action_aliases, environment=environment
         )
-        new_spend: CoinSpend = await new_description.spend(environment=environment)
+        new_spend: CoinSpend = new_description.spend(environment=environment)
 
         # Step 3: Erase the graftroot metadata from the delegated solution, the old client won't know to dump it
+        # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
         re_matched_spend: Optional[
             Tuple[SolutionDescription, Program]
-        ] = await new_description.outer_puzzle_description.driver.match_solution(new_spend.solution.to_program())
+        ] = new_description.outer_puzzle_description.driver.match_solution(  # type: ignore  # noqa
+            new_spend.solution.to_program()
+        )
         if re_matched_spend is None:
             raise RuntimeError("Internal logic error, spend could not be rematched")
         inner_most_solution: Program = re_matched_spend[1]
@@ -442,7 +445,7 @@ async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offe
 
         new_full_solution: Program = (
             # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
-            await new_description.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
+            new_description.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
                 new_description.outer_solution_description.actions,
                 inner_most_solution,
                 global_environment=environment,
@@ -465,7 +468,7 @@ async def spend_to_offer(wallet_state_manager: Any, bundle: SpendBundle) -> Offe
                             new_spend.coin.parent_coin_info,
                             (
                                 # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
-                                await new_description.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore  # noqa
+                                new_description.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore
                             ).get_tree_hash(),
                             new_spend.coin.amount,
                         ],

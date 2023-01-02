@@ -1382,7 +1382,7 @@ class DataLayerWallet:
 
                 inner_puzzle_hash: bytes32 = (
                     # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
-                    await spend.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore
+                    spend.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore
                 ).get_tree_hash()
                 singleton_recreation: DirectPayment = next(
                     action for action in actions if isinstance(action, DirectPayment) and action.payment.amount % 2 == 1
@@ -1516,10 +1516,10 @@ class OuterDriver:
             UpdateMetadataDL.name(): UpdateMetadataDL,
         }
 
-    async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
+    def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
         return create_host_fullpuz(inner_puzzle, self.root, self.launcher_id)
 
-    async def construct_outer_solution(
+    def construct_outer_solution(
         self,
         actions: List[WalletAction],
         inner_solution: Program,
@@ -1537,7 +1537,7 @@ class OuterDriver:
         )
         return full_sol
 
-    async def check_and_modify_actions(
+    def check_and_modify_actions(
         self,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
@@ -1591,7 +1591,7 @@ class OuterDriver:
         return [], new_inner_actions
 
     @classmethod
-    async def match_puzzle(
+    def match_puzzle(
         cls, puzzle: Program, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleDescription, Program]]:
         matched, args = match_dl_singleton(puzzle)
@@ -1619,7 +1619,7 @@ class OuterDriver:
         return None
 
     @classmethod
-    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+    def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
         return SolutionDescription(
             [],
             Solver({"amount": str(solution.at("rf").as_int()), "lineage_proof": disassemble(solution.at("f"))}),
@@ -1657,7 +1657,7 @@ class OuterDriver:
         ]
 
     @staticmethod
-    async def match_asset_types(asset_types: List[Solver]) -> bool:
+    def match_asset_types(asset_types: List[Solver]) -> bool:
         if (
             len(asset_types) == 2
             and asset_types[0]["mod"] == SINGLETON_TOP_LAYER_MOD

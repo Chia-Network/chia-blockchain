@@ -1836,7 +1836,7 @@ class WalletStateManager:
     async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> Type[OuterDriver]:
         matches: List[Type[OuterDriver]] = []
         for wallet in self.outer_wallets:
-            match = await wallet.match_asset_types(asset_types)
+            match = wallet.match_asset_types(asset_types)
             if match:
                 matches.append(wallet)
 

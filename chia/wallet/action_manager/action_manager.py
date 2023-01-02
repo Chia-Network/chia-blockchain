@@ -50,7 +50,7 @@ class WalletActionManager:
     wallet_state_manager: Any
     log: logging.Logger = logging.getLogger(__name__)
 
-    async def spends_from_actions_and_infos(
+    def spends_from_actions_and_infos(
         self,
         actions: List[Solver],
         bundle_actions: List[Solver],
@@ -66,7 +66,7 @@ class WalletActionManager:
         spend_descriptions: List[SpendDescription] = []
         for spend in infos:
             actions_left.extend(coin_specific_actions[spend.coin])
-            actions_left, new_description = await spend.apply_actions(
+            actions_left, new_description = spend.apply_actions(
                 actions_left, default_aliases=default_aliases, environment=environment
             )
             for specific_action in coin_specific_actions[spend.coin]:
@@ -158,7 +158,7 @@ class WalletActionManager:
             all_actions.extend(actions)
 
             # Step 4: Build a CoinSpend for each coin
-            bundle_actions_left, spend_descriptions = await self.spends_from_actions_and_infos(
+            bundle_actions_left, spend_descriptions = self.spends_from_actions_and_infos(
                 actions,
                 bundle_actions_left,
                 coin_infos,
@@ -167,7 +167,7 @@ class WalletActionManager:
                 environment,
             )
 
-            new_spends.extend([await spend.spend(environment=environment) for spend in spend_descriptions])
+            new_spends.extend([spend.spend(environment=environment) for spend in spend_descriptions])
             all_descriptions.extend(spend_descriptions)
 
         if len(bundle_actions_left) > 0:
@@ -210,7 +210,7 @@ class WalletActionManager:
 
         return SpendBundle(nonced_new_spends, G2Element())
 
-    async def deconstruct_spend(self, bundle: SpendBundle) -> Solver:
+    def deconstruct_spend(self, bundle: SpendBundle) -> Solver:
         """
         This method should ideally be the inverse of build_spend, however, there's no way to know which actions were
         specified as "bundle actions" so the returned summary will likely be different than the original
@@ -218,7 +218,7 @@ class WalletActionManager:
         final_actions: List[Solver] = []
         final_signatures: List[Tuple[bytes32, G1Element, bytes, bool]] = []
         for spend in bundle.coin_spends:
-            matches: List[SpendDescription] = await SpendDescription.match(spend, self.wallet_state_manager)
+            matches: List[SpendDescription] = SpendDescription.match(spend, self.wallet_state_manager)
 
             if matches == []:
                 continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -277,7 +277,7 @@ class WalletActionManager:
             }
         )
 
-    async def sign_spend(self, unsigned_spend: SpendBundle) -> SpendBundle:
+    def sign_spend(self, unsigned_spend: SpendBundle) -> SpendBundle:
         """
         Isolated away from the spend building process, here is where we sign the spend with our pubkey.
         In the future, this likely moves to a different device entirely.
@@ -289,7 +289,7 @@ class WalletActionManager:
                 solver["data"],
                 solver["me"] != Program.to(None),
             )
-            for solver in (await self.deconstruct_spend(unsigned_spend))["signatures"]
+            for solver in (self.deconstruct_spend(unsigned_spend))["signatures"]
         ]
 
         signatures: List[G2Element] = []
@@ -306,7 +306,7 @@ class WalletActionManager:
 
         return SpendBundle(unsigned_spend.coin_spends, AugSchemeMPL.aggregate(signatures))
 
-    async def solve_spend(self, bundle: SpendBundle, environment: Solver) -> SpendBundle:
+    def solve_spend(self, bundle: SpendBundle, environment: Solver) -> SpendBundle:
         """
         Given a bundle and an environment, this method makes the spend ready to go to chain
 
@@ -334,7 +334,7 @@ class WalletActionManager:
         spend_descriptions: List[SpendDescription] = []
         for spend in bundle.coin_spends:
             # Step 2: Get any wallets that claim to identify the puzzle
-            matches: List[SpendDescription] = await SpendDescription.match(spend, self.wallet_state_manager)
+            matches: List[SpendDescription] = SpendDescription.match(spend, self.wallet_state_manager)
 
             if matches == []:
                 continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
@@ -372,13 +372,13 @@ class WalletActionManager:
             actions: List[WalletAction] = description.get_all_actions(self.wallet_state_manager.action_aliases)
             # Step 4: Augment each action with the global environment
             augmented_actions: List[Solver] = [action.augment(environment).to_solver() for action in actions]
-            remaining_actions, new_description = await description.apply_actions(
+            remaining_actions, new_description = description.apply_actions(
                 augmented_actions, self.wallet_state_manager.action_aliases, environment=environment
             )
             if len(remaining_actions) > 0:
                 raise ValueError(
                     "Attempting to solve the spends with specified environment resulted in being unable to spend a coin"
                 )
-            new_spends.append(await new_description.spend(environment=environment, optimize=True))
+            new_spends.append(new_description.spend(environment=environment, optimize=True))
 
         return SpendBundle(new_spends, bundle.aggregated_signature)

@@ -730,7 +730,7 @@ class TradeManager:
             unsigned_complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
                 complement_summary
             )
-            complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
+            complement_spend: SpendBundle = self.wallet_state_manager.action_manager.sign_spend(
                 unsigned_complement_spend
             )
             full_spend: SpendBundle = SpendBundle.aggregate(
@@ -739,7 +739,7 @@ class TradeManager:
                     offer_to_spend(offer),
                 ]
             )
-            final_spend_bundle: SpendBundle = await self.wallet_state_manager.action_manager.solve_spend(
+            final_spend_bundle: SpendBundle = self.wallet_state_manager.action_manager.solve_spend(
                 full_spend, modified_solver
             )
             offer_no_payments: Offer = Offer.from_spend_bundle(final_spend_bundle)
@@ -893,10 +893,10 @@ class TradeManager:
                         # TODO: We do the conversion from spend <-> offer twice because we need to make sure
                         # that we're signing the proper thing. During an optimization pass, we should figure out
                         # how to avoid this.
-                        signed_spend: SpendBundle = await self.wallet_state_manager.action_manager.sign_spend(
-                            offer_to_spend(await spend_to_offer(self.wallet_state_manager, unsigned_spend))
+                        signed_spend: SpendBundle = self.wallet_state_manager.action_manager.sign_spend(
+                            offer_to_spend(spend_to_offer(self.wallet_state_manager, unsigned_spend))
                         )
-                        return await spend_to_offer(self.wallet_state_manager, signed_spend)
+                        return spend_to_offer(self.wallet_state_manager, signed_spend)
 
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee
@@ -945,7 +945,7 @@ class TradeManager:
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
                         offer_as_spend: SpendBundle = offer_to_spend(offer)
-                        deconstructed_spend: Solver = await self.wallet_state_manager.action_manager.deconstruct_spend(
+                        deconstructed_spend: Solver = self.wallet_state_manager.action_manager.deconstruct_spend(
                             offer_as_spend
                         )
                         old_summary: Dict[str, Any] = new_summary_to_old(deconstructed_spend)
@@ -993,7 +993,7 @@ class TradeManager:
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
                         offer_as_spend: SpendBundle = offer_to_spend(offer)
-                        deconstructed_spend: Solver = await self.wallet_state_manager.action_manager.deconstruct_spend(
+                        deconstructed_spend: Solver = self.wallet_state_manager.action_manager.deconstruct_spend(
                             offer_as_spend
                         )
                         return deconstructed_spend

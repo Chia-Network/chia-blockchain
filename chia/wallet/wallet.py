@@ -713,10 +713,10 @@ class OuterDriver:
     def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {}
 
-    async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
+    def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
         return inner_puzzle
 
-    async def construct_outer_solution(
+    def construct_outer_solution(
         self,
         actions: List[WalletAction],
         inner_solution: Program,
@@ -726,7 +726,7 @@ class OuterDriver:
     ) -> Program:
         return inner_solution
 
-    async def check_and_modify_actions(
+    def check_and_modify_actions(
         self,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
@@ -734,7 +734,7 @@ class OuterDriver:
         return outer_actions, inner_actions
 
     @classmethod
-    async def match_puzzle(
+    def match_puzzle(
         cls, puzzle: Program, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleDescription, Program]]:
         return (
@@ -746,7 +746,7 @@ class OuterDriver:
         )
 
     @classmethod
-    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+    def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
         return (
             SolutionDescription(
                 [],
@@ -760,7 +760,7 @@ class OuterDriver:
         return []
 
     @staticmethod
-    async def match_asset_types(asset_types: List[Solver]) -> bool:
+    def match_asset_types(asset_types: List[Solver]) -> bool:
         if asset_types == []:
             return True
         else:
@@ -785,10 +785,10 @@ class InnerDriver:
     def get_aliases(self) -> Dict[str, Type[ActionAlias]]:
         return {}
 
-    async def construct_inner_puzzle(self) -> Program:
+    def construct_inner_puzzle(self) -> Program:
         return puzzle_for_synthetic_public_key(self.pubkey)
 
-    async def construct_inner_solution(
+    def construct_inner_solution(
         self,
         actions: List[WalletAction],
         global_environment: Solver,
@@ -815,7 +815,7 @@ class InnerDriver:
         return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
     @classmethod
-    async def match_puzzle(cls, puzzle: Program, mod: Program, curried_args: Program) -> Optional[PuzzleDescription]:
+    def match_puzzle(cls, puzzle: Program, mod: Program, curried_args: Program) -> Optional[PuzzleDescription]:
         if mod != MOD:
             return None
 
@@ -824,7 +824,7 @@ class InnerDriver:
         return PuzzleDescription(InnerDriver(pubkey), Solver({}))
 
     @classmethod
-    async def match_solution(cls, solution: Program) -> Optional[SolutionDescription]:
+    def match_solution(cls, solution: Program) -> Optional[SolutionDescription]:
         actions: List[WalletAction] = []
         delegated_solution: Program = solution.at("rrf")
         if delegated_solution.atom is None and delegated_solution.first() == Program.to("graftroot"):

@@ -87,7 +87,7 @@ class OuterDriver(Protocol):
         """
         ...
 
-    async def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
+    def construct_outer_puzzle(self, inner_puzzle: Program) -> Program:
         """
         Given an inner puzzle, construct the full puzzle reveal
 
@@ -95,7 +95,7 @@ class OuterDriver(Protocol):
         """
         ...
 
-    async def construct_outer_solution(
+    def construct_outer_solution(
         self,
         actions: List[WalletAction],
         inner_solution: Program,
@@ -116,7 +116,7 @@ class OuterDriver(Protocol):
         """
         ...
 
-    async def check_and_modify_actions(
+    def check_and_modify_actions(
         self,
         outer_actions: List[WalletAction],
         inner_actions: List[WalletAction],
@@ -131,7 +131,7 @@ class OuterDriver(Protocol):
         ...
 
     @classmethod
-    async def match_puzzle(
+    def match_puzzle(
         cls, puzzle: Program, mod: Program, curried_args: Program
     ) -> Optional[Tuple[PuzzleDescription, Program]]:
         """
@@ -143,7 +143,7 @@ class OuterDriver(Protocol):
         ...
 
     @classmethod
-    async def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
+    def match_solution(cls, solution: Program) -> Optional[Tuple[SolutionDescription, Program]]:
         """
         Given a solution, return a description of the solution including what actions are being performed as well as
         the local environment necessary to solve the coin.
@@ -161,7 +161,7 @@ class OuterDriver(Protocol):
         ...
 
     @staticmethod
-    async def match_asset_types(asset_types: List[Solver]) -> bool:
+    def match_asset_types(asset_types: List[Solver]) -> bool:
         """
         Given a list of asset types, return whether or not this driver represents those asset types
         (see chia/wallet/puzzles/add_wrapped_announcement.clsp for a description of asset types)
@@ -192,7 +192,7 @@ class InnerDriver(Protocol):
         """
         ...
 
-    async def construct_inner_puzzle(self) -> Program:
+    def construct_inner_puzzle(self) -> Program:
         """
         Construct the full puzzle reveal
 
@@ -200,7 +200,7 @@ class InnerDriver(Protocol):
         """
         ...
 
-    async def construct_inner_solution(
+    def construct_inner_solution(
         self,
         actions: List[WalletAction],
         global_environment: Solver,
@@ -221,7 +221,7 @@ class InnerDriver(Protocol):
         ...
 
     @classmethod
-    async def match_puzzle(cls, puzzle: Program, mod: Program, curried_args: Program) -> Optional[PuzzleDescription]:
+    def match_puzzle(cls, puzzle: Program, mod: Program, curried_args: Program) -> Optional[PuzzleDescription]:
         """
         Given a puzzle (and its uncurried representation for optimization purposes), return a description of the puzzle
         including an instance of this driver and a clvm dictionary describing the coin's features.
@@ -229,7 +229,7 @@ class InnerDriver(Protocol):
         ...
 
     @classmethod
-    async def match_solution(cls, solution: Program) -> Optional[SolutionDescription]:
+    def match_solution(cls, solution: Program) -> Optional[SolutionDescription]:
         """
         Given a solution, return a description of the solution including what actions are being performed as well as
         the local environment necessary to solve the coin.
@@ -328,7 +328,7 @@ class SpendDescription:
             }
         )
 
-    async def apply_actions(
+    def apply_actions(
         self,
         actions: List[Solver],
         default_aliases: Dict[str, Type[ActionAlias]] = {},
@@ -370,7 +370,7 @@ class SpendDescription:
         (
             new_outer_actions,
             new_inner_actions,
-        ) = await self.outer_puzzle_description.driver.check_and_modify_actions(  # type: ignore
+        ) = self.outer_puzzle_description.driver.check_and_modify_actions(  # type: ignore
             outer_actions, inner_actions
         )
 
@@ -385,7 +385,7 @@ class SpendDescription:
         # pylint: enable=unsupported-membership-test,unsubscriptable-object
 
         # Create the inner puzzle and solution first
-        inner_solution: Program = await self.inner_puzzle_description.driver.construct_inner_solution(  # type: ignore
+        inner_solution: Program = self.inner_puzzle_description.driver.construct_inner_solution(  # type: ignore
             new_inner_actions,
             global_environment=environment,
             local_environment=self.inner_solution_description.environment,
@@ -393,7 +393,7 @@ class SpendDescription:
         )
 
         # Then feed those to the outer wallet
-        outer_solution: Program = await self.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
+        outer_solution: Program = self.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
             new_outer_actions,
             inner_solution,
             global_environment=environment,
@@ -402,16 +402,22 @@ class SpendDescription:
         )
 
         # Now we're going to match the newly generated solutions to get new solution descriptions
+        # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
         outer_solution_match: Optional[
             Tuple[SolutionDescription, Program]
-        ] = await self.outer_puzzle_description.driver.match_solution(outer_solution)
+        ] = self.outer_puzzle_description.driver.match_solution(
+            outer_solution
+        )  # type: ignore
         if outer_solution_match is None:
             raise ValueError("Outer Wallet generated a solution it couldn't match itself")
         new_outer_solution_description, _ = outer_solution_match
 
+        # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
         new_inner_solution_description: Optional[
             SolutionDescription
-        ] = await self.inner_puzzle_description.driver.match_solution(inner_solution)
+        ] = self.inner_puzzle_description.driver.match_solution(
+            inner_solution
+        )  # type: ignore
         if new_inner_solution_description is None:
             raise ValueError("Inner Wallet generated a solution it couldn't match itself")
 
@@ -424,14 +430,14 @@ class SpendDescription:
             ),
         )
 
-    async def spend(self, environment: Solver = Solver({}), optimize: bool = False) -> CoinSpend:
+    def spend(self, environment: Solver = Solver({}), optimize: bool = False) -> CoinSpend:
         """
         Digest the existing SpendDescription into a CoinSpend in the specified global environment
         """
         # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
         # Create the inner puzzle and solution first
-        inner_puzzle: Program = await self.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore
-        inner_solution: Program = await self.inner_puzzle_description.driver.construct_inner_solution(  # type: ignore
+        inner_puzzle: Program = self.inner_puzzle_description.driver.construct_inner_puzzle()  # type: ignore
+        inner_solution: Program = self.inner_puzzle_description.driver.construct_inner_solution(  # type: ignore
             self.inner_solution_description.actions,
             global_environment=environment,
             local_environment=self.inner_solution_description.environment,
@@ -439,8 +445,8 @@ class SpendDescription:
         )
 
         # Then feed those to the outer wallet
-        outer_puzzle: Program = await self.outer_puzzle_description.driver.construct_outer_puzzle(inner_puzzle)  # type: ignore  # noqa
-        outer_solution: Program = await self.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
+        outer_puzzle: Program = self.outer_puzzle_description.driver.construct_outer_puzzle(inner_puzzle)  # type: ignore  # noqa
+        outer_solution: Program = self.outer_puzzle_description.driver.construct_outer_solution(  # type: ignore
             self.outer_solution_description.actions,
             inner_solution,
             global_environment=environment,
@@ -451,7 +457,7 @@ class SpendDescription:
         return CoinSpend(self.coin, outer_puzzle, outer_solution)
 
     @classmethod
-    async def match(cls, spend: CoinSpend, wallet_state_manager: Any) -> List[SpendDescription]:
+    def match(cls, spend: CoinSpend, wallet_state_manager: Any) -> List[SpendDescription]:
         """
         Through trial and error, take note of every valid spend description we can make
         First, we see if any outer drivers can match the puzzle/solution, noting their guess for the inner puz/sol
@@ -460,25 +466,25 @@ class SpendDescription:
         matches: List[SpendDescription] = []
         for outer_wallet in wallet_state_manager.outer_wallets:
             puzzle_reveal: Program = spend.puzzle_reveal.to_program()
-            outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = await outer_wallet.match_puzzle(
+            outer_puzzle_match: Optional[Tuple[PuzzleDescription, Program]] = outer_wallet.match_puzzle(
                 puzzle_reveal, *puzzle_reveal.uncurry()
             )
             if outer_puzzle_match is not None:
                 solution: Program = spend.solution.to_program()
-                outer_solution_match: Optional[Tuple[SolutionDescription, Program]] = await outer_wallet.match_solution(
+                outer_solution_match: Optional[Tuple[SolutionDescription, Program]] = outer_wallet.match_solution(
                     solution
                 )
                 if outer_solution_match is not None:
                     outer_puzzle_description, inner_puzzle = outer_puzzle_match
                     outer_solution_description, inner_solution = outer_solution_match
                     for inner_wallet in wallet_state_manager.inner_wallets:
-                        inner_puzzle_description: Optional[PuzzleDescription] = await inner_wallet.match_puzzle(
+                        inner_puzzle_description: Optional[PuzzleDescription] = inner_wallet.match_puzzle(
                             inner_puzzle, *inner_puzzle.uncurry()
                         )
                         if inner_puzzle_description is not None:
-                            inner_solution_description: Optional[
-                                SolutionDescription
-                            ] = await inner_wallet.match_solution(inner_solution)
+                            inner_solution_description: Optional[SolutionDescription] = inner_wallet.match_solution(
+                                inner_solution
+                            )
                             if inner_solution_description is not None:
                                 matches.append(
                                     cls(
