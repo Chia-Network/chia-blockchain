@@ -113,6 +113,10 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
             else:
                 AMOUNT = uint64(750000000000)
             FEE = uint64(1)
+        if case == "allow":
+            allow_height = full_node_api.full_node.blockchain.get_peak().height + 1
+        if case == "allow_larger":
+            allow_larger_height = full_node_api.full_node.blockchain.get_peak().height + 1
         tx = await notification_manager_1.send_new_notification(ph_2, bytes(case, "utf8"), AMOUNT, fee=FEE)
         await wsm_1.add_pending_transaction(tx)
         await time_out_assert_not_none(
@@ -133,9 +137,11 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 2))
     assert len(notifications) == 2
     assert notifications[0].message == b"allow_larger"
+    assert notifications[0].height == allow_larger_height
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(1, None))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow"
+    assert notifications[0].height == allow_height
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 1))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
