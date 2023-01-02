@@ -1506,11 +1506,6 @@ class OuterDriver:
     def get_wallet_class() -> Type[WalletProtocol]:
         return DataLayerWallet
 
-    @staticmethod
-    def type() -> bytes32:
-        # placeholder tree hash. If this were a clvm plugin, it'd probably be the tree hash of that.
-        return bytes32(Program.to("Data Layer OuterDriver").get_tree_hash())
-
     def get_actions(self) -> Dict[str, Type[WalletAction]]:
         return {}
 
