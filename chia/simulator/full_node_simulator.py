@@ -549,8 +549,6 @@ class FullNodeSimulator(FullNodeAPI):
                 if len(coin_set) == 0:
                     return
 
-            await asyncio.sleep(0.050)
-
     async def create_coins_with_amounts(
         self,
         amounts: List[uint64],
