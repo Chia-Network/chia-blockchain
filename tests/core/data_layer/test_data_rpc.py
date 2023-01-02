@@ -125,7 +125,7 @@ async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
-    await offer_setup.full_node_api.process_blocks(count=1)
+    await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     return await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer)
 
 
@@ -667,7 +667,7 @@ async def offer_setup_fixture(
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallets.append(wallet)
 
-        await full_node_api.farm_blocks(count=1, wallet=wallet)
+        await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet)
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: List[StoreSetup] = []
@@ -696,7 +696,7 @@ async def offer_setup_fixture(
         [maker, taker] = store_setups
 
         for sleep_time in backoff_times():
-            await full_node_api.process_blocks(count=1)
+            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             try:
                 await maker.api.get_root({"id": maker.id.hex()})
                 await taker.api.get_root({"id": taker.id.hex()})
@@ -808,7 +808,7 @@ async def process_for_data_layer_keys(
         else:
             if expected_value is None or value == expected_value:
                 break
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(sleep_time)
     else:
         raise Exception("failed to confirm the new data")
@@ -1613,7 +1613,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
             offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
         ):
             break
-        await offer_setup.full_node_api.process_blocks(count=1)
+        await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)
     else:
         assert False, "offer was not cancelled"

@@ -24,10 +24,10 @@ class MempoolRemoveReason(Enum):
 
 class Mempool:
     def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
-        self.log = logging.getLogger(__name__)
+        self.log: logging.Logger = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
-        self.mempool_info = mempool_info
+        self.mempool_info: MempoolInfo = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
         self.removal_coin_id_to_spendbundle_ids: Dict[bytes32, List[bytes32]] = {}
         self.total_mempool_cost: CLVMCost = CLVMCost(uint64(0))

@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 import time
-from typing import Callable
+from typing import Callable, Optional, overload
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 
@@ -34,11 +34,24 @@ else:
     _system_delay = system_delays["local"][sys.platform]
 
 
-def adjusted_timeout(timeout: int) -> int:
+@overload
+def adjusted_timeout(timeout: float) -> float:
+    ...
+
+
+@overload
+def adjusted_timeout(timeout: None) -> None:
+    ...
+
+
+def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:
+    if timeout is None:
+        return None
+
     return timeout + _system_delay
 
 
-async def time_out_assert_custom_interval(timeout: int, interval, function, value=True, *args, **kwargs):
+async def time_out_assert_custom_interval(timeout: float, interval, function, value=True, *args, **kwargs):
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -60,7 +73,7 @@ async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
     await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, **kwargs)
 
 
-async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
+async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)

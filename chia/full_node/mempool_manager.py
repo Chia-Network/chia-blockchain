@@ -88,7 +88,6 @@ class MempoolManager:
     seen_bundle_hashes: Dict[bytes32, bytes32]
     get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
     nonzero_fee_minimum_fpc: int
-    limit_factor: float
     mempool_max_total_cost: int
     potential_cache: PendingTxCache
     seen_cache_size: int
@@ -140,6 +139,7 @@ class MempoolManager:
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
             CLVMCost(uint64(self.max_block_clvm_cost)),
         )
+        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
 
         self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
 
@@ -396,7 +396,6 @@ class MempoolManager:
             return Err(npc_result.error), None, []
 
         cost = npc_result.cost
-
         log.debug(f"Cost: {cost}")
 
         if cost > self.max_block_clvm_cost:
@@ -417,11 +416,6 @@ class MempoolManager:
         for add in additions:
             additions_dict[add.name()] = add
             addition_amount = addition_amount + add.amount
-        # Check for duplicate outputs
-        addition_counter = collections.Counter(_.name() for _ in additions)
-        for k, v in addition_counter.items():
-            if v > 1:
-                return Err.DUPLICATE_OUTPUT, None, []
         # Check for duplicate inputs
         removal_counter = collections.Counter(name for name in removal_names)
         for k, v in removal_counter.items():
@@ -476,7 +470,7 @@ class MempoolManager:
                 return Err.INVALID_FEE_LOW_FEE, None, []
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
-        fail_reason, conflicts = await self.check_removals(removal_record_dict)
+        fail_reason, conflicts = self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
@@ -532,7 +526,7 @@ class MempoolManager:
 
         return None, potential, list(conflicting_pool_items.keys())
 
-    async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
+    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
@@ -610,7 +604,6 @@ class MempoolManager:
                         )
         else:
             old_pool = self.mempool
-
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
