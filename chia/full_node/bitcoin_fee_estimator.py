@@ -17,6 +17,10 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
     https://github.com/bitcoin/bitcoin/tree/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy
     """
 
+    fee_rate_estimator: SmartFeeEstimator
+    tracker: FeeTracker
+    last_mempool_info: FeeMempoolInfo
+
     def __init__(self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator) -> None:
         self.fee_rate_estimator: SmartFeeEstimator = smart_fee_estimator
         self.tracker: FeeTracker = fee_tracker
