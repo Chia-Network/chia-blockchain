@@ -6,3 +6,12 @@
 	path = mozilla-ca
 	url = https://github.com/Chia-Network/mozilla-ca.git
         branch = main
+[submodule "tests/bats"]
+	path = tests/bats
+	url = https://github.com/bats-core/bats-core.git
+[submodule "tests/test_helper/bats-support"]
+	path = tests/test_helper/bats-support
+	url = https://github.com/bats-core/bats-support.git
+[submodule "tests/test_helper/bats-assert"]
+	path = tests/test_helper/bats-assert
+	url = https://github.com/bats-core/bats-assert.git
