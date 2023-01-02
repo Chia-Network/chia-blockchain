@@ -625,11 +625,13 @@ class Wallet:
     ) -> Tuple[List[SpendDescription], Optional[Solver]]:
         selected_coins: List[SpendDescription] = []
 
+        # First, get all of the spends that create coins that are not also consumed in this bundle
         all_parent_ids: List[bytes32] = [spend.coin.parent_coin_info for spend in previous_actions]
         non_ephemeral_spends: List[SpendDescription] = [
             spend for spend in previous_actions if spend.coin.name() not in all_parent_ids
         ]
 
+        # Loop through spends looking for spends of standard XCH
         for spend in non_ephemeral_spends:
             if isinstance(spend.outer_puzzle_description.driver, OuterDriver):
                 actions: List[WalletAction] = spend.get_all_actions(wallet_state_manager.action_aliases)
@@ -639,6 +641,7 @@ class Wallet:
                         Tuple[uint32, WalletType]
                     ] = await wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.payment.puzzle_hash)
                     if wallet_info is not None:
+                        # Once we've found one, add new coins to selected_coins until we reach the target amount
                         selected_coins.append(
                             SpendDescription(
                                 Coin(spend.coin.name(), addition.payment.puzzle_hash, addition.payment.amount),
@@ -666,6 +669,7 @@ class Wallet:
                     continue
                 break
 
+        # Need to select_new_coins for any remaining balance
         remaining_balance: int = cast_to_int(coin_spec["amount"]) - sum(c.coin.amount for c in selected_coins)
         return selected_coins, Solver({"amount": str(remaining_balance)}) if remaining_balance > 0 else None
 
@@ -694,6 +698,8 @@ class Wallet:
         ]
 
 
+# This driver is an "outer" driver in that it drives coins with no outer puzzle
+# It can be looked at as the simplest version of these types of drivers
 @dataclass(frozen=True)
 class OuterDriver:
     # TODO: This is not great, we should move the coin selection logic in here
@@ -771,6 +777,8 @@ class InnerDriver:
     def get_actions(self) -> Dict[str, Type[WalletAction]]:
         return {
             Condition.name(): Condition,
+            # Graftroots are defined in this context to have inner puzzles
+            # This is so we can put conditions inside of graftroots we have and stack them on top of each other
             Graftroot.name(): Graftroot,
         }
 
@@ -788,7 +796,7 @@ class InnerDriver:
         optimize: bool = False,
     ) -> Program:
         conditions: List[Program] = [cond.condition for cond in actions if isinstance(cond, Condition)]
-        delegated_puzzle: Program = Program.to((1, conditions))
+        delegated_puzzle: Program = Program.to((1, conditions))  # inner most delegated puzzle
         delegated_solution: Program = Program.to(None)
         metadata: Program = Program.to(None)
         for action in actions:
@@ -798,6 +806,7 @@ class InnerDriver:
                 if optimize:
                     delegated_solution = action.solution_wrapper.run([delegated_solution])
         if not optimize:
+            # leave some metadata about the graftroots so that we can infer this driver later
             delegated_solution = (
                 Program.to("graftroot").cons(Program.to((1, conditions)).cons(metadata))
                 if metadata != Program.to(None)
@@ -822,6 +831,7 @@ class InnerDriver:
             metadata = delegated_solution.rest().as_iter()
             actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
             all_graftroots: List[Graftroot] = [Graftroot(*graftroot.as_iter()) for graftroot in metadata]
+            # It's important we parse the graftroots in the same order that the original class was instantiated with
             all_graftroots.reverse()
             actions.extend(all_graftroots)
         else:
