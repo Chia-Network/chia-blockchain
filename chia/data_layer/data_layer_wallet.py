@@ -1357,11 +1357,13 @@ class DataLayerWallet:
         else:
             return [], coin_spec
 
+        # First, get all of the spends that create coins that are not also consumed in this bundle
         all_parent_ids: List[bytes32] = [spend.coin.parent_coin_info for spend in previous_actions]
         non_ephemeral_spends: List[SpendDescription] = [
             spend for spend in previous_actions if spend.coin.name() not in all_parent_ids
         ]
 
+        # Loop through the spends, looking for any that spend a singleton of the specified launcherand create a new one
         for spend in non_ephemeral_spends:
             if (
                 isinstance(spend.outer_puzzle_description.driver, OuterDriver)
@@ -1548,10 +1550,14 @@ class OuterDriver:
             if len(alias.metadata_solution.first().first().as_python()) != 32:
                 raise ValueError("The specified metadata update would not leave a valid root")
 
+        # After we've checked any metadata updates, we throw them in as a condition for the inner puzzle to output
         new_inner_actions: List[WalletAction] = [*outer_actions, *inner_actions]
+
+        # Also police the recreation of a singleton has the correct hints on it
         root: bytes32 = (
             self.root
             if len(outer_actions) == 0
+            # the default data layer metadata updater will just have the new root in the solution
             else bytes32(UpdateMetadataDL.from_action(outer_actions[0]).metadata_solution.at("ff").as_python())
         )
         direct_payments: List[Condition] = [
@@ -1623,6 +1629,7 @@ class OuterDriver:
     def get_asset_types(request: Solver) -> List[Solver]:
         return [
             Solver(
+                # solution template: ((SINGLETON_MOD_HASH . (LAUCHER_ID . LAUNCHER_PH)) INNER_PUZZLE . rest_of_solution)
                 {
                     "mod": disassemble(SINGLETON_TOP_LAYER_MOD),
                     "solution_template": f"((1 . ({'1' if 'launcher_id' in request else '-1'} . 1)) 0 . $)",
@@ -1635,6 +1642,7 @@ class OuterDriver:
                 }
             ),
             Solver(
+                # solution template: (NFT_MOD_HASH METADATA METADATA_UPDATER_HASH INNER_PUZZLE . rest_of_solution)
                 {
                     "mod": disassemble(NFT_STATE_LAYER_MOD),
                     "solution_template": f"(1 {'1' if 'metadata' in request else '-1'} 1 0 . $)",
@@ -1668,6 +1676,10 @@ _T_UpdateMetadataDL = TypeVar("_T_UpdateMetadataDL", bound="UpdateMetadataDL")
 
 @dataclasses.dataclass(frozen=True)
 class UpdateMetadataDL(UpdateMetadata):
+    """
+    Like a standard UpdateMetadata action, but takes the metadata_updater for granted which provides better ergonomics
+    for use in the context of a data layer singleton
+    """
     metadata_updater: Program = ACS_MU
 
     @classmethod
