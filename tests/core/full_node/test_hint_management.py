@@ -101,8 +101,8 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     scs = StateChangeSummary(br, uint32(0), [], npc_res, rewards)
 
     # Removal ID and addition PH
-    has_coin_sub = lambda c: c == coin_ids[1]  # noqa
-    has_ph_sub = lambda ph: ph == phs[4]  # noqa
+    has_coin_sub = lambda c: c == coin_ids[1]  # noqa: E731
+    has_ph_sub = lambda ph: ph == phs[4]  # noqa: E731
 
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
 
@@ -111,8 +111,8 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     assert set(lookup_coin_ids) == {coin_ids[1], first_coin_id, second_coin_id}
 
     # Removal PH and addition ID
-    has_coin_sub = lambda c: c == first_coin_id  # noqa
-    has_ph_sub = lambda ph: ph == phs[0]  # noqa
+    has_coin_sub = lambda c: c == first_coin_id  # noqa: E731
+    has_ph_sub = lambda ph: ph == phs[0]  # noqa: E731
 
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {first_coin_id, coin_ids[0], coin_ids[2]}
@@ -120,19 +120,19 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     # Subscribe to hint
     third_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), phs[9], uint64(123)).name()
 
-    has_ph_sub = lambda ph: ph == bytes32(b"1" * 32)  # noqa
+    has_ph_sub = lambda ph: ph == bytes32(b"1" * 32)  # noqa: E731
 
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {first_coin_id, third_coin_id}
 
     # Reward PH
-    has_ph_sub = lambda ph: ph == rewards[0].puzzle_hash  # noqa
+    has_ph_sub = lambda ph: ph == rewards[0].puzzle_hash  # noqa: E731
 
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {rewards[0].name(), rewards[2].name()}
 
     # Reward coin id + reward ph
-    has_coin_sub = lambda c: c == rewards[1].name()  # noqa
+    has_coin_sub = lambda c: c == rewards[1].name()  # noqa: E731
 
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {rewards[1].name(), rewards[0].name(), rewards[2].name()}

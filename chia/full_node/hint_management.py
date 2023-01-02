@@ -10,8 +10,8 @@ from chia.util.ints import uint64
 
 def get_hints_and_subscription_coin_ids(
     state_change_summary: StateChangeSummary,
-    has_coin_sub: Callable[[bytes32], bool],
-    has_ph_sub: Callable[[bytes32], bool],
+    has_coin_subscription: Callable[[bytes32], bool],
+    has_ph_subscription: Callable[[bytes32], bool],
 ) -> Tuple[List[Tuple[bytes32, bytes]], List[bytes32]]:
     # Precondition: all hints passed in are max 32 bytes long
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
@@ -24,11 +24,11 @@ def get_hints_and_subscription_coin_ids(
     lookup_coin_ids: Set[bytes32] = set()
 
     def add_if_coin_subscription(coin_id: bytes32) -> None:
-        if has_coin_sub(coin_id):
+        if has_coin_subscription(coin_id):
             lookup_coin_ids.add(coin_id)
 
     def add_if_ph_subscription(puzzle_hash: bytes32, coin_id: bytes32) -> None:
-        if has_ph_sub(puzzle_hash):
+        if has_ph_subscription(puzzle_hash):
             lookup_coin_ids.add(coin_id)
 
     for npc_result in state_change_summary.new_npc_results:

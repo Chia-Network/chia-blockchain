@@ -170,7 +170,6 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-
         self.subscriptions = PeerSubscriptions()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
@@ -1134,8 +1133,8 @@ class FullNode:
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
                         state_change_summary,
-                        self.subscriptions.has_coin_sub,
-                        self.subscriptions.has_ph_sub,
+                        self.subscriptions.has_coin_subscription,
+                        self.subscriptions.has_ph_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                     await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
@@ -1440,8 +1439,8 @@ class FullNode:
 
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
-            self.subscriptions.has_coin_sub,
-            self.subscriptions.has_ph_sub,
+            self.subscriptions.has_coin_subscription,
+            self.subscriptions.has_ph_subscription,
         )
         await self.hint_store.add_hints(hints_to_add)
 
