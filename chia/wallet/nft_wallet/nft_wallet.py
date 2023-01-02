@@ -161,7 +161,7 @@ class NFTWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
+        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
             return
@@ -1661,6 +1661,9 @@ class NFTWallet:
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
+
+    def get_name(self) -> str:
+        return self.wallet_info.name
 
     @staticmethod
     def get_asset_types(request: Solver) -> List[Solver]:

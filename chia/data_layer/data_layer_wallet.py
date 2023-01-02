@@ -1116,6 +1116,9 @@ class DataLayerWallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
+    def get_name(self) -> str:
+        return self.wallet_info.name
+
     ##########
     # OFFERS #
     ##########

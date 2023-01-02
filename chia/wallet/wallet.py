@@ -616,6 +616,9 @@ class Wallet:
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 
+    def get_name(self) -> str:
+        return "Standard Wallet"
+
     @staticmethod
     async def select_coins_from_spend_descriptions(
         wallet_state_manager: Any, coin_spec: Solver, previous_actions: List[SpendDescription]

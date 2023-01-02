@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 def test_interface() -> None:
     max_block_cost_clvm = uint64(1000 * 1000)
-    estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm)
     target_times = [0, 120, 300]
     estimates = [estimator.estimate_fee_rate(time_offset_seconds=time) for time in target_times]
     current_fee_rate = estimator.estimate_fee_rate(
@@ -35,13 +35,13 @@ def test_interface() -> None:
 
 def test_estimator_create() -> None:
     max_block_cost_clvm = uint64(1000 * 1000)
-    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
     assert estimator is not None
 
 
 def test_single_estimate() -> None:
     max_block_cost_clvm = uint64(1000 * 1000)
-    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
     height = uint32(1)
     estimator.new_block(FeeBlockInfo(height, []))
     fee_rate = estimator.estimate_fee_rate(time_offset_seconds=40 * height)
@@ -71,7 +71,7 @@ def test_steady_fee_pressure() -> None:
     We expect the estimator to converge on this FeeRate value.
     """
     max_block_cost_clvm = uint64(1000 * 1000)
-    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
     wallet_tool = WalletTool(test_constants)
     cost = uint64(5000000)
     fee = uint64(10000000)
@@ -107,7 +107,7 @@ def test_fee_estimation_inception() -> None:
     transaction block wait time we have observed.
     """
     max_block_cost_clvm = uint64(1000 * 1000)
-    estimator1 = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator1 = create_bitcoin_fee_estimator(max_block_cost_clvm)
     wallet_tool = WalletTool(test_constants)
     cost = uint64(5000000)
     fee = uint64(10000000)
@@ -130,7 +130,7 @@ def test_fee_estimation_inception() -> None:
     assert e == [2, 2, 2, 2, 2, 2, 2]
 
     ##########################################################
-    estimator5 = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
+    estimator5 = create_bitcoin_fee_estimator(max_block_cost_clvm)
 
     for height in range(start, end):
         height = uint32(height)

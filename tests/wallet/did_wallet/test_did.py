@@ -248,7 +248,7 @@ class TestDIDWallet:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager, wallet, uint64(101)
             )
-        assert did_wallet.wallet_info.name == "Profile 1"
+        assert did_wallet.get_name() == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -315,7 +315,7 @@ class TestDIDWallet:
                 wallet,
                 backup_data,
             )
-        assert did_wallet_4.wallet_info.name == "Profile 2"
+        assert did_wallet_4.get_name() == "Profile 2"
 
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
@@ -763,7 +763,7 @@ class TestDIDWallet:
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
             )
-        assert did_wallet_1.wallet_info.name == "Profile 1"
+        assert did_wallet_1.get_name() == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
@@ -903,7 +903,7 @@ class TestDIDWallet:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await full_node_api.farm_blocks(count=2, wallet=wallet)
+        await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -1054,7 +1054,7 @@ class TestDIDWallet:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        expected_confirmed_balance = await full_node_api.farm_blocks(count=2, wallet=wallet)
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -1149,7 +1149,7 @@ class TestDIDWallet:
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
             )
-        assert did_wallet_1.wallet_info.name == "Profile 1"
+        assert did_wallet_1.get_name() == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )

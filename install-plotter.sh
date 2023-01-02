@@ -75,7 +75,7 @@ if [ "$1" = "-h" ] || [ -z "$1" ]; then
   exit 0
 fi
 
-DEFAULT_BLADEBIT_VERSION="v2.0.0"
+DEFAULT_BLADEBIT_VERSION="v2.0.1"
 DEFAULT_MADMAX_VERSION="0.0.2"
 VERSION=
 PLOTTER=$1

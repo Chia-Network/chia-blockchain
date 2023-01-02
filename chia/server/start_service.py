@@ -192,9 +192,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         if self._reconnect_tasks.get(peer) is not None:
             raise ServiceException(f"Peer {peer} already added")
 
-        self._reconnect_tasks[peer] = start_reconnect_task(
-            self._server, peer, self._log, self.config.get("prefer_ipv6")
-        )
+        self._reconnect_tasks[peer] = start_reconnect_task(self._server, peer, self._log)
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is

@@ -12,7 +12,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -38,12 +38,14 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
 
 
 async def wait_rpc_state_condition(
-    timeout: int,
+    timeout: float,
     async_function: Callable[[Dict[str, Any]], Awaitable[Dict]],
     params: List[Dict],
     condition_func: Callable[[Dict[str, Any]], bool],
 ) -> Dict:
     __tracebackhide__ = True
+
+    timeout = adjusted_timeout(timeout=timeout)
 
     start = time.monotonic()
 
