@@ -21,6 +21,8 @@
   proposal_innerpuz
   proposal_current_votes ; tally of yes votes
   proposal_total_votes   ; total votes cast (by number of cat-mojos)
+  type  ; this is used for the recreating self type
+  extra_value  ; this is used for recreating self
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -28,6 +30,33 @@
 
   (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
   (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
+
+  ; take two lists and merge them into one
+  (defun merge_list (list_a list_b)
+    (if list_a
+      (c (f list_a) (merge_list (r list_a) list_b))
+      list_b
+    )
+  )
+
+  ; this macro in theory allows us to pass a list for the args of a function
+  (defmacro compile-call-to-f (to-call N lst)
+    (defun rlist (N elt)
+      (if (= N 0)
+          (c 5 (list elt))
+          (rlist (- N 1) (c 6 (list elt)))
+          )
+      )
+
+    (defun list-of-rlist (N M elt)
+      (if (= N M)
+          ()
+          (c (rlist M elt) (list-of-rlist N (+ M 1) elt))
+          )
+      )
+
+    (c to-call (list-of-rlist N 0 lst))
+  )
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
      (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
@@ -63,6 +92,8 @@
                                      (sha256tree PROPOSAL_SINGLETON_STRUCT)
     )
   )
+
+  ; this allows a proposal to make the treasury make an announcement
   (defun loop_through_announcements (proposal_puzhash announcement_messages_list)
     (if announcement_messages_list
       (c
@@ -76,12 +107,55 @@
     )
   )
 
-  (defun create_puzzle_asserts (PROPOSAL_TIMELOCK proposal_puzhash my_singleton_id new_puzhash new_amount_change announcement_messages_list)
+  (defun create_puzzle_asserts (
+    PROPOSAL_TIMELOCK
+    proposal_puzhash
+    my_singleton_id
+    new_puzhash
+    new_amount_change
+    announcement_messages_list
+    type
+  )
     (c
       (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (list my_singleton_id PROPOSAL_TIMELOCK))))  ; the proposal format will make this
       (c
-        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (c new_puzhash new_amount_change))))  ; the proposals innerpuz will make this
+        ; the proposals innerpuz will make this - this secures these values - we needn't secure extra_value as we check it ourselves
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (list type new_puzhash new_amount_change))))
         (loop_through_announcements proposal_puzhash announcement_messages_list)
+      )
+    )
+  )
+
+  (defun-inline recurry_self (TREASURY_MOD_HASH index_value_pairs_list CURRENT_PARAMS)
+    (compile-call-to-f
+      puzzle-hash-of-curried-params
+      (c
+        TREASURY_MOD_HASH
+        (recurry_by_index_ordered
+          index_value_pairs_list   ; MUST BE ORDERED
+          0  ; must be 0 on initial call
+          CURRENT_PARAMS  ; current list of curry params
+        )
+      )
+    )
+  )
+
+
+  (defun-inline recreate_self_condition (CURRENT_PARAMS type new_puzhash extra_value new_amount_change my_amount)
+    (if (= type 'u')
+      (list
+        (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change))
+        (list ASSERT_MY_PUZZLEHASH new_puzhash)
+      )
+      (if (= type 'r')
+        (list (list CREATE_NEW_COIN (recurry_self new_puzhash CURRENT_PARAMS) (+ my_amount new_amount_change)))
+        (if (= type 'n')
+          (if (= new_puzhash (sha56tree extra_value))  ; check that the solution contains a reveal of the new puzhash
+            (list (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change)))
+            (x)
+          )
+          (x)
+        )
       )
     )
   )
@@ -93,8 +167,8 @@
       ; this is the payout spend case
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, and the current amount of CATs in the world
-        (c
-          (list CREATE_COIN new_puzhash (+ my_amount new_amount_change))
+        (merge_list  ; this will be very short in practice
+          (recreate_self_condition CURRENT_PARAMS type new_puzhash extra_value new_amount_change my_amount)
           (create_puzzle_asserts
             PROPOSAL_TIMELOCK
             (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
@@ -116,6 +190,7 @@
             new_puzhash
             new_amount_change
             announcement_messages_list_or_payment_nonce
+            type
           )
         )
       )

@@ -2,7 +2,7 @@
 ; If the proposal passes the INNERPUZ inside it will run, and the DAO Treasury will accept a spend to change itself or spend money
 
 (mod (
-  SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+  SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
   CAT_MOD_HASH
@@ -143,7 +143,45 @@
     )
   )
 
+  ; the point of this function is to check for the presence of 0 or 1 puzzle_update announcements
+  ; a puzzle_update announcement must have one of the following as its hint
+  ; 'n' - totally new puzzlehash with a hint of the whole puzzle reveal
+  ; 'r' - a list of (index, value) pieces of data for the treasury to recurry itself with
+  ; 'u' - unchanged
+  ; The amount announced here is a relevant amount change, and can be a negative number - this is so you know what you get even if treasury amount changes
+
+  (defun loop_through_generated_conditions (
+    found_update
+    conditions
+  )
+    (if conditions
+      (c
+        (f conditions)
+        (loop_through_generated_conditions
+          (if (all (= (f conditions) CREATE_PUZZLE_ANNOUNCEMENT) (r (r (f conditions))))  ; check if there's a hint
+            (if  ; check if the hint is one of the ones we recognise
+              (any
+                (= (f (r (r (f conditions)))) 'u')
+                (= (f (r (r (f conditions)))) 'r')
+                (= (f (r (r (f conditions)))) 'n')
+              )
+              (if found_update (x) 1)  ; if so, assert we haven't already set flag, and then set flag
+              found_update  ; otherwise maintain flag
+            )
+            found_update  ; maintain flag
+          )
+          (r conditions)  ; continue loop
+        )
+      )
+      (if found_update
+        ()
+        (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; if no update created, we make a maintain announcement anyway for security
+      )
+    )
+  )
+
   ; main
+
   (if previous_votes
 
     ; if we're taking votes
@@ -235,11 +273,12 @@
           (c
             (list
               CREATE_PUZZLE_ANNOUNCEMENT
-              (sha256tree (list
-                TREASURY_ID
-                proposal_timelock  ; this is included so that the timer can assert and verify
+              (sha256tree
+                (list
+                  TREASURY_ID
+                  proposal_timelock  ; this is included so that the timer can assert and verify
+                )
               )
-            )
             )  ; create an announcement so the treasury can sync with us
             (c
               (list
@@ -260,7 +299,7 @@
                   (> YES_VOTES (calculate_win_percentage TOTAL_VOTES pass_margin))
                 )
                 (a INNERPUZ vote_amount_or_solution)  ; run proposed chialisp
-                ()  ; we don't run the chialisp, but we still move to the finished state
+                (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; we dont run the chialisp, but we still move to the finished state and let the treasury know to remain the same
               )
             )
           )
