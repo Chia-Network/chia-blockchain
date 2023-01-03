@@ -120,6 +120,11 @@ _T_RequireDLInclusion = TypeVar("_T_RequireDLInclusion", bound="RequireDLInclusi
 
 @dataclass(frozen=True)
 class RequireDLInclusion:
+    """
+    This class is a wallet action that forces a coin to rely on an announcement from one or more data layer singletons.
+    A singleton making the announcement must have a markle root in which a list of 32 byte values can be proven.
+    """
+
     launcher_ids: List[bytes32]
     values_to_prove: List[List[bytes32]]
 

@@ -94,6 +94,7 @@ class WalletActionManager:
             bundle_actions_left = list(map(nonce_payments, bundle_actions_left))
 
         all_actions: List[Solver] = bundle_actions_left.copy()
+        # We might be building a spend from the outputs of another spend
         all_descriptions: List[SpendDescription] = previous_spends.copy()
         new_spends: List[CoinSpend] = []
         for action_spec in request["actions"]:

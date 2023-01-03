@@ -1,3 +1,28 @@
+;; This puzzle uses the concept of "asset types" to create an announcement of a certain value from a certain
+;; puzzle hash that can be modified by the solver of the coin. This is especially useful for requesting payments of
+;; coins in which you know some of the information about the coin, but not necessarily all of it.
+;;
+;; An "asset type" is defined by 4 things:
+;; 1) A "mod" or base program that all variable arguments are curried into
+;; 2) A "solution template" which gives information about the tree structure of the solution that the mod is expecting.
+;;    The solution template is what tells this program the arguments that are known and the arguments that can be solved.
+;;    For example, most programs (with as an example 2 curried arguments) are going to have a template of (1 1 0 . $).
+;;    This template indicates that there are two curried arguments, the next curried argument is the inner puzzle, and
+;;    the rest of the solution is variable and solved during spend time.
+;;
+;;    If you so desire, you can change a 1 to a -1 to mark that you are ambivalent to the value of that argument
+;;    and the spender can supply what it will be at spend time.
+;;
+;;    An example is an NFT in which you care about recieving exactly that NFT, but you don't care if the metadata
+;;    inside of it has changed. The spender of this puzzle can tell you what to expect as the metadata during spend time.
+;; 3) "committed arguments" are arguments that are marked with a `1` in the solution template
+;;    and are supplied by the puzzle creator.
+;; 4) "solvable arguments" are arguments that are marked with a `-1` in the solution template
+;;    and are supplied by the coin spender
+;;
+;; This particular puzzle is only concerned with the final puzzle hash and therefore does not ask for the full
+;; mods, committed arguments, or solvable arguments, but instead their tree hashes
+
 (mod
   (
     MOD_HASHES
@@ -19,12 +44,16 @@
   (defconstant Q_KW #q)
   (defconstant C_KW #c)
   (defconstant A_KW #a)
+
+  ; solution template constants
   (defconstant COMMITTED 1)
   (defconstant SOLVED -1)
   (defconstant INNER 0)
   (defconstant ENVIRONMENT "$")
 
   (defun generate_environment_hash (spec committed_args solved_args puzhash)
+    ;; This generates the hash of the following:
+    ;; (c (q . arg) (c (q . arg) etc.)) where the very bottom of the cons-chain is a 1
     (if (l spec)
         (sha256 TWO
           (sha256 ONE C_KW)
@@ -51,6 +80,8 @@
 
   (defun wrap_all (MOD_HASHES SOLUTION_TEMPLATES COMMITTED_ARGUMENTS solved_arguments PUZZLE_HASH)
     (if SOLUTION_TEMPLATES
+        ;; This generates the tree hash of the following:
+        ;; (a (q . mod) environment_hash)
         (sha256 TWO
           (sha256 ONE A_KW)
           (sha256 TWO

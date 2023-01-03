@@ -718,7 +718,7 @@ class TradeManager:
         if solver is None:
             solver = Solver({})
 
-        deconstructed_spend: Optional[Solver] = await self.check_for_new_offer_type(offer)
+        deconstructed_spend: Optional[Solver] = self.check_for_new_offer_type(offer)
         if deconstructed_spend is not None:
             modified_solver = await old_solver_to_new(self.wallet_state_manager, solver)
             complement_summary: Solver = await generate_summary_complement(
@@ -739,10 +739,12 @@ class TradeManager:
                     offer_to_spend(offer),
                 ]
             )
-            final_spend_bundle: SpendBundle = self.wallet_state_manager.action_manager.solve_spend(
+            solved_spend_bundle: SpendBundle = self.wallet_state_manager.action_manager.solve_spend(
                 full_spend, modified_solver
             )
-            offer_no_payments: Offer = Offer.from_spend_bundle(final_spend_bundle)
+            offer_no_payments: Offer = Offer.from_spend_bundle(solved_spend_bundle)
+            # The new action manager has already encoded the requested payment info in a way it itself can understand
+            # We must add the legacy style dummy spends into the bundle so that the trade manager can understand it
             payment_spends: List[CoinSpend] = [
                 request_payment_to_legacy_encoding(
                     RequestPayment.from_solver(action),
@@ -801,7 +803,7 @@ class TradeManager:
 
         self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
-        final_spend_bundle = complete_offer.to_valid_spend()
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
 
@@ -875,6 +877,8 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 for info in driver_dict.values():
+                    # We've already validated that there's a DL singleton in the offer, now lets check if there's
+                    # anything that's NOT a DL singleton, which signals to us this is a pay-for-inclusion offer
                     if (
                         not (
                             info.check_type(
@@ -934,22 +938,10 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
-                for asset_id in [*offer.requested_payments.keys(), *offer.get_offered_coins().keys()]:
-                    if asset_id is None or not (
-                        offer.driver_dict[asset_id].check_type(
-                            [
-                                AssetType.SINGLETON.value,
-                                AssetType.METADATA.value,
-                            ]
-                        )
-                        and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
-                    ):
-                        offer_as_spend: SpendBundle = offer_to_spend(offer)
-                        deconstructed_spend: Solver = self.wallet_state_manager.action_manager.deconstruct_spend(
-                            offer_as_spend
-                        )
-                        old_summary: Dict[str, Any] = new_summary_to_old(deconstructed_spend)
-                        return old_summary
+                deconstructed_spend: Optional[Solver] = self.check_for_new_offer_type(offer)
+                if deconstructed_spend is not None:
+                    old_summary: Dict[str, Any] = new_summary_to_old(deconstructed_spend)
+                    return old_summary
 
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
@@ -971,7 +963,7 @@ class TradeManager:
 
         return offer
 
-    async def check_for_new_offer_type(self, offer: Offer) -> Optional[Solver]:
+    def check_for_new_offer_type(self, offer: Offer) -> Optional[Solver]:
         for puzzle_info in offer.driver_dict.values():
             if (
                 puzzle_info.check_type(

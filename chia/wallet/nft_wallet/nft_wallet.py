@@ -31,6 +31,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     LAUNCHER_PUZZLE_HASH,
     NFT_METADATA_UPDATER,
     NFT_OWNERSHIP_LAYER,
+    NFT_OWNERSHIP_LAYER_HASH,
     NFT_STATE_LAYER_MOD,
     NFT_STATE_LAYER_MOD_HASH,
     SINGLETON_MOD_HASH,
@@ -1668,6 +1669,7 @@ class NFTWallet:
     @staticmethod
     def get_asset_types(request: Solver) -> List[Solver]:
         return [
+            # solution template: ((SINGLETON_MOD_HASH . (LAUCHER_ID . LAUNCHER_PH)) INNER_PUZZLE . rest_of_solution)
             Solver(
                 {
                     "mod": disassemble(SINGLETON_TOP_LAYER_MOD),
@@ -1680,6 +1682,7 @@ class NFTWallet:
                     ),
                 }
             ),
+            # solution template: (NFT_MOD_HASH METADATA METADATA_UPDATER_HASH INNER_PUZZLE . rest_of_solution)
             Solver(
                 {
                     "mod": disassemble(NFT_STATE_LAYER_MOD),
@@ -1698,6 +1701,7 @@ class NFTWallet:
                     ),
                 }
             ),
+            # solution template: (OWNERSHIP_MOD_HASH CURRENT_OWNER TRANSFER_PROGRAM INNER_PUZZLE . rest_of_solution)
             *(
                 [
                     Solver(
@@ -1711,7 +1715,7 @@ class NFTWallet:
                             ),
                             "committed_args": (
                                 "("
-                                f"{'0x' + NFT_STATE_LAYER_MOD_HASH.hex()} "
+                                f"{'0x' + NFT_OWNERSHIP_LAYER_HASH.hex()} "
                                 f"{request.info['owner'] if 'owner' in request else '()'} "
                                 f"{request.info['transfer_program'] if 'transfer_program' in request else '()'} "
                                 "() . ())"

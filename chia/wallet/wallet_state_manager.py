@@ -1825,14 +1825,6 @@ class WalletStateManager:
 
         return coin_infos
 
-    async def describe_spend(self, spend: CoinSpend) -> Solver:
-        return Solver(
-            {
-                "coin_id": "0x" + spend.coin.name().hex(),
-                "amount": str(spend.coin.amount),
-            }
-        )
-
     async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> Type[OuterDriver]:
         matches: List[Type[OuterDriver]] = []
         for wallet in self.outer_wallets:
