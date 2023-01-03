@@ -9,7 +9,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
@@ -35,7 +35,7 @@ from chia.protocols.wallet_protocol import (
     RespondFeeEstimates,
     RespondSESInfo,
 )
-from chia.server.outbound_message import Message, make_msg
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
@@ -53,7 +53,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_node, api_request
 from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
@@ -67,7 +67,9 @@ else:
     FullNode = object
 
 
+@api_node()
 class FullNodeAPI:
+    node_type: ClassVar[NodeType] = NodeType.FULL_NODE
     full_node: FullNode
     executor: ThreadPoolExecutor
 

@@ -572,7 +572,7 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     # Test get_transactions to address
     ph_by_addr = await wallet.get_new_puzzlehash()
     await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"))
-    await client.farm_block(encode_puzzle_hash(ph_by_addr, "txch"))
+    await env.full_node.api.farm_blocks_to_puzzlehash(count=1, farm_to=ph_by_addr)
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1

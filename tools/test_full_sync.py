@@ -11,7 +11,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional
+from typing import Awaitable, Callable, Iterator, List, Optional
 
 import aiosqlite
 import click
@@ -29,6 +29,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
+from chia.util.streamable import Streamable
 from tools.test_constants import test_constants as TEST_CONSTANTS
 
 
@@ -59,10 +60,21 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 
 class FakeServer:
-    async def send_to_all(self, messages: List[Message], node_type: NodeType):
+    async def send_to_all(
+        self,
+        request_method: Callable[..., Awaitable[Optional[Message]]],
+        message: Streamable,
+        # node_type: NodeType,
+    ) -> None:
         pass
 
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
+    async def send_to_all_except(
+        self,
+        request_method: Callable[..., Awaitable[Optional[Message]]],
+        message: Streamable,
+        # node_type: NodeType,
+        exclude: bytes32,
+    ) -> None:
         pass
 
     def set_received_message_callback(self, callback: Callable):

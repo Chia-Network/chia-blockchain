@@ -16,10 +16,10 @@ from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import timelord_protocol
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import default_get_connections
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.timelord.iters_from_block import iters_from_block
@@ -488,8 +488,9 @@ class Timelord:
                     rc_proof,
                 )
                 if self._server is not None:
-                    msg = make_msg(ProtocolMessageTypes.new_signage_point_vdf, response)
-                    await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                    from chia.full_node.full_node_api import FullNodeAPI
+
+                    await self.server.send_to_all(FullNodeAPI.new_signage_point_vdf, response)
                 # Cleanup the signage point from memory.
                 to_remove.append((signage_iter, signage_point_index))
 
@@ -599,9 +600,8 @@ class Timelord:
                         icc_info,
                         icc_proof,
                     )
-                    msg = make_msg(ProtocolMessageTypes.new_infusion_point_vdf, response)
                     if self._server is not None:
-                        await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                        await self.server.send_to_all(FullNodeAPI.new_infusion_point_vdf, response)
 
                     self.proofs_finished = self._clear_proof_list(iteration)
 
@@ -809,11 +809,8 @@ class Timelord:
                 SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
             )
             if self._server is not None:
-                msg = make_msg(
-                    ProtocolMessageTypes.new_end_of_sub_slot_vdf,
-                    timelord_protocol.NewEndOfSubSlotVDF(eos_bundle),
-                )
-                await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                msg = timelord_protocol.NewEndOfSubSlotVDF(eos_bundle)
+                await self.server.send_to_all(FullNodeAPI.new_end_of_sub_slot_vdf, msg)
 
             log.info(
                 f"Built end of subslot bundle. cc hash: {eos_bundle.challenge_chain.get_hash()}. New_difficulty: "
@@ -1068,8 +1065,7 @@ class Timelord:
                         vdf_info, vdf_proof, header_hash, height, field_vdf
                     )
                     if self._server is not None:
-                        message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
-                        await self.server.send_to_all([message], NodeType.FULL_NODE)
+                        await self.server.send_to_all(FullNodeAPI.respond_compact_proof_of_time, response)
                     self.state_changed(
                         "new_compact_proof", {"header_hash": header_hash, "height": height, "field_vdf": field_vdf}
                     )
@@ -1187,8 +1183,7 @@ class Timelord:
                         picked_info.field_vdf,
                     )
                     if self._server is not None:
-                        message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
-                        await self.server.send_to_all([message], NodeType.FULL_NODE)
+                        await self.server.send_to_all(FullNodeAPI.respond_compact_proof_of_time, response)
                 except Exception as e:
                     log.error(f"Exception manage discriminant queue: {e}")
                     tb = traceback.format_exc()
