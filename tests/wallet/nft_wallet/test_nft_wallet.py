@@ -38,7 +38,7 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
 
 
 async def wait_rpc_state_condition(
-    timeout: int,
+    timeout: float,
     async_function: Callable[[Dict[str, Any]], Awaitable[Dict]],
     params: List[Dict],
     condition_func: Callable[[Dict[str, Any]], bool],

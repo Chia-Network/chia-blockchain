@@ -975,6 +975,9 @@ class PoolWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("PoolWallet does not support puzzle_hash_for_pk")
 
+    def get_name(self) -> str:
+        return self.wallet_info.name
+
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol

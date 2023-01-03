@@ -573,14 +573,12 @@ class ChiaServer:
                         )
                 raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
 
-    async def send_to_all(self, messages: List[Message], node_type: NodeType) -> None:
-        await self.validate_broadcast_message_type(messages, node_type)
-        for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type:
-                for message in messages:
-                    await connection.send_message(message)
-
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32) -> None:
+    async def send_to_all(
+        self,
+        messages: List[Message],
+        node_type: NodeType,
+        exclude: Optional[bytes32] = None,
+    ) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
