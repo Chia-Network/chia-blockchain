@@ -95,7 +95,7 @@ def test_mempool_fee_estimator_add_item() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
-    mempool.add_to_pool(item)
+    mempool.add_to_pool(item, block_height=uint32(1))
     assert mempool.fee_estimator.add_mempool_item_called_count == 1  # type: ignore[attr-defined]
 
 

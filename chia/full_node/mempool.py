@@ -13,7 +13,13 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
+
+
+class MempoolRemoveReason(Enum):
+    CONFLICT = 1
+    BLOCK_INCLUSION = 2
+    POOL_FULL = 3
 
 
 class MempoolRemoveReason(Enum):
@@ -54,7 +60,7 @@ class Mempool:
         else:
             return 0
 
-    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
+    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason, block_height: uint32) -> None:
         """
         Removes an item from the mempool.
         """
@@ -76,11 +82,11 @@ class Mempool:
                 del self.sorted_spends[item.fee_per_cost]
             self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost - item.cost))
             assert self.total_mempool_cost >= 0
-            info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now())
+            info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now(), block_height)
             if reason != MempoolRemoveReason.BLOCK_INCLUSION:
                 self.fee_estimator.remove_mempool_item(info, item)
 
-    def add_to_pool(self, item: MempoolItem) -> None:
+    def add_to_pool(self, item: MempoolItem, block_height: uint32) -> None:
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
@@ -89,7 +95,7 @@ class Mempool:
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
             to_remove: MempoolItem = list(val.values())[0]
-            self.remove_from_pool([to_remove.name], MempoolRemoveReason.POOL_FULL)
+            self.remove_from_pool([to_remove.name], MempoolRemoveReason.POOL_FULL, block_height)
 
         self.spends[item.name] = item
 
@@ -106,7 +112,7 @@ class Mempool:
             self.removal_coin_id_to_spendbundle_ids[coin_id].append(item.name)
 
         self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost + item.cost))
-        info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now())
+        info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now(), block_height)
         self.fee_estimator.add_mempool_item(info, item)
 
     def at_full_capacity(self, cost: int) -> bool:

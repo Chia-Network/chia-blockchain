@@ -44,6 +44,7 @@ class FeeMempoolInfo:
     mempool_info: MempoolInfo
     current_mempool_cost: CLVMCost  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
     time: datetime  # Local time this sample was taken
+    height: uint32  # Current blockchain height
 
 
 EmptyMempoolInfo = MempoolInfo(
@@ -51,11 +52,7 @@ EmptyMempoolInfo = MempoolInfo(
 )
 
 
-EmptyFeeMempoolInfo = FeeMempoolInfo(
-    EmptyMempoolInfo,
-    CLVMCost(uint64(0)),
-    datetime.min,
-)
+EmptyFeeMempoolInfo = FeeMempoolInfo(EmptyMempoolInfo, CLVMCost(uint64(0)), datetime.min, uint32(0))
 
 
 @dataclass(frozen=True)
