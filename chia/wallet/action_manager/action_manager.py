@@ -15,11 +15,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.action_manager.action_aliases import DirectPayment, RequestPayment
-from chia.wallet.action_manager.protocols import (
-    ActionAlias,
-    SpendDescription,
-    WalletAction,
-)
+from chia.wallet.action_manager.protocols import ActionAlias, SpendDescription, WalletAction
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver, cast_to_int
 
