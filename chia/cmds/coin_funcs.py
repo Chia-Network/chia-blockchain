@@ -113,7 +113,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     target_coin_amount = Decimal(args["target_coin_amount"])
     target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in args["target_coin_ids"]]
     largest = bool(args["largest"])
-    final_fee = uint64(int(Decimal(args["fee"] * units["chia"])))
+    final_fee = uint64(int(Decimal(args["fee"]) * units["chia"]))
     if number_of_coins > 500:
         raise ValueError(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
     try:
@@ -176,7 +176,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
 async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id: int = args["id"]
     number_of_coins = args["number_of_coins"]
-    final_fee = uint64(int(Decimal(args["fee"] * units["chia"])))
+    final_fee = uint64(int(Decimal(args["fee"]) * units["chia"]))
     # new args
     amount_per_coin = Decimal(args["amount_per_coin"])
     target_coin_id: bytes32 = bytes32.from_hexstr(args["target_coin_id"])
