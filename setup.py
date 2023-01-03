@@ -43,7 +43,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "anyio",
     "build",
-    "coverage==7.0.2",
+    "coverage @ git+https://github.com/nedbat/coveragepy@nedbat/fix-1522",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
