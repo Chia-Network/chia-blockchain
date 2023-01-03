@@ -179,6 +179,19 @@ class WalletTransactionStore:
             return TransactionRecord.from_bytes(rows[0][0])
         return None
 
+    async def get_transactions_by_height(self, height: uint32) -> List[TransactionRecord]:
+        """
+        Checks DB and cache for TransactionRecord with id: id and returns it.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            # NOTE: bundle_id is being stored as bytes, not hex
+            rows = list(
+                await conn.execute_fetchall(
+                    "SELECT transaction_record from transaction_record WHERE confirmed_at_height=?", (height,)
+                )
+            )
+        return [TransactionRecord.from_bytes(row[0]) for row in rows]
+
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.

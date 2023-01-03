@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type
 
 from blspy import PrivateKey
+
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
 from chia.util.ints import uint32
-from chia.util.keychain import KeyData, Keychain
-from chia.util.streamable import streamable, Streamable
-from pathlib import Path
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Type
+from chia.util.keychain import Keychain, KeyData
+from chia.util.streamable import Streamable, streamable
 
 # Commands that are handled by the KeychainServer
 keychain_commands = [
@@ -166,7 +169,7 @@ class KeychainServer:
             }
 
         try:
-            self.get_keychain_for_request(request).add_private_key(mnemonic, label)
+            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
         except KeyError as e:
             return {
                 "success": False,
@@ -180,7 +183,7 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True}
+        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():

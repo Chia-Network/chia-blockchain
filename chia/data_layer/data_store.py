@@ -4,7 +4,8 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
-from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
+from pathlib import Path
+from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 
@@ -30,7 +31,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -43,24 +44,26 @@ log = logging.getLogger(__name__)
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
-    db: aiosqlite.Connection
-    db_wrapper: DBWrapper
+    db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
-        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
-        self.db.row_factory = aiosqlite.Row
+    async def create(cls, database: Union[str, Path], uri: bool = False) -> "DataStore":
+        db_wrapper = await DBWrapper2.create(
+            database=database,
+            uri=uri,
+            journal_mode="WAL",
+            # Setting to FULL despite other locations being configurable.  If there are
+            # performance issues we can consider other the implications of other options.
+            synchronous="FULL",
+            # If foreign key checking gets turned off, please add corresponding check
+            # methods and enable foreign key checking in the tests.
+            foreign_keys=True,
+            row_factory=aiosqlite.Row,
+        )
+        self = cls(db_wrapper=db_wrapper)
 
-        await self.db.execute("pragma journal_mode=wal")
-        # Setting to FULL despite other locations being configurable.  If there are
-        # performance issues we can consider other the implications of other options.
-        await self.db.execute("pragma synchronous=FULL")
-        # If foreign key checking gets turned off, please add corresponding check
-        # methods.
-        await self.db.execute("PRAGMA foreign_keys=ON")
-
-        async with self.db_wrapper.locked_transaction():
-            await self.db.execute(
+        async with db_wrapper.writer() as writer:
+            await writer.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS node(
                     hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
@@ -88,7 +91,7 @@ class DataStore:
                 )
                 """
             )
-            await self.db.execute(
+            await writer.execute(
                 """
                 CREATE TRIGGER IF NOT EXISTS no_node_updates
                 BEFORE UPDATE ON node
@@ -97,7 +100,7 @@ class DataStore:
                 END
                 """
             )
-            await self.db.execute(
+            await writer.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS root(
                     tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
@@ -116,7 +119,7 @@ class DataStore:
             # and the node table also enforcing a similar relationship in the
             # other direction.
             # FOREIGN KEY(ancestor) REFERENCES ancestors(ancestor)
-            await self.db.execute(
+            await writer.execute(
                 """
                 CREATE TABLE IF NOT EXISTS ancestors(
                     hash BLOB NOT NULL REFERENCES node,
@@ -128,7 +131,7 @@ class DataStore:
                 )
                 """
             )
-            await self.db.execute(
+            await writer.execute(
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
@@ -140,7 +143,7 @@ class DataStore:
                 )
                 """
             )
-            await self.db.execute(
+            await writer.execute(
                 """
                 CREATE INDEX IF NOT EXISTS node_hash ON root(node_hash)
                 """
@@ -148,9 +151,12 @@ class DataStore:
 
         return self
 
+    async def close(self) -> None:
+        await self.db_wrapper.close()
+
     @asynccontextmanager
-    async def transaction(self, lock: bool = True) -> AsyncIterator[None]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def transaction(self) -> AsyncIterator[None]:
+        async with self.db_wrapper.writer():
             yield
 
     async def _insert_root(
@@ -164,41 +170,43 @@ class DataStore:
         # https://github.com/Chia-Network/chia-blockchain/pull/9284
         tree_id = bytes32(tree_id)
 
-        if generation is None:
-            existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+        async with self.db_wrapper.writer() as writer:
+            if generation is None:
+                existing_generation = await self.get_tree_generation(tree_id=tree_id)
 
-            if existing_generation is None:
-                generation = 0
-            else:
-                generation = existing_generation + 1
+                if existing_generation is None:
+                    generation = 0
+                else:
+                    generation = existing_generation + 1
 
-        await self.db.execute(
-            """
-            INSERT INTO root(tree_id, generation, node_hash, status) VALUES(:tree_id, :generation, :node_hash, :status)
-            """,
-            {
-                "tree_id": tree_id,
-                "generation": generation,
-                "node_hash": None if node_hash is None else node_hash,
-                "status": status.value,
-            },
-        )
-
-        # `node_hash` is now a root, so it has no ancestor.
-        # Don't change the ancestor table unless the root is committed.
-        if node_hash is not None and status == Status.COMMITTED:
-            values = {
-                "hash": node_hash,
-                "tree_id": tree_id,
-                "generation": generation,
-            }
-            await self.db.execute(
+            await writer.execute(
                 """
-                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                VALUES (:hash, NULL, :tree_id, :generation)
+                INSERT INTO root(tree_id, generation, node_hash, status)
+                VALUES(:tree_id, :generation, :node_hash, :status)
                 """,
-                values,
+                {
+                    "tree_id": tree_id,
+                    "generation": generation,
+                    "node_hash": None if node_hash is None else node_hash,
+                    "status": status.value,
+                },
             )
+
+            # `node_hash` is now a root, so it has no ancestor.
+            # Don't change the ancestor table unless the root is committed.
+            if node_hash is not None and status == Status.COMMITTED:
+                values = {
+                    "hash": node_hash,
+                    "tree_id": tree_id,
+                    "generation": generation,
+                }
+                await writer.execute(
+                    """
+                    INSERT INTO ancestors(hash, ancestor, tree_id, generation)
+                    VALUES (:hash, NULL, :tree_id, :generation)
+                    """,
+                    values,
+                )
 
     async def _insert_node(
         self,
@@ -219,32 +227,34 @@ class DataStore:
             "value": value,
         }
 
-        cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
-        result = await cursor.fetchone()
+        async with self.db_wrapper.writer() as writer:
+            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+            result = await cursor.fetchone()
 
-        if result is None:
-            await self.db.execute(
-                """
-                INSERT INTO node(hash, node_type, left, right, key, value)
-                VALUES(:hash, :node_type, :left, :right, :key, :value)
-                """,
-                values,
-            )
-        else:
-            result_dict = dict(result)
-            if result_dict != values:
-                raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
+            if result is None:
+                await writer.execute(
+                    """
+                    INSERT INTO node(hash, node_type, left, right, key, value)
+                    VALUES(:hash, :node_type, :left, :right, :key, :value)
+                    """,
+                    values,
+                )
+            else:
+                result_dict = dict(result)
+                if result_dict != values:
+                    raise Exception(
+                        f"Requested insertion of node with matching hash but other values differ: {node_hash}"
+                    )
 
     async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
-        async with self.db_wrapper.locked_transaction(lock=True):
-            if node_type == NodeType.INTERNAL:
-                left_hash = bytes32(value1)
-                right_hash = bytes32(value2)
-                node_hash = internal_hash(left_hash, right_hash)
-                await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
-            else:
-                node_hash = leaf_hash(key=value1, value=value2)
-                await self._insert_node(node_hash, node_type, None, None, value1, value2)
+        if node_type == NodeType.INTERNAL:
+            left_hash = bytes32(value1)
+            right_hash = bytes32(value2)
+            node_hash = internal_hash(left_hash, right_hash)
+            await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
+        else:
+            node_hash = leaf_hash(key=value1, value=value2)
+            await self._insert_node(node_hash, node_type, None, None, value1, value2)
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         node_hash: bytes32 = internal_hash(left_hash=left_hash, right_hash=right_hash)
@@ -269,33 +279,34 @@ class DataStore:
     ) -> None:
         node_hash = internal_hash(left_hash=left_hash, right_hash=right_hash)
 
-        for hash in (left_hash, right_hash):
-            values = {
-                "hash": hash,
-                "ancestor": node_hash,
-                "tree_id": tree_id,
-                "generation": generation,
-            }
-            cursor = await self.db.execute(
-                "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
-                {"hash": hash, "generation": generation, "tree_id": tree_id},
-            )
-            result = await cursor.fetchone()
-            if result is None:
-                await self.db.execute(
-                    """
-                    INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                    VALUES (:hash, :ancestor, :tree_id, :generation)
-                    """,
-                    values,
+        async with self.db_wrapper.writer() as writer:
+            for hash in (left_hash, right_hash):
+                values = {
+                    "hash": hash,
+                    "ancestor": node_hash,
+                    "tree_id": tree_id,
+                    "generation": generation,
+                }
+                cursor = await writer.execute(
+                    "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
+                    {"hash": hash, "generation": generation, "tree_id": tree_id},
                 )
-            else:
-                result_dict = dict(result)
-                if result_dict != values:
-                    raise Exception(
-                        "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
-                        f"{hash} {generation} {tree_id}"
+                result = await cursor.fetchone()
+                if result is None:
+                    await writer.execute(
+                        """
+                        INSERT INTO ancestors(hash, ancestor, tree_id, generation)
+                        VALUES (:hash, :ancestor, :tree_id, :generation)
+                        """,
+                        values,
                     )
+                else:
+                    result_dict = dict(result)
+                    if result_dict != values:
+                        raise Exception(
+                            "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
+                            f"{hash} {generation} {tree_id}"
+                        )
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
@@ -314,9 +325,9 @@ class DataStore:
 
         return node_hash
 
-    async def get_pending_root(self, tree_id: bytes32, *, lock: bool = True) -> Optional[Root]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+    async def get_pending_root(self, tree_id: bytes32) -> Optional[Root]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status",
                 {"tree_id": tree_id, "status": Status.PENDING.value},
             )
@@ -332,22 +343,22 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def clear_pending_roots(self, tree_id: bytes32, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
+    async def clear_pending_roots(self, tree_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
                 {"tree_id": tree_id, "status": Status.PENDING.value},
             )
 
-    async def shift_root_generations(self, tree_id: bytes32, shift_size: int, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+    async def shift_root_generations(self, tree_id: bytes32, shift_size: int) -> None:
+        async with self.db_wrapper.writer():
+            root = await self.get_tree_root(tree_id=tree_id)
             for _ in range(shift_size):
                 await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=Status.COMMITTED)
 
-    async def change_root_status(self, root: Root, status: Status = Status.PENDING, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
+    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
                 (
                     status.value,
@@ -363,7 +374,7 @@ class DataStore:
                     "tree_id": root.tree_id,
                     "generation": root.generation,
                 }
-                await self.db.execute(
+                await writer.execute(
                     """
                     INSERT INTO ancestors(hash, ancestor, tree_id, generation)
                     VALUES (:hash, NULL, :tree_id, :generation)
@@ -376,9 +387,9 @@ class DataStore:
             # pylint seems to think these are bound methods not unbound methods.
             await check(self)  # pylint: disable=too-many-function-args
 
-    async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM root ORDER BY tree_id, generation")
+    async def _check_roots_are_incrementing(self) -> None:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM root ORDER BY tree_id, generation")
             roots = [Root.from_row(row=row) async for row in cursor]
 
             roots_by_tree: Dict[bytes32, List[Root]] = defaultdict(list)
@@ -396,9 +407,9 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(tree_ids=bad_trees)
 
-    async def _check_hashes(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node")
+    async def _check_hashes(self) -> None:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM node")
 
             bad_node_hashes: List[bytes32] = []
             async for row in cursor:
@@ -419,29 +430,27 @@ class DataStore:
         _check_hashes,
     )
 
-    async def create_tree(self, tree_id: bytes32, *, lock: bool = True, status: Status = Status.PENDING) -> bool:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
+    async def create_tree(self, tree_id: bytes32, status: Status = Status.PENDING) -> bool:
+        await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
 
         return True
 
-    async def table_is_empty(self, tree_id: bytes32, *, lock: bool = True) -> bool:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            tree_root = await self.get_tree_root(tree_id=tree_id, lock=False)
+    async def table_is_empty(self, tree_id: bytes32) -> bool:
+        tree_root = await self.get_tree_root(tree_id=tree_id)
 
         return tree_root.node_hash is None
 
-    async def get_tree_ids(self, *, lock: bool = True) -> Set[bytes32]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT DISTINCT tree_id FROM root")
+    async def get_tree_ids(self) -> Set[bytes32]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT DISTINCT tree_id FROM root")
 
-        tree_ids = {bytes32(row["tree_id"]) async for row in cursor}
+            tree_ids = {bytes32(row["tree_id"]) async for row in cursor}
 
         return tree_ids
 
-    async def get_tree_generation(self, tree_id: bytes32, *, lock: bool = True) -> int:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+    async def get_tree_generation(self, tree_id: bytes32) -> int:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
                 "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id AND status == :status",
                 {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
@@ -452,11 +461,11 @@ class DataStore:
         generation: int = row["MAX(generation)"]
         return generation
 
-    async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None) -> Root:
+        async with self.db_wrapper.reader() as reader:
             if generation is None:
-                generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-            cursor = await self.db.execute(
+                generation = await self.get_tree_generation(tree_id=tree_id)
+            cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation AND status == :status",
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
             )
@@ -471,9 +480,9 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def tree_id_exists(self, tree_id: bytes32, *, lock: bool = True) -> bool:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+    async def tree_id_exists(self, tree_id: bytes32) -> bool:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
                 "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status",
                 {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
@@ -483,11 +492,9 @@ class DataStore:
             return False
         return True
 
-    async def get_roots_between(
-        self, tree_id: bytes32, generation_begin: int, generation_end: int, *, lock: bool = True
-    ) -> List[Root]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+    async def get_roots_between(self, tree_id: bytes32, generation_begin: int, generation_end: int) -> List[Root]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 "AND generation >= :generation_begin AND generation < :generation_end ORDER BY generation ASC",
                 {"tree_id": tree_id, "generation_begin": generation_begin, "generation_end": generation_end},
@@ -497,12 +504,12 @@ class DataStore:
         return roots
 
     async def get_last_tree_root_by_hash(
-        self, tree_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None, *, lock: bool = True
+        self, tree_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None
     ) -> Optional[Root]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+        async with self.db_wrapper.reader() as reader:
             max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
             node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
-            cursor = await self.db.execute(
+            cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 f"{max_generation_str}"
                 f"{node_hash_str}"
@@ -520,16 +527,14 @@ class DataStore:
         node_hash: bytes32,
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
-        *,
-        lock: bool = True,
     ) -> List[InternalNode]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+        async with self.db_wrapper.reader() as reader:
             if root_hash is None:
-                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root = await self.get_tree_root(tree_id=tree_id)
                 root_hash = root.node_hash
             if root_hash is None:
                 raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
-            cursor = await self.db.execute(
+            cursor = await reader.execute(
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left, right, key, value, depth) AS (
@@ -561,11 +566,11 @@ class DataStore:
         return ancestors
 
     async def get_ancestors_optimized(
-        self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None, lock: bool = True
+        self, node_hash: bytes32, tree_id: bytes32, generation: Optional[int] = None
     ) -> List[InternalNode]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+        async with self.db_wrapper.reader():
             nodes = []
-            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+            root = await self.get_tree_root(tree_id=tree_id, generation=generation)
             if root.node_hash is None:
                 return []
 
@@ -582,14 +587,12 @@ class DataStore:
 
             return nodes
 
-    async def get_internal_nodes(
-        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
-    ) -> List[InternalNode]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def get_internal_nodes(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> List[InternalNode]:
+        async with self.db_wrapper.reader() as reader:
             if root_hash is None:
-                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root = await self.get_tree_root(tree_id=tree_id)
                 root_hash = root.node_hash
-            cursor = await self.db.execute(
+            cursor = await reader.execute(
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left, right, key, value) AS (
@@ -613,14 +616,12 @@ class DataStore:
 
         return internal_nodes
 
-    async def get_keys_values(
-        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
-    ) -> List[TerminalNode]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def get_keys_values(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> List[TerminalNode]:
+        async with self.db_wrapper.reader() as reader:
             if root_hash is None:
-                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root = await self.get_tree_root(tree_id=tree_id)
                 root_hash = root.node_hash
-            cursor = await self.db.execute(
+            cursor = await reader.execute(
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
@@ -665,9 +666,9 @@ class DataStore:
 
         return terminal_nodes
 
-    async def get_node_type(self, node_hash: bytes32, *, lock: bool = True) -> NodeType:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash})
+    async def get_node_type(self, node_hash: bytes32) -> NodeType:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash})
             raw_node_type = await cursor.fetchone()
 
         if raw_node_type is None:
@@ -675,17 +676,15 @@ class DataStore:
 
         return NodeType(raw_node_type["node_type"])
 
-    async def get_terminal_node_for_seed(
-        self, tree_id: bytes32, seed: bytes32, *, lock: bool = True
-    ) -> Optional[bytes32]:
+    async def get_terminal_node_for_seed(self, tree_id: bytes32, seed: bytes32) -> Optional[bytes32]:
         path = int.from_bytes(seed, byteorder="big")
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id, lock=False)
+        async with self.db_wrapper.reader():
+            root = await self.get_tree_root(tree_id)
             if root is None or root.node_hash is None:
                 return None
             node_hash = root.node_hash
             while True:
-                node = await self.get_node(node_hash, lock=False)
+                node = await self.get_node(node_hash)
                 assert node is not None
                 if isinstance(node, TerminalNode):
                     break
@@ -709,17 +708,15 @@ class DataStore:
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
-        *,
-        lock: bool = True,
     ) -> bytes32:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
+        async with self.db_wrapper.writer():
+            was_empty = await self.table_is_empty(tree_id=tree_id)
             if was_empty:
                 reference_node_hash = None
                 side = None
             else:
                 seed = leaf_hash(key=key, value=value)
-                reference_node_hash = await self.get_terminal_node_for_seed(tree_id, seed, lock=False)
+                reference_node_hash = await self.get_terminal_node_for_seed(tree_id, seed)
                 side = self.get_side_for_seed(seed)
 
             return await self.insert(
@@ -729,24 +726,20 @@ class DataStore:
                 reference_node_hash=reference_node_hash,
                 side=side,
                 hint_keys_values=hint_keys_values,
-                lock=False,
                 use_optimized=use_optimized,
                 status=status,
             )
 
-    async def get_keys_values_dict(self, tree_id: bytes32, *, lock: bool = True) -> Dict[bytes, bytes]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
-            return {node.key: node.value for node in pairs}
+    async def get_keys_values_dict(self, tree_id: bytes32) -> Dict[bytes, bytes]:
+        pairs = await self.get_keys_values(tree_id=tree_id)
+        return {node.key: node.value for node in pairs}
 
-    async def get_keys(
-        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
-    ) -> List[bytes]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def get_keys(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> List[bytes]:
+        async with self.db_wrapper.reader() as reader:
             if root_hash is None:
-                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root = await self.get_tree_root(tree_id=tree_id)
                 root_hash = root.node_hash
-            cursor = await self.db.execute(
+            cursor = await reader.execute(
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left, right, key) AS (
@@ -776,17 +769,15 @@ class DataStore:
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
-        *,
-        lock: bool = True,
     ) -> bytes32:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+        async with self.db_wrapper.writer():
+            was_empty = await self.table_is_empty(tree_id=tree_id)
+            root = await self.get_tree_root(tree_id=tree_id)
 
             if not was_empty:
                 if hint_keys_values is None:
                     # TODO: is there any way the db can enforce this?
-                    pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
+                    pairs = await self.get_keys_values(tree_id=tree_id)
                     if any(key == node.key for node in pairs):
                         raise Exception(f"Key already present: {key.hex()}")
                 else:
@@ -797,7 +788,7 @@ class DataStore:
                 if not was_empty:
                     raise Exception(f"Reference node hash must be specified for non-empty tree: {tree_id.hex()}")
             else:
-                reference_node_type = await self.get_node_type(node_hash=reference_node_hash, lock=False)
+                reference_node_type = await self.get_node_type(node_hash=reference_node_hash)
                 if reference_node_type == NodeType.INTERNAL:
                     raise Exception("can not insert a new key/value on an internal node")
 
@@ -823,14 +814,12 @@ class DataStore:
 
                 if use_optimized:
                     ancestors: List[InternalNode] = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                        node_hash=reference_node_hash, tree_id=tree_id
                     )
                 else:
-                    ancestors = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
-                    )
+                    ancestors = await self.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
                     ancestors_2: List[InternalNode] = await self.get_ancestors(
-                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
+                        node_hash=reference_node_hash, tree_id=tree_id
                     )
                     if ancestors != ancestors_2:
                         raise RuntimeError("Ancestors optimized didn't produce the expected result.")
@@ -890,12 +879,10 @@ class DataStore:
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
-        *,
-        lock: bool = True,
     ) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+        async with self.db_wrapper.writer():
             if hint_keys_values is None:
-                node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
+                node = await self.get_node_by_key(key=key, tree_id=tree_id)
             else:
                 if bytes(key) not in hint_keys_values:
                     log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
@@ -905,14 +892,10 @@ class DataStore:
                 node = TerminalNode(node_hash, key, value)
                 del hint_keys_values[bytes(key)]
             if use_optimized:
-                ancestors: List[InternalNode] = await self.get_ancestors_optimized(
-                    node_hash=node.hash, tree_id=tree_id, lock=False
-                )
+                ancestors: List[InternalNode] = await self.get_ancestors_optimized(node_hash=node.hash, tree_id=tree_id)
             else:
-                ancestors = await self.get_ancestors_optimized(node_hash=node.hash, tree_id=tree_id, lock=False)
-                ancestors_2: List[InternalNode] = await self.get_ancestors(
-                    node_hash=node.hash, tree_id=tree_id, lock=False
-                )
+                ancestors = await self.get_ancestors_optimized(node_hash=node.hash, tree_id=tree_id)
+                ancestors_2: List[InternalNode] = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id)
                 if ancestors != ancestors_2:
                     raise RuntimeError("Ancestors optimized didn't produce the expected result.")
 
@@ -943,7 +926,7 @@ class DataStore:
 
             old_child_hash = parent.hash
             new_child_hash = other_hash
-            new_generation = await self.get_tree_generation(tree_id, lock=False) + 1
+            new_generation = await self.get_tree_generation(tree_id) + 1
             # update ancestors after inserting root, to keep table constraints.
             insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
             # more parents to handle so let's traverse them
@@ -977,12 +960,10 @@ class DataStore:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
-        *,
-        lock: bool = True,
     ) -> Optional[bytes32]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            hint_keys_values = await self.get_keys_values_dict(tree_id, lock=False)
-            old_root = await self.get_tree_root(tree_id, lock=False)
+        async with self.db_wrapper.writer():
+            hint_keys_values = await self.get_keys_values_dict(tree_id)
+            old_root = await self.get_tree_root(tree_id)
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -990,7 +971,7 @@ class DataStore:
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
-                        await self.autoinsert(key, value, tree_id, hint_keys_values, True, Status.COMMITTED, lock=False)
+                        await self.autoinsert(key, value, tree_id, hint_keys_values, True, Status.COMMITTED)
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
@@ -1003,27 +984,26 @@ class DataStore:
                             hint_keys_values,
                             True,
                             Status.COMMITTED,
-                            lock=False,
                         )
                 elif change["action"] == "delete":
                     key = change["key"]
-                    await self.delete(key, tree_id, hint_keys_values, True, Status.COMMITTED, lock=False)
+                    await self.delete(key, tree_id, hint_keys_values, True, Status.COMMITTED)
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
-            await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
+            root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash == old_root.node_hash:
+                if len(changelist) != 0:
+                    await self.rollback_to_generation(tree_id, old_root.generation)
                 raise ValueError("Changelist resulted in no change to tree data")
-            await self.insert_root_with_ancestor_table(
-                tree_id=tree_id, node_hash=root.node_hash, status=status, lock=False
-            )
+            # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
+            await self.rollback_to_generation(tree_id, old_root.generation)
+            await self.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root.node_hash, status=status)
             if status == Status.PENDING:
-                new_root = await self.get_pending_root(tree_id=tree_id, lock=False)
+                new_root = await self.get_pending_root(tree_id=tree_id)
                 assert new_root is not None
             elif status == Status.COMMITTED:
-                new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                new_root = await self.get_tree_root(tree_id=tree_id)
             else:
                 raise Exception(f"No known status: {status}")
             if new_root.node_hash != root.node_hash:
@@ -1043,42 +1023,41 @@ class DataStore:
         tree_id: bytes32,
         generation: Optional[int] = None,
     ) -> Optional[InternalNode]:
-        if generation is None:
-            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-        cursor = await self.db.execute(
-            """
-            SELECT * from node INNER JOIN (
-                SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
-                FROM ancestors
-                WHERE ancestors.hash == :hash
-                AND ancestors.tree_id == :tree_id
-                AND ancestors.generation <= :generation
-                GROUP BY hash
-            ) asc on asc.hash == node.hash
-            """,
-            {"hash": node_hash, "tree_id": tree_id, "generation": generation},
-        )
-        row = await cursor.fetchone()
-        if row is None:
-            return None
-        return InternalNode.from_row(row=row)
+        async with self.db_wrapper.reader() as reader:
+            if generation is None:
+                generation = await self.get_tree_generation(tree_id=tree_id)
+            cursor = await reader.execute(
+                """
+                SELECT * from node INNER JOIN (
+                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                    FROM ancestors
+                    WHERE ancestors.hash == :hash
+                    AND ancestors.tree_id == :tree_id
+                    AND ancestors.generation <= :generation
+                    GROUP BY hash
+                ) asc on asc.hash == node.hash
+                """,
+                {"hash": node_hash, "tree_id": tree_id, "generation": generation},
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            return InternalNode.from_row(row=row)
 
-    async def build_ancestor_table_for_latest_root(self, tree_id: bytes32, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+    async def build_ancestor_table_for_latest_root(self, tree_id: bytes32) -> None:
+        async with self.db_wrapper.writer():
+            root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash is None:
                 return
             previous_root = await self.get_tree_root(
                 tree_id=tree_id,
                 generation=max(root.generation - 1, 0),
-                lock=False,
             )
 
             if previous_root.node_hash is not None:
                 previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(
                     tree_id=tree_id,
                     root_hash=previous_root.node_hash,
-                    lock=False,
                 )
                 known_hashes: Set[bytes32] = set(node.hash for node in previous_internal_nodes)
             else:
@@ -1086,7 +1065,6 @@ class DataStore:
             internal_nodes: List[InternalNode] = await self.get_internal_nodes(
                 tree_id=tree_id,
                 root_hash=root.node_hash,
-                lock=False,
             )
             for node in internal_nodes:
                 # We already have the same values in ancestor tables, if we have the same internal node.
@@ -1095,24 +1073,21 @@ class DataStore:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
 
     async def insert_root_with_ancestor_table(
-        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING, *, lock: bool = True
+        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
     ) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+        async with self.db_wrapper.writer():
             await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status)
             # Don't update the ancestor table for non-committed status.
             if status == Status.COMMITTED:
-                await self.build_ancestor_table_for_latest_root(tree_id=tree_id, lock=False)
+                await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
 
     async def get_node_by_key(
         self,
         key: bytes,
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
-        *,
-        lock: bool = True,
     ) -> TerminalNode:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash, lock=False)
+        nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
 
         for node in nodes:
             if node.key == key:
@@ -1120,9 +1095,9 @@ class DataStore:
 
         raise KeyNotFoundError(key=key)
 
-    async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+    async def get_node(self, node_hash: bytes32) -> Node:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:
@@ -1131,14 +1106,14 @@ class DataStore:
         node = row_to_node(row=row)
         return node
 
-    async def get_tree_as_program(self, tree_id: bytes32, *, lock: bool = True) -> Program:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+    async def get_tree_as_program(self, tree_id: bytes32) -> Program:
+        async with self.db_wrapper.reader() as reader:
+            root = await self.get_tree_root(tree_id=tree_id)
             # TODO: consider actual proper behavior
             assert root.node_hash is not None
-            root_node = await self.get_node(node_hash=root.node_hash, lock=False)
+            root_node = await self.get_node(node_hash=root.node_hash)
 
-            cursor = await self.db.execute(
+            cursor = await reader.execute(
                 """
                 WITH RECURSIVE
                     tree_from_root_hash(hash, node_type, left, right, key, value) AS (
@@ -1171,14 +1146,11 @@ class DataStore:
         node_hash: bytes32,
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
-        *,
-        lock: bool = True,
     ) -> ProofOfInclusion:
         """Collect the information for a proof of inclusion of a hash in the Merkle
         tree.
         """
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash, lock=False)
+        ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
 
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash
@@ -1206,19 +1178,17 @@ class DataStore:
         self,
         key: bytes,
         tree_id: bytes32,
-        *,
-        lock: bool = True,
     ) -> ProofOfInclusion:
         """Collect the information for a proof of inclusion of a key and its value in
         the Merkle tree.
         """
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
-            return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
+        async with self.db_wrapper.reader():
+            node = await self.get_node_by_key(key=key, tree_id=tree_id)
+            return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
 
-    async def get_first_generation(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> int:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+    async def get_first_generation(self, node_hash: bytes32, tree_id: bytes32) -> int:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
                 "SELECT MIN(generation) AS generation FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
                 {"hash": node_hash, "tree_id": tree_id},
             )
@@ -1236,22 +1206,20 @@ class DataStore:
         tree_id: bytes32,
         deltas_only: bool,
         writer: BinaryIO,
-        *,
-        lock: bool = True,
     ) -> None:
         if node_hash == bytes32([0] * 32):
             return
 
         if deltas_only:
-            generation = await self.get_first_generation(node_hash, tree_id, lock=lock)
+            generation = await self.get_first_generation(node_hash, tree_id)
             # Root's generation is not the first time we see this hash, so it's not a new delta.
             if root.generation != generation:
                 return
-        node = await self.get_node(node_hash, lock=lock)
+        node = await self.get_node(node_hash)
         to_write = b""
         if isinstance(node, InternalNode):
-            await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, writer, lock=lock)
-            await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, writer, lock=lock)
+            await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, writer)
+            await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, writer)
             to_write = bytes(SerializedNode(False, bytes(node.left_hash), bytes(node.right_hash)))
         elif isinstance(node, TerminalNode):
             to_write = bytes(SerializedNode(True, node.key, node.value))
@@ -1261,18 +1229,16 @@ class DataStore:
         writer.write(len(to_write).to_bytes(4, byteorder="big"))
         writer.write(to_write)
 
-    async def update_subscriptions_from_wallet(
-        self, tree_id: bytes32, new_urls: List[str], *, lock: bool = True
-    ) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+    async def update_subscriptions_from_wallet(self, tree_id: bytes32, new_urls: List[str]) -> None:
+        async with self.db_wrapper.writer() as writer:
+            cursor = await writer.execute(
                 "SELECT * FROM subscriptions WHERE from_wallet == 1 AND tree_id == :tree_id",
                 {
                     "tree_id": tree_id,
                 },
             )
             old_urls = [row["url"] async for row in cursor]
-            cursor = await self.db.execute(
+            cursor = await writer.execute(
                 "SELECT * FROM subscriptions WHERE from_wallet == 0 AND tree_id == :tree_id",
                 {
                     "tree_id": tree_id,
@@ -1282,7 +1248,7 @@ class DataStore:
             additions = {url for url in new_urls if url not in old_urls}
             removals = [url for url in old_urls if url not in new_urls]
             for url in removals:
-                await self.db.execute(
+                await writer.execute(
                     "DELETE FROM subscriptions WHERE url == :url AND tree_id == :tree_id",
                     {
                         "url": url,
@@ -1291,7 +1257,7 @@ class DataStore:
                 )
             for url in additions:
                 if url not in from_subscriptions_urls:
-                    await self.db.execute(
+                    await writer.execute(
                         "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                         "VALUES (:tree_id, :url, 0, 0, 1)",
                         {
@@ -1300,17 +1266,17 @@ class DataStore:
                         },
                     )
 
-    async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def subscribe(self, subscription: Subscription) -> None:
+        async with self.db_wrapper.writer() as writer:
             # Add a fake subscription, so we always have the tree_id, even with no URLs.
-            await self.db.execute(
+            await writer.execute(
                 "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                 "VALUES (:tree_id, NULL, NULL, NULL, 0)",
                 {
                     "tree_id": subscription.tree_id,
                 },
             )
-            all_subscriptions = await self.get_subscriptions(lock=False)
+            all_subscriptions = await self.get_subscriptions()
             old_subscription = next(
                 (
                     old_subscription
@@ -1324,7 +1290,7 @@ class DataStore:
                 old_urls = set(server_info.url for server_info in old_subscription.servers_info)
             new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
             for server_info in new_servers:
-                await self.db.execute(
+                await writer.execute(
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                     "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, 0)",
                     {
@@ -1335,10 +1301,10 @@ class DataStore:
                     },
                 )
 
-    async def remove_subscriptions(self, tree_id: bytes32, urls: List[str], *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
+    async def remove_subscriptions(self, tree_id: bytes32, urls: List[str]) -> None:
+        async with self.db_wrapper.writer() as writer:
             for url in urls:
-                await self.db.execute(
+                await writer.execute(
                     "DELETE FROM subscriptions WHERE tree_id == :tree_id AND url == :url",
                     {
                         "tree_id": tree_id,
@@ -1346,27 +1312,27 @@ class DataStore:
                     },
                 )
 
-    async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
+    async def unsubscribe(self, tree_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
                 {"tree_id": tree_id},
             )
 
-    async def rollback_to_generation(self, tree_id: bytes32, target_generation: int, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
+    async def rollback_to_generation(self, tree_id: bytes32, target_generation: int) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
                 "DELETE FROM ancestors WHERE tree_id == :tree_id AND generation > :target_generation",
                 {"tree_id": tree_id, "target_generation": target_generation},
             )
-            await self.db.execute(
+            await writer.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id AND generation > :target_generation",
                 {"tree_id": tree_id, "target_generation": target_generation},
             )
 
-    async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
+    async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
                 "UPDATE subscriptions SET ignore_till = :ignore_till, "
                 "num_consecutive_failures = :num_consecutive_failures WHERE tree_id = :tree_id AND url = :url",
                 {
@@ -1377,27 +1343,23 @@ class DataStore:
                 },
             )
 
-    async def received_incorrect_file(
-        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
-    ) -> None:
+    async def received_incorrect_file(self, tree_id: bytes32, server_info: ServerInfo, timestamp: int) -> None:
         SEVEN_DAYS_BAN = 7 * 24 * 60 * 60
         new_server_info = replace(
             server_info,
             num_consecutive_failures=server_info.num_consecutive_failures + 1,
             ignore_till=max(server_info.ignore_till, timestamp + SEVEN_DAYS_BAN),
         )
-        await self.update_server_info(tree_id, new_server_info, lock=lock)
+        await self.update_server_info(tree_id, new_server_info)
 
-    async def received_correct_file(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
+    async def received_correct_file(self, tree_id: bytes32, server_info: ServerInfo) -> None:
         new_server_info = replace(
             server_info,
             num_consecutive_failures=0,
         )
-        await self.update_server_info(tree_id, new_server_info, lock=lock)
+        await self.update_server_info(tree_id, new_server_info)
 
-    async def server_misses_file(
-        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
-    ) -> None:
+    async def server_misses_file(self, tree_id: bytes32, server_info: ServerInfo, timestamp: int) -> None:
         BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
         index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
         new_server_info = replace(
@@ -1405,12 +1367,10 @@ class DataStore:
             num_consecutive_failures=server_info.num_consecutive_failures + 1,
             ignore_till=max(server_info.ignore_till, timestamp + BAN_TIME_BY_MISSING_COUNT[index]),
         )
-        await self.update_server_info(tree_id, new_server_info, lock=lock)
+        await self.update_server_info(tree_id, new_server_info)
 
-    async def get_available_servers_for_store(
-        self, tree_id: bytes32, timestamp: int, *, lock: bool = True
-    ) -> List[ServerInfo]:
-        subscriptions = await self.get_subscriptions(lock=lock)
+    async def get_available_servers_for_store(self, tree_id: bytes32, timestamp: int) -> List[ServerInfo]:
+        subscriptions = await self.get_subscriptions()
         subscription = next((subscription for subscription in subscriptions if subscription.tree_id == tree_id), None)
         if subscription is None:
             return []
@@ -1420,11 +1380,11 @@ class DataStore:
                 servers_info.append(server_info)
         return servers_info
 
-    async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
+    async def get_subscriptions(self) -> List[Subscription]:
         subscriptions: List[Subscription] = []
 
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
                 "SELECT * from subscriptions",
             )
             async for row in cursor:
@@ -1457,12 +1417,10 @@ class DataStore:
         tree_id: bytes32,
         hash_1: bytes32,
         hash_2: bytes32,
-        *,
-        lock: bool = True,
     ) -> Set[DiffData]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            old_pairs = set(await self.get_keys_values(tree_id, hash_1, lock=False))
-            new_pairs = set(await self.get_keys_values(tree_id, hash_2, lock=False))
+        async with self.db_wrapper.reader():
+            old_pairs = set(await self.get_keys_values(tree_id, hash_1))
+            new_pairs = set(await self.get_keys_values(tree_id, hash_2))
             if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
                 return set()
             if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):

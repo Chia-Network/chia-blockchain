@@ -1,64 +1,58 @@
 from __future__ import annotations
-import asyncio
+
 import dataclasses
 import logging
 import time
-from typing import cast, Any, Optional, Set, Tuple, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, cast
+
+from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
-from blspy import PrivateKey, G2Element, G1Element
-
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
+from chia.pools.pool_puzzles import (
+    SINGLETON_LAUNCHER,
+    create_absorb_spend,
+    create_full_puzzle,
+    create_pooling_inner_puzzle,
+    create_travel_spend,
+    create_waiting_room_inner_puzzle,
+    get_delayed_puz_info_from_launcher_spend,
+    get_most_recent_singleton_coin_from_coin_spend,
+    is_pool_member_inner_puzzle,
+    is_pool_waitingroom_inner_puzzle,
+    launcher_id_to_p2_puzzle_hash,
+    pool_state_to_inner_puzzle,
+    solution_to_pool_state,
+    uncurry_pool_member_inner_puzzle,
+    uncurry_pool_waitingroom_inner_puzzle,
+)
 from chia.pools.pool_wallet_info import (
-    PoolWalletInfo,
+    FARMING_TO_POOL,
+    LEAVING_POOL,
+    SELF_POOLING,
     PoolSingletonState,
     PoolState,
-    FARMING_TO_POOL,
-    SELF_POOLING,
-    LEAVING_POOL,
+    PoolWalletInfo,
     create_pool_state,
 )
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
-
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-
-from chia.pools.pool_puzzles import (
-    create_waiting_room_inner_puzzle,
-    create_full_puzzle,
-    SINGLETON_LAUNCHER,
-    create_pooling_inner_puzzle,
-    solution_to_pool_state,
-    pool_state_to_inner_puzzle,
-    get_most_recent_singleton_coin_from_coin_spend,
-    launcher_id_to_p2_puzzle_hash,
-    create_travel_spend,
-    uncurry_pool_member_inner_puzzle,
-    create_absorb_spend,
-    is_pool_member_inner_puzzle,
-    is_pool_waitingroom_inner_puzzle,
-    uncurry_pool_waitingroom_inner_puzzle,
-    get_delayed_puz_info_from_launcher_spend,
-)
-
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.wallet.derive_keys import (
-    find_owner_sk,
-)
+from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.util.transaction_type import TransactionType
 
 
 @final
@@ -77,7 +71,6 @@ class PoolWallet:
     next_transaction_fee: uint64 = uint64(0)
     target_state: Optional[PoolState] = None
     _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = None
-    _update_pool_config_after_sync_task: Optional[asyncio.Task] = None
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
@@ -302,26 +295,8 @@ class PoolWallet:
                     self.next_transaction_fee = uint64(0)
                 break
 
-        await self.update_pool_config_after_sync()  # Update pool config after we finish syncing.
+        await self.update_pool_config()
         return True
-
-    async def update_pool_config_after_sync(self) -> None:
-        """
-        Updates the pool config file with the current state after sync is complete.
-        If the wallet crashes, the config file will be auto updated on restart.
-        """
-        # we only need one task running at a time.
-        if self._update_pool_config_after_sync_task is None or self._update_pool_config_after_sync_task.done():
-
-            async def update_pool_config_after_sync_task():
-                synced = await self.wallet_state_manager.synced()
-                while not synced:
-                    await asyncio.sleep(5)  # we sync pretty quickly, so I think this is ok.
-                    synced = await self.wallet_state_manager.synced()
-                await self.update_pool_config()
-                self.log.info("Updated pool config after syncing finished.")
-
-            self._update_pool_config_after_sync_task = asyncio.create_task(update_pool_config_after_sync_task())
 
     async def rewind(self, block_height: int) -> bool:
         """
@@ -405,7 +380,6 @@ class PoolWallet:
             wallet_id=wallet_info.id,
             standard_wallet=wallet,
         )
-        await pool_wallet.update_pool_config()
         return pool_wallet
 
     @staticmethod
@@ -991,6 +965,7 @@ class PoolWallet:
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         raise RuntimeError("PoolWallet does not support select_coins()")
 
@@ -999,6 +974,9 @@ class PoolWallet:
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("PoolWallet does not support puzzle_hash_for_pk")
+
+    def get_name(self) -> str:
+        return self.wallet_info.name
 
 
 if TYPE_CHECKING:

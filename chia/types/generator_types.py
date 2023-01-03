@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List
+
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
@@ -8,7 +11,8 @@ from chia.util.streamable import Streamable, streamable
 class GeneratorBlockCacheInterface:
     def get_generator_for_block_height(self, height: uint32) -> SerializedProgram:
         # Requested block must be a transaction block
-        pass
+        # ignoring hinting error until we handle our interfaces more formally
+        return  # type: ignore[return-value]
 
 
 @dataclass(frozen=True)

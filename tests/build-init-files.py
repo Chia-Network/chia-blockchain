@@ -9,12 +9,13 @@
 #
 # Note: This script is run in a `pre-commit` hook (which runs on CI) to make sure we don't miss out any folder.
 
+from __future__ import annotations
+
 import logging
 import pathlib
 import sys
 
 import click
-
 
 log_levels = {
     0: logging.ERROR,

@@ -6,15 +6,15 @@ import logging
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
-from tests.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ class TestWalletRpc:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -93,7 +93,8 @@ class TestWalletRpc:
                 return rec.confirmed
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
-            singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
+            singleton_record = await client.dl_latest_singleton(launcher_id)
+            assert singleton_record is not None
             assert singleton_record.root == merkle_root
 
             new_root: bytes32 = bytes32([1] * 32)
@@ -103,7 +104,8 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
                 await asyncio.sleep(0.5)
 
-            new_singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
+            new_singleton_record = await client.dl_latest_singleton(launcher_id)
+            assert new_singleton_record is not None
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
 
@@ -184,6 +186,7 @@ class TestWalletRpc:
 
             for lid in [launcher_id, launcher_id_2, launcher_id_3]:
                 rec = await client.dl_latest_singleton(lid)
+                assert rec is not None
                 assert rec.root == next_root
 
             await client_2.dl_stop_tracking(launcher_id)

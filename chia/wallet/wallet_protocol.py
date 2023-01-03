@@ -34,6 +34,7 @@ class WalletProtocol(Protocol):
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         ...
 
@@ -58,6 +59,9 @@ class WalletProtocol(Protocol):
         ...
 
     def require_derivation_paths(self) -> bool:
+        ...
+
+    def get_name(self) -> str:
         ...
 
     # WalletStateManager is only imported for type hinting thus leaving pylint

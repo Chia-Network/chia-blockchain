@@ -26,6 +26,9 @@ on:
       configuration:
         required: true
         type: string
+      matrix_mode:
+        required: true
+        type: string
       runs-on:
         required: true
         type: string
@@ -58,12 +61,16 @@ jobs:
             apt: '3.7'
             install_sh: '3.7'
             matrix: '3.7'
+            exclude_from:
+              limited: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
             apt: '3.8'
             install_sh: '3.8'
             matrix: '3.8'
+            exclude_from:
+              limited: True
           - name: '3.9'
             file_name: '3.9'
             action: '3.9'
@@ -76,6 +83,8 @@ jobs:
             apt: '3.10'
             install_sh: '3.10'
             matrix: '3.10'
+            exclude_from:
+              limited: True
         exclude:
           - os:
               matrix: macos
@@ -93,6 +102,9 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          - python:
+              exclude_from:
+                ${{ inputs.matrix_mode }}: True
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -110,7 +122,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Python environment
-        uses: actions/setup-python@v3
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.action }}
 
@@ -135,8 +147,9 @@ jobs:
 
       - name: Get pip cache dir
         id: pip-cache
+        shell: bash
         run: |
-          echo "::set-output name=dir::$(pip cache dir)"
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache pip
         uses: actions/cache@v3
@@ -184,6 +197,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.install_sh }}
           development: true
+          legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
 
       - uses: chia-network/actions/activate-venv@main
 

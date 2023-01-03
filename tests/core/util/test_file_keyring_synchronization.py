@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import logging
 import os
-
-from chia.util.keyring_wrapper import KeyringWrapper
 from multiprocessing import Pool
 from pathlib import Path
 from sys import platform
-from tests.util.keyring import TempKeyring, using_temp_file_keyring
-from tests.core.util.test_lockfile import poll_directory
 from time import sleep
 
+from chia.simulator.keyring import TempKeyring, using_temp_file_keyring
+from chia.simulator.time_out_assert import adjusted_timeout
+from chia.util.keyring_wrapper import KeyringWrapper
+from tests.core.util.test_lockfile import poll_directory
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +100,9 @@ class TestFileKeyringSynchronization:
             log.warning(f"Finished: {num_workers} workers finished")
 
             # Collect results
-            res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
+            res.get(
+                timeout=adjusted_timeout(timeout=10)
+            )  # 10 second timeout to prevent a bad test from spoiling the fun
 
         # Expect: parent process should be able to find all passphrases that were set by the child processes
         for item in passphrase_list:

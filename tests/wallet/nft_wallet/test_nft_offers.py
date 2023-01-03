@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -25,13 +24,6 @@ from tests.util.wallet_is_synced import wallets_are_synced
 from tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
 
 
-async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
-    tx = mempool.get_spendbundle(tx_id)
-    if tx is None:
-        return False
-    return True
-
-
 async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ignore
     trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
     return TradeStatus(trade_rec.status)
@@ -42,7 +34,7 @@ async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ig
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -66,8 +58,8 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -136,18 +128,14 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    sb_id = Offer.from_bytes(trade_take.offer).to_valid_spend().name()
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb_id)
-
-    assert success
-    assert error is None
     assert trade_take is not None
+    assert tx_records is not None
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -182,18 +170,14 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     taker_fee = uint64(1)
 
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
-    sb_id = Offer.from_bytes(trade_take.offer).to_valid_spend().name()
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb_id)
-
-    assert success
-    assert error is None
     assert trade_take is not None
+    assert tx_records is not None
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -212,7 +196,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -236,8 +220,8 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -309,11 +293,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
     txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=cancel_fee)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    for tx in txs:
-        if tx.spend_bundle is not None:
-            await time_out_assert(20, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.spend_bundle.name())
-
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await full_node_api.process_transaction_records(records=txs)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -329,7 +309,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -353,8 +333,8 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -444,16 +424,14 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    assert success
-    assert error is None
     assert trade_take is not None
+    assert tx_records is not None
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -472,7 +450,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_nft_for_cat(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -496,8 +474,8 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -566,11 +544,11 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, cats_to_mint)
     await time_out_assert(20, cat_wallet_taker.get_unconfirmed_balance, cats_to_mint)
 
-    wallet_maker_for_taker_cat: CATWallet = await CATWallet.create_wallet_for_cat(
+    wallet_maker_for_taker_cat: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
         wallet_node_0.wallet_state_manager, wallet_maker, cat_wallet_taker.get_asset_id()
     )
 
-    wallet_taker_for_maker_cat: CATWallet = await CATWallet.create_wallet_for_cat(
+    wallet_taker_for_maker_cat: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
         wallet_node_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
     )
 
@@ -601,16 +579,14 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    assert success
-    assert error is None
     assert trade_take is not None
+    assert tx_records is not None
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -657,17 +633,15 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
     taker_fee = uint64(1)
 
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    assert success
-    assert error is None
     assert trade_take is not None
+    assert tx_records is not None
 
+    await full_node_api.process_transaction_records(records=tx_records)
     # check balances: taker wallet down an NFT, up cats
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -692,7 +666,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -716,8 +690,8 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -802,16 +776,14 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
-    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
-    assert success
-    assert error is None
     assert trade_take is not None
+    assert tx_records is not None
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)

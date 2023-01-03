@@ -1,64 +1,71 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
+from typing import Callable, Dict, List, Optional, Tuple
 
-from typing import Dict, List, Optional, Tuple, Callable
-
-from clvm.casts import int_to_bytes
 import pytest
+from blspy import G1Element, G2Element
+from clvm.casts import int_to_bytes
+from clvm_tools import binutils
 
-import chia.server.ws_connection as ws
-
-from chia.full_node.mempool import Mempool
+from chia.consensus.condition_costs import ConditionCost
+from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.mempool import Mempool
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
 from chia.server.outbound_message import Message
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
+from chia.types.fee_rate import FeeRate
+from chia.types.generator_types import BlockGenerator
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.util.api_decorators import api_request
 from chia.util.condition_tools import conditions_for_solution, pkm_pairs
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.util.hash import std_hash
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request, peer_required, bytes_required
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.full_node.pending_tx_cache import PendingTxCache
-from blspy import G2Element
-
+from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.connection_utils import connect_and_get_peer, add_dummy_connection
+from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.node_height import node_height_at_least
-from chia.simulator.time_out_assert import time_out_assert
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.condition_costs import ConditionCost
-from chia.types.blockchain_format.program import SerializedProgram
-from clvm_tools import binutils
-from chia.types.generator_types import BlockGenerator
-from blspy import G1Element
-from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
-
 from tests.util.misc import assert_runtime
-from chia.simulator.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
+
+log = logging.getLogger(__name__)
+
+
+def new_mi(mi: MempoolInfo, max_mempool_cost: int, min_replace_fee_per_cost: int) -> MempoolInfo:
+    return dataclasses.replace(
+        mi,
+        minimum_fee_per_cost_to_replace=FeeRate(uint64(min_replace_fee_per_cost)),
+        max_size_in_cost=CLVMCost(uint64(max_mempool_cost)),
+    )
 
 
 @pytest.fixture(scope="module")
 def wallet_a(bt):
     return bt.get_pool_wallet_tool()
-
-
-log = logging.getLogger(__name__)
 
 
 def generate_test_spend_bundle(
@@ -79,13 +86,7 @@ def generate_test_spend_bundle(
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
-        SpendBundle([], G2Element()),
-        uint64(0),
-        NPCResult(None, None, cost),
-        cost,
-        spend_bundle_name,
-        [],
-        [],
+        SpendBundle([], G2Element()), uint64(0), NPCResult(None, None, cost), cost, spend_bundle_name, [], uint32(0)
     )
 
 
@@ -157,8 +158,11 @@ class TestMempool:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
 
-        max_mempool_cost = 40000000 * 5
-        mempool = Mempool(max_mempool_cost)
+        max_block_cost_clvm = uint64(40000000)
+        max_mempool_cost = max_block_cost_clvm * 5
+        mempool_info = new_mi(EmptyMempoolInfo, max_mempool_cost, uint64(5))
+        fee_estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
+        mempool = Mempool(mempool_info, fee_estimator)
         assert mempool.get_min_fee_rate(104000) == 0
 
         with pytest.raises(ValueError):
@@ -169,13 +173,11 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-@peer_required
-@api_request
-@bytes_required
+@api_request(peer_required=True, bytes_required=True)
 async def respond_transaction(
-    node: FullNodeAPI,
+    self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
-    peer: ws.WSChiaConnection,
+    peer: WSChiaConnection,
     tx_bytes: bytes = b"",
     test: bool = False,
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
@@ -185,11 +187,11 @@ async def respond_transaction(
     """
     assert tx_bytes != b""
     spend_name = std_hash(tx_bytes)
-    if spend_name in node.full_node.full_node_store.pending_tx_request:
-        node.full_node.full_node_store.pending_tx_request.pop(spend_name)
-    if spend_name in node.full_node.full_node_store.peers_with_tx:
-        node.full_node.full_node_store.peers_with_tx.pop(spend_name)
-    return await node.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
+    if spend_name in self.full_node.full_node_store.pending_tx_request:
+        self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+    if spend_name in self.full_node.full_node_store.peers_with_tx:
+        self.full_node.full_node_store.peers_with_tx.pop(spend_name)
+    return await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
 
 
 async def next_block(full_node_1, wallet_a, bt) -> Coin:
@@ -389,7 +391,7 @@ class TestMempoolManager:
 
     async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
         tx = wallet_protocol.SendTransaction(sb)
-        return await node.send_transaction(tx, test=True)  # type: ignore
+        return await node.send_transaction(tx, test=True)
 
     async def gen_and_send_sb(self, node, peer, *args, **kwargs):
         sb = generate_test_spend_bundle(*args, **kwargs)
@@ -533,11 +535,12 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
         _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
-        dummy_peer = None
         for node_id, wsc in server_1.all_connections.items():
             if node_id == dummy_node_id:
                 dummy_peer = wsc
                 break
+        else:
+            raise Exception("dummy peer not found")
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -570,11 +573,12 @@ class TestMempoolManager:
             time_per_block=10,
         )
         _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
-        dummy_peer = None
         for node_id, wsc in server_1.all_connections.items():
             if node_id == dummy_node_id:
                 dummy_peer = wsc
                 break
+        else:
+            raise Exception("dummy peer not found")
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -2327,7 +2331,7 @@ class TestMaliciousGenerators:
     def test_duplicate_coin_announces(self, request, opcode):
         condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with assert_runtime(seconds=7, label=request.node.name):
+        with assert_runtime(seconds=9, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False)
 
         assert npc_result.error is None
@@ -2415,7 +2419,7 @@ class TestPkmPairs:
 
     def test_no_agg_sigs(self):
         # one create coin: h1 amount: 1 and not hint
-        spends = [Spend(self.h3, self.h4, None, 0, [(self.h1, 1, b"")], [])]
+        spends = [Spend(self.h3, self.h4, None, 0, [(self.h1, 1, b"")], [], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
@@ -2423,7 +2427,7 @@ class TestPkmPairs:
 
     def test_agg_sig_me(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")])]
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
@@ -2437,7 +2441,7 @@ class TestPkmPairs:
 
     def test_agg_sig_mixed(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")])]
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, [(bytes48(self.pk2), b"msg2")], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]

@@ -1,22 +1,15 @@
-import asyncio
-import traceback
-import os
-import logging
-import sys
+from __future__ import annotations
 
+import asyncio
+import logging
+import os
+import sys
+import traceback
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import (
-    run_plotter,
-    run_command,
-    reset_loop_policy_for_windows,
-    get_linux_distro,
-    is_libsodium_available_on_redhat_like_os,
-    check_git_ref,
-    check_git_repository,
-    git_clean_checkout,
-)
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +21,7 @@ def is_madmax_supported() -> bool:
     return sys.platform.startswith("linux") or sys.platform in ["darwin", "win32", "cygwin"]
 
 
-def get_madmax_install_path(plotters_root_path: Path) -> Path:
+def get_madmax_src_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / MADMAX_PLOTTER_DIR
 
 
@@ -36,14 +29,26 @@ def get_madmax_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "madmax"
 
 
-def get_madmax_exec_install_path(plotters_root_path: Path, ksize: int = 32) -> Path:
-    madmax_install_dir = get_madmax_install_path(plotters_root_path) / "build"
+def get_madmax_exec_venv_path(ksize: int = 32) -> Optional[Path]:
+    venv_bin_path = get_venv_bin()
+    if not venv_bin_path:
+        return None
     madmax_exec = "chia_plot"
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
     if sys.platform in ["win32", "cygwin"]:
         madmax_exec += ".exe"
-    return madmax_install_dir / madmax_exec
+    return venv_bin_path / madmax_exec
+
+
+def get_madmax_exec_src_path(plotters_root_path: Path, ksize: int = 32) -> Path:
+    madmax_src_dir = get_madmax_src_path(plotters_root_path) / "build"
+    madmax_exec = "chia_plot"
+    if ksize > 32:
+        madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
+    if sys.platform in ["win32", "cygwin"]:
+        madmax_exec += ".exe"
+    return madmax_src_dir / madmax_exec
 
 
 def get_madmax_exec_package_path(ksize: int = 32) -> Path:
@@ -57,9 +62,12 @@ def get_madmax_exec_package_path(ksize: int = 32) -> Path:
 
 
 def get_madmax_executable_path_for_ksize(plotters_root_path: Path, ksize: int = 32) -> Path:
-    madmax_exec_install_path = get_madmax_exec_install_path(plotters_root_path, ksize)
-    if madmax_exec_install_path.exists():
-        return madmax_exec_install_path
+    madmax_exec_venv_path = get_madmax_exec_venv_path(ksize)
+    if madmax_exec_venv_path is not None and madmax_exec_venv_path.exists():
+        return madmax_exec_venv_path
+    madmax_exec_src_path = get_madmax_exec_src_path(plotters_root_path, ksize)
+    if madmax_exec_src_path.exists():
+        return madmax_exec_src_path
     return get_madmax_exec_package_path(ksize)
 
 
@@ -75,7 +83,11 @@ def get_madmax_version(plotters_root_path: Path):
             "Failed to call madmax with --version option",
             capture_output=True,
             text=True,
+            check=False,
         )
+        if proc.returncode != 0:
+            return None, proc.stderr.strip()
+
         # (Found, versionStr)
         version_str = proc.stdout.strip()
         return True, version_str.split(".")
@@ -97,7 +109,7 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
         if found:
             version = ".".join(result_msg)
         elif found is None:
-            print(result_msg)
+            print(f"Failed to determine madMAx version: {result_msg}")
 
         if version is not None:
             installed = True
@@ -110,158 +122,6 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
         info["can_install"] = supported
 
     return info
-
-
-def install_madmax(plotters_root_path: Path, override: bool = False, commit: Optional[str] = None):
-    if not override and os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path)):
-        print("Madmax plotter already installed.")
-        print("You can override it with -o option")
-        return
-
-    if not is_madmax_supported():
-        raise RuntimeError("Platform not supported yet for madmax plotter.")
-
-    if commit and not check_git_ref(commit):
-        raise RuntimeError("commit contains unusual string. Aborted.")
-
-    print("Installing madmax plotter.")
-
-    if sys.platform in ["win32", "cygwin"]:
-        print("Automatic install not supported on Windows")
-        print("GUI and 'chia plotters madmax' command recognize madmax exec installed at:")
-        print(f"  {get_madmax_exec_install_path(plotters_root_path)}")
-        print("If you have Windows madmax binary, put that binary to the directory above")
-        raise RuntimeError("Automatic install not supported on Windows")
-
-    print("Installing dependencies.")
-    if sys.platform.startswith("linux"):
-        distro = get_linux_distro()
-        if distro == "debian":
-            run_command(
-                [
-                    "sudo",
-                    "apt",
-                    "update",
-                    "-y",
-                ],
-                "Could not update get package information from apt",
-            )
-            run_command(
-                [
-                    "sudo",
-                    "apt",
-                    "install",
-                    "-y",
-                    "libsodium-dev",
-                    "cmake",
-                    "g++",
-                    "git",
-                    "build-essential",
-                ],
-                "Could not install dependencies",
-            )
-        elif distro == "redhat":
-            if not is_libsodium_available_on_redhat_like_os():
-                print("libsodium-devel is required but not available")
-                return
-
-            run_command(
-                [
-                    "sudo",
-                    "yum",
-                    "groupinstall",
-                    "-y",
-                    "Development Tools",
-                ],
-                "Could not install Development Tools",
-            )
-            run_command(
-                [
-                    "sudo",
-                    "yum",
-                    "install",
-                    "-y",
-                    "cmake",
-                    "gcc-c++",
-                    "git",
-                ],
-                "Could not install dependencies",
-            )
-    if sys.platform.startswith("darwin"):
-        run_command(
-            [
-                "brew",
-                "install",
-                "libsodium",
-                "cmake",
-                "git",
-                "autoconf",
-                "automake",
-                "libtool",
-                "wget",
-            ],
-            "Could not install dependencies",
-        )
-
-    madmax_path: str = os.fspath(plotters_root_path.joinpath(MADMAX_PLOTTER_DIR))
-    madmax_git_origin_url = "https://github.com/Chia-Network/chia-plotter-madmax.git"
-    madmax_git_repos_exist = check_git_repository(madmax_path, madmax_git_origin_url)
-
-    if madmax_git_repos_exist:
-        print("Checking out git repository")
-        if commit:
-            git_clean_checkout(commit, madmax_path)
-        elif override:
-            run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=madmax_path)
-            run_command(
-                ["git", "reset", "--hard", "origin/master"], "Failed to reset to origin/master", cwd=madmax_path
-            )
-        else:
-            # Rebuild with existing files
-            pass
-    else:
-        print("Cloning git repository.")
-        if commit:
-            run_command(
-                [
-                    "git",
-                    "clone",
-                    "--branch",
-                    commit,
-                    madmax_git_origin_url,
-                    MADMAX_PLOTTER_DIR,
-                ],
-                "Could not clone madmax repository",
-                cwd=os.fspath(plotters_root_path),
-            )
-        else:
-            run_command(
-                [
-                    "git",
-                    "clone",
-                    madmax_git_origin_url,
-                    MADMAX_PLOTTER_DIR,
-                ],
-                "Could not clone madmax repository",
-                cwd=os.fspath(plotters_root_path),
-            )
-
-    madmax_path = os.fspath(get_madmax_install_path(plotters_root_path))
-    print("Installing git submodules.")
-    run_command(
-        [
-            "git",
-            "submodule",
-            "update",
-            "--init",
-            "--recursive",
-        ],
-        "Could not initialize git submodules",
-        cwd=madmax_path,
-    )
-
-    print("Running install script.")
-    run_command(["./make_devel.sh"], "Error while running install script", cwd=madmax_path)
 
 
 progress = {
@@ -297,17 +157,17 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
 
         # madMAx has a ulimit -n requirement > 296:
         # "Cannot open at least 296 files, please raise maximum open file limit in OS."
-        resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
+        soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+        # Set soft limit to max (hard limit)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
     else:
         reset_loop_policy_for_windows()
 
-    if not os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)):
-        print("Installing madmax plotter.")
-        try:
-            install_madmax(plotters_root_path)
-        except Exception as e:
-            print(f"Exception while installing madmax plotter: {e}")
-            return
+    madmax_executable_path_for_ksize = get_madmax_executable_path_for_ksize(plotters_root_path, args.size)
+    if not os.path.exists(madmax_executable_path_for_ksize):
+        print("madmax plotter was not found.")
+        return
+
     plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
@@ -320,7 +180,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         )
     )
     call_args = []
-    call_args.append(os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)))
+    call_args.append(os.fspath(madmax_executable_path_for_ksize))
     call_args.append("-f")
     call_args.append(bytes(plot_keys.farmer_public_key).hex())
     if plot_keys.pool_public_key is not None:

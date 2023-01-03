@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Tuple, Any, Union, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import typing_extensions
 import zstd
@@ -15,10 +15,9 @@ from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import block_info_from_block, generator_from_block
+from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
-from chia.util.full_block_utils import GeneratorBlockInfo
 
 log = logging.getLogger(__name__)
 
@@ -156,15 +155,17 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
-                    "UPDATE OR FAIL full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
+                    "UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
                 )
 
     async def set_in_chain(self, header_hashes: List[Tuple[bytes32]]) -> None:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.executemany(
-                    "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
-                )
+                async with await conn.executemany(
+                    "UPDATE full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
+                ) as cursor:
+                    if cursor.rowcount != len(header_hashes):
+                        raise RuntimeError(f"The blockchain database is corrupt. All of {header_hashes} should exist")
 
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
 

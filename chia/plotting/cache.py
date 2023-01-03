@@ -12,7 +12,7 @@ from blspy import G1Element
 from chiapos import DiskProver
 
 from chia.plotting.util import parse_plot_info
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.util.misc import VersionedBlob
@@ -68,7 +68,7 @@ class CacheEntry:
 
         local_sk = master_sk_to_local_sk(local_master_sk)
 
-        plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+        plot_public_key: G1Element = generate_plot_public_key(
             local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
         )
 

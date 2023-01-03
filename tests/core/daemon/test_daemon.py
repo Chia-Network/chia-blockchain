@@ -1,23 +1,30 @@
-import aiohttp
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
-import pytest
-
 from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Type, Union, cast
 
-from chia.daemon.keychain_server import DeleteLabelRequest, SetLabelRequest
+import aiohttp
+import pytest
+
+from chia.daemon.keychain_server import (
+    DeleteLabelRequest,
+    GetKeyRequest,
+    GetKeyResponse,
+    GetKeysResponse,
+    SetLabelRequest,
+)
 from chia.daemon.server import WebSocketServer, service_plotter
 from chia.server.outbound_message import NodeType
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.util.keychain import KeyData
-from chia.daemon.keychain_server import GetKeyRequest, GetKeyResponse, GetKeysResponse
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
-from chia.simulator.time_out_assert import time_out_assert_custom_interval, time_out_assert
 
 
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
@@ -57,6 +64,13 @@ test_key_data_no_secrets = replace(test_key_data, secrets=None)
 success_response_data = {
     "success": True,
 }
+
+
+def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
+    return {
+        "success": True,
+        "fingerprint": fingerprint,
+    }
 
 
 def fingerprint_missing_response_data(request_type: Type[object]) -> Dict[str, object]:
@@ -185,7 +199,7 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
     await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
     async def num_connections():
-        count = len(node2.server.connection_by_type[NodeType.FULL_NODE].items())
+        count = len(node2.server.get_connections(NodeType.FULL_NODE))
         return count
 
     await time_out_assert_custom_interval(60, 1, num_connections, 1)
@@ -534,7 +548,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 
     await ws.send_str(create_payload("add_private_key", {"mnemonic": test_key_data.mnemonic_str()}, "test", "daemon"))
     # Expect: key was added successfully
-    assert_response(await ws.receive(), success_response_data)
+    assert_response(await ws.receive(), add_private_key_response_data(test_key_data.fingerprint))
 
     # When: missing mnemonic
     await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
@@ -561,9 +575,11 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 async def test_add_private_key_label(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
-    async def assert_add_private_key_with_label(key_data: KeyData, request: Dict[str, object]) -> None:
+    async def assert_add_private_key_with_label(
+        key_data: KeyData, request: Dict[str, object], add_private_key_response: Dict[str, object]
+    ) -> None:
         await ws.send_str(create_payload("add_private_key", request, "test", "daemon"))
-        assert_response(await ws.receive(), success_response_data)
+        assert_response(await ws.receive(), add_private_key_response)
         await ws.send_str(
             create_payload("get_key", {"fingerprint": key_data.fingerprint, "include_secrets": True}, "test", "daemon")
         )
@@ -571,14 +587,24 @@ async def test_add_private_key_label(daemon_connection_and_temp_keychain):
 
     # without `label` parameter
     key_data_0 = KeyData.generate()
-    await assert_add_private_key_with_label(key_data_0, {"mnemonic": key_data_0.mnemonic_str()})
+    await assert_add_private_key_with_label(
+        key_data_0,
+        {"mnemonic": key_data_0.mnemonic_str()},
+        add_private_key_response_data(key_data_0.fingerprint),
+    )
     # with `label=None`
     key_data_1 = KeyData.generate()
-    await assert_add_private_key_with_label(key_data_1, {"mnemonic": key_data_1.mnemonic_str(), "label": None})
+    await assert_add_private_key_with_label(
+        key_data_1,
+        {"mnemonic": key_data_1.mnemonic_str(), "label": None},
+        add_private_key_response_data(key_data_1.fingerprint),
+    )
     # with `label="key_2"`
     key_data_2 = KeyData.generate("key_2")
     await assert_add_private_key_with_label(
-        key_data_1, {"mnemonic": key_data_2.mnemonic_str(), "label": key_data_2.label}
+        key_data_1,
+        {"mnemonic": key_data_2.mnemonic_str(), "label": key_data_2.label},
+        add_private_key_response_data(key_data_2.fingerprint),
     )
 
 

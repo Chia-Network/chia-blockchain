@@ -1,7 +1,8 @@
-from typing import Tuple
-from pathlib import Path
+from __future__ import annotations
 
 import random
+from pathlib import Path
+from typing import Tuple
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants

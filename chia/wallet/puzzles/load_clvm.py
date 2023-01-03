@@ -1,17 +1,18 @@
+from __future__ import annotations
+
 import importlib
 import inspect
 import os
-import sys
-
-import tempfile
 import pathlib
+import sys
+import tempfile
 from typing import List
 
 import pkg_resources
-from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.util.lock import Lockfile
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.util.lock import Lockfile
 
 compile_clvm_py = None
 
@@ -140,6 +141,20 @@ def load_clvm_maybe_recompile(
     recompile: bool = recompile_requested,
 ) -> Program:
     return load_clvm(
+        clvm_filename=clvm_filename,
+        package_or_requirement=package_or_requirement,
+        include_standard_libraries=include_standard_libraries,
+        recompile=recompile,
+    )
+
+
+def load_serialized_clvm_maybe_recompile(
+    clvm_filename,
+    package_or_requirement=__name__,
+    include_standard_libraries: bool = False,
+    recompile: bool = recompile_requested,
+) -> SerializedProgram:
+    return load_serialized_clvm(
         clvm_filename=clvm_filename,
         package_or_requirement=package_or_requirement,
         include_standard_libraries=include_standard_libraries,

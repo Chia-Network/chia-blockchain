@@ -1,4 +1,6 @@
-from typing import Dict, List, Optional, Tuple, Any
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.signage_point import SignagePoint
@@ -231,9 +233,11 @@ class FullNodeRpcClient(RpcClient):
             converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
         return converted
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32, include_pending: bool = False) -> Optional[Dict]:
         try:
-            response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
+            response = await self.fetch(
+                "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
+            )
             return response["mempool_item"]
         except Exception:
             return None
@@ -260,3 +264,11 @@ class FullNodeRpcClient(RpcClient):
                 }
         except Exception:
             return None
+
+    async def get_fee_estimate(
+        self,
+        target_times: Optional[List[int]],
+        cost: Optional[int],
+    ) -> Dict[str, Any]:
+        response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
+        return response
