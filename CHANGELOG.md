@@ -10,29 +10,26 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- Add WalletConnect
-- Add Bladebit v2 plotting support (RAM and Disk)
-- Add `chia keys show --json` (display all keys as json) (thanks @kimsk)
-- Add `chia data get_sync_status` CLI and RPC.
-- Add download progress log and stream in Datalayer (thanks @Chida82)
-- Add wallet RPC `/get_spendable_coins`
-- Add wallet RPC `/get_coin_records_by_names`
-- Add wallet RPC `/verify_signature`
-- Add wallet RPC `/did_message_spend`
-- Add wallet RPC `/did_get_info`
-- Add wallet RPC `/nft_set_did_bulk`
-- Add options `--max-coin-amount` and `--exclude-coin-ids` to `chia wallet send`
+- `chia keys show --json` (display all keys as json)
+- Coin Selection CLI / RPC Expansion
+- Add atari get sync status RPC.
+- Add task_instrumentation fixture
+- Add download progress log and stream in aiohttp
+- Add LimitedSemaphore
+- Add verify signature API
+- Added total balance check, updated error messages
+- Add target_coin amount to coin selection cli (chia wallet coins)
+- Add did_message_spend API
+- Add optional `outbound` parameter to `get_connections`
+- Add a workflow for scanning python deps
+- Introduce `sync_store.Peak`
 - Add `--fingerprint` option to `chia keys show`
-- Add SECURITY.md
-- Add GUI support for adding and removing full node peers
-- New GUI setting for NFT image scaling
-- New GUI warning if the GUI version is different from the back-end version
+- Adding SECURITY.md
+- Add bulk set NFT DID API
 
 ### Changed
 
-- Remove legacy keyring support
-- Drop support for bladebit v1 and use bladebit v2 for RAM and Disk plots
-- Removed remaining vestiges of defunct backup service
+- `process_transaction_records()` -> `process_transactions()`
 - `debug_spend_bundle` -- print coin id as hex string
 - Only open SQLite log file once per db wrapper
 - Switch to context manager for task timing instrumentation
@@ -40,41 +37,45 @@ for setuptools_scm/PEP 440 reasons.
 - `add_private_key` now returns the fingerprint of the added key
 - SQLite log the full node db version check
 - Delete DID wallet after transfer
-- Don't validate weight proof on wallet log_in
+- Don't validate wp on log_in
 - Drop broken message types logging
+- Make `WSChiaConnection` a `dataclass`
+- Simplify `ChiaServer.close_all_connections`
 - Return minted NFT ID & Allow transfer NFT with NFT ID
+- Bump chia-blockchain-gui to dd4d7d031995189711248628f10d85ebd6764c25
+- Remove legacy keyring support
+- Simplify TradeManager.respond_to_offer() return
 - Display key labels when making a wallet key selection
-- Add support for pending transactions to `get_mempool_item_by_tx_id()` (thanks @rwarren)
+- Add support for pending transactions to `get_mempool_item_by_tx_id()`
 - Simplify the mempool manager instantiation
-- Add coin id and address to NFT Details screen in GUI
-- New GUI prefs location under `CHIA_ROOT`
-- Removed SkyNFT references
-- Add GUI memo field when sending XCH
-- Update to Electron 20.3.5
+- Made it able to RAM plot with bladebit2
+- Bump chia-blockchain-gui to 2a605eb5e04b2a2b72941c4a244e04d563513a77
+- Renamed chia packages to use the @Chia-Network scope Updates build scripts to account for the scope rename
 
 ### Fixed
 
-- Fixed a missing state_changed GUI notification
-- Minor sync optimizations and refactor; eliminate redundant weight proof requests
+- Add a state_changed for frontend on notification
+- Rework wallet new peak
 - Upped the number of file handles for madmax
-- Catch exceptions raised when resolving plot directories (fix #13723)
-- Call close callback for already closed connections (fix #9172)
-- Set GUI binary name to `chia-blockchain` in the Fedora rpm and Ubuntu deb (fix #13847)
-- Add simple fix to set farmer response timer for `SP: 0` (fix #11869, #10900) (thanks @neurosis69)
+- Catch exceptions raised when resolving plot directories
+- Call close callback for already closed connections
+- Set GUI binary name to chia-blockchain in the Fedora rpm
+- Set GUI binary name to chia-blockchain in the Ubuntu DEB
+- Ensure `chia-blockchain` still opens UI on Linux
+- Enable and fix `mypy` in `server.py`
+- Add simple fix to set farmer response timer for `SP: 0`
 - Preserve correct `MempoolItem` block height when rebuilding mempool
-- Windows: start daemon without a window and detached from current console (fix #13175) (thanks @jcteng)
+- Windows: start daemon without a window and detached from current console
 - Fix pool singleton sync height in DB
 - Remove duplicate nft wallet deletion in reorg
 - Fix DID unnecessary wallet deletion
 - Improve performance of wallets with many NFTs
-- Stop creating unecessary index in notification store (fix #13955)
-- Fix issues in switching pools introduced in 1.6.0 (fix #13872)
+- Stop creating unecessary index in notification store
+- Fix coin selection cli decimal handling & splitting issue
+- Make `--number-of-coins` required for the `chia coins split` CLI
+- Bump chia-blockchain-gui to restore add token functionality and fix NFTDetails exception
+- Revert delayed pool config handling
 - Handle incoming unknown capabilities
-- GUI Offer Builder displays totals with royalties when requesting an NFT
-- Fixed NFT inbox detection
-- Convert and cache NFT metadata as UTF-8
-- Fixed issue with switching between farmer and wallet modes (GUI issue #1005)
-- Improve error message when sending more mojos than Spendable Balance
 
 ## 1.6.1 Chia blockchain 2022-11-03
 
