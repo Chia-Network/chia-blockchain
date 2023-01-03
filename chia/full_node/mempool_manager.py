@@ -19,7 +19,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import Mempool
+from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -350,7 +350,7 @@ class MempoolManager:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
             self.mempool.add_to_pool(item)
-            self.mempool.remove_from_pool(remove_items)
+            self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
             return item.cost, MempoolInclusionStatus.SUCCESS, None
         elif item is not None:
             # There is an error,  but we still returned a mempool item, this means we should add to the pending pool.
@@ -586,7 +586,7 @@ class MempoolManager:
                         spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
                             bytes32(spend.coin_id)
                         ]
-                        self.mempool.remove_from_pool(spendbundle_ids)
+                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
                         for spendbundle_id in spendbundle_ids:
                             self.remove_seen(spendbundle_id)
         else:
