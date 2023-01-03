@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Dict
+
 from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
@@ -12,7 +14,7 @@ from chia.full_node.fee_estimation import (
     MempoolInfo,
 )
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import Mempool
+from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.clvm_cost import CLVMCost
@@ -43,7 +45,8 @@ def make_mempoolitem() -> MempoolItem:
 
 
 class FeeEstimatorInterfaceIntegrationVerificationObject(FeeEstimatorInterface):
-    add_mempool_item_called = False
+    add_mempool_item_called_count: int = 0
+    remove_mempool_item_called_count: int = 0
 
     def new_block(self, block_info: FeeBlockInfo) -> None:
         """A new block has been added to the blockchain"""
@@ -51,11 +54,11 @@ class FeeEstimatorInterfaceIntegrationVerificationObject(FeeEstimatorInterface):
 
     def add_mempool_item(self, mempool_item_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         """A MempoolItem (transaction and associated info) has been added to the mempool"""
-        self.add_mempool_item_called = True
+        self.add_mempool_item_called_count += 1
 
     def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         """A MempoolItem (transaction and associated info) has been removed from the mempool"""
-        pass
+        self.remove_mempool_item_called_count += 1
 
     def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRate:
         """time_offset_seconds: number of seconds into the future for which to estimate fee"""
@@ -93,12 +96,31 @@ def test_mempool_fee_estimator_add_item() -> None:
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
     mempool.add_to_pool(item)
-    assert mempool.fee_estimator.add_mempool_item_called  # type: ignore[attr-defined]
+    assert mempool.fee_estimator.add_mempool_item_called_count == 1  # type: ignore[attr-defined]
+
+
+def test_item_not_removed_if_not_added() -> None:
+    for reason in MempoolRemoveReason:
+        fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
+        mempool = Mempool(test_mempool_info, fee_estimator)
+        item = make_mempoolitem()
+        mempool.remove_from_pool([item.name], reason)
+        assert mempool.fee_estimator.remove_mempool_item_called_count == 0  # type: ignore[attr-defined]
 
 
 def test_mempool_fee_estimator_remove_item() -> None:
-    # reasons: Dict[MempoolRemoveReason, bool] = {}
-    pass
+    should_call_fee_estimator_remove: Dict[MempoolRemoveReason, int] = {
+        MempoolRemoveReason.BLOCK_INCLUSION: 0,
+        MempoolRemoveReason.CONFLICT: 1,
+        MempoolRemoveReason.POOL_FULL: 1,
+    }
+    for reason, call_count in should_call_fee_estimator_remove.items():
+        fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
+        mempool = Mempool(test_mempool_info, fee_estimator)
+        item = make_mempoolitem()
+        mempool.add_to_pool(item)
+        mempool.remove_from_pool([item.name], reason)
+        assert mempool.fee_estimator.remove_mempool_item_called_count == call_count  # type: ignore[attr-defined]
 
 
 def test_mempool_manager_fee_estimator_new_block() -> None:
