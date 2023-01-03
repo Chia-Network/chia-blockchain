@@ -141,17 +141,25 @@
   )
 
 
-  (defun-inline recreate_self_condition (CURRENT_PARAMS type new_puzhash extra_value new_amount_change my_amount)
+  (defun-inline recreate_self_condition (
+    CURRENT_PARAMS
+    type
+    new_puzhash
+    extra_value
+    new_amount_change
+    my_amount
+    my_singleton_id
+  )
     (if (= type 'u')
       (list
-        (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change))
+        (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0))
         (list ASSERT_MY_PUZZLEHASH new_puzhash)
       )
       (if (= type 'r')
-        (list (list CREATE_NEW_COIN (recurry_self new_puzhash CURRENT_PARAMS) (+ my_amount new_amount_change)))
+        (list (list CREATE_NEW_COIN (recurry_self new_puzhash CURRENT_PARAMS) (+ my_amount new_amount_change) (c my_singleton_id 0)))
         (if (= type 'n')
           (if (= new_puzhash (sha56tree extra_value))  ; check that the solution contains a reveal of the new puzhash
-            (list (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change)))
+            (list (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0)))
             (x)
           )
           (x)
@@ -197,7 +205,7 @@
       ; this is the add money spend case
       (if (> new_amount_change -1)
         (list
-          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change my_amount))
+          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change my_amount) (c (f (r SINGLETON_STRUCT))))
           (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
           (list
             CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken

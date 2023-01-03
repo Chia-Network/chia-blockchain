@@ -226,6 +226,7 @@
               INNERPUZ
             )
             ONE  ; why would a proposal hold any value
+            (c TREASURY_ID 0)  ; hint to Treasury ID so people can find it
           )
           (if (any TOTAL_VOTES SUM_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
             ()
@@ -249,7 +250,7 @@
 
     ; terminate this proposal
     (c
-      (list CREATE_COIN dao_finished_state ONE)  ; move to announce finished mode. See previous comment about proposal amounts
+      (list CREATE_COIN dao_finished_state ONE (c my_singleton_id 0))  ; move to announce finished mode. See previous comment about proposal amounts
       (c
         (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
         (c
