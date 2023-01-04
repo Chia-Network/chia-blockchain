@@ -272,10 +272,18 @@ class FullNodeDiscovery:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         retry_introducers = False
         introducer_attempts: int = 0
+        dns_start_index: int = 0
         dns_server_index: int = 0
+        tried_all_dns_servers: bool = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         last_collision_timestamp = 0
+
+        if len(self.dns_servers) > 0:
+            # Don't always start with the same DNS server
+            dns_start_index = random.randint(0, len(self.dns_servers) - 1)
+            dns_server_index = dns_start_index
+
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
 
@@ -291,13 +299,16 @@ class FullNodeDiscovery:
                         await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
                         return None
-                    # Run dual between DNS servers and introducers. One time query DNS server,
-                    # next two times query the introducer.
-                    if introducer_attempts % 3 == 0 and len(self.dns_servers) > 0:
+                    # Alternate between DNS servers and introducers.
+                    # First try all the DNS servers in the list once. Then try the introducers once.
+                    if len(self.dns_servers) > 0 and not tried_all_dns_servers:
                         dns_address = self.dns_servers[dns_server_index]
-                        dns_server_index = (dns_server_index + 1) % len(self.dns_servers)
+                        next_index = (dns_server_index + 1) % len(self.dns_servers)
+                        tried_all_dns_servers = next_index == dns_start_index
+                        dns_server_index = next_index
                         await self._query_dns(dns_address)
                     else:
+                        tried_all_dns_servers = False
                         await self._introducer_client()
                         # there's some delay between receiving the peers from the
                         # introducer until they get incorporated to prevent this
