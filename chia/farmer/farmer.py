@@ -5,8 +5,9 @@ import json
 import logging
 import time
 import traceback
+from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, DefaultDict, Dict, List, Optional, Set, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -66,6 +67,9 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class Farmer:
+    max_limited_log_rate = 60 * 60  # seconds
+    last_log_times: DefaultDict[str, float] = defaultdict(float)
+
     def __init__(
         self,
         root_path: Path,
@@ -542,10 +546,12 @@ class Farmer:
                                 pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
                     else:
-                        self.log.warning(
-                            f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
-                            f", check communication with the pool."
-                        )
+                        if time.time() - self.last_log_times["current_difficulty"] > self.max_limited_log_rate:
+                            self.last_log_times["current_difficulty"] = time.time()
+                            self.log.warning(
+                                f"No pool specific authentication_token_timeout has been set for "
+                                f"{p2_singleton_puzzle_hash}, check communication with the pool."
+                            )
 
             except Exception as e:
                 tb = traceback.format_exc()

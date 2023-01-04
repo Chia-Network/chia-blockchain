@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from collections import defaultdict
+from typing import Any, DefaultDict, Dict, List, Optional, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -52,6 +53,8 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
 
 class FarmerAPI:
     farmer: Farmer
+    max_limited_log_rate = 60 * 60  # seconds
+    last_log_times: DefaultDict[str, float] = defaultdict(float)
 
     def __init__(self, farmer) -> None:
         self.farmer = farmer
@@ -147,10 +150,12 @@ class FarmerAPI:
                     return
 
                 if pool_state_dict["current_difficulty"] is None:
-                    self.farmer.log.warning(
-                        f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
-                        f"check communication with the pool, skipping this partial to {pool_url}."
-                    )
+                    if time.time() - self.last_log_times["current_difficulty"] > self.max_limited_log_rate:
+                        self.last_log_times["current_difficulty"] = time.time()
+                        self.farmer.log.warning(
+                            f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
+                            f"check communication with the pool, skipping this partial to {pool_url}."
+                        )
                     return
 
                 required_iters = calculate_iterations_quality(
@@ -170,10 +175,12 @@ class FarmerAPI:
 
                 authentication_token_timeout = pool_state_dict["authentication_token_timeout"]
                 if authentication_token_timeout is None:
-                    self.farmer.log.warning(
-                        f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
-                        f", check communication with the pool."
-                    )
+                    if time.time() - self.last_log_times["authentication_token_timeout"] > self.max_limited_log_rate:
+                        self.last_log_times["authentication_token_timeout"] = time.time()
+                        self.farmer.log.warning(
+                            f"No pool specific authentication_token_timeout has been set for"
+                            f" {p2_singleton_puzzle_hash}, check communication with the pool."
+                        )
                     return
 
                 # Submit partial to pool
@@ -451,11 +458,13 @@ class FarmerAPI:
                     continue
 
                 if pool_dict["current_difficulty"] is None:
-                    self.farmer.log.warning(
-                        f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
-                        f"check communication with the pool, skipping this signage point, pool: "
-                        f"{pool_dict['pool_config'].pool_url} "
-                    )
+                    if time.time() - self.last_log_times["current_difficulty"] > self.max_limited_log_rate:
+                        self.last_log_times["current_difficulty"] = time.time()
+                        self.farmer.log.warning(
+                            f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
+                            f"check communication with the pool, skipping this signage point, pool: "
+                            f"{pool_dict['pool_config'].pool_url} "
+                        )
                     continue
                 pool_difficulties.append(
                     PoolDifficulty(
