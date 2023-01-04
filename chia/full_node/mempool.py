@@ -22,12 +22,6 @@ class MempoolRemoveReason(Enum):
     POOL_FULL = 3
 
 
-class MempoolRemoveReason(Enum):
-    CONFLICT = 1
-    BLOCK_INCLUSION = 2
-    POOL_FULL = 3
-
-
 class Mempool:
     def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
         self.log: logging.Logger = logging.getLogger(__name__)
