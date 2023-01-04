@@ -864,7 +864,11 @@ class WalletNode:
             latest_timestamp = last_tx.foliage_transaction_block.timestamp
 
         # Return None if not synced
-        if latest_timestamp is None or self.config["testing"] is False and latest_timestamp < request_time - 600:
+        if (
+            latest_timestamp is None
+            or self.config.get("testing", False) is False
+            and latest_timestamp < request_time - 600
+        ):
             return None
         return latest_timestamp
 
