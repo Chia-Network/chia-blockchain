@@ -28,6 +28,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
+from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
@@ -1308,7 +1309,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 
 
 @pytest.mark.parametrize(
-    "rpc_request, rpc_response",
+    ["rpc_request", "rpc_response"],
     [
         # Valid signatures
         (
@@ -1341,7 +1342,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
                     "91246eb1c7f1b66a6a"
                 ),
-                "signing_mode": "chip_0002",
+                "signing_mode": SigningMode.CHIP_0002.value,
             },
             {"isValid": True},
         ),
@@ -1359,7 +1360,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
                     "91246eb1c7f1b66a6a"
                 ),
-                "signing_mode": "chip_0002",
+                "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1e2pcue5q7t4sg8gygz3aht369sk78rzzs92zx65ktn9a9qurw35saajvkh",
             },
             {"isValid": True},
@@ -1394,14 +1395,14 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
                     "91246eb1c7f1b66a6a"
                 ),
-                "signing_mode": "chip_0002",
+                "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1d0rekc2javy5gpruzmcnk4e4qq834jzlvxt5tcgl2ylt49t26gdsjen7t0",
             },
             {"isValid": False, "error": "Public key doesn't match the address"},
         ),
     ],
 )
-@pytest.mark.parametrize("prefix_hex_strings", [True, False])
+@pytest.mark.parametrize("prefix_hex_strings", [True, False], ids=["with 0x", "no 0x"])
 @pytest.mark.asyncio
 async def test_verify_signature(
     wallet_rpc_environment: WalletRpcTestEnvironment,

@@ -1026,8 +1026,8 @@ class WalletRpcClient(RpcClient):
 
     async def sign_message_by_address(self, address: str, message: str) -> Tuple[str, str]:
         response = await self.fetch("sign_message_by_address", {"address": address, "message": message})
-        return response["pubkey"], response["signature"]
+        return response["pubkey"], response["signature"], response["signing_mode"]
 
     async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str]:
         response = await self.fetch("sign_message_by_id", {"id": id, "message": message})
-        return response["pubkey"], response["signature"]
+        return response["pubkey"], response["signature"], response["signing_mode"]
