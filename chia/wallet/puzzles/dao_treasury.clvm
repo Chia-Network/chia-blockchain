@@ -210,7 +210,7 @@
       ; this is the add money spend case
       (if (> new_amount_change -1)
         (list
-          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change my_amount) (c (f (r SINGLETON_STRUCT))))
+          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change my_amount) (c (f (r SINGLETON_STRUCT)) 0))
           (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
           (list
             CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken
