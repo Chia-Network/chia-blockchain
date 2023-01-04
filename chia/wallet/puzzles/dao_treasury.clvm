@@ -136,14 +136,14 @@
   )
     (if (= type 'u')
       (list
-        (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0))
+        (list CREATE_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0))
         (list ASSERT_MY_PUZZLEHASH new_puzhash)
       )
       (if (= type 'r')
-        (list (list CREATE_NEW_COIN (recurry_self TREASURY_MOD_HASH new_puzhash CURRENT_PARAMS ()) (+ my_amount new_amount_change) (c my_singleton_id 0)))
+        (list (list CREATE_COIN (recurry_self TREASURY_MOD_HASH new_puzhash CURRENT_PARAMS ()) (+ my_amount new_amount_change) (c my_singleton_id 0)))
         (if (= type 'n')
           (if (= new_puzhash (sha256tree extra_value))  ; check that the solution contains a reveal of the new puzhash
-            (list (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0)))
+            (list (list CREATE_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0)))
             (x)
           )
           (x)
@@ -180,7 +180,7 @@
             extra_value
             new_amount_change
             my_amount
-            0
+            (f (r SINGLETON_STRUCT))
           )
           (create_puzzle_asserts
             PROPOSAL_TIMELOCK
