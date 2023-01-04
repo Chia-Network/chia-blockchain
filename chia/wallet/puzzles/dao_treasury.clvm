@@ -2,17 +2,19 @@
 ; Money can be sent to this via p2_singleton or by spending this coin through the "add money" spend case
 
 (mod (
-  SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
-  TREASURY_MOD_HASH
-  PROPOSAL_MOD_HASH
-  PROPOSAL_TIMER_MOD_HASH
-  LOCKUP_MOD_HASH
-  CAT_MOD_HASH
-  CAT_TAIL
-  CURRENT_CAT_ISSUANCE
-  ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
-  PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
-  PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
+  (
+    SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+    TREASURY_MOD_HASH
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    LOCKUP_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL
+    CURRENT_CAT_ISSUANCE
+    ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
+    PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
+    PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
+  )
   my_amount         ; current amount
   new_amount_change ; may be negative or positive. Is zero during eve spend
   my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
@@ -38,25 +40,6 @@
       (c (f list_a) (merge_list (r list_a) list_b))
       list_b
     )
-  )
-
-  ; this macro in theory allows us to pass a list for the args of a function
-  (defmacro compile-call-to-f (to-call N lst)
-    (defun rlist (N elt)
-      (if (= N 0)
-          (c 5 (list elt))
-          (rlist (- N 1) (c 6 (list elt)))
-          )
-      )
-
-    (defun list-of-rlist (N M elt)
-      (if (= N M)
-          ()
-          (c (rlist M elt) (list-of-rlist N (+ M 1) elt))
-          )
-      )
-
-    (c to-call (list-of-rlist N 0 lst))
   )
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
@@ -85,8 +68,8 @@
                                      (sha256 ONE proposal_current_votes)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE CAT_TAIL)
-				     (sha256 ONE LOCKUP_MOD_HASH)
-				     (sha256 ONE TREASURY_MOD_HASH)
+                        				     (sha256 ONE LOCKUP_MOD_HASH)
+                        				     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -128,10 +111,9 @@
   )
 
   (defun-inline recurry_self (TREASURY_MOD_HASH index_value_pairs_list CURRENT_PARAMS)
-    (compile-call-to-f
-      puzzle-hash-of-curried-params
-      (c
-        TREASURY_MOD_HASH
+    (puzzle-hash-of-curried-function
+      TREASURY_MOD_HASH
+      (sha256tree
         (recurry_by_index_ordered
           index_value_pairs_list   ; MUST BE ORDERED
           0  ; must be 0 on initial call

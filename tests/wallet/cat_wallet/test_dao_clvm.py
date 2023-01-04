@@ -170,17 +170,19 @@ def test_treasury() -> None:
     # PROPOSAL_PASS_PERCENTAGE
     # PROPOSAL_TIMELOCK
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
-        singleton_struct,
-        DAO_TREASURY_MOD.get_tree_hash(),
-        DAO_PROPOSAL_MOD.get_tree_hash(),
-        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        current_cat_issuance,
-        attendance_percentage,
-        5100,  # pass margin
-        LOCKUP_TIME,
+        [
+            singleton_struct,
+            DAO_TREASURY_MOD.get_tree_hash(),
+            DAO_PROPOSAL_MOD.get_tree_hash(),
+            DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+            DAO_LOCKUP_MOD.get_tree_hash(),
+            CAT_MOD.get_tree_hash(),
+            CAT_TAIL,
+            current_cat_issuance,
+            attendance_percentage,
+            5100,  # pass margin
+            LOCKUP_TIME,
+        ]
     )
 
     # old_amount
