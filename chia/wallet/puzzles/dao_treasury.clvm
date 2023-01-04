@@ -26,6 +26,7 @@
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+  (include curry_by_index.clib)
   (include *standard-cl-21*)
 
   (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
@@ -142,6 +143,7 @@
 
 
   (defun-inline recreate_self_condition (
+    TREASURY_MOD_HASH
     CURRENT_PARAMS
     type
     new_puzhash
@@ -156,9 +158,9 @@
         (list ASSERT_MY_PUZZLEHASH new_puzhash)
       )
       (if (= type 'r')
-        (list (list CREATE_NEW_COIN (recurry_self new_puzhash CURRENT_PARAMS) (+ my_amount new_amount_change) (c my_singleton_id 0)))
+        (list (list CREATE_NEW_COIN (recurry_self TREASURY_MOD_HASH new_puzhash CURRENT_PARAMS ()) (+ my_amount new_amount_change) (c my_singleton_id 0)))
         (if (= type 'n')
-          (if (= new_puzhash (sha56tree extra_value))  ; check that the solution contains a reveal of the new puzhash
+          (if (= new_puzhash (sha256tree extra_value))  ; check that the solution contains a reveal of the new puzhash
             (list (list CREATE_NEW_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0)))
             (x)
           )
@@ -176,7 +178,28 @@
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, and the current amount of CATs in the world
         (merge_list  ; this will be very short in practice
-          (recreate_self_condition CURRENT_PARAMS type new_puzhash extra_value new_amount_change my_amount)
+          (recreate_self_condition
+            TREASURY_MOD_HASH
+            (list
+              SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+              TREASURY_MOD_HASH
+              PROPOSAL_MOD_HASH
+              PROPOSAL_TIMER_MOD_HASH
+              LOCKUP_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL
+              CURRENT_CAT_ISSUANCE
+              ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
+              PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
+              PROPOSAL_TIMELOCK
+            )
+            type
+            new_puzhash
+            extra_value
+            new_amount_change
+            my_amount
+            0
+          )
           (create_puzzle_asserts
             PROPOSAL_TIMELOCK
             (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
