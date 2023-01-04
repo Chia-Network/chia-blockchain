@@ -126,3 +126,13 @@ async def test_block_cost_exceeds_max() -> None:
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="Err.BLOCK_COST_EXCEEDS_MAX"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+
+
+@pytest.mark.asyncio
+async def test_double_spend_prevalidation() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    sb_twice: SpendBundle = SpendBundle.aggregate([sb, sb])
+    with pytest.raises(ValidationError, match="Err.DOUBLE_SPEND"):
+        await mempool_manager.pre_validate_spendbundle(sb_twice, None, sb_twice.name())
