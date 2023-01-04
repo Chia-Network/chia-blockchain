@@ -266,7 +266,7 @@ def parse_signature_json(json_str: str):
     type=str,
 )
 def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, json: str):
-    from .keys_funcs import verify, as_bytes_from_signing_mode
+    from .keys_funcs import as_bytes_from_signing_mode, verify
 
     if json is not None:
         parsed_message, parsed_pubkey, parsed_sig, parsed_signing_mode_str = parse_signature_json(json)

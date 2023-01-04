@@ -11,6 +11,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.errors import KeychainException
@@ -18,7 +19,6 @@ from chia.util.file_keyring import MAX_LABEL_LENGTH
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 from chia.util.keyring_wrapper import KeyringWrapper
-from chia.types.signing_mode import SigningMode
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
