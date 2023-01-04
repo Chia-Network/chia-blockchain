@@ -104,7 +104,7 @@ def test_item_not_removed_if_not_added() -> None:
         fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
         mempool = Mempool(test_mempool_info, fee_estimator)
         item = make_mempoolitem()
-        mempool.remove_from_pool([item.name], reason)
+        mempool.remove_from_pool([item.name], reason, block_height=uint32(1))
         assert mempool.fee_estimator.remove_mempool_item_called_count == 0  # type: ignore[attr-defined]
 
 
@@ -118,8 +118,8 @@ def test_mempool_fee_estimator_remove_item() -> None:
         fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
         mempool = Mempool(test_mempool_info, fee_estimator)
         item = make_mempoolitem()
-        mempool.add_to_pool(item)
-        mempool.remove_from_pool([item.name], reason)
+        mempool.add_to_pool(item, block_height=uint32(1))
+        mempool.remove_from_pool([item.name], reason, block_height=uint32(1))
         assert mempool.fee_estimator.remove_mempool_item_called_count == call_count  # type: ignore[attr-defined]
 
 
