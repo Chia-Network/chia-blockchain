@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import collections
 import logging
 import time
 from concurrent.futures import Executor
@@ -408,11 +407,6 @@ class MempoolManager:
         for add in additions:
             additions_dict[add.name()] = add
             addition_amount = addition_amount + add.amount
-        # Check for duplicate inputs
-        removal_counter = collections.Counter(name for name in removal_names)
-        for k, v in removal_counter.items():
-            if v > 1:
-                return Err.DOUBLE_SPEND, None, []
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
