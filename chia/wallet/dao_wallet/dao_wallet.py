@@ -27,7 +27,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.dao_wallet.dao_info import DAOInfo
+from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import SINGLETON_LAUNCHER, curry_singleton, generate_cat_tail, get_treasury_puzzle
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
@@ -45,14 +45,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-
-
-@streamable
-@dataclass(frozen=True)
-class ProposalInfo(Streamable):
-    proposal_id: bytes32
-    inner_puzzle: Program
-    voted: bool
 
 
 class DAOWallet:
@@ -427,7 +419,6 @@ class DAOWallet:
             raise ValueError("Could not find any peers to request puzzle and solution from")
         cs = self.wallet_node.get_coin_state([parent_coin], peer)
         parent_coin = cs[0].coin
-        breakpoint()
         while True:
             children = await self.wallet_node.fetch_children(parent_coin, peer)
             if len(children) == 0:
