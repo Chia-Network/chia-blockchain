@@ -136,7 +136,7 @@ async def insert_from_delta_file(
     client_foldername: Path,
     timeout: int,
     log: logging.Logger,
-    proxy_url: str
+    proxy_url: str,
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())

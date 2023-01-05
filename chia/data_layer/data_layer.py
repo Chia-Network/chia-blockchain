@@ -386,7 +386,7 @@ class DataLayer:
                     self.server_files_location,
                     timeout,
                     self.log,
-                    proxy_url
+                    proxy_url,
                 )
                 if success:
                     self.log.info(
