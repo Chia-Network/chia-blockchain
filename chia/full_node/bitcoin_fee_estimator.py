@@ -19,7 +19,7 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
 
     fee_rate_estimator: SmartFeeEstimator
     tracker: FeeTracker
-    last_mempool_info: FeeMempoolInfo
+    last_mempool_info: FeeMempoolInfo = EmptyFeeMempoolInfo
     block_height: uint32
 
     def __init__(self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator) -> None:
@@ -72,7 +72,7 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         return self.tracker
 
     def get_mempool_info(self) -> FeeMempoolInfo:
-        return self.last_mempool_info if self.last_mempool_info else EmptyFeeMempoolInfo
+        return self.last_mempool_info
 
 
 def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64) -> BitcoinFeeEstimator:
