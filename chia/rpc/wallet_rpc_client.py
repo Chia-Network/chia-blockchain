@@ -998,6 +998,7 @@ class WalletRpcClient(RpcClient):
                 bytes32.from_hexstr(notification["id"]),
                 bytes.fromhex(notification["message"]),
                 uint64(notification["amount"]),
+                uint32(notification["height"]),
             )
             for notification in response["notifications"]
         ]
