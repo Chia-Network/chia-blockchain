@@ -134,14 +134,14 @@
     my_amount
     my_singleton_id
   )
-    (if (= type 'u')
+    (if (= type 'u')  ; unchanged
       (list
         (list CREATE_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0))
         (list ASSERT_MY_PUZZLEHASH new_puzhash)
       )
-      (if (= type 'r')
+      (if (= type 'r')  ; recurry by index
         (list (list CREATE_COIN (recurry_self TREASURY_MOD_HASH new_puzhash CURRENT_PARAMS ()) (+ my_amount new_amount_change) (c my_singleton_id 0)))
-        (if (= type 'n')
+        (if (= type 'n')  ; new puzhash
           (if (= new_puzhash (sha256tree extra_value))  ; check that the solution contains a reveal of the new puzhash
             (list (list CREATE_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0)))
             (x)

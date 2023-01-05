@@ -1,9 +1,9 @@
-(mod (P2_CONDS TREASURY_PH NEW_AMOUNT_CHANGE)
+(mod (P2_CONDS NEW_TREASURY_PH NEW_AMOUNT_CHANGE)
 ;; This puzzle is a generic inner puzzle for a DAO proposal and works with either XCH or CAT minting.
 ;; It curries in a list of conditions which are produced if the proposal runs its "pass" spend.
 
 ;; P2_CONDS: Curried list of conditions that will be issued if the puzzle is run
-;; TREASURY_PH: The puzzlehash of the treasury coin - must be correct or puzzle will fail
+;; NEW_TREASURY_PH: The new puzzlehash of the treasury coin
 ;; NEW_AMOUNT_CHANGE: the change in amount held by the treasury (old_amount - new_amount)
 
 
@@ -13,7 +13,7 @@
 
 
   (c
-    (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list 'u' TREASURY_PH NEW_AMOUNT_CHANGE))) ;; asserted by dao_treasury
+    (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list 'n' NEW_TREASURY_PH NEW_AMOUNT_CHANGE))) ;; asserted by dao_treasury
     P2_CONDS
   )
 
