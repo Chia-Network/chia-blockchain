@@ -642,8 +642,3 @@ class FullNodeSimulator(FullNodeAPI):
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
         return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
-
-    # TODO: so wallet_is_synced() is in test code and thus unavailable here...  but
-    #       shouldn't we be able to ask the wallet...?
-    # def wait_wallets_synced(self, wallets: List[WalletNode], timeout: float = 5) -> None:
-    #     with anyio.fail_after(delay=adjusted_timeout(timeout)):
