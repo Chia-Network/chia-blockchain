@@ -146,8 +146,11 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
         )
         if len(target_coin_ids) > 0:
             conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
-        if len(conf_coins) <= 1:
+        if len(conf_coins) == 0:
             print("No coins to combine.")
+            return
+        if len(conf_coins) == 1:
+            print("Only one coin found, you need at least two coins to combine.")
             return
         if largest:
             conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
