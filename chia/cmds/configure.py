@@ -10,15 +10,16 @@ from chia.util.config import load_defaults_for_missing_services, lock_and_load_c
 
 def configure(
     root_path: Path,
-    set_farmer_peer: str,
+    testnet: str,
     set_node_introducer: str,
+    set_farmer_peer: str,
+    set_fullnode_peer: str,
     set_fullnode_port: str,
     set_harvester_port: str,
     set_log_level: str,
     enable_upnp: str,
     set_outbound_peer_count: str,
     set_peer_count: str,
-    testnet: str,
     peer_connect_timeout: str,
     crawler_db_path: str,
     crawler_minimum_version_count: Optional[int],
@@ -59,6 +60,24 @@ def configure(
                     change_made = True
             except ValueError:
                 print("Farmer address must be in format [IP:Port]")
+        if set_fullnode_peer:
+            try:
+                if set_fullnode_peer.index(":"):
+                    host, port = (
+                        ":".join(set_fullnode_peer.split(":")[:-1]),
+                        set_fullnode_peer.split(":")[-1],
+                    )
+                    config["farmer"]["full_node_peer"]["host"] = host
+                    config["farmer"]["full_node_peer"]["port"] = int(port)
+                    config["timelord"]["full_node_peer"]["host"] = host
+                    config["timelord"]["full_node_peer"]["port"] = int(port)
+                    config["wallet"]["full_node_peer"]["host"] = host
+                    config["wallet"]["full_node_peer"]["port"] = int(port)
+                    print("Fullnode peer updated")
+                    change_made = True
+            except ValueError:
+                print("Fullnode peer address must be in format [IP:Port]")
+
         if set_fullnode_port:
             config["full_node"]["port"] = int(set_fullnode_port)
             config["full_node"]["introducer_peer"]["port"] = int(set_fullnode_port)
@@ -216,6 +235,7 @@ def configure(
 )
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
+@click.option("--set-fullnode-peer", help="Set the fullnode peer for wallet - IP:Port", type=str)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for testing",
@@ -270,15 +290,16 @@ def configure(
 @click.pass_context
 def configure_cmd(
     ctx,
-    set_farmer_peer,
+    testnet,
     set_node_introducer,
+    set_farmer_peer,
+    set_fullnode_peer,
     set_fullnode_port,
     set_harvester_port,
     set_log_level,
     enable_upnp,
     set_outbound_peer_count,
     set_peer_count,
-    testnet,
     set_peer_connect_timeout,
     crawler_db_path,
     crawler_minimum_version_count,
@@ -287,15 +308,16 @@ def configure_cmd(
 ):
     configure(
         ctx.obj["root_path"],
-        set_farmer_peer,
+        testnet,
         set_node_introducer,
+        set_farmer_peer,
+        set_fullnode_peer,
         set_fullnode_port,
         set_harvester_port,
         set_log_level,
         enable_upnp,
         set_outbound_peer_count,
         set_peer_count,
-        testnet,
         set_peer_connect_timeout,
         crawler_db_path,
         crawler_minimum_version_count,
