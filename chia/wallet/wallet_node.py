@@ -1279,7 +1279,6 @@ class WalletNode:
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
         all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-        puzzle_store_count = len(all_puzzle_hashes)
         # Get all phs from interested store
         interested_puzzle_hashes = [
             t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
