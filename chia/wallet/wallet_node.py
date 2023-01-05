@@ -1285,8 +1285,7 @@ class WalletNode:
             t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
         ]
         all_puzzle_hashes.extend(interested_puzzle_hashes)
-        assert puzzle_store_count + len(interested_puzzle_hashes) == len(set(all_puzzle_hashes))
-        return all_puzzle_hashes
+        return list(set(all_puzzle_hashes))  # Remove duplicates
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
         all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
