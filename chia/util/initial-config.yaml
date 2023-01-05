@@ -593,6 +593,10 @@ data_layer:
   fee: 1000000000
   logging: *logging
 
+  # If you need use a proxy for download data you can use this setting sample
+  # proxy_url: http://localhost:8888 
+
+  
   # TODO: which of these are really appropriate?
 
   ssl:

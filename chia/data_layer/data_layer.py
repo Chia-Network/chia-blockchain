@@ -376,6 +376,7 @@ class DataLayer:
 
             try:
                 timeout = self.config.get("client_timeout", 15)
+                proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
                     tree_id,
@@ -385,6 +386,7 @@ class DataLayer:
                     self.server_files_location,
                     timeout,
                     self.log,
+                    proxy_url
                 )
                 if success:
                     self.log.info(
