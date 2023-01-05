@@ -185,14 +185,16 @@ def test_treasury() -> None:
         ]
     )
 
-    # old_amount
-    # new_amount_change
-    # my_puzhash_or_proposal_id
+    # my_amount         ; current amount
+    # new_amount_change ; may be negative or positive. Is zero during eve spend
+    # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
     # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
     # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
     # proposal_innerpuz
-    # proposal_current_votes
-    # proposal_total_votes
+    # proposal_current_votes ; tally of yes votes
+    # proposal_total_votes   ; total votes cast (by number of cat-mojos)
+    # type  ; this is used for the recreating self type
+    # extra_value  ; this is used for recreating self
 
     # Add money solution
     solution: Program = Program.to(
@@ -217,10 +219,11 @@ def test_treasury() -> None:
             Program.to("proposal_inner").get_tree_hash(),
             100,
             150,
+            'u',
         ]
     )
     conds = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 5
+    assert len(conds.as_python()) == 6
 
 
 def test_lockup() -> None:
@@ -342,7 +345,12 @@ def test_proposal_innerpuz() -> None:
         proposal_innerpuz,
     )
 
-    solution: Program = Program.to([[], P2_SINGLETON_MOD.get_tree_hash(), current_cat_issuance, 0])
+    solution: Program = Program.to([
+        [],
+        P2_SINGLETON_MOD.get_tree_hash(),
+        current_cat_issuance,
+        0
+    ])
 
     full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
 
@@ -360,14 +368,16 @@ def test_proposal_innerpuz() -> None:
         pass_margin,
         LOCKUP_TIME,
     )
-    #   my_amount         ; current amount
+    # my_amount         ; current amount
     # new_amount_change ; may be negative or positive. Is zero during eve spend
     # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
-    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot
+    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
     # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
     # proposal_innerpuz
     # proposal_current_votes ; tally of yes votes
     # proposal_total_votes   ; total votes cast (by number of cat-mojos)
+    # type  ; this is used for the recreating self type
+    # extra_value  ; this is used for recreating self
 
     treasury_solution: Program = Program.to(
         [
@@ -379,6 +389,8 @@ def test_proposal_innerpuz() -> None:
             proposal_innerpuz,  # proposal_innerpuz
             200,  # current_votes
             350,  # total_votes
+            'u',  # recreation type
+            0,  # extra_value for recreation
         ]
     )
 
