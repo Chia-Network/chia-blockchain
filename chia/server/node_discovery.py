@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import random
 import time
 import traceback
 from logging import Logger
@@ -58,6 +59,7 @@ class FullNodeDiscovery:
         self.legacy_peer_db_migrated = False
         self.peers_file_path = peer_store_resolver.peers_file_path
         self.dns_servers = dns_servers
+        random.shuffle(dns_servers)  # Don't always start with the same DNS server
         if introducer_info is not None:
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
                 introducer_info["host"],
@@ -271,18 +273,11 @@ class FullNodeDiscovery:
     async def _connect_to_peers(self, random: Random) -> None:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         retry_introducers = False
-        introducer_attempts: int = 0
-        dns_start_index: int = 0
         dns_server_index: int = 0
         tried_all_dns_servers: bool = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         last_collision_timestamp = 0
-
-        if len(self.dns_servers) > 0:
-            # Don't always start with the same DNS server
-            dns_start_index = random.randint(0, len(self.dns_servers) - 1)
-            dns_server_index = dns_start_index
 
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
@@ -303,9 +298,8 @@ class FullNodeDiscovery:
                     # First try all the DNS servers in the list once. Then try the introducers once.
                     if len(self.dns_servers) > 0 and not tried_all_dns_servers:
                         dns_address = self.dns_servers[dns_server_index]
-                        next_index = (dns_server_index + 1) % len(self.dns_servers)
-                        tried_all_dns_servers = next_index == dns_start_index
-                        dns_server_index = next_index
+                        dns_server_index = (dns_server_index + 1) % len(self.dns_servers)
+                        tried_all_dns_servers = dns_server_index == 0
                         await self._query_dns(dns_address)
                     else:
                         tried_all_dns_servers = False
@@ -320,7 +314,6 @@ class FullNodeDiscovery:
                             return None
 
                     retry_introducers = False
-                    introducer_attempts += 1
                     # keep doubling the introducer delay until we reach 5
                     # minutes
                     if introducer_backoff < 300:
