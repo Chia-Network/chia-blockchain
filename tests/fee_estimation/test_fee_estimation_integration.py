@@ -16,6 +16,7 @@ from chia.full_node.fee_estimation import (
     MempoolInfo,
 )
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
@@ -235,3 +236,25 @@ async def test_mm_calls_new_block_height() -> None:
     block2 = create_test_block_record(height=uint32(2))
     await mempool_manager.new_peak(block2, None)
     assert new_block_height_called
+
+
+def test_process_block_tx_called() -> None:
+    max_block_cost = uint64(1000 * 1000)
+    fee_estimator = create_bitcoin_fee_estimator(max_block_cost)
+    mempool = Mempool(test_mempool_info, fee_estimator)
+    item = make_mempoolitem()
+
+    process_block_tx_called = False
+
+    def process_block_tx_called_fun(self: FeeTracker, current_height: uint32, mitem: MempoolItem) -> None:
+        nonlocal process_block_tx_called
+        process_block_tx_called = True
+
+    # Replace with test method
+    mempool.fee_estimator.tracker.process_block_tx = types.MethodType(  # type: ignore[attr-defined]
+        process_block_tx_called_fun, mempool.fee_estimator.tracker  # type: ignore[attr-defined]
+    )
+
+    mempool.add_to_pool(item)
+
+    assert process_block_tx_called
