@@ -98,7 +98,8 @@ def list_cmd(
 @click.option(
     "-a",
     "--target-amount",
-    help="Select coins until this amount (in XCH or CAT) is reached. Combine all selected coins into one coin, which will have a value of at least target-amount",
+    help="Select coins until this amount (in XCH or CAT) is reached. \
+    Combine all selected coins into one coin, which will have a value of at least target-amount",
     type=str,
     default="0",
 )
