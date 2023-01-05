@@ -650,7 +650,7 @@ class WalletNode:
             await self.wallet_state_manager.create_more_puzzle_hashes()
             all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
             not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
-            if len(not_checked_puzzle_hashes) == 0:
+            if not_checked_puzzle_hashes == set():
                 break
             for chunk in chunks(list(not_checked_puzzle_hashes), 1000):
                 ph_update_res: List[CoinState] = await subscribe_to_phs(chunk, full_node, 0)
@@ -668,7 +668,7 @@ class WalletNode:
         while not self._shut_down:
             all_coin_ids = await self.get_coin_ids_to_subscribe(0)
             not_checked_coin_ids = set(all_coin_ids) - already_checked_coin_ids
-            if len(not_checked_coin_ids) == 0:
+            if not_checked_coin_ids == set():
                 break
             for chunk in chunks(list(not_checked_coin_ids), 1000):
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
