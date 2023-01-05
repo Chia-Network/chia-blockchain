@@ -32,3 +32,7 @@ class FeeEstimatorInterface(Protocol):
     def mempool_max_size(self) -> CLVMCost:
         """Report current mempool max "size" (i.e. CLVM cost)"""
         pass
+
+    def get_mempool_info(self) -> FeeMempoolInfo:
+        """Report Mempool current configuration and state"""
+        pass
