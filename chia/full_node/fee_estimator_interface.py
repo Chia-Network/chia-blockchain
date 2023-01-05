@@ -6,11 +6,16 @@ from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
+from chia.util.ints import uint32
 
 
 class FeeEstimatorInterface(Protocol):
+    def new_block_height(self, block_height: uint32) -> None:
+        """Called immediately when block height changes. Can be called multiple times before `new_block`"""
+        pass
+
     def new_block(self, block_info: FeeBlockInfo) -> None:
-        """A new block has been added to the blockchain"""
+        """A new transaction block has been added to the blockchain"""
         pass
 
     def add_mempool_item(self, mempool_item_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:

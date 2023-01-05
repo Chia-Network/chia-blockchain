@@ -31,14 +31,11 @@ async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
     assert False
 
 
-async def instantiate_mempool_manager(
-    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
-) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
-    test_block_record = BlockRecord(
+def create_test_block_record(*, height: uint32 = TEST_HEIGHT) -> BlockRecord:
+    return BlockRecord(
         IDENTITY_PUZZLE_HASH,
         IDENTITY_PUZZLE_HASH,
-        TEST_HEIGHT,
+        height,
         uint128(0),
         uint128(0),
         uint8(0),
@@ -52,7 +49,7 @@ async def instantiate_mempool_manager(
         uint64(0),
         uint8(0),
         False,
-        uint32(TEST_HEIGHT - 1),
+        uint32(height - 1),
         TEST_TIMESTAMP,
         None,
         uint64(0),
@@ -62,6 +59,13 @@ async def instantiate_mempool_manager(
         None,
         None,
     )
+
+
+async def instantiate_mempool_manager(
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+) -> MempoolManager:
+    mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
+    test_block_record = create_test_block_record()
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
