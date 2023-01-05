@@ -98,7 +98,7 @@ def list_cmd(
 @click.option(
     "-a",
     "--target-amount",
-    help="An optional target coin amount, if you want to create a coin with a specific amount.",
+    help="Select coins until this amount (in XCH or CAT) is reached. Combine all selected coins into one coin, which will have a value of at least target-amount",
     type=str,
     default="0",
 )
@@ -123,11 +123,11 @@ def list_cmd(
     help="The number of coins we are combining.",
 )
 @click.option(
-    "--max-dust-amount",
+    "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
     show_default=True,
-    default="0.000001000000",  # 1000000 mojo
+    default="0",  # 0 means no limit
 )
 @click.option(
     "-m",
@@ -158,7 +158,7 @@ def combine_cmd(
     min_amount: str,
     amounts_to_exclude: List[int],
     number_of_coins: int,
-    max_dust_amount: str,
+    max_amount: str,
     fee: str,
     input_coins: List[str],
     largest_first: bool,
@@ -169,7 +169,7 @@ def combine_cmd(
         "min_coin_amount": min_amount,
         "excluded_amounts": amounts_to_exclude,
         "number_of_coins": number_of_coins,
-        "max_dust_amount": max_dust_amount,
+        "max_amount": max_amount,
         "fee": fee,
         "target_coin_ids": list(input_coins),
         "largest": largest_first,

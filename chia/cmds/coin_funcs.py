@@ -109,7 +109,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     min_coin_amount = Decimal(args["min_coin_amount"])
     excluded_amounts = args["excluded_amounts"]
     number_of_coins = args["number_of_coins"]
-    max_dust_amount = Decimal(args["max_dust_amount"])
+    max_amount = Decimal(args["max_amount"])
     target_coin_amount = Decimal(args["target_coin_amount"])
     target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in args["target_coin_ids"]]
     largest = bool(args["largest"])
@@ -125,7 +125,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     if not await wallet_client.get_synced():
         print("Wallet not synced. Please wait.")
         return
-    final_max_dust_amount = uint64(int(max_dust_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
+    final_max_amount = uint64(int(max_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_excluded_amounts: List[uint64] = [uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts]
     final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
@@ -133,14 +133,14 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
         removals: List[Coin] = await wallet_client.select_coins(
             amount=final_target_coin_amount + final_fee,
             wallet_id=wallet_id,
-            max_coin_amount=final_max_dust_amount,
+            max_coin_amount=final_max_amount,
             min_coin_amount=final_min_coin_amount,
             excluded_amounts=final_excluded_amounts + [final_target_coin_amount],  # dont reuse coins of same amount.
         )
     else:
         conf_coins, _, _ = await wallet_client.get_spendable_coins(
             wallet_id=wallet_id,
-            max_coin_amount=final_max_dust_amount,
+            max_coin_amount=final_max_amount,
             min_coin_amount=final_min_coin_amount,
             excluded_amounts=final_excluded_amounts,
         )
