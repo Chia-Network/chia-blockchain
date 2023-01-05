@@ -126,7 +126,6 @@ def list_cmd(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
-    show_default=True,
     default="0",  # 0 means no limit
 )
 @click.option(
