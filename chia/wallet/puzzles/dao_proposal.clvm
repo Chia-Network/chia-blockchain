@@ -130,55 +130,19 @@
     (calculate_singleton_puzzle_hash treasury_singleton_struct
       (puzzle-hash-of-curried-function TREASURY_MOD_HASH
         (sha256 ONE PROPOSAL_TIMELOCK)
-	(sha256 ONE PROPOSAL_PASS_PERCENTAGE)
-	(sha256 ONE CURRENT_CAT_ISSUANCE)
-	(sha256 ONE CAT_TAIL)
-	(sha256 ONE CAT_MOD_HASH)
-	(sha256 ONE p2_singleton_mod_hash)
-	(sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-	(sha256 ONE PROPOSAL_MOD_HASH)
+      	(sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+      	(sha256 ONE CURRENT_CAT_ISSUANCE)
+      	(sha256 ONE CAT_TAIL)
+      	(sha256 ONE CAT_MOD_HASH)
+      	(sha256 ONE p2_singleton_mod_hash)
+      	(sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+      	(sha256 ONE PROPOSAL_MOD_HASH)
         (sha256 ONE TREASURY_MOD_HASH)
         (sha256tree treasury_singleton_struct)
       )
     )
   )
 
-  ; the point of this function is to check for the presence of 0 or 1 puzzle_update announcements
-  ; a puzzle_update announcement must have one of the following as its hint
-  ; 'n' - totally new puzzlehash with a hint of the whole puzzle reveal
-  ; 'r' - a list of (index, value) pieces of data for the treasury to recurry itself with
-  ; 'u' - unchanged
-  ; The amount announced here is a relevant amount change, and can be a negative number - this is so you know what you get even if treasury amount changes
-
-  (defun loop_through_generated_conditions (
-    found_update
-    conditions
-  )
-    (if conditions
-      (c
-        (f conditions)
-        (loop_through_generated_conditions
-          (if (all (= (f conditions) CREATE_PUZZLE_ANNOUNCEMENT) (r (r (f conditions))))  ; check if there's a hint
-            (if  ; check if the hint is one of the ones we recognise
-              (any
-                (= (f (r (r (f conditions)))) 'u')
-                (= (f (r (r (f conditions)))) 'r')
-                (= (f (r (r (f conditions)))) 'n')
-              )
-              (if found_update (x) 1)  ; if so, assert we haven't already set flag, and then set flag
-              found_update  ; otherwise maintain flag
-            )
-            found_update  ; maintain flag
-          )
-          (r conditions)  ; continue loop
-        )
-      )
-      (if found_update
-        ()
-        (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; if no update created, we make a maintain announcement anyway for security
-      )
-    )
-  )
 
   ; main
 
