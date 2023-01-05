@@ -31,11 +31,11 @@ async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
     assert False
 
 
-def create_test_block_record() -> BlockRecord:
+def create_test_block_record(*, height: uint32 = TEST_HEIGHT) -> BlockRecord:
     return BlockRecord(
         IDENTITY_PUZZLE_HASH,
         IDENTITY_PUZZLE_HASH,
-        TEST_HEIGHT,
+        height,
         uint128(0),
         uint128(0),
         uint8(0),
@@ -49,7 +49,7 @@ def create_test_block_record() -> BlockRecord:
         uint64(0),
         uint8(0),
         False,
-        uint32(TEST_HEIGHT - 1),
+        uint32(height - 1),
         TEST_TIMESTAMP,
         None,
         uint64(0),

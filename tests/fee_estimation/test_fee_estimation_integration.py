@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Dict, List
 
 import pytest
@@ -212,8 +211,8 @@ def test_current_block_height_new_block_then_new_height() -> None:
 
 
 @pytest.mark.asyncio
-async def test_duplicate_output() -> None:
+async def test_mm_new_peak_changes_fee_estimator_block_height() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
-    block2 = replace(create_test_block_record(), height=uint32(2))
+    block2 = create_test_block_record(height=uint32(2))
     await mempool_manager.new_peak(block2, None)
     assert mempool_manager.mempool.fee_estimator.block_height == uint32(2)  # type: ignore[attr-defined]
