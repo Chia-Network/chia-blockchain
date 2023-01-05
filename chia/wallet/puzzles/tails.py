@@ -242,9 +242,9 @@ class GenesisByIdOrProposal(LimitationsProgram):
             [
                 origin_id,
                 tail_info["treasury_id"],
-                Program(SINGLETON_MOD.get_tree_hash()),
-                Program(SINGLETON_LAUNCHER.get_tree_hash()),
-                Program(DAO_PROPOSAL_MOD.get_tree_hash()),
+                Program.to(SINGLETON_MOD.get_tree_hash()),
+                Program.to(SINGLETON_LAUNCHER.get_tree_hash()),
+                Program.to(DAO_PROPOSAL_MOD.get_tree_hash()),
             ]
         )
 
