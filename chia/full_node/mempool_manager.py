@@ -581,9 +581,12 @@ class MempoolManager:
                         spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
                             bytes32(spend.coin_id)
                         ]
-                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
                         for spendbundle_id in spendbundle_ids:
+                            item = self.mempool.spends.get(spendbundle_id)
+                            if item:
+                                included_items.append(item)
                             self.remove_seen(spendbundle_id)
+                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
