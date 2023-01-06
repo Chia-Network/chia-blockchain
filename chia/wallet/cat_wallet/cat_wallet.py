@@ -171,6 +171,7 @@ class CATWallet:
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
         await self.standard_wallet.push_transaction(cat_record)
+        breakpoint()
         return self
 
     @staticmethod

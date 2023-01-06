@@ -227,10 +227,15 @@ class GenesisByIdOrProposal(LimitationsProgram):
     async def generate_issuance_bundle(
         cls, wallet, tail_info: Dict, amount: uint64
     ) -> Tuple[TransactionRecord, SpendBundle]:
-        coins = await wallet.standard_wallet.select_coins(amount)
 
-        origin = coins.copy().pop()
-        origin_id = origin.name()
+        if "coins" in tail_info:
+            coins = tail_info["coins"]
+            origin_id = coins.copy().pop().name()
+        else:
+            coins = await wallet.standard_wallet.select_coins(amount)
+
+            origin = coins.copy().pop()
+            origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
         # GENESIS_ID

@@ -72,6 +72,12 @@ class TestDAOWallet:
         )
         assert dao_wallet is not None
         treasury_id = dao_wallet.dao_info.treasury_id
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await asyncio.sleep(20)
+
         dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             wallet_node_1.wallet_state_manager,
             wallet_1,

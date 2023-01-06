@@ -24,6 +24,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
@@ -114,7 +115,6 @@ class DAOWallet:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-
         return self
 
     @staticmethod
@@ -125,7 +125,7 @@ class DAOWallet:
         name: Optional[str] = None,
     ):
         """
-        Create a DID wallet from a backup file
+        Create a DAO wallet for existing DAO
         :param wallet_state_manager: Wallet state manager
         :param wallet: Standard wallet
         :param name: Wallet name
@@ -139,7 +139,7 @@ class DAOWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        self.log.info("Creating DID wallet from recovery file ...")
+        self.log.info("Creating DAO wallet for existent DAO ...")
         self.dao_info = DAOInfo(
             treasury_id,  # treasury_id: bytes32
             0,  # cat_wallet_id: int
@@ -418,6 +418,8 @@ class DAOWallet:
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
         cs = await wallet_node.get_coin_state([parent_coin_id], peer)
+        children = await wallet_node.fetch_children(parent_coin_id, peer)
+        breakpoint()
         parent_coin = cs[0].coin
         while True:
             children = await wallet_node.fetch_children(parent_coin, peer)
@@ -1100,12 +1102,18 @@ class DAOWallet:
         if proposal_pass_percentage > 10000 or proposal_pass_percentage < 0:
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
-        coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
+        coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
             return None
-
+        # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
+
+        different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats), exclude=[origin])
+        cat_origin = different_coins.copy().pop()
+
+        assert origin.name() != cat_origin.name()
         genesis_launcher_puz = SINGLETON_LAUNCHER
+        # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         cat_wallet = None
@@ -1115,12 +1123,13 @@ class DAOWallet:
             if cat_wallet is not None:
                 cat_tail = cat_wallet.cat_info.limitations_program_hash
         if cat_tail is None:
-            cat_tail = generate_cat_tail(origin.name(), launcher_coin.name())
+            cat_tail = generate_cat_tail(cat_origin.name(), launcher_coin.name())
 
         assert cat_tail is not None
         cat_tail_info = {
             "identifier": "genesis_by_id_or_proposal",
             "treasury_id": launcher_coin.name(),
+            "coins": different_coins,
         }
 
         dao_info: DAOInfo = DAOInfo(
@@ -1224,6 +1233,8 @@ class DAOWallet:
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
+        await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()])
+        breakpoint()
         return full_spend
 
     async def generate_treasury_eve_spend(
