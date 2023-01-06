@@ -47,16 +47,18 @@ def get_treasury_puzzle(
     # PROPOSAL_TIMELOCK
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_PUZHASH)))
     puzzle = DAO_TREASURY_MOD.curry(
-        singleton_struct,
-        DAO_TREASURY_MOD_HASH,
-        DAO_PROPOSAL_MOD_HASH,
-        DAO_PROPOSAL_TIMER_MOD_HASH,
-        DAO_LOCKUP_MOD_HASH,
-        CAT_MOD_HASH,
-        cat_tail,
-        current_cat_issuance,
-        proposal_pass_percentage,
-        proposal_timelock,
+        [
+          singleton_struct,
+          DAO_TREASURY_MOD_HASH,
+          DAO_PROPOSAL_MOD_HASH,
+          DAO_PROPOSAL_TIMER_MOD_HASH,
+          DAO_LOCKUP_MOD_HASH,
+          CAT_MOD_HASH,
+          cat_tail,
+          current_cat_issuance,
+          proposal_pass_percentage,
+          proposal_timelock,
+        ]
     )
     return puzzle
 

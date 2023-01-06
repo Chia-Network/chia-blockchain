@@ -479,10 +479,10 @@ class DAOWallet:
         return chia_tx
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return Program(Program.to(0))
+        return Program.to(0)
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> Program:
-        return Program(Program.to(0).get_tree_hash())
+        return Program.to(0).get_tree_hash()
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -1199,6 +1199,7 @@ class DAOWallet:
             launcher_coin,
         )
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
+
         # assert self.dao_info.origin_coin is not None
         # assert self.dao_info.current_inner is not None
 
@@ -1233,7 +1234,7 @@ class DAOWallet:
                 coin.amount,
                 0,  # Make a payment with relative change 0, just to spend the coin
                 coin.puzzle_hash,
-                0,  # A list of messages which the treasury will parrot - assert from the proposal and also create
+                [],  # A list of messages which the treasury will parrot - assert from the proposal and also create
                 0,  # If this variable is 0 then we do the "add_money" spend case
             ]
         )
