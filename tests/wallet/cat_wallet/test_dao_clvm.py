@@ -349,24 +349,29 @@ def test_proposal_innerpuz() -> None:
         [],
         P2_SINGLETON_MOD.get_tree_hash(),
         current_cat_issuance,
-        0
+        0,
+        proposal_pass_percentage,
+        pass_margin,
+        LOCKUP_TIME,
     ])
 
     full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
 
     # Setup the treasury
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
-        singleton_struct,
-        DAO_TREASURY_MOD.get_tree_hash(),
-        DAO_PROPOSAL_MOD.get_tree_hash(),
-        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        current_cat_issuance,
-        proposal_pass_percentage,
-        pass_margin,
-        LOCKUP_TIME,
+        [
+          singleton_struct,
+          DAO_TREASURY_MOD.get_tree_hash(),
+          DAO_PROPOSAL_MOD.get_tree_hash(),
+          DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+          DAO_LOCKUP_MOD.get_tree_hash(),
+          CAT_MOD.get_tree_hash(),
+          CAT_TAIL,
+          current_cat_issuance,
+          proposal_pass_percentage,
+          pass_margin,
+          LOCKUP_TIME,
+        ]
     )
     # my_amount         ; current amount
     # new_amount_change ; may be negative or positive. Is zero during eve spend
