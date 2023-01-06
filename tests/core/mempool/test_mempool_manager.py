@@ -13,12 +13,15 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
+    DedupCoinSpend,
     MempoolManager,
     TimelockConditions,
     can_replace,
+    check_item_for_dedup,
     compute_assert_height,
     optional_max,
     optional_min,
+    run_for_cost_and_additions,
 )
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -323,6 +326,12 @@ async def generate_and_add_spendbundle(
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
     return (sb, sb_name, result)
+
+
+def get_mempool_item(mempool_manager: MempoolManager, sb_name: bytes32) -> MempoolItem:
+    mempool_item = mempool_manager.get_mempool_item(sb_name)
+    assert mempool_item is not None
+    return mempool_item
 
 
 @pytest.mark.asyncio
@@ -1115,3 +1124,88 @@ async def test_sufficient_total_fpc_increase() -> None:
     assert_sb_in_pool(mempool_manager, sb1234)
     assert_sb_not_in_pool(mempool_manager, sb12)
     assert_sb_not_in_pool(mempool_manager, sb3)
+
+
+def test_run_for_cost_and_additions() -> None:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    solution = Program.to(conditions)
+    with pytest.raises(ValueError, match="('cost exceeded', '01')"):
+        run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(1))
+    created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
+    expected_cost, expected_coins = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
+    assert expected_cost == 44
+    assert expected_coins == [created_coin]
+
+
+@pytest.mark.asyncio
+async def test_check_item_for_dedup() -> None:
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        test_coin_records = {
+            TEST_COIN_ID: TEST_COIN_RECORD,
+            TEST_COIN_ID2: TEST_COIN_RECORD2,
+            TEST_COIN_ID3: TEST_COIN_RECORD3,
+        }
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+
+    # No eligible coins, nothing to deduplicate, item gets considered normally
+    conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
+    _, sb_name, res = await generate_and_add_spendbundle(mempool_manager, conditions)
+    assert res == (2873056, MempoolInclusionStatus.SUCCESS, None)
+    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    dedup_coin_spends: Dict[bytes32, DedupCoinSpend] = {}
+    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    assert result == ([], 0, {}, set())
+
+    # Eligible coin encountered for the first time
+    first_conditions = conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    _, sb_name, res = await generate_and_add_spendbundle(mempool_manager, first_conditions)
+    assert res == (5177056, MempoolInclusionStatus.SUCCESS, None)
+    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    saved_cost = None
+    first_solution = SerializedProgram.from_program(Program.to(first_conditions))
+    expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(first_solution, saved_cost, set())}
+    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    assert result == ([], 0, expected_dedup_coin_spends, set())
+    dedup_coin_spends.update(expected_dedup_coin_spends)
+
+    # Eligible coin but different solution from the one we encountered
+    different_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    _, sb_name, res = await generate_and_add_spendbundle(mempool_manager, different_conditions)
+    assert res == (2897056, MempoolInclusionStatus.SUCCESS, None)
+    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
+        check_item_for_dedup(mempool_item, dedup_coin_spends)
+
+    # Eligible coin encountered a second time, and another for the first time
+    sb, sb_name, res = await generate_and_add_spendbundle(mempool_manager, first_conditions)
+    assert res == (5177056, MempoolInclusionStatus.SUCCESS, None)
+    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    saved_cost = uint64(44)
+    created_coins = {Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1), Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2)}
+    expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(first_solution, saved_cost, created_coins)}
+    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    assert result == (sb.coin_spends, saved_cost, expected_dedup_coin_spends, created_coins)
+    dedup_coin_spends.update(expected_dedup_coin_spends)
+
+    # Eligible coin encountered a third time, another for the first time and one non eligible
+    sb1 = spend_bundle_from_conditions(first_conditions)
+    sb2 = spend_bundle_from_conditions(different_conditions, TEST_COIN2)
+    sb3_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
+    sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
+    sb = SpendBundle.aggregate([sb1, sb2, sb3])
+    sb_name = sb.name()
+    res = await add_spendbundle(mempool_manager, sb, sb_name)
+    assert res == (10835510, MempoolInclusionStatus.SUCCESS, None)
+    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    # Only the eligible one that we encountered more than once gets deduplicated
+    spends_to_dedup = sb1.coin_spends
+    # The other eligible one we encountered for the first time is put here in new_dedups
+    different_solution = SerializedProgram.from_program(Program.to(different_conditions))
+    new_dedups = {TEST_COIN_ID2: DedupCoinSpend(different_solution, None, set())}
+    assert result == (spends_to_dedup, saved_cost, new_dedups, created_coins)
