@@ -49,6 +49,8 @@ class TestDAOWallet:
             wallet_node_1.config["trusted_peers"] = {}
 
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
