@@ -629,7 +629,6 @@ class Farmer:
                     self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
                     continue
                 authentication_token_timeout = pool_state["authentication_token_timeout"]
-                authentication_token = get_current_authentication_token(authentication_token_timeout)
                 if authentication_token_timeout is None:
                     self.log.warning(
                         f"No pool specific authentication_token_timeout has been set for"
@@ -637,6 +636,7 @@ class Farmer:
                     )
                     return None
 
+                authentication_token = get_current_authentication_token(authentication_token_timeout)
                 message: bytes32 = std_hash(
                     AuthenticationPayload(
                         "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
