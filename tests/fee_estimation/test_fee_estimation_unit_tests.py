@@ -3,12 +3,15 @@ from __future__ import annotations
 import logging
 from typing import List
 
+import pytest
 from chia_rs import Coin
+from sortedcontainers import SortedDict
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.fee_tracker import get_bucket_index, init_buckets
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.clvm_cost import CLVMCost
@@ -145,3 +148,36 @@ def test_fee_estimation_inception() -> None:
 
     # Confirm that estimates start after block 4
     assert e1 == [0, 0, 0, 2, 2, 2, 2]
+
+
+def test_init_buckets() -> None:
+    buckets, sorted_buckets = init_buckets()
+    assert len(buckets) == len(sorted_buckets)
+
+
+def test_get_bucket_index_empty_buckets() -> None:
+    sorted_buckets = SortedDict()
+    for rate in [0.5, 1.0, 2.0]:
+        with pytest.raises(RuntimeError):
+            _ = get_bucket_index(sorted_buckets, rate)
+
+
+def test_get_bucket_index_single_entry() -> None:
+    """Test single entry with low, equal and high keys"""
+    sorted_buckets = SortedDict({1.0: 0})
+    print()
+    print(sorted_buckets)
+    for rate, expected_index in ((0.5, 0), (1.0, 0), (1.5, 0)):
+        result_index = get_bucket_index(sorted_buckets, rate)
+        print(rate, expected_index, result_index)
+        assert expected_index == result_index
+
+
+def test_get_bucket_index() -> None:
+    sorted_buckets = SortedDict({1.0: 0, 2.0: 1})
+    print()
+    print(sorted_buckets)
+    for rate, expected_index in ((0.5, 0), (1.0, 0), (1.5, 0), (2.0, 1), (2.1, 1)):
+        result_index = get_bucket_index(sorted_buckets, rate)
+        print(rate, expected_index, result_index)
+        assert expected_index == result_index

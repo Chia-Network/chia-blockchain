@@ -62,11 +62,22 @@ def get_estimate_time_intervals() -> List[uint64]:
 
 
 def get_bucket_index(sorted_buckets: SortedDict, fee_rate: float) -> int:
+    if len(sorted_buckets) < 1:
+        raise RuntimeError("get_bucket_index: sorted_buckets is invalid")
+
     if fee_rate in sorted_buckets:
         bucket_index = sorted_buckets[fee_rate]
     else:
         # Choose the bucket to the left if we do not have exactly this fee rate
+        # Python's list.bisect_left returns the index to insert a new element into a sorted list
         bucket_index = sorted_buckets.bisect_left(fee_rate) - 1
+
+    if bucket_index < 0:
+        return 0
+
+    if bucket_index >= len(sorted_buckets):
+        # The fee rate is greater than our max fee rate - clamp to the highest rate
+        return len(sorted_buckets) - 1
 
     return int(bucket_index)
 
@@ -400,6 +411,25 @@ class FeeStat:  # TxConfirmStats
         return result
 
 
+def init_buckets() -> Tuple[List[float], SortedDict[float, int]]:
+    index = 0
+    fee_rate = 0.0
+    sorted_buckets = SortedDict()
+    buckets = []
+    while fee_rate < MAX_FEE_RATE:
+        buckets.append(fee_rate)
+        sorted_buckets[fee_rate] = index
+        if fee_rate == 0:
+            fee_rate = INITIAL_STEP
+        else:
+            fee_rate = fee_rate * STEP_SIZE
+        index += 1
+    buckets.append(INFINITE_FEE_RATE)
+    sorted_buckets[INFINITE_FEE_RATE] = index
+    assert len(sorted_buckets.keys()) == len(buckets)
+    return buckets, sorted_buckets
+
+
 class FeeTracker:
     sorted_buckets: SortedDict
     short_horizon: FeeStat
@@ -413,26 +443,10 @@ class FeeTracker:
 
     def __init__(self, fee_store: FeeStore):
         self.log = logging.Logger(__name__)
-        self.sorted_buckets = SortedDict()
-        self.buckets = []
         self.latest_seen_height = uint32(0)
         self.first_recorded_height = uint32(0)
         self.fee_store = fee_store
-        fee_rate = 0.0
-        index = 0
-
-        while fee_rate < MAX_FEE_RATE:
-            self.buckets.append(fee_rate)
-            self.sorted_buckets[fee_rate] = index
-            if fee_rate == 0:
-                fee_rate = INITIAL_STEP
-            else:
-                fee_rate = fee_rate * STEP_SIZE
-            index += 1
-        self.buckets.append(INFINITE_FEE_RATE)
-        self.sorted_buckets[INFINITE_FEE_RATE] = index
-
-        assert len(self.sorted_buckets.keys()) == len(self.buckets)
+        self.buckets, self.sorted_buckets = init_buckets()
 
         self.short_horizon = FeeStat(
             self.buckets,
