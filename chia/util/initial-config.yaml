@@ -580,6 +580,9 @@ data_layer:
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # The timeout for the client to download a file from a server
   client_timeout: 15
+  # If you need use a proxy for download data you can use this setting sample
+  # proxy_url: http://localhost:8888
+
   # Data for running a data layer server.
   host_ip: 0.0.0.0
   host_port: 8575
