@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Type, TypeVar, Union, get_type_hints
@@ -53,6 +54,7 @@ def api_request(
         non_optional_reply_types = reply_types
 
     def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
+        @functools.wraps(f)
         def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
             arg: S
             if isinstance(original, bytes):
