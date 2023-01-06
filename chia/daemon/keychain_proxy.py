@@ -49,8 +49,9 @@ class KeychainProxy(DaemonProxy):
         local_keychain: Optional[Keychain] = None,
         user: Optional[str] = None,
         service: Optional[str] = None,
+        heartbeat: int = 300,
     ):
-        super().__init__(uri, ssl_context)
+        super().__init__(uri, ssl_context, heartbeat=heartbeat)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
@@ -108,7 +109,7 @@ class KeychainProxy(DaemonProxy):
                     self._uri,
                     autoclose=True,
                     autoping=True,
-                    heartbeat=60,
+                    heartbeat=self.heartbeat,
                     ssl_context=self.ssl_context,
                     max_msg_size=self.max_message_size,
                 )
@@ -391,6 +392,7 @@ def wrap_local_keychain(keychain: Keychain, log: logging.Logger) -> KeychainProx
 async def connect_to_keychain(
     self_hostname: str,
     daemon_port: int,
+    daemon_heartbeat: int,
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
     user: Optional[str] = None,
@@ -401,7 +403,12 @@ async def connect_to_keychain(
     """
 
     client = KeychainProxy(
-        uri=f"wss://{self_hostname}:{daemon_port}", ssl_context=ssl_context, log=log, user=user, service=service
+        uri=f"wss://{self_hostname}:{daemon_port}",
+        heartbeat=daemon_heartbeat,
+        ssl_context=ssl_context,
+        log=log,
+        user=user,
+        service=service,
     )
     # Connect to the service if the proxy isn't using a local keychain
     if not client.use_local_keychain():
@@ -426,8 +433,9 @@ async def connect_to_keychain_and_validate(
         ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path, log=log)
+        daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         connection = await connect_to_keychain(
-            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, user, service
+            net_config["self_hostname"], net_config["daemon_port"], daemon_heartbeat, ssl_context, log, user, service
         )
 
         # If proxying to a local keychain, don't attempt to ping
