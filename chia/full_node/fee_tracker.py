@@ -492,6 +492,10 @@ class FeeTracker:
 
         self.latest_seen_height = block_height
 
+        self.short_horizon.clear_current(block_height)
+        self.med_horizon.clear_current(block_height)
+        self.long_horizon.clear_current(block_height)
+
         self.short_horizon.update_moving_averages()
         self.med_horizon.update_moving_averages()
         self.long_horizon.update_moving_averages()
