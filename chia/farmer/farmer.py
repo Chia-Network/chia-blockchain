@@ -630,7 +630,7 @@ class Farmer:
                     continue
                 authentication_token_timeout = pool_state["authentication_token_timeout"]
                 if authentication_token_timeout is None:
-                    self.log.warning(
+                    self.log.error(
                         f"No pool specific authentication_token_timeout has been set for"
                         f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
                     )
