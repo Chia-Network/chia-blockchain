@@ -141,7 +141,7 @@ class DAOWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DID wallet from recovery file ...")
         self.dao_info = DAOInfo(
-            bytes32([0] * 32),  # treasury_id: bytes32
+            treasury_id,  # treasury_id: bytes32
             0,  # cat_wallet_id: int
             [],  # proposals_list: List[ProposalInfo]
             [],  # treasury_id: bytes32
@@ -412,15 +412,15 @@ class DAOWallet:
         assert parent_info is not None
 
     async def resync_treasury_state(self):
-        parent_coin: Coin = self.dao_info.treasury_id
-        wallet_node = self.wallet_state_manager.wallet_node
+        parent_coin_id: bytes32 = self.dao_info.treasury_id
+        wallet_node: WalletNode = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
-        cs = self.wallet_node.get_coin_state([parent_coin], peer)
+        cs = await wallet_node.get_coin_state([parent_coin_id], peer)
         parent_coin = cs[0].coin
         while True:
-            children = await self.wallet_node.fetch_children(parent_coin, peer)
+            children = await wallet_node.fetch_children(parent_coin, peer)
             if len(children) == 0:
                 break
 
