@@ -6,6 +6,76 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.6.2 Chia blockchain 2023-01-03
+
+### Added
+
+- Add WalletConnect
+- Add Bladebit v2 plotting support (RAM and Disk)
+- Add `chia keys show --json` (display all keys as json) (thanks @kimsk)
+- Add `chia data get_sync_status` CLI and RPC.
+- Add download progress log and stream in Datalayer (thanks @Chida82)
+- Add wallet RPC `/get_spendable_coins`
+- Add wallet RPC `/get_coin_records_by_names`
+- Add wallet RPC `/verify_signature`
+- Add wallet RPC `/did_message_spend`
+- Add wallet RPC `/did_get_info`
+- Add wallet RPC `/nft_set_did_bulk`
+- Add options `--max-coin-amount` and `--exclude-coin-ids` to `chia wallet send`
+- Add `--fingerprint` option to `chia keys show`
+- Add SECURITY.md
+- Add GUI support for adding and removing full node peers
+- New GUI setting for NFT image scaling
+- New GUI warning if the GUI version is different from the back-end version
+
+### Changed
+
+- Remove legacy keyring support
+- Drop support for bladebit v1 and use bladebit v2 for RAM and Disk plots
+- Removed remaining vestiges of defunct backup service
+- `debug_spend_bundle` -- print coin id as hex string
+- Only open SQLite log file once per db wrapper
+- Switch to context manager for task timing instrumentation
+- Revert rate limiting messages from `warning` back to `debug`
+- `add_private_key` now returns the fingerprint of the added key
+- SQLite log the full node db version check
+- Delete DID wallet after transfer
+- Don't validate weight proof on wallet log_in
+- Drop broken message types logging
+- Return minted NFT ID & Allow transfer NFT with NFT ID
+- Display key labels when making a wallet key selection
+- Add support for pending transactions to `get_mempool_item_by_tx_id()` (thanks @rwarren)
+- Simplify the mempool manager instantiation
+- Add coin id and address to NFT Details screen in GUI
+- New GUI prefs location under `CHIA_ROOT`
+- Removed SkyNFT references
+- Add GUI memo field when sending XCH
+- Update to Electron 20.3.5
+
+### Fixed
+
+- Fixed a missing state_changed GUI notification
+- Minor sync optimizations and refactor; eliminate redundant weight proof requests
+- Upped the number of file handles for madmax
+- Catch exceptions raised when resolving plot directories (fix #13723)
+- Call close callback for already closed connections (fix #9172)
+- Set GUI binary name to `chia-blockchain` in the Fedora rpm and Ubuntu deb (fix #13847)
+- Add simple fix to set farmer response timer for `SP: 0` (fix #11869, #10900) (thanks @neurosis69)
+- Preserve correct `MempoolItem` block height when rebuilding mempool
+- Windows: start daemon without a window and detached from current console (fix #13175) (thanks @jcteng)
+- Fix pool singleton sync height in DB
+- Remove duplicate nft wallet deletion in reorg
+- Fix DID unnecessary wallet deletion
+- Improve performance of wallets with many NFTs
+- Stop creating unecessary index in notification store (fix #13955)
+- Fix issues in switching pools introduced in 1.6.0 (fix #13872)
+- Handle incoming unknown capabilities
+- GUI Offer Builder displays totals with royalties when requesting an NFT
+- Fixed NFT inbox detection
+- Convert and cache NFT metadata as UTF-8
+- Fixed issue with switching between farmer and wallet modes (GUI issue #1005)
+- Improve error message when sending more mojos than Spendable Balance
+
 ## 1.6.1 Chia blockchain 2022-11-03
 
 ### Added

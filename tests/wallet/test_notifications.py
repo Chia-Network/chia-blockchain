@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from secrets import token_bytes
 from typing import Any
 
@@ -11,10 +13,40 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
-
-# from clvm_tools.binutils import disassemble
+from chia.wallet.notification_store import NotificationStore
 from tests.util.wallet_is_synced import wallets_are_synced
+
+
+# For testing backwards compatibility with a DB change to add height
+@pytest.mark.asyncio
+async def test_notification_store_backwards_compat() -> None:
+    # First create the DB the way it would have otheriwse been created
+    db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
+    db_name.parent.mkdir(parents=True, exist_ok=True)
+    db_wrapper = await DBWrapper2.create(
+        database=db_name,
+    )
+    try:
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
+            )
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount) " "VALUES(?, ?, ?)",
+                (
+                    bytes32([0] * 32),
+                    bytes([0] * 10),
+                    bytes([0]),
+                ),
+            )
+            await cursor.close()
+
+        await NotificationStore.create(db_wrapper)
+        await NotificationStore.create(db_wrapper)
+    finally:
+        await db_wrapper.close()
 
 
 @pytest.mark.parametrize(
@@ -22,7 +54,6 @@ from tests.util.wallet_is_synced import wallets_are_synced
     [True, False],
 )
 @pytest.mark.asyncio
-# @pytest.mark.skip
 async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -82,6 +113,12 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
             else:
                 AMOUNT = uint64(750000000000)
             FEE = uint64(1)
+        peak = full_node_api.full_node.blockchain.get_peak()
+        assert peak is not None
+        if case == "allow":
+            allow_height = peak.height + 1
+        if case == "allow_larger":
+            allow_larger_height = peak.height + 1
         tx = await notification_manager_1.send_new_notification(ph_2, bytes(case, "utf8"), AMOUNT, fee=FEE)
         await wsm_1.add_pending_transaction(tx)
         await time_out_assert_not_none(
@@ -102,9 +139,11 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 2))
     assert len(notifications) == 2
     assert notifications[0].message == b"allow_larger"
+    assert notifications[0].height == allow_larger_height
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(1, None))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow"
+    assert notifications[0].height == allow_height
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 1))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"

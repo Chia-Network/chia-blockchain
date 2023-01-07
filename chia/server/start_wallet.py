@@ -94,7 +94,7 @@ async def async_main() -> int:
     config[SERVICE_NAME] = service_config
 
     # This is simulator
-    local_test = service_config["testing"]
+    local_test = service_config.get("testing", False)
     if local_test is True:
         from chia.simulator.block_tools import test_constants
 

@@ -31,14 +31,11 @@ async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
     assert False
 
 
-async def instantiate_mempool_manager(
-    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
-) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
-    test_block_record = BlockRecord(
+def create_test_block_record(*, height: uint32 = TEST_HEIGHT) -> BlockRecord:
+    return BlockRecord(
         IDENTITY_PUZZLE_HASH,
         IDENTITY_PUZZLE_HASH,
-        TEST_HEIGHT,
+        height,
         uint128(0),
         uint128(0),
         uint8(0),
@@ -52,7 +49,7 @@ async def instantiate_mempool_manager(
         uint64(0),
         uint8(0),
         False,
-        uint32(TEST_HEIGHT - 1),
+        uint32(height - 1),
         TEST_TIMESTAMP,
         None,
         uint64(0),
@@ -62,6 +59,13 @@ async def instantiate_mempool_manager(
         None,
         None,
     )
+
+
+async def instantiate_mempool_manager(
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+) -> MempoolManager:
+    mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
+    test_block_record = create_test_block_record()
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
@@ -77,9 +81,7 @@ async def test_negative_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
     sb = spend_bundle_from_conditions(conditions)
-    # chia_rs currently emits this instead of Err.COIN_AMOUNT_NEGATIVE
-    # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
-    with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
+    with pytest.raises(ValidationError, match="Err.COIN_AMOUNT_NEGATIVE"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
 
@@ -99,9 +101,7 @@ async def test_too_big_addition_amount() -> None:
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount + 1]]
     sb = spend_bundle_from_conditions(conditions)
-    # chia_rs currently emits this instead of Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
-    # Addressed in https://github.com/Chia-Network/chia_rs/pull/99
-    with pytest.raises(ValidationError, match="Err.INVALID_CONDITION"):
+    with pytest.raises(ValidationError, match="Err.COIN_AMOUNT_EXCEEDS_MAXIMUM"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
 
@@ -126,3 +126,13 @@ async def test_block_cost_exceeds_max() -> None:
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="Err.BLOCK_COST_EXCEEDS_MAX"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+
+
+@pytest.mark.asyncio
+async def test_double_spend_prevalidation() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    sb_twice: SpendBundle = SpendBundle.aggregate([sb, sb])
+    with pytest.raises(ValidationError, match="Err.DOUBLE_SPEND"):
+        await mempool_manager.pre_validate_spendbundle(sb_twice, None, sb_twice.name())

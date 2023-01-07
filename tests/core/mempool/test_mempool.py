@@ -11,6 +11,8 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -26,9 +28,11 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
@@ -49,6 +53,14 @@ BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
 
 log = logging.getLogger(__name__)
+
+
+def new_mi(mi: MempoolInfo, max_mempool_cost: int, min_replace_fee_per_cost: int) -> MempoolInfo:
+    return dataclasses.replace(
+        mi,
+        minimum_fee_per_cost_to_replace=FeeRate(uint64(min_replace_fee_per_cost)),
+        max_size_in_cost=CLVMCost(uint64(max_mempool_cost)),
+    )
 
 
 @pytest.fixture(scope="module")
@@ -146,9 +158,11 @@ class TestMempool:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
 
-        max_block_cost_clvm = 40000000
+        max_block_cost_clvm = uint64(40000000)
         max_mempool_cost = max_block_cost_clvm * 5
-        mempool = Mempool(max_mempool_cost, uint64(5), uint64(max_block_cost_clvm))
+        mempool_info = new_mi(EmptyMempoolInfo, max_mempool_cost, uint64(5))
+        fee_estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
+        mempool = Mempool(mempool_info, fee_estimator)
         assert mempool.get_min_fee_rate(104000) == 0
 
         with pytest.raises(ValueError):
