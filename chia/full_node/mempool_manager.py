@@ -294,6 +294,9 @@ class MempoolManager:
         if new_spend_bytes is None:
             new_spend_bytes = bytes(new_spend)
 
+        if new_spend.coin_spends == []:
+            raise ValidationError(Err.INVALID_SPEND_BUNDLE)
+
         err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
             self.pool,
             validate_clvm_and_signature,
