@@ -326,7 +326,10 @@ class FullNodeAPI:
 
     @api_request(reply_types=[ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
-        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+        if (
+            request.end_height < request.start_height
+            or request.end_height - request.start_height > self.full_node.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        ):
             reject = RejectBlocks(request.start_height, request.end_height)
             msg: Message = make_msg(ProtocolMessageTypes.reject_blocks, reject)
             return msg
@@ -1369,7 +1372,10 @@ class FullNodeAPI:
     @api_request()
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
         """DEPRECATED: please use RequestBlockHeaders"""
-        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+        if (
+            request.end_height < request.start_height
+            or request.end_height - request.start_height > self.full_node.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        ):
             return None
         height_to_hash = self.full_node.blockchain.height_to_hash
         header_hashes: List[bytes32] = []
