@@ -1233,7 +1233,7 @@ class DAOWallet:
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
-        await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()])
+        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.wallet_id])
         breakpoint()
         return full_spend
 
