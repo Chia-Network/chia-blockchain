@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import List
-
+import logging
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -158,6 +158,41 @@ def get_proposal_timer_puzzle(
         treasury_id,
     )
     return puzzle
+
+
+def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program):
+    # my_amount         ; current amount
+    # new_amount_change ; may be negative or positive. Is zero during eve spend
+    # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
+    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+    # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
+    # proposal_innerpuz
+    # proposal_current_votes ; tally of yes votes
+    # proposal_total_votes   ; total votes cast (by number of cat-mojos)
+    # type  ; this is used for the recreating self type
+    # extra_value  ; this is used for recreating self
+    type = solution.rest().rest().rest().rest().rest().rest().rest().rest().first()
+    if type == Program.to('n'):
+        return solution.rest().rest().rest().rest().first().as_atom()
+    elif type == Program.to('u'):
+        return puzzle_reveal
+    elif type == Program.to('r'):
+        curried_args = uncurry_treasury(puzzle_reveal)
+        breakpoint()
+    return
+
+
+def uncurry_treasury(treasury_puzzle: Program):
+    try:
+        mod, curried_args = treasury_puzzle.uncurry()
+    except ValueError as e:
+        logging.log.debug("Cannot uncurry treasury puzzle: Args %s error: %s", curried_args, e)
+        return None
+
+    if mod != DAO_TREASURY_MOD:
+        raise ValueError("Not a Treasury Mod.")
+
+    return curried_args
 
 
 def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program:

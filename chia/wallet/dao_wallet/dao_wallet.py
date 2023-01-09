@@ -5,7 +5,6 @@ import json
 import logging
 import re
 import time
-from dataclasses import dataclass
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -23,13 +22,18 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
-from chia.wallet.dao_wallet.dao_utils import SINGLETON_LAUNCHER, curry_singleton, generate_cat_tail, get_treasury_puzzle
+from chia.wallet.dao_wallet.dao_utils import (
+    SINGLETON_LAUNCHER,
+    curry_singleton,
+    generate_cat_tail,
+    get_treasury_puzzle,
+    get_new_puzzle_from_treasury_solution,
+)
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
@@ -94,6 +98,8 @@ class DAOWallet:
             0,
             [],
             [],
+            None,
+            None,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -145,6 +151,8 @@ class DAOWallet:
             0,  # cat_wallet_id: int
             [],  # proposals_list: List[ProposalInfo]
             [],  # treasury_id: bytes32
+            None,  # current_coin
+            None,  # current innerpuz
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -417,52 +425,101 @@ class DAOWallet:
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
-        cs = await wallet_node.get_coin_state([parent_coin_id], peer)
+
         children = await wallet_node.fetch_children(parent_coin_id, peer)
-        breakpoint()
-        parent_coin = cs[0].coin
-        while True:
-            children = await wallet_node.fetch_children(parent_coin, peer)
+        parent_coin = None
+        parent_parent_coin = None
+        assert len(children) > 0
+        while len(children) > 0:
+            # TODO:  check we're getting odd amount child
+            children = await wallet_node.fetch_children(parent_coin_id, peer)
             if len(children) == 0:
                 break
 
             children_state: CoinState = children[0]
+            breakpoint()
             child_coin = children_state.coin
-            future_parent = LineageProof(
-                child_coin.parent_coin_info,
-                self.dao_info.current_inner.get_tree_hash(),
-                uint64(child_coin.amount),
-            )
-            await self.add_parent(child_coin.name(), future_parent)
-            if children_state.spent_height != children_state.created_height:
-                dao_info = DAOInfo(
-                    self.dao_info.origin_coin,
-                    self.dao_info.backup_ids,
-                    self.dao_info.num_of_backup_ids_needed,
-                    self.dao_info.parent_info,
-                    self.dao_info.current_inner,
-                    child_coin,
-                    new_did_inner_puzhash,
-                    bytes(new_pubkey),
-                    False,
-                    dao_info.metadata,
-                )
 
-                await self.save_info(dao_info)
-                assert children_state.created_height
-                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
-                assert parent_spend is not None
-                parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
-                    parent_spend.puzzle_reveal.to_program()
-                )
-                assert parent_innerpuz is not None
-                parent_info = LineageProof(
-                    parent_coin.parent_coin_info,
-                    parent_innerpuz.get_tree_hash(),
-                    uint64(parent_coin.amount),
-                )
-                await self.add_parent(child_coin.parent_coin_info, parent_info)
+            #  I don't remember why the below code was originally included in the DID Wallet
+
+            # if children_state.spent_height != children_state.created_height:
+            #     dao_info = DAOInfo(
+            #         self.dao_info.treasury_id,  # treasury_id: bytes32
+            #         self.dao_info.cat_wallet_id,  # cat_wallet_id: int
+            #         self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
+            #         self.dao_info.parent_info,  # treasury_id: bytes32
+            #         children,  # current_coin
+            #         inner_puz,  # current innerpuz
+            #     )
+            #
+            #     await self.save_info(dao_info)
+            #     assert children_state.created_height
+            #     cs = await wallet_node.get_coin_state([children[0]], peer)
+            #     parent_coin = cs[0].coin
+            #     parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
+            #     assert parent_spend is not None
+            #     parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
+            #         parent_spend.puzzle_reveal.to_program()
+            #     )
+            #     assert parent_innerpuz is not None
+            #     parent_info = LineageProof(
+            #         parent_coin.parent_coin_info,
+            #         parent_innerpuz.get_tree_hash(),
+            #         uint64(parent_coin.amount),
+            #     )
+            #     await self.add_parent(child_coin.parent_coin_info, parent_info)
+            if parent_coin is not None:
+                parent_parent_coin = parent_coin
             parent_coin = child_coin
+            parent_coin_id = child_coin.name()
+
+        # get lineage proof of parent spend, and also current innerpuz
+        assert children_state.created_height
+        parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_parent_coin, peer)
+        assert parent_spend is not None
+        parent_inner_puz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
+            parent_spend.puzzle_reveal.to_program()
+        )
+        if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
+            current_innerpuz = parent_inner_puz
+        else:
+            # my_amount         ; current amount
+            # new_amount_change ; may be negative or positive. Is zero during eve spend
+            # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
+            # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+            # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
+            # proposal_innerpuz
+            # proposal_current_votes ; tally of yes votes
+            # proposal_total_votes   ; total votes cast (by number of cat-mojos)
+            # type  ; this is used for the recreating self type
+            # extra_value  ; this is used for recreating self
+            inner_solution = parent_spend.solution.rest().rest().first()
+            get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
+        breakpoint()
+
+        current_lineage_proof = LineageProof(
+            parent_parent_coin.parent_name,  # ...
+            parent_inner_puz,
+            parent_parent_coin.amount
+        )
+        await self.add_parent(parent_parent_coin.name(), current_lineage_proof)
+
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,  # treasury_id: bytes32
+            self.dao_info.cat_wallet_id,  # cat_wallet_id: int
+            self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
+            self.dao_info.parent_info,  # treasury_id: bytes32
+            children,  # current_coin
+            current_innerpuz,  # current innerpuz
+        )
+        future_parent = LineageProof(
+            child_coin.parent_coin_info,
+            self.dao_info.current_treasury_innerpuz.get_tree_hash(),
+            uint64(child_coin.amount),
+        )
+        await self.add_parent(child_coin.name(), future_parent)
+
+        await self.save_info(dao_info)
         assert parent_info is not None
         return
 
@@ -1137,6 +1194,8 @@ class DAOWallet:
             self.dao_info.cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
+            None,
+            None,
         )
         await self.save_info(dao_info)
 
@@ -1157,6 +1216,8 @@ class DAOWallet:
             cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
+            None,
+            None,
         )
 
         await self.save_info(dao_info)
@@ -1234,6 +1295,15 @@ class DAOWallet:
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.wallet_id])
+
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,
+            cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            Coin(eve_coin.name(), full_treasury_puzzle.get_tree_hash(), eve_coin.amount),
+            dao_treasury_puzzle,
+        )
         breakpoint()
         return full_spend
 
@@ -1285,6 +1355,8 @@ class DAOWallet:
             self.dao_info.cat_wallet_id,
             self.dao_info.proposals_list,
             current_list,
+            self.dao_info.current_treasury_coin,
+            self.dao_info.current_treasury_innerpuz,
         )
         await self.save_info(dao_info)
 
