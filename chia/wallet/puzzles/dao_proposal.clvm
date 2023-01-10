@@ -166,7 +166,7 @@
                 CAT_TAIL
                 PROPOSAL_TIMELOCK
                 previous_votes
-                lockup_innerpuzhash
+                lockup_innerpuzhash_or_attendance_required
               )
             )
             (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id_or_current_cat_issuance))

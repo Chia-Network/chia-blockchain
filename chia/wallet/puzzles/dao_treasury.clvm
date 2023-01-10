@@ -17,7 +17,7 @@
   )
   my_amount         ; current amount
   new_amount_change ; may be negative or positive. Is zero during eve spend
-  my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
+  my_inner_puzhash_or_proposal_id ; either the current treasury puzzlehash OR proposal ID
   announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
   new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
   proposal_innerpuz
@@ -158,7 +158,7 @@
     (if new_puzhash
       ; this is the payout spend case
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, and the current amount of CATs in the world
+        (list CREATE_PUZZLE_ANNOUNCEMENT my_inner_puzhash_or_proposal_id)  ; announce the proposal we're approving, and the current amount of CATs in the world
         (merge_list  ; this will be very short in practice
           (recreate_self_condition
             TREASURY_MOD_HASH
@@ -184,9 +184,9 @@
           )
           (create_puzzle_asserts
             PROPOSAL_TIMELOCK
-            (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
+            (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_inner_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
                 (calculate_proposal_puzzle
-                  (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))
+                  (c (f SINGLETON_STRUCT) (c my_inner_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))
                   PROPOSAL_MOD_HASH
                   PROPOSAL_TIMER_MOD_HASH
                   CAT_MOD_HASH
@@ -210,8 +210,8 @@
       ; this is the add money spend case
       (if (> new_amount_change -1)
         (list
-          (list CREATE_COIN my_puzhash_or_proposal_id (+ new_amount_change my_amount) (c (f (r SINGLETON_STRUCT)) 0))
-          (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id)
+          (list CREATE_COIN my_inner_puzhash_or_proposal_id (+ new_amount_change my_amount) (c (f (r SINGLETON_STRUCT)) 0))
+          (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT my_inner_puzhash_or_proposal_id))
           (list
             CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken
             (sha256tree (list new_amount_change announcement_messages_list_or_payment_nonce))

@@ -109,10 +109,11 @@ class DAOWallet:
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
 
+        attendance_required_percentage = uint64(10)
         proposal_pass_percentage = uint64(10)
         proposal_timelock = uint64(10)
         try:
-            spend_bundle = await self.generate_new_dao(amount_of_cats, proposal_pass_percentage, proposal_timelock, fee)
+            spend_bundle = await self.generate_new_dao(amount_of_cats, attendance_required_percentage, proposal_pass_percentage, proposal_timelock, fee)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -434,9 +435,9 @@ class DAOWallet:
             children = await wallet_node.fetch_children(parent_coin_id, peer)
             if len(children) == 0:
                 break
-
-            # check we're getting odd amount child
+            children_state = None
             children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
+            assert children_state is not None
             # breakpoint()
             child_coin = children_state.coin
 
@@ -495,9 +496,10 @@ class DAOWallet:
             # extra_value  ; this is used for recreating self
 
             inner_solution = parent_spend.solution.to_program().rest().rest().first()
-            if inner_solution.at("rrrrf").as_atom() == b"":
+            if inner_solution.at("rrrrf").as_atom() == Program.to(0):
+                breakpoint()
                 # add money spend
-                # GW: Probably current_inner_puz should be calculated in get_new_puzzle_from_treasury_solution
+                # MH: if its the add money spend then the child puzhash *should* be the same as the parent. something's wrong.
                 current_inner_puz = parent_inner_puz
             else:
                 current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
@@ -1153,6 +1155,7 @@ class DAOWallet:
     async def generate_new_dao(
         self,
         amount_of_cats: uint64,
+        attendance_required_percentage: uint64,
         proposal_pass_percentage: uint64,  # reminder that this is between 0 - 10,000
         proposal_timelock: uint64,
         fee: uint64 = uint64(0),
@@ -1227,10 +1230,18 @@ class DAOWallet:
 
         await self.save_info(dao_info)
 
+        # treasury_id: bytes32,
+        # cat_tail: bytes32,
+        # current_cat_issuance: uint64,
+        # attendance_required_percentage: uint64,
+        # proposal_pass_percentage: uint64,
+        # proposal_timelock: uint64,
+        breakpoint()
         dao_treasury_puzzle = get_treasury_puzzle(
             launcher_coin.name(),
-            cat_tail,
+            cat_tail.get_tree_hash(),
             amount_of_cats,
+            attendance_required_percentage,
             proposal_pass_percentage,
             proposal_timelock,
         )
@@ -1319,7 +1330,7 @@ class DAOWallet:
             [
                 coin.amount,
                 0,  # Make a payment with relative change 0, just to spend the coin
-                coin.puzzle_hash,
+                innerpuz.get_tree_hash(),
                 [],  # A list of messages which the treasury will parrot - assert from the proposal and also create
                 0,  # If this variable is 0 then we do the "add_money" spend case
             ]

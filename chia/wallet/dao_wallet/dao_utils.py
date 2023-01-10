@@ -32,34 +32,38 @@ def get_treasury_puzzle(
     treasury_id: bytes32,
     cat_tail: bytes32,
     current_cat_issuance: uint64,
+    attendance_required_percentage: uint64,
     proposal_pass_percentage: uint64,
     proposal_timelock: uint64,
 ) -> Program:
-    # SINGLETON_STRUCT
-    # TREASURY_MOD_HASH
-    # PROPOSAL_MOD_HASH
-    # PROPOSAL_TIMER_MOD_HASH
-    # LOCKUP_MOD_HASH
-    # CAT_MOD_HASH
-    # CAT_TAIL
-    # CURRENT_CAT_ISSUANCE
-    # PROPOSAL_PASS_PERCENTAGE
-    # PROPOSAL_TIMELOCK
+    # (
+        # SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+        # TREASURY_MOD_HASH
+        # PROPOSAL_MOD_HASH
+        # PROPOSAL_TIMER_MOD_HASH
+        # LOCKUP_MOD_HASH
+        # CAT_MOD_HASH
+        # CAT_TAIL
+        # CURRENT_CAT_ISSUANCE
+        # ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
+        # PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
+        # PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
+    # )
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_PUZHASH)))
-    puzzle = DAO_TREASURY_MOD.curry(
-        [
-          singleton_struct,
-          DAO_TREASURY_MOD_HASH,
-          DAO_PROPOSAL_MOD_HASH,
-          DAO_PROPOSAL_TIMER_MOD_HASH,
-          DAO_LOCKUP_MOD_HASH,
-          CAT_MOD_HASH,
-          cat_tail,
-          current_cat_issuance,
-          proposal_pass_percentage,
-          proposal_timelock,
-        ]
-    )
+    puzzle = DAO_TREASURY_MOD.curry(Program.to([
+        singleton_struct,
+        DAO_TREASURY_MOD_HASH,
+        DAO_PROPOSAL_MOD_HASH,
+        DAO_PROPOSAL_TIMER_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
+        cat_tail,
+        current_cat_issuance,
+        attendance_required_percentage,
+        proposal_pass_percentage,
+        proposal_timelock,
+    ]))
+    breakpoint()
     return puzzle
 
 
@@ -202,7 +206,7 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
     # SINGLETON_LAUNCHER_PUZHASH
     # DAO_PROPOSAL_MOD_HASH
     puzzle = DAO_CAT_TAIL.curry(
-        genesis_coin_id, treasury_id, SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_PUZHASH, DAO_PROPOSAL_MOD
+        genesis_coin_id, treasury_id, SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_PUZHASH, DAO_PROPOSAL_MOD_HASH
     )
     return puzzle
 
