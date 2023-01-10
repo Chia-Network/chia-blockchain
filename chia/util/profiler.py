@@ -85,6 +85,7 @@ if __name__ == "__main__":
                     if (
                         "{method 'poll' of 'select.epoll' objects}" in columns[5]
                         or "method 'control' of 'select.kqueue' objects" in columns[5]
+                        or "method _overlapped.GetQueuedCompletionStatus" in columns[5]
                     ):
                         # cumulative time
                         sleep += float(columns[3])

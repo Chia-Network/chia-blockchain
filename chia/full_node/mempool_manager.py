@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import collections
 import logging
 import time
 from concurrent.futures import Executor
@@ -15,9 +14,11 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
-from chia.full_node.mempool import Mempool
+from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -82,6 +83,15 @@ def validate_clvm_and_signature(
 
 class MempoolManager:
     pool: Executor
+    constants: ConsensusConstants
+    seen_bundle_hashes: Dict[bytes32, bytes32]
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+    nonzero_fee_minimum_fpc: int
+    mempool_max_total_cost: int
+    potential_cache: PendingTxCache
+    seen_cache_size: int
+    peak: Optional[BlockRecord]
+    mempool: Mempool
 
     def __init__(
         self,
@@ -103,7 +113,8 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        self.limit_factor = 0.5
+        BLOCK_SIZE_LIMIT_FACTOR = 0.5
+        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR)
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
@@ -121,16 +132,43 @@ class MempoolManager:
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
-        self.mempool: Mempool = Mempool(
-            self.mempool_max_total_cost,
-            uint64(self.nonzero_fee_minimum_fpc),
-            uint64(self.constants.MAX_BLOCK_COST_CLVM),
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(self.max_block_clvm_cost)
+        mempool_info = MempoolInfo(
+            CLVMCost(uint64(self.mempool_max_total_cost)),
+            FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
+            CLVMCost(uint64(self.max_block_clvm_cost)),
         )
+        self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
 
-    async def create_bundle_from_mempool(
+    def process_mempool_items(
+        self, item_inclusion_filter: Callable[[MempoolManager, MempoolItem], bool]
+    ) -> Tuple[List[SpendBundle], uint64, List[Coin], List[Coin]]:
+        cost_sum = 0  # Checks that total cost does not exceed block maximum
+        fee_sum = 0  # Checks that total fees don't exceed 64 bits
+        spend_bundles: List[SpendBundle] = []
+        removals: List[Coin] = []
+        additions: List[Coin] = []
+        for dic in reversed(self.mempool.sorted_spends.values()):
+            for item in dic.values():
+                if not item_inclusion_filter(self, item):
+                    continue
+                log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
+                if (
+                    item.cost + cost_sum > self.max_block_clvm_cost
+                    or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT
+                ):
+                    return (spend_bundles, uint64(cost_sum), additions, removals)
+                spend_bundles.append(item.spend_bundle)
+                cost_sum += item.cost
+                fee_sum += item.fee
+                removals.extend(item.removals)
+                additions.extend(item.additions)
+        return (spend_bundles, uint64(cost_sum), additions, removals)
+
+    def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
         item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
@@ -149,41 +187,16 @@ class MempoolManager:
 
             item_inclusion_filter = always
 
-        cost_sum = 0  # Checks that total cost does not exceed block maximum
-        fee_sum = 0  # Checks that total fees don't exceed 64 bits
-        spend_bundles: List[SpendBundle] = []
-        removals = []
-        additions = []
-        broke_from_inner_loop = False
-        log.info(f"Starting to make block, max cost: {self.constants.MAX_BLOCK_COST_CLVM}")
-        for dic in reversed(self.mempool.sorted_spends.values()):
-            if broke_from_inner_loop:
-                break
-            for item in dic.values():
-                if not item_inclusion_filter(self, item):
-                    continue
-                log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
-                if (
-                    item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
-                    and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
-                ):
-                    spend_bundles.append(item.spend_bundle)
-                    cost_sum += item.cost
-                    fee_sum += item.fee
-                    removals.extend(item.removals)
-                    additions.extend(item.additions)
-                else:
-                    broke_from_inner_loop = True
-                    break
-        if len(spend_bundles) > 0:
-            log.info(
-                f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
-                f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
-            )
-            agg = SpendBundle.aggregate(spend_bundles)
-            return agg, additions, removals
-        else:
+        log.info(f"Starting to make block, max cost: {self.max_block_clvm_cost}")
+        spend_bundles, cost_sum, additions, removals = self.process_mempool_items(item_inclusion_filter)
+        if len(spend_bundles) == 0:
             return None
+        log.info(
+            f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
+            f"full: {cost_sum / self.max_block_clvm_cost}"
+        )
+        agg = SpendBundle.aggregate(spend_bundles)
+        return agg, additions, removals
 
     def get_filter(self) -> bytes:
         all_transactions: Set[bytes32] = set()
@@ -285,7 +298,7 @@ class MempoolManager:
             self.pool,
             validate_clvm_and_signature,
             new_spend_bytes,
-            int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM),
+            self.max_block_clvm_cost,
             self.constants.COST_PER_BYTE,
             self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
@@ -335,8 +348,8 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
+            self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
             self.mempool.add_to_pool(item)
-            self.mempool.remove_from_pool(remove_items)
             return item.cost, MempoolInclusionStatus.SUCCESS, None
         elif item is not None:
             # There is an error,  but we still returned a mempool item, this means we should add to the pending pool.
@@ -379,13 +392,7 @@ class MempoolManager:
             return Err(npc_result.error), None, []
 
         cost = npc_result.cost
-
         log.debug(f"Cost: {cost}")
-
-        if cost > int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM):
-            # we shouldn't ever end up here, since the cost is limited when we
-            # execute the CLVM program.
-            return Err.BLOCK_COST_EXCEEDS_MAX, None, []
 
         assert npc_result.conds is not None
         # build removal list
@@ -395,29 +402,11 @@ class MempoolManager:
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         additions: List[Coin] = additions_for_npc(npc_result)
-
         additions_dict: Dict[bytes32, Coin] = {}
+        addition_amount: int = 0
         for add in additions:
             additions_dict[add.name()] = add
-
-        addition_amount: int = 0
-        # Check additions for max coin amount
-        for coin in additions:
-            if coin.amount < 0:
-                return Err.COIN_AMOUNT_NEGATIVE, None, []
-            if coin.amount > self.constants.MAX_COIN_AMOUNT:
-                return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None, []
-            addition_amount = addition_amount + coin.amount
-        # Check for duplicate outputs
-        addition_counter = collections.Counter(_.name() for _ in additions)
-        for k, v in addition_counter.items():
-            if v > 1:
-                return Err.DUPLICATE_OUTPUT, None, []
-        # Check for duplicate inputs
-        removal_counter = collections.Counter(name for name in removal_names)
-        for k, v in removal_counter.items():
-            if v > 1:
-                return Err.DOUBLE_SPEND, None, []
+            addition_amount = addition_amount + add.amount
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
@@ -467,7 +456,7 @@ class MempoolManager:
                 return Err.INVALID_FEE_LOW_FEE, None, []
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
-        fail_reason, conflicts = await self.check_removals(removal_record_dict)
+        fail_reason, conflicts = self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
@@ -506,10 +495,10 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                for c_sb_id in self.mempool.removals[conflicting.name()]:
+                for c_sb_id in self.mempool.removal_coin_id_to_spendbundle_ids[conflicting.name()]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
-            log.warning(f"Conflicting pool items: {len(conflicting_pool_items)}")
+            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
@@ -523,7 +512,7 @@ class MempoolManager:
 
         return None, potential, list(conflicting_pool_items.keys())
 
-    async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
+    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
@@ -539,7 +528,7 @@ class MempoolManager:
             if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
-            if removal.name() in self.mempool.removals:
+            if removal.name() in self.mempool.removal_coin_id_to_spendbundle_ids:
                 conflicts.append(removal)
 
         if len(conflicts) > 0:
@@ -555,7 +544,8 @@ class MempoolManager:
 
     def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
         """
-        Returns a MempoolItem if it's inside one the mempools.
+        Returns the MempoolItem in the mempool that matches the provided spend bundle hash (id)
+        or None if not found.
 
         If include_pending is specified, also check the PENDING cache.
         """
@@ -578,6 +568,7 @@ class MempoolManager:
         if self.peak == new_peak:
             return []
         assert new_peak.timestamp is not None
+        self.fee_estimator.new_block_height(new_peak.height)
         included_items = []
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
@@ -587,19 +578,19 @@ class MempoolManager:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
-                    if spend.coin_id in self.mempool.removals:
-                        c_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(c_ids)
-                        for c_id in c_ids:
-                            self.remove_seen(c_id)
+                    if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
+                        spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
+                            bytes32(spend.coin_id)
+                        ]
+                        for spendbundle_id in spendbundle_ids:
+                            item = self.mempool.spends.get(spendbundle_id)
+                            if item:
+                                included_items.append(item)
+                            self.remove_seen(spendbundle_id)
+                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
-
-            self.mempool = Mempool(
-                self.mempool_max_total_cost,
-                uint64(self.nonzero_fee_minimum_fpc),
-                uint64(self.constants.MAX_BLOCK_COST_CLVM),
-            )
+            self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, err = await self.add_spend_bundle(
@@ -624,7 +615,8 @@ class MempoolManager:
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.info(
-            f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
+            f"Size of mempool: {len(self.mempool.spends)} spends, "
+            f"cost: {self.mempool.total_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
@@ -649,14 +641,3 @@ class MempoolManager:
                 counter += 1
 
         return items
-
-    def get_mempool_info(self) -> FeeMempoolInfo:
-        import datetime
-
-        return FeeMempoolInfo(
-            CLVMCost(uint64(self.mempool_max_total_cost)),
-            FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
-            CLVMCost(uint64(self.mempool.total_mempool_cost)),
-            datetime.datetime.now(),
-            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
-        )

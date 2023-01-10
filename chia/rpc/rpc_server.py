@@ -147,6 +147,7 @@ class RpcServer:
     ssl_context: SSLContext
     ssl_client_context: SSLContext
     webserver: Optional[WebServer] = None
+    daemon_heartbeat: int = 300
     daemon_connection_task: Optional[asyncio.Task[None]] = None
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
@@ -165,9 +166,10 @@ class RpcServer:
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+        daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
-        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
+        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context, daemon_heartbeat=daemon_heartbeat)
 
     async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, prefer_ipv6: bool) -> None:
         if self.webserver is not None:
@@ -270,8 +272,8 @@ class RpcServer:
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
         if not await self.rpc_api.service.server.start_client(target_node, on_connect):
-            raise ValueError("Start client failed, or server is not set")
-        return {}
+            return {"success": False, "error": f"could not connect to {target_node}"}
+        return {"success": True}
 
     async def close_connection(self, request: Dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
@@ -378,7 +380,7 @@ class RpcServer:
                         f"wss://{self_hostname}:{daemon_port}",
                         autoclose=True,
                         autoping=True,
-                        heartbeat=60,
+                        heartbeat=self.daemon_heartbeat,
                         ssl_context=self.ssl_client_context,
                         max_msg_size=max_message_size,
                     )

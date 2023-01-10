@@ -151,7 +151,7 @@ class NFTWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
+        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
             return
@@ -1213,8 +1213,7 @@ class NFTWallet:
         :param fee: A fee amount, taken out of the xch spend.
         """
         # get DID Wallet
-        for wallet_id in self.wallet_state_manager.wallets:
-            wallet = self.wallet_state_manager.wallets[wallet_id]
+        for wallet in self.wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DECENTRALIZED_ID.value:
                 if self.get_did() == bytes32.from_hexstr(wallet.get_my_DID()):
                     did_wallet = wallet
@@ -1689,6 +1688,9 @@ class NFTWallet:
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
+
+    def get_name(self) -> str:
+        return self.wallet_info.name
 
 
 if TYPE_CHECKING:

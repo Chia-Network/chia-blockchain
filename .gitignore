@@ -97,6 +97,8 @@ build/
 # https://pytest-monitor.readthedocs.io/en/latest/operating.html?highlight=.pymon#storage
 .pymon
 
+# cache for tooling such as tools/manage_clvm.py
+.chia_cache/
 
 #       =====                       =====
 #     DO NOT EDIT BELOW - GENERATED

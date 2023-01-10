@@ -9,7 +9,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
@@ -18,10 +18,11 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates, RespondToPhUpdates
+from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -645,52 +646,37 @@ class WalletNode:
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
         # Things, so we don't have to reprocess these later. There can be many things in ph_update_res.
         already_checked_ph: Set[bytes32] = set()
-        continue_while: bool = True
-        all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-        while continue_while:
-            # Get all phs from puzzle store
-            ph_chunks: Iterator[List[bytes32]] = chunks(all_puzzle_hashes, 1000)
-            for chunk in ph_chunks:
-                ph_update_res: List[CoinState] = await subscribe_to_phs(
-                    [p for p in chunk if p not in already_checked_ph], full_node, 0
-                )
+        while not self._shut_down:
+            await self.wallet_state_manager.create_more_puzzle_hashes()
+            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
+            not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
+            if not_checked_puzzle_hashes == set():
+                break
+            for chunk in chunks(list(not_checked_puzzle_hashes), 1000):
+                ph_update_res: List[CoinState] = await subscribe_to_phs(chunk, full_node, 0)
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.receive_state_from_peer(ph_update_res, full_node, update_finished_height=True):
                     # If something goes wrong, abort sync
                     return
-                already_checked_ph.update(chunk)
+            already_checked_ph.update(not_checked_puzzle_hashes)
 
-            # Check if new puzzle hashed have been created
-            await self.wallet_state_manager.create_more_puzzle_hashes()
-            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
-            continue_while = False
-            for ph in all_puzzle_hashes:
-                if ph not in already_checked_ph:
-                    continue_while = True
-                    break
         self.log.info(f"Successfully subscribed and updated {len(already_checked_ph)} puzzle hashes")
 
         # The number of coin id updates are usually going to be significantly less than ph updates, so we can
         # sync from 0 every time.
-        continue_while = True
-        all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(0)
         already_checked_coin_ids: Set[bytes32] = set()
-        while continue_while:
-            one_k_chunks = chunks(all_coin_ids, 1000)
-            for chunk in one_k_chunks:
+        while not self._shut_down:
+            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
+            not_checked_coin_ids = set(all_coin_ids) - already_checked_coin_ids
+            if not_checked_coin_ids == set():
+                break
+            for chunk in chunks(list(not_checked_coin_ids), 1000):
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
 
                 if not await self.receive_state_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
                     return
-                already_checked_coin_ids.update(chunk)
-
-            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
-            continue_while = False
-            for coin_id in all_coin_ids:
-                if coin_id not in already_checked_coin_ids:
-                    continue_while = True
-                    break
+            already_checked_coin_ids.update(not_checked_coin_ids)
         self.log.info(f"Successfully subscribed and updated {len(already_checked_coin_ids)} coin ids")
 
         # Only update this fully when the entire sync has completed
@@ -704,9 +690,7 @@ class WalletNode:
         self.synced_peers.add(full_node.peer_node_id)
         await self.update_ui()
 
-        end_time = time.time()
-        duration = end_time - start_time
-        self.log.info(f"Sync (trusted: {trusted}) duration was: {duration}")
+        self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
 
     async def receive_state_from_peer(
         self,
@@ -852,18 +836,6 @@ class WalletNode:
         await self.update_ui()
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
-    async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
-        # TODO Use trusted peer, otherwise try untrusted
-        all_nodes = self.server.get_connections(NodeType.FULL_NODE)
-        if len(all_nodes) == 0:
-            raise ValueError("Not connected to the full node")
-        first_node = all_nodes[0]
-        msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
-        coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
-        # TODO validate state if received from untrusted peer
-        assert coin_state is not None
-        return coin_state.coin_states
-
     async def is_peer_synced(
         self, peer: WSChiaConnection, header_block: HeaderBlock, request_time: uint64
     ) -> Optional[uint64]:
@@ -875,7 +847,11 @@ class WalletNode:
             latest_timestamp = last_tx.foliage_transaction_block.timestamp
 
         # Return None if not synced
-        if latest_timestamp is None or self.config["testing"] is False and latest_timestamp < request_time - 600:
+        if (
+            latest_timestamp is None
+            or self.config.get("testing", False) is False
+            and latest_timestamp < request_time - 600
+        ):
             return None
         return latest_timestamp
 
@@ -1012,7 +988,7 @@ class WalletNode:
             return
 
         request = wallet_protocol.RequestBlockHeader(new_peak.height)
-        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
             await peer.close(120)
@@ -1207,7 +1183,9 @@ class WalletNode:
 
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
             request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
-            response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
+            response_prev: Optional[RespondBlockHeader] = await peer.call_api(
+                FullNodeAPI.request_block_header, request_prev
+            )
             if response_prev is None or not isinstance(response_prev, RespondBlockHeader):
                 raise RuntimeError("bad block header response from peer while syncing")
             prev_head = response_prev.header_block
@@ -1246,8 +1224,8 @@ class WalletNode:
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-            weight_request, timeout=wp_timeout
+        weight_proof_response: RespondProofOfWeight = await peer.call_api(
+            FullNodeAPI.request_proof_of_weight, weight_request, timeout=wp_timeout
         )
 
         if weight_proof_response is None:
@@ -1595,8 +1573,8 @@ class WalletNode:
         return True
 
     async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        solution_response = await peer.call_api(
+            FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
             raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
@@ -1613,7 +1591,7 @@ class WalletNode:
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_interest_in_coin, msg)
         if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
@@ -1633,8 +1611,8 @@ class WalletNode:
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
 
-        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
-            wallet_protocol.RequestChildren(coin_name)
+        response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
+            FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
         )
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
             raise PeerRequestException(f"Was not able to obtain children {response}")

@@ -136,6 +136,7 @@ async def insert_from_delta_file(
     client_foldername: Path,
     timeout: int,
     log: logging.Logger,
+    proxy_url: str,
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -144,7 +145,7 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(server_info.url + "/" + filename, timeout=timeout) as resp:
+                async with session.get(server_info.url + "/" + filename, timeout=timeout, proxy=proxy_url) as resp:
                     resp.raise_for_status()
                     size = int(resp.headers.get("content-length", 0))
                     log.debug(f"Downloading delta file {filename}. Size {size} bytes.")

@@ -1,4 +1,6 @@
 # flake8: noqa: E501
+from __future__ import annotations
+
 from blspy import AugSchemeMPL, PrivateKey
 
 from chia.pools.pool_config import PoolWalletConfig
