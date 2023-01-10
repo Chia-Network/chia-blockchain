@@ -63,7 +63,6 @@ def get_treasury_puzzle(
         proposal_pass_percentage,
         proposal_timelock,
     ]))
-    breakpoint()
     return puzzle
 
 

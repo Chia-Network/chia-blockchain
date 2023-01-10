@@ -77,6 +77,12 @@ class TestDAOWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         # await asyncio.sleep(20)
+        await time_out_assert(
+            60,
+            dao_wallet.is_spend_retrievable,
+            True,
+            treasury_id,
+        )
 
         dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             wallet_node_1.wallet_state_manager,

@@ -420,6 +420,12 @@ class DAOWallet:
             parent_coin = child_coin
         assert parent_info is not None
 
+    async def is_spend_retrievable(self, coin_id):
+        wallet_node: WalletNode = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
+        children = await wallet_node.fetch_children(coin_id, peer)
+        return len(children) > 0
+
     async def resync_treasury_state(self):
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: WalletNode = self.wallet_state_manager.wallet_node
@@ -496,13 +502,8 @@ class DAOWallet:
             # extra_value  ; this is used for recreating self
 
             inner_solution = parent_spend.solution.to_program().rest().rest().first()
-            if inner_solution.at("rrrrf").as_atom() == Program.to(0):
-                breakpoint()
-                # add money spend
-                # MH: if its the add money spend then the child puzhash *should* be the same as the parent. something's wrong.
-                current_inner_puz = parent_inner_puz
-            else:
-                current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
+            current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
+
         current_lineage_proof = LineageProof(
             parent_parent_coin.parent_coin_info,  # ...
             parent_inner_puz.get_tree_hash(),
@@ -1230,13 +1231,6 @@ class DAOWallet:
 
         await self.save_info(dao_info)
 
-        # treasury_id: bytes32,
-        # cat_tail: bytes32,
-        # current_cat_issuance: uint64,
-        # attendance_required_percentage: uint64,
-        # proposal_pass_percentage: uint64,
-        # proposal_timelock: uint64,
-        breakpoint()
         dao_treasury_puzzle = get_treasury_puzzle(
             launcher_coin.name(),
             cat_tail.get_tree_hash(),
