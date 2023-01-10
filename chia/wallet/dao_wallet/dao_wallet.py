@@ -431,12 +431,12 @@ class DAOWallet:
         parent_parent_coin = None
         assert len(children) > 0
         while len(children) > 0:
-            # TODO:  check we're getting odd amount child
             children = await wallet_node.fetch_children(parent_coin_id, peer)
             if len(children) == 0:
                 break
 
-            children_state: CoinState = children[0]
+            # check we're getting odd amount child
+            children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
             # breakpoint()
             child_coin = children_state.coin
 
@@ -497,6 +497,7 @@ class DAOWallet:
             inner_solution = parent_spend.solution.to_program().rest().rest().first()
             if inner_solution.at("rrrrf").as_atom() == b"":
                 # add money spend
+                # GW: Probably current_inner_puz should be calculated in get_new_puzzle_from_treasury_solution
                 current_inner_puz = parent_inner_puz
             else:
                 current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
