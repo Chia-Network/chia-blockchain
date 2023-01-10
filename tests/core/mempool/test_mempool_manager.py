@@ -182,3 +182,28 @@ async def test_minting_coin(
     _, status, error = result[2]
     assert status == expected_status
     assert error == expected_error
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "amount,expected_status,expected_error",
+    [
+        (TEST_COIN_AMOUNT, MempoolInclusionStatus.SUCCESS, None),
+        (TEST_COIN_AMOUNT + 1, MempoolInclusionStatus.FAILED, Err.RESERVE_FEE_CONDITION_FAILED),
+    ],
+)
+async def test_reserve_fee_condition(
+    amount: uint64,
+    expected_status: MempoolInclusionStatus,
+    expected_error: Optional[Err],
+) -> None:
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        test_coin_records = {TEST_COIN_ID: TEST_COIN_RECORD}
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    conditions = [[ConditionOpcode.RESERVE_FEE, amount]]
+    result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    _, status, error = result[2]
+    assert status == expected_status
+    assert error == expected_error
