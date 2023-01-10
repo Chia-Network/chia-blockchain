@@ -437,7 +437,7 @@ class DAOWallet:
                 break
 
             children_state: CoinState = children[0]
-            breakpoint()
+            # breakpoint()
             child_coin = children_state.coin
 
             #  I don't remember why the below code was originally included in the DID Wallet
@@ -481,7 +481,7 @@ class DAOWallet:
             parent_spend.puzzle_reveal.to_program()
         )
         if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
-            current_innerpuz = parent_inner_puz
+            current_inner_puz = parent_inner_puz
         else:
             # my_amount         ; current amount
             # new_amount_change ; may be negative or positive. Is zero during eve spend
@@ -493,13 +493,16 @@ class DAOWallet:
             # proposal_total_votes   ; total votes cast (by number of cat-mojos)
             # type  ; this is used for the recreating self type
             # extra_value  ; this is used for recreating self
-            inner_solution = parent_spend.solution.rest().rest().first()
-            get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
-        breakpoint()
 
+            inner_solution = parent_spend.solution.to_program().rest().rest().first()
+            if inner_solution.at("rrrrf").as_atom() == b"":
+                # add money spend
+                current_inner_puz = parent_inner_puz
+            else:
+                current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
         current_lineage_proof = LineageProof(
-            parent_parent_coin.parent_name,  # ...
-            parent_inner_puz,
+            parent_parent_coin.parent_coin_info,  # ...
+            parent_inner_puz.get_tree_hash(),
             parent_parent_coin.amount
         )
         await self.add_parent(parent_parent_coin.name(), current_lineage_proof)
@@ -509,18 +512,19 @@ class DAOWallet:
             self.dao_info.cat_wallet_id,  # cat_wallet_id: int
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
-            children,  # current_coin
-            current_innerpuz,  # current innerpuz
+            child_coin,  # current_coin
+            current_inner_puz,  # current innerpuz
         )
+
         future_parent = LineageProof(
             child_coin.parent_coin_info,
-            self.dao_info.current_treasury_innerpuz.get_tree_hash(),
+            dao_info.current_treasury_innerpuz.get_tree_hash(),
             uint64(child_coin.amount),
         )
         await self.add_parent(child_coin.name(), future_parent)
 
         await self.save_info(dao_info)
-        assert parent_info is not None
+        assert self.dao_info.parent_info is not None
         return
 
     async def create_tandem_xch_tx(
