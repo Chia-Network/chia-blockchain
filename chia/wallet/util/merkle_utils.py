@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from enum import IntEnum
 from typing import Any, Dict, List, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,6 +15,10 @@ HASH_LEAF_PREFIX = bytes([1])
 
 # paths here are not quite the same a `NodePath` paths. We don't need the high order bit
 # anymore since the proof indicates how big the path is.
+
+
+class MerkleCoinType(IntEnum):
+    CLAWBACK = 1
 
 
 def compose_paths(path_1: int, path_2: int, path_2_length: int) -> int:
@@ -52,7 +57,7 @@ def list_to_binary_tree(objects: List[Any]) -> Any:
     midpoint = (size + 1) >> 1
     first_half = objects[:midpoint]
     last_half = objects[midpoint:]
-    return (list_to_binary_tree(first_half), list_to_binary_tree(last_half))
+    return list_to_binary_tree(first_half), list_to_binary_tree(last_half)
 
 
 def build_merkle_tree(objects: List[bytes32]) -> Tuple[bytes32, Dict[bytes32, Tuple[int, List[bytes32]]]]:

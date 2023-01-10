@@ -64,12 +64,21 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
+from chia.wallet.puzzles.clawback.cb_puzzles import (
+    ACH_CLAWBACK_MOD,
+    ACH_COMPLETION_MOD,
+    P2_MERKLE_MOD,
+    generate_claim_spend_bundle,
+    uncurry_clawback,
+)
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.merkle_utils import MerkleCoinType, build_merkle_tree
+from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
@@ -79,6 +88,8 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
+from chia.wallet.wallet_merkle_coin_record import WalletMerkleCoinRecord
+from chia.wallet.wallet_merkle_coin_store import WalletMerkleCoinStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -125,6 +136,7 @@ class WalletStateManager:
     user_settings: UserSettings
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
+    merkle_coin_store: WalletMerkleCoinStore
     interested_store: WalletInterestedStore
     retry_store: WalletRetryStore
     multiprocessing_context: multiprocessing.context.BaseContext
@@ -136,6 +148,7 @@ class WalletStateManager:
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
     initial_num_public_keys: int
+    decorator_manager: PuzzleDecoratorManager
 
     @staticmethod
     async def create(
@@ -176,6 +189,7 @@ class WalletStateManager:
             self.initial_num_public_keys = min_num_public_keys
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
+        self.merkle_coin_store = await WalletMerkleCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
         self.user_store = await WalletUserStore.create(self.db_wrapper)
@@ -197,6 +211,7 @@ class WalletStateManager:
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.db_path = db_path
+        self.decorator_manager = PuzzleDecoratorManager.create(self.config, wallet_node.logged_in_fingerprint)
 
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
@@ -648,9 +663,48 @@ class WalletStateManager:
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
+        # Check if the coin is a merkle coin
+        clawback_args = uncurry_clawback(puzzle)
+        if clawback_args is not None:
+            return await self.handle_clawback(clawback_args, coin_state, coin_spend)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None, None
+
+    async def update_merkle_coin(self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]):
+        # Get unspent merkle coin
+        assert fork_height is not None
+        unspent_coins = await self.merkle_coin_store.get_all_unspent_coins()
+        current_timestamp = await self.wallet_node.get_timestamp_for_height(fork_height)
+        claim_count = 0
+        coin_spends = []
+        for coin in unspent_coins:
+            if coin_state.coin.parent_coin_info == coin.coin.name():
+                # This coin is spent, update it
+                await self.merkle_coin_store.set_spent(coin.coin.name(), fork_height)
+                continue
+            if (
+                self.config.get("auto_claim", True)
+                and coin.coin_type == MerkleCoinType.CLAWBACK.value
+                and coin.spent == 0
+            ):
+                coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
+                if current_timestamp - coin_timestamp >= coin.metadata["time_lock"]:
+                    coin_spends.append(generate_claim_spend_bundle(coin.coin, coin.metadata))
+                    claim_count += 1
+                    if len(coin_spends) >= self.config.get("auto_claim_tx_size", 50):
+                        await self.auto_claim_clawback(coin_spends)
+                        claim_count = 0
+                        coin_spends = []
+        if len(coin_spends) > 0:
+            await self.auto_claim_clawback(coin_spends)
+
+    async def auto_claim_clawback(self, coin_spends: List[CoinSpend]):
+        spend_bundle = self.main_wallet.sign_transaction(coin_spends)
+        # TODO Add tx fee
+        await self.wallet_node.push_tx(spend_bundle)
+        for coin_spend in coin_spends:
+            await self.merkle_coin_store.set_spent(coin_spend.coin.name(), uint32(0))
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
@@ -973,6 +1027,70 @@ class WalletStateManager:
             wallet_type = WalletType.NFT
         return wallet_id, wallet_type
 
+    async def handle_clawback(
+        self,
+        clawback_args: Tuple[uint32, Program],
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+    ) -> Tuple[Optional[uint32], Optional[WalletType]]:
+        """
+        Handle Clawback coins
+        :param clawback_args:
+        :param coin_state:
+        :param coin_spend:
+        :return:
+        """
+        time_lock, inner_puzzle = clawback_args
+        hint_list = compute_coin_hints(coin_spend)
+        recipient_derivation_record = None
+        target_ph = None
+        # Check if the wallet is the recipient
+        for hint in hint_list:
+            recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
+            if recipient_derivation_record is not None:
+                target_ph = bytes32(hint)
+                break
+
+        claim_puz = ACH_COMPLETION_MOD.curry(time_lock, target_ph)
+        claw_puz = ACH_CLAWBACK_MOD.curry(coin_spend.coin.puzzle_hash, inner_puzzle)
+        merkle_tree = build_merkle_tree([claw_puz.get_tree_hash(), claim_puz.get_tree_hash()])
+        p2_merkle_puz = P2_MERKLE_MOD.curry(merkle_tree[0])
+        if p2_merkle_puz.get_tree_hash() != coin_state.coin.puzzle_hash:
+            self.log.error(f"Merkle coin puzzle hash doesn't match for coin: {coin_state.coin.name().hex()}")
+            return None, None
+        # Record metadata
+        metadata = {
+            "time_lock": time_lock,
+            "target_puzhash": target_ph.hex() if target_ph else None,
+            "cb_puzhash": coin_spend.coin.puzzle_hash.hex(),
+            "sender_inner_puzzle": inner_puzzle.__bytes__().hex(),
+        }
+        assert coin_state.created_height is not None
+        coin_record = WalletMerkleCoinRecord(
+            coin_state.coin,
+            uint32(coin_state.created_height),
+            uint32(0),
+            False,
+            MerkleCoinType.CLAWBACK.value,
+            metadata,
+            WalletType.STANDARD_WALLET,
+            1,
+        )
+        await self.merkle_coin_store.add_coin_record(coin_record)
+        if recipient_derivation_record is not None:
+            self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name())
+            # Add merkle coin
+            await self.merkle_coin_store.add_coin_record(coin_record)
+        # Check if the wallet is the sender
+        sender_derivation_record: Optional[
+            DerivationRecord
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(coin_spend.coin.puzzle_hash)
+        if sender_derivation_record is not None:
+            self.log.info("Found Clawback merkle coin %s as the sender.", coin_state.coin.name())
+            # Add merkle coin
+            await self.merkle_coin_store.add_coin_record(coin_record)
+        return None, None
+
     async def new_coin_state(
         self,
         coin_states: List[CoinState],
@@ -1040,7 +1158,7 @@ class WalletStateManager:
                             ):
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
-
+                    await self.update_merkle_coin(peer, coin_state, fork_height)
                     if wallet_id is None or wallet_type is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue

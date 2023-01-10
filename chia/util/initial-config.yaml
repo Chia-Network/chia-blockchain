@@ -491,10 +491,7 @@ wallet:
   full_node_peer:
     host: *self_hostname
     port: 8444
-  # The path of NFT off-chain metadata cache
-  nft_metadata_cache_path: "nft_cache"
-  # The length of NFT ID prefix will be used as hash index
-  nft_metadata_cache_hash_length: 3
+
   multiprocessing_start_method: default
 
   testing: False
@@ -556,6 +553,19 @@ wallet:
   accept_notifications: False
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
+
+  #################################
+  #  Inner puzzle decorators      #
+  #################################
+  # The following decorator puzzles will wrap the P2 puzzle in order.
+  # format: {fingerprint1:["decorator1", "decorator2" ...]}
+  puzzle_decorators: {}
+  # Clawback Decorator Config
+  # The clawback time lock in seconds
+  clawback_timelock: 3600
+  auto_claim: True
+  auto_claim_tx_fee: 0
+  auto_claim_tx_size: 50
 
 data_layer:
   # TODO: consider name

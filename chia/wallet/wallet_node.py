@@ -256,7 +256,7 @@ class WalletNode:
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)
-
+        self.log_in(private_key)
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
@@ -282,7 +282,7 @@ class WalletNode:
         self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
-        self.log_in(private_key)
+
         self.wallet_state_manager.set_sync_mode(False)
 
         async with self.wallet_state_manager.puzzle_store.lock:

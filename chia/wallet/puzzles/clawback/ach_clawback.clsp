@@ -1,0 +1,48 @@
+
+(mod
+  (
+    CLAWBACK_PH
+    INNER_PUZ
+    puzzle_solution
+  )
+  ;; This puzzle should be solved with only 1 CREATE_COIN condition which takes the whole amount
+
+  (include condition_codes.clib)
+  (include curry_and_treehash.clib)
+  (include merkle_utils.clib)
+  (include utility_macros.clib)
+
+  (defun-inline opcode (condition) (f condition))
+  (defun-inline puzhash (condition) (f (r condition)))
+  (defun-inline amount (condition) (f (r (r condition))))
+
+  (defun check_for_clawback (conditions CLAWBACK_PH seen)
+    (if conditions
+      (c (f conditions)
+        (check_for_clawback
+          (r conditions)
+          CLAWBACK_PH
+          (if (= CREATE_COIN (opcode (f conditions)))
+              (assert
+                (not seen)  ; not seen
+                (= CLAWBACK_PH (puzhash (f conditions)))
+                ;; (= amount (amount (f conditions)))
+                ; then
+		(+ seen (amount (f conditions)))
+              )
+	      (if (= RESERVE_FEE (opcode (f conditions)))
+	        (+ seen (f (r (f conditions))))
+                seen
+	      )
+          )
+        )
+      )
+      ;; Once we've gone through all conditions check we have seen at least 1 CC, and assert the amount
+      (assert seen (list (list ASSERT_MY_AMOUNT seen)))
+    )
+  )
+
+  ; main
+  (check_for_clawback (a INNER_PUZ puzzle_solution) CLAWBACK_PH ())
+
+)

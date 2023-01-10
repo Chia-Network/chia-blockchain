@@ -24,7 +24,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
-    puzzle_hash_for_pk,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
@@ -160,7 +159,7 @@ class Wallet:
         return puzzle_for_pk(pubkey)
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return puzzle_hash_for_pk(pubkey)
+        return self.wallet_state_manager.decorator_manager.decorate(puzzle_for_pk(pubkey)).get_tree_hash()
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
@@ -191,7 +190,7 @@ class Wallet:
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
-        return puzzle_for_pk(public_key)
+        return self.wallet_state_manager.decorator_manager.decorate(puzzle_for_pk(public_key))
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
@@ -319,9 +318,10 @@ class Wallet:
         exclude_coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
         """
-        Generates a unsigned transaction in form of List(Puzzle, Solutions)
+        Generates an unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
+
         if primaries_input is None:
             primaries: Optional[List[AmountWithPuzzlehash]] = None
             total_amount = amount + fee
@@ -387,13 +387,20 @@ class Wallet:
             # Only one coin creates outputs
             if origin_id in (None, coin.name()):
                 origin_id = coin.name()
+                public_key = await self.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
+                inner_puzzle = puzzle_for_pk(public_key)
+                decorated_target_puzhash = self.wallet_state_manager.decorator_manager.decorate_target_puzhash(
+                    inner_puzzle, newpuzzlehash
+                )
+                memos = self.wallet_state_manager.decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
+                assert memos is not None
                 if primaries is None:
                     if amount > 0:
-                        primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
+                        primaries = [{"puzzlehash": decorated_target_puzhash, "amount": uint64(amount), "memos": memos}]
                     else:
                         primaries = []
                 else:
-                    primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
+                    primaries.append({"puzzlehash": decorated_target_puzhash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
                     change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
@@ -409,6 +416,7 @@ class Wallet:
                     coin_announcements_to_assert=coin_announcements_bytes,
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
+                solution = self.wallet_state_manager.decorator_manager.solve(inner_puzzle, primaries, solution)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
 
                 spends.append(
@@ -424,9 +432,11 @@ class Wallet:
         for coin in coins:
             if coin.name() == origin_id:
                 continue
-
+            public_key = await self.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
+            inner_puzzle = puzzle_for_pk(public_key)
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
+            solution = self.wallet_state_manager.decorator_manager.solve(inner_puzzle, [], solution)
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))

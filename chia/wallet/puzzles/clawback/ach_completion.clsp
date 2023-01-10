@@ -1,0 +1,16 @@
+(mod
+  (
+    TIMELOCK
+    P2_PH
+    my_amount
+  )
+
+  (include condition_codes.clib)
+
+  (list
+    (list ASSERT_SECONDS_RELATIVE TIMELOCK)
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN P2_PH my_amount)
+    (list CREATE_COIN_ANNOUNCEMENT ())  ; for fees
+  )
+)
