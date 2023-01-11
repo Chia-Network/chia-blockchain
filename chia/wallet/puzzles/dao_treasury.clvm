@@ -9,7 +9,7 @@
     PROPOSAL_TIMER_MOD_HASH
     LOCKUP_MOD_HASH
     CAT_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     CURRENT_CAT_ISSUANCE
     ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
     PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
@@ -56,7 +56,7 @@
     CAT_MOD_HASH
     TREASURY_MOD_HASH
     LOCKUP_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     TREASURY_ID
     proposal_current_votes
     proposal_total_votes
@@ -67,7 +67,7 @@
                                      (sha256 ONE proposal_total_votes)
                                      (sha256 ONE proposal_current_votes)
                                      (sha256 ONE TREASURY_ID)
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
                         				     (sha256 ONE LOCKUP_MOD_HASH)
                         				     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
@@ -169,7 +169,7 @@
               PROPOSAL_TIMER_MOD_HASH
               LOCKUP_MOD_HASH
               CAT_MOD_HASH
-              CAT_TAIL
+              CAT_TAIL_HASH
               CURRENT_CAT_ISSUANCE
               ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
               PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
@@ -192,7 +192,7 @@
                   CAT_MOD_HASH
                   TREASURY_MOD_HASH
                   LOCKUP_MOD_HASH
-                  CAT_TAIL
+                  CAT_TAIL_HASH
                   (f (r SINGLETON_STRUCT))
                   proposal_current_votes
                   proposal_total_votes

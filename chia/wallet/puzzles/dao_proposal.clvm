@@ -8,9 +8,9 @@
   CAT_MOD_HASH
   TREASURY_MOD_HASH
   LOCKUP_MOD_HASH
-  CAT_TAIL
+  CAT_TAIL_HASH
   TREASURY_ID
-  YES_VOTES  ; yes votes are +1, no votes are -1
+  YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
   TOTAL_VOTES  ; how many people responded
   INNERPUZ  ; this is what runs if this proposal is successful
   vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
@@ -38,14 +38,14 @@
   (defun calculate_timer_puzhash (
     PROPOSAL_TIMER_MOD_HASH
     PROPOSAL_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     MY_SINGLETON_STRUCT
     TREASURY_ID
   )
     (puzzle-hash-of-curried-function PROPOSAL_TIMER_MOD_HASH
                                      (sha256 ONE TREASURY_ID)
                                      (sha256tree MY_SINGLETON_STRUCT)
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
     )
@@ -57,7 +57,7 @@
     SINGLETON_LAUNCHER_PUZHASH
     LOCKUP_MOD_HASH
     CAT_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     PROPOSAL_TIMELOCK
     previous_votes
     lockup_innerpuzhash
@@ -66,7 +66,7 @@
                                      lockup_innerpuzhash
                                      (sha256 ONE PROPOSAL_TIMELOCK)
                                      (sha256tree previous_votes)
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE LOCKUP_MOD_HASH)
                                      (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
@@ -81,7 +81,7 @@
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
     TREASURY_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     TREASURY_ID
     YES_VOTES
     TOTAL_VOTES
@@ -92,7 +92,7 @@
                                      (sha256 ONE TOTAL_VOTES)
                                      (sha256 ONE YES_VOTES)
                                      (sha256 ONE TREASURY_ID)
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
 				     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
@@ -101,10 +101,10 @@
     )
   )
 
-  (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL INNERPUZHASH)
+  (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
     (puzzle-hash-of-curried-function CAT_MOD_HASH
                                      INNERPUZHASH
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
     )
   )
@@ -122,7 +122,7 @@
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     PROPOSAL_PASS_PERCENTAGE
     PROPOSAL_TIMELOCK
     p2_singleton_mod_hash
@@ -132,7 +132,7 @@
         (sha256 ONE PROPOSAL_TIMELOCK)
       	(sha256 ONE PROPOSAL_PASS_PERCENTAGE)
       	(sha256 ONE CURRENT_CAT_ISSUANCE)
-      	(sha256 ONE CAT_TAIL)
+      	(sha256 ONE CAT_TAIL_HASH)
       	(sha256 ONE CAT_MOD_HASH)
       	(sha256 ONE p2_singleton_mod_hash)
       	(sha256 ONE PROPOSAL_TIMER_MOD_HASH)
@@ -156,14 +156,14 @@
           ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
           (sha256
             (wrap_in_cat_layer
-              CAT_MOD_HASH CAT_TAIL
+              CAT_MOD_HASH CAT_TAIL_HASH
               (calculate_lockup_puzzlehash
                 PROPOSAL_MOD_HASH
                 (f SINGLETON_STRUCT)
                 (r (r SINGLETON_STRUCT))
                 LOCKUP_MOD_HASH
                 CAT_MOD_HASH
-                CAT_TAIL
+                CAT_TAIL_HASH
                 PROPOSAL_TIMELOCK
                 previous_votes
                 lockup_innerpuzhash_or_attendance_required
@@ -180,13 +180,13 @@
               PROPOSAL_MOD_HASH
               PROPOSAL_TIMER_MOD_HASH
               CAT_MOD_HASH
-	      TREASURY_MOD_HASH
-              CAT_TAIL
+	            TREASURY_MOD_HASH
+              CAT_TAIL_HASH
               PROPOSAL_PASS_PERCENTAGE
               TREASURY_ID
               PROPOSAL_TIMELOCK
-              (if vote_info_or_p2_singleton_mod_hash (+ YES_VOTES vote_amount_or_solution) (- YES_VOTES vote_amount_or_solution))
-              TOTAL_VOTES
+              (if vote_info_or_p2_singleton_mod_hash (+ YES_VOTES vote_amount_or_solution) YES_VOTES)
+              (+ TOTAL_VOTES vote_amount_or_solution)
               INNERPUZ
             )
             ONE  ; why would a proposal hold any value
@@ -200,7 +200,7 @@
                 (calculate_timer_puzhash
                   PROPOSAL_TIMER_MOD_HASH
                   PROPOSAL_MOD_HASH
-                  CAT_TAIL
+                  CAT_TAIL_HASH
                   SINGLETON_STRUCT
                   TREASURY_ID
                 )
@@ -226,7 +226,7 @@
                 PROPOSAL_MOD_HASH
                 PROPOSAL_TIMER_MOD_HASH
                 CAT_MOD_HASH
-                CAT_TAIL
+                CAT_TAIL_HASH
                 vote_coin_id_or_current_cat_issuance
                 lockup_innerpuzhash_or_attendance_required  ; check the veracity of these values by if the treasury uses them
                 pass_margin  ; check the veracity of these values by if the treasury uses them
@@ -251,7 +251,7 @@
                 (calculate_timer_puzhash
                   PROPOSAL_TIMER_MOD_HASH
                   PROPOSAL_MOD_HASH
-                  CAT_TAIL
+                  CAT_TAIL_HASH
                   SINGLETON_STRUCT
                   TREASURY_ID
                 )

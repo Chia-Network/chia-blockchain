@@ -33,6 +33,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     generate_cat_tail,
     get_treasury_puzzle,
     get_new_puzzle_from_treasury_solution,
+    get_proposal_puzzle,
 )
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
@@ -1338,6 +1339,96 @@ class DAOWallet:
             ]
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        return unsigned_spend_bundle
+
+    async def generate_new_proposal(self, proposed_puzzle_hash, fee):
+        coins = await self.standard_wallet.select_coins(uint64(fee + 1))
+        if coins is None:
+            return None
+        # origin is normal coin which creates launcher coin
+        origin = coins.copy().pop()
+        genesis_launcher_puz = SINGLETON_LAUNCHER
+        # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
+        # MH: do you think we should store the cat tail locally as well?
+        cat_wallet = await self.wallet_state_manager.get_wallet_by_id(self.dao_info.cat_wallet_id)
+        cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
+        dao_proposal_puzzle = get_proposal_puzzle(
+            launcher_coin.name(),
+            cat_tail_hash,
+            self.dao_info.treasury_id,
+            proposed_puzzle_hash,
+        )
+
+        full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
+        full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
+
+        announcement_set: Set[Announcement] = set()
+        announcement_message = Program.to([full_proposal_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
+
+        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+            uint64(1), genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
+        )
+
+        genesis_launcher_solution = Program.to([full_proposal_puzzle_hash, 1, bytes(0x80)])
+
+        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        eve_coin = Coin(launcher_coin.name(), full_proposal_puzzle_hash, 1)
+
+        future_parent = LineageProof(
+            eve_coin.parent_coin_info,
+            dao_proposal_puzzle.get_tree_hash(),
+            uint64(eve_coin.amount),
+        )
+        eve_parent = LineageProof(
+            bytes32(launcher_coin.parent_coin_info),
+            bytes32(launcher_coin.puzzle_hash),
+            uint64(launcher_coin.amount),
+        )
+
+        await self.add_parent(bytes32(eve_coin.parent_coin_info), eve_parent)
+        await self.add_parent(eve_coin.name(), future_parent)
+
+        eve_spend = await self.generate_proposal_eve_spend(
+            eve_coin,
+            full_proposal_puzzle,
+            dao_proposal_puzzle,
+            launcher_coin,
+        )
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
+        return
+
+    async def generate_proposal_eve_spend(
+        eve_coin: Coin,
+        full_proposal_puzzle: Program,
+        dao_proposal_puzzle: Program,
+        launcher_coin: Coin,
+    ) -> SpendBundle:
+
+        # TODO: connect with DAO CAT Wallet here
+
+        # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+        # vote_info_or_p2_singleton_mod_hash
+        # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from
+        # previous_votes  ; set this to 0 if we have passed
+        # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from
+        inner_sol = Program.to(
+            [
+
+            ]
+        )
+        # full solution is (lineage_proof my_amount inner_solution)
+        fullsol = Program.to(
+            [
+                [eve_coin.parent_coin_info, launcher_coin.amount],
+                eve_coin.amount,
+                inner_sol,
+            ]
+        )
+        list_of_coinspends = [CoinSpend(eve_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 

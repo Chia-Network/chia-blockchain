@@ -28,6 +28,29 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER_PUZHASH = SINGLETON_LAUNCHER.get_tree_hash()
 
 
+def get_proposal_puzzle(
+    proposal_id: bytes32,
+    cat_tail_hash: bytes32,
+    treasury_id: bytes32,
+    proposed_puzzle_hash: bytes32,
+) -> Program:
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
+    puzzle: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD_HASH,
+        DAO_PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        DAO_TREASURY_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        cat_tail_hash,
+        treasury_id,
+        0,
+        0,
+        proposed_puzzle_hash,
+    )
+    return puzzle
+
+
 def get_treasury_puzzle(
     treasury_id: bytes32,
     cat_tail: bytes32,

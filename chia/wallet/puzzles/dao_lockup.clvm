@@ -10,7 +10,7 @@
   SINGLETON_LAUNCHER_PUZHASH
   LOCKUP_MOD_HASH
   CAT_MOD_HASH
-  CAT_TAIL
+  CAT_TAIL_HASH
   ACTIVE_VOTES  ; "active votes" list
   INNERPUZ
   my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
@@ -80,7 +80,7 @@
     SINGLETON_LAUNCHER_PUZHASH
     LOCKUP_MOD_HASH
     CAT_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     PROPOSAL_MOD_HASH
     INNERPUZ
     my_id
@@ -96,7 +96,7 @@
           SINGLETON_LAUNCHER_PUZHASH
           LOCKUP_MOD_HASH
           CAT_MOD_HASH
-          CAT_TAIL
+          CAT_TAIL_HASH
           PROPOSAL_MOD_HASH
           INNERPUZ
           my_id
@@ -110,7 +110,7 @@
             PROPOSAL_MOD_HASH
             CAT_MOD_HASH
             LOCKUP_MOD_HASH
-            CAT_TAIL
+            CAT_TAIL_HASH
             (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH))
             proposal_curry_vals
           )
@@ -132,7 +132,7 @@
     PROPOSAL_MOD_HASH
     CAT_MOD_HASH
     LOCKUP_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     proposal_singleton_struct
     (
       TREASURY_MOD_HASH
@@ -150,7 +150,7 @@
         (sha256 ONE TOTAL_VOTES)
         (sha256 ONE YES_VOTES)
         (sha256 ONE TREASURY_ID)
-        (sha256 ONE CAT_TAIL)
+        (sha256 ONE CAT_TAIL_HASH)
         (sha256 ONE LOCKUP_MOD_HASH)
         (sha256 ONE TREASURY_MOD_HASH)
         (sha256 ONE CAT_MOD_HASH)
@@ -161,11 +161,11 @@
     )
   )
 
-  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL active_votes INNERPUZ)
+  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH active_votes INNERPUZ)
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
                                      (sha256 ONE INNERPUZ)
                                      (sha256tree active_votes)
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE LOCKUP_MOD_HASH)
                                      (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
@@ -181,7 +181,7 @@
     SINGLETON_LAUNCHER_PUZHASH
     LOCKUP_MOD_HASH
     CAT_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     ACTIVE_VOTES
     INNERPUZ
     removal_id
@@ -200,7 +200,7 @@
               SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
               CAT_MOD_HASH
-              CAT_TAIL
+              CAT_TAIL_HASH
               (merge_list unused_votes (r ACTIVE_VOTES))  ; removes the current entry from the list
               INNERPUZ
             )
@@ -225,7 +225,7 @@
           SINGLETON_LAUNCHER_PUZHASH
           LOCKUP_MOD_HASH
           CAT_MOD_HASH
-          CAT_TAIL
+          CAT_TAIL_HASH
           (r ACTIVE_VOTES)
           INNERPUZ
           removal_id
@@ -252,7 +252,7 @@
               SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
               CAT_MOD_HASH
-              CAT_TAIL
+              CAT_TAIL_HASH
               PROPOSAL_MOD_HASH
               INNERPUZ
               my_id
@@ -268,7 +268,7 @@
                 SINGLETON_LAUNCHER_PUZHASH
                 LOCKUP_MOD_HASH
                 CAT_MOD_HASH
-                CAT_TAIL
+                CAT_TAIL_HASH
                 (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
                 INNERPUZ
               )
@@ -292,7 +292,7 @@
         SINGLETON_LAUNCHER_PUZHASH
         LOCKUP_MOD_HASH
         CAT_MOD_HASH
-        CAT_TAIL
+        CAT_TAIL_HASH
         ACTIVE_VOTES
         INNERPUZ
         new_proposal_vote_id_or_removal_id

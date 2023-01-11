@@ -6,7 +6,7 @@
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
   CAT_MOD_HASH
-  CAT_TAIL
+  CAT_TAIL_HASH
   MY_PARENT_SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (PROPOSAL_SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
   TREASURY_ID
   proposal_yes_votes
@@ -32,7 +32,7 @@
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
-    CAT_TAIL
+    CAT_TAIL_HASH
     TREASURY_ID
     proposal_yes_votes
     proposal_total_votes
@@ -43,7 +43,7 @@
                                      (sha256 ONE proposal_total_votes)
                                      (sha256 ONE proposal_yes_votes)
                                      (sha256 ONE TREASURY_ID)
-                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -73,7 +73,7 @@
                 PROPOSAL_MOD_HASH
                 PROPOSAL_TIMER_MOD_HASH
                 CAT_MOD_HASH
-                CAT_TAIL
+                CAT_TAIL_HASH
                 TREASURY_ID
                 proposal_yes_votes
                 proposal_total_votes
@@ -91,7 +91,7 @@
             PROPOSAL_MOD_HASH
             PROPOSAL_TIMER_MOD_HASH
             CAT_MOD_HASH
-            CAT_TAIL
+            CAT_TAIL_HASH
             TREASURY_ID
             0
             0
