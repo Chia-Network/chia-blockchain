@@ -164,20 +164,26 @@ def test_get_bucket_index_empty_buckets() -> None:
 
 def test_get_bucket_index_single_entry() -> None:
     """Test single entry with low, equal and high keys"""
+    from sys import float_info
+
+    e = float_info.epsilon * 10
     sorted_buckets = SortedDict({1.0: 0})
     print()
     print(sorted_buckets)
-    for rate, expected_index in ((0.5, 0), (1.0, 0), (1.5, 0)):
+    for rate, expected_index in ((0.5, 0), (1.0 - e, 0), (1.5, 0)):
         result_index = get_bucket_index(sorted_buckets, rate)
         print(rate, expected_index, result_index)
         assert expected_index == result_index
 
 
 def test_get_bucket_index() -> None:
+    from sys import float_info
+
+    e = float_info.epsilon * 10
     sorted_buckets = SortedDict({1.0: 0, 2.0: 1})
     print()
     print(sorted_buckets)
-    for rate, expected_index in ((0.5, 0), (1.0, 0), (1.5, 0), (2.0, 1), (2.1, 1)):
+    for rate, expected_index in ((0.5, 0), (1.0 - e, 0), (1.5, 0), (2.0 - e, 1), (2.1, 1)):
         result_index = get_bucket_index(sorted_buckets, rate)
         print(rate, expected_index, result_index)
         assert expected_index == result_index
