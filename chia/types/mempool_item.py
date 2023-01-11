@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
@@ -21,6 +21,9 @@ class MempoolItem(Streamable):
     spend_bundle_name: bytes32
     additions: List[Coin]
     height_added_to_mempool: uint32
+
+    # If present, this SpendBundle is not valid at or before this height
+    assert_height: Optional[uint32] = None
 
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost

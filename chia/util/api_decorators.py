@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints
@@ -67,6 +68,7 @@ class ApiNodeMetadata:
             if name in self.name_to_endpoint:
                 raise Exception(f"endpoint name already registered: {name}")
 
+            @functools.wraps(f)
             def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
                 arg: S
                 if isinstance(original, bytes):

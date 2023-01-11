@@ -12,7 +12,11 @@ class TestDaemonRpc:
         ws_server = get_daemon
         config = bt.config
         client = await connect_to_daemon(
-            config["self_hostname"], config["daemon_port"], 50 * 1000 * 1000, bt.get_daemon_ssl_context()
+            config["self_hostname"],
+            config["daemon_port"],
+            50 * 1000 * 1000,
+            bt.get_daemon_ssl_context(),
+            heartbeat=config["daemon_heartbeat"],
         )
         response = await client.get_version()
 

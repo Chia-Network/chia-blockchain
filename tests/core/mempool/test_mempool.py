@@ -11,10 +11,12 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.full_node.pending_tx_cache import PendingTxCache
+from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
 from chia.server.outbound_message import Message, NodeType
@@ -26,9 +28,11 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
@@ -51,6 +55,14 @@ BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
 log = logging.getLogger(__name__)
 
 
+def new_mi(mi: MempoolInfo, max_mempool_cost: int, min_replace_fee_per_cost: int) -> MempoolInfo:
+    return dataclasses.replace(
+        mi,
+        minimum_fee_per_cost_to_replace=FeeRate(uint64(min_replace_fee_per_cost)),
+        max_size_in_cost=CLVMCost(uint64(max_mempool_cost)),
+    )
+
+
 @pytest.fixture(scope="module")
 def wallet_a(bt):
     return bt.get_pool_wallet_tool()
@@ -71,23 +83,31 @@ def generate_test_spend_bundle(
     return transaction
 
 
-def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
+def make_item(idx: int, cost: uint64 = uint64(80), assert_height=100) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
-        SpendBundle([], G2Element()), uint64(0), NPCResult(None, None, cost), cost, spend_bundle_name, [], uint32(0)
+        SpendBundle([], G2Element()),
+        uint64(0),
+        NPCResult(None, None, cost),
+        cost,
+        spend_bundle_name,
+        [],
+        uint32(0),
+        assert_height,
     )
 
 
-class TestPendingTxCache:
+class TestConflictTxCache:
     def test_recall(self):
-        c = PendingTxCache(100)
+        c = ConflictTxCache(100)
         item = make_item(1)
         c.add(item)
+        assert c.get(item.name) == item
         tx = c.drain()
         assert tx == {item.spend_bundle_name: item}
 
     def test_fifo_limit(self):
-        c = PendingTxCache(200)
+        c = ConflictTxCache(200)
         # each item has cost 80
         items = [make_item(i) for i in range(1, 4)]
         for i in items:
@@ -97,8 +117,19 @@ class TestPendingTxCache:
         tx = c.drain()
         assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
 
+    def test_item_limit(self):
+        c = ConflictTxCache(1000000, 2)
+        # each item has cost 80
+        items = [make_item(i) for i in range(1, 4)]
+        for i in items:
+            c.add(i)
+        # the max size is 2, only two transactions will fit
+        # we evict items FIFO, so the to most recently added will be left
+        tx = c.drain()
+        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+
     def test_drain(self):
-        c = PendingTxCache(100)
+        c = ConflictTxCache(100)
         item = make_item(1)
         c.add(item)
         tx = c.drain()
@@ -109,7 +140,7 @@ class TestPendingTxCache:
         assert tx == {}
 
     def test_cost(self):
-        c = PendingTxCache(200)
+        c = ConflictTxCache(200)
         assert c.cost() == 0
         item1 = make_item(1)
         c.add(item1)
@@ -137,6 +168,109 @@ class TestPendingTxCache:
         assert tx == {item4.spend_bundle_name: item4}
 
 
+class TestPendingTxCache:
+    def test_recall(self):
+        c = PendingTxCache(100)
+        item = make_item(1)
+        c.add(item)
+        assert c.get(item.name) == item
+        tx = c.drain(101)
+        assert tx == {item.spend_bundle_name: item}
+
+    def test_fifo_limit(self):
+        c = PendingTxCache(200)
+        # each item has cost 80
+        items = [make_item(i) for i in range(1, 4)]
+        for i in items:
+            c.add(i)
+        # the max cost is 200, only two transactions will fit
+        # the eviction is FIFO because all items have the same assert_height
+        tx = c.drain(101)
+        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+
+    def test_item_limit(self):
+        c = PendingTxCache(1000000, 2)
+        # each item has cost 80
+        items = [make_item(i) for i in range(1, 4)]
+        for i in items:
+            c.add(i)
+        # the max size is 2, only two transactions will fit
+        # the eviction is FIFO because all items have the same assert_height
+        tx = c.drain(101)
+        assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
+
+    def test_drain(self):
+        c = PendingTxCache(100)
+        item = make_item(1)
+        c.add(item)
+        tx = c.drain(101)
+        assert tx == {item.spend_bundle_name: item}
+
+        # drain will clear the cache, so a second call will be empty
+        tx = c.drain(101)
+        assert tx == {}
+
+    def test_cost(self):
+        c = PendingTxCache(200)
+        assert c.cost() == 0
+        item1 = make_item(1)
+        c.add(item1)
+        # each item has cost 80
+        assert c.cost() == 80
+
+        item2 = make_item(2)
+        c.add(item2)
+        assert c.cost() == 160
+
+        # the first item is evicted, so the cost stays the same
+        item3 = make_item(3)
+        c.add(item3)
+        assert c.cost() == 160
+
+        tx = c.drain(101)
+        assert tx == {item2.spend_bundle_name: item2, item3.spend_bundle_name: item3}
+
+        assert c.cost() == 0
+        item4 = make_item(4)
+        c.add(item4)
+        assert c.cost() == 80
+
+        tx = c.drain(101)
+        assert tx == {item4.spend_bundle_name: item4}
+
+    def test_drain_height(self):
+        c = PendingTxCache(20000, 1000)
+
+        # each item has cost 80
+        # heights are 100-109
+        items = [make_item(i, 80, 100 + i) for i in range(10)]
+        for i in items:
+            c.add(i)
+
+        tx = c.drain(101)
+        assert tx == {items[0].spend_bundle_name: items[0]}
+
+        tx = c.drain(105)
+        assert tx == {
+            items[1].spend_bundle_name: items[1],
+            items[2].spend_bundle_name: items[2],
+            items[3].spend_bundle_name: items[3],
+            items[4].spend_bundle_name: items[4],
+        }
+
+        tx = c.drain(105)
+        assert tx == {}
+
+        tx = c.drain(110)
+        assert tx == {
+            items[5].spend_bundle_name: items[5],
+            items[6].spend_bundle_name: items[6],
+            items[7].spend_bundle_name: items[7],
+            items[8].spend_bundle_name: items[8],
+            items[9].spend_bundle_name: items[9],
+        }
+
+
 class TestMempool:
     @pytest.mark.asyncio
     async def test_basic_mempool(self, one_node_one_block, wallet_a):
@@ -146,9 +280,11 @@ class TestMempool:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
 
-        max_block_cost_clvm = 40000000
+        max_block_cost_clvm = uint64(40000000)
         max_mempool_cost = max_block_cost_clvm * 5
-        mempool = Mempool(max_mempool_cost, uint64(5), uint64(max_block_cost_clvm))
+        mempool_info = new_mi(EmptyMempoolInfo, max_mempool_cost, uint64(5))
+        fee_estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
+        mempool = Mempool(mempool_info, fee_estimator)
         assert mempool.get_min_fee_rate(104000) == 0
 
         with pytest.raises(ValueError):
