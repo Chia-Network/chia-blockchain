@@ -28,7 +28,7 @@ SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER_PUZHASH = SINGLETON_LAUNCHER.get_tree_hash()
 
 
-def get_proposal_puzzle(
+def create_new_proposal_puzzle(
     proposal_id: bytes32,
     cat_tail_hash: bytes32,
     treasury_id: bytes32,
@@ -204,7 +204,25 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
         return puzzle_reveal
     elif type == Program.to('r'):
         curried_args = uncurry_treasury(puzzle_reveal)
+        # TODO: finish this
         breakpoint()
+    return
+
+
+def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle):
+    (
+        singleton_struct,
+        DAO_TREASURY_MOD_HASH,
+        DAO_PROPOSAL_MOD_HASH,
+        DAO_PROPOSAL_TIMER_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
+        cat_tail,
+        current_cat_issuance,
+        attendance_required_percentage,
+        proposal_pass_percentage,
+        proposal_timelock,
+    ) = uncurry_treasury(treasury_puzzle)
     return
 
 

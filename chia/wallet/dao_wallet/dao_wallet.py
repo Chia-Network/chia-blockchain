@@ -25,6 +25,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import (
@@ -34,6 +35,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_puzzle,
     get_new_puzzle_from_treasury_solution,
     get_proposal_puzzle,
+    get_cat_tail_hash_from_treasury_puzzle,
 )
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
@@ -59,7 +61,7 @@ class DAOWallet:
     wallet_info: WalletInfo
     dao_info: DAOInfo
     standard_wallet: Wallet
-    cat_wallet: CATWallet
+    cat_wallet: DAOCATWallet
     wallet_id: int
 
     @staticmethod
@@ -511,6 +513,11 @@ class DAOWallet:
             parent_parent_coin.amount
         )
         await self.add_parent(parent_parent_coin.name(), current_lineage_proof)
+
+        # get cat tail and for loop through our wallets to see if we have a dao cat wallet with this tail
+        # if nonexistent, then create one
+        cat_tail_hash = get_cat_tail_hash_from_treasury_puzzle(parent_inner_puz)
+        # cat_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
@@ -1210,7 +1217,7 @@ class DAOWallet:
         await self.save_info(dao_info)
 
         # This will also mint the coins
-        new_cat_wallet = await CATWallet.create_new_cat_wallet(
+        new_cat_wallet = await DAOCATWallet.create_new_cat_wallet(
             self.wallet_state_manager,
             self.standard_wallet,
             cat_tail_info,
