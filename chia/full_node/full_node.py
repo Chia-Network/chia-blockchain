@@ -1133,8 +1133,8 @@ class FullNode:
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
                         state_change_summary,
-                        self.subscriptions.has_coin_subscription,
-                        self.subscriptions.has_ph_subscription,
+                        self.subscriptions.has_coin_id_subscription,
+                        self.subscriptions.has_puzzle_hash_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                     await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
@@ -1439,8 +1439,8 @@ class FullNode:
 
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
-            self.subscriptions.has_coin_subscription,
-            self.subscriptions.has_ph_subscription,
+            self.subscriptions.has_coin_id_subscription,
+            self.subscriptions.has_puzzle_hash_subscription,
         )
         await self.hint_store.add_hints(hints_to_add)
 

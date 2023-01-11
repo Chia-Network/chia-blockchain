@@ -1464,7 +1464,7 @@ class FullNodeAPI:
         else:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
 
-        self.full_node.subscriptions.add_ph_subscriptions(peer.peer_node_id, request.puzzle_hashes, max_items)
+        self.full_node.subscriptions.add_puzzle_hash_subscriptions(peer.peer_node_id, request.puzzle_hashes, max_items)
 
         hint_coin_ids = []
         for puzzle_hash in request.puzzle_hashes:
@@ -1495,7 +1495,7 @@ class FullNodeAPI:
             max_items = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
         else:
             max_items = self.full_node.config.get("max_subscribe_items", 200000)
-        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_items)
+        self.full_node.subscriptions.add_coin_id_subscriptions(peer.peer_node_id, request.coin_ids, max_items)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
             include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
