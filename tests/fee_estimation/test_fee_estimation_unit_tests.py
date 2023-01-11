@@ -5,11 +5,11 @@ from typing import List
 
 import pytest
 from chia_rs import Coin
-from sortedcontainers import SortedDict
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo
+from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_STEP
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import get_bucket_index, init_buckets
 from chia.simulator.block_tools import test_constants
@@ -151,15 +151,24 @@ def test_fee_estimation_inception() -> None:
 
 
 def test_init_buckets() -> None:
-    buckets, sorted_buckets = init_buckets()
-    assert len(buckets) == len(sorted_buckets)
+    buckets = init_buckets()
+    assert len(buckets) > 1
+    assert buckets[0] == INITIAL_STEP
+    assert buckets[-1] == INFINITE_FEE_RATE
 
 
 def test_get_bucket_index_empty_buckets() -> None:
-    sorted_buckets = SortedDict()
+    buckets: List[float] = []
     for rate in [0.5, 1.0, 2.0]:
         with pytest.raises(RuntimeError):
-            _ = get_bucket_index(sorted_buckets, rate)
+            a = get_bucket_index(buckets, rate)
+            log.warning(a)
+
+
+def test_get_bucket_index_fee_rate_too_high() -> None:
+    buckets = [0.5, 1.0, 2.0]
+    index = get_bucket_index(buckets, 3.0)
+    assert index == len(buckets) - 1
 
 
 def test_get_bucket_index_single_entry() -> None:
@@ -167,11 +176,11 @@ def test_get_bucket_index_single_entry() -> None:
     from sys import float_info
 
     e = float_info.epsilon * 10
-    sorted_buckets = SortedDict({1.0: 0})
+    buckets = [1.0]
     print()
-    print(sorted_buckets)
+    print(buckets)
     for rate, expected_index in ((0.5, 0), (1.0 - e, 0), (1.5, 0)):
-        result_index = get_bucket_index(sorted_buckets, rate)
+        result_index = get_bucket_index(buckets, rate)
         print(rate, expected_index, result_index)
         assert expected_index == result_index
 
@@ -180,10 +189,8 @@ def test_get_bucket_index() -> None:
     from sys import float_info
 
     e = float_info.epsilon * 10
-    sorted_buckets = SortedDict({1.0: 0, 2.0: 1})
-    print()
-    print(sorted_buckets)
-    for rate, expected_index in ((0.5, 0), (1.0 - e, 0), (1.5, 0), (2.0 - e, 1), (2.1, 1)):
-        result_index = get_bucket_index(sorted_buckets, rate)
-        print(rate, expected_index, result_index)
-        assert expected_index == result_index
+    buckets = [1.0, 2.0]
+
+    for rate, expected_index in ((0.5, 0), (1.0 - e, 0), (1.5, 0), (2.0 - e, 0), (2.0 + e, 1), (2.1, 1)):
+        result_index = get_bucket_index(buckets, rate)
+        assert result_index == expected_index
