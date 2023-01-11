@@ -10,18 +10,16 @@ from chiabip158 import PyBIP158
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.mempool import DedupCoinSpend, find_duplicate_spends, run_for_cost_and_additions
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
-    DedupCoinSpend,
     MempoolManager,
     TimelockConditions,
     can_replace,
-    check_item_for_dedup,
     compute_assert_height,
     optional_max,
     optional_min,
-    run_for_cost_and_additions,
 )
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -1138,7 +1136,7 @@ def test_run_for_cost_and_additions() -> None:
 
 
 @pytest.mark.asyncio
-async def test_check_item_for_dedup() -> None:
+async def test_find_duplicate_spends() -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         test_coin_records = {
             TEST_COIN_ID: TEST_COIN_RECORD,
@@ -1155,7 +1153,7 @@ async def test_check_item_for_dedup() -> None:
     assert res == (2873056, MempoolInclusionStatus.SUCCESS, None)
     mempool_item = get_mempool_item(mempool_manager, sb_name)
     dedup_coin_spends: Dict[bytes32, DedupCoinSpend] = {}
-    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    result = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert result == ([], 0, {}, set())
 
     # Eligible coin encountered for the first time
@@ -1169,7 +1167,7 @@ async def test_check_item_for_dedup() -> None:
     saved_cost = None
     first_solution = SerializedProgram.from_program(Program.to(first_conditions))
     expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(first_solution, saved_cost, set())}
-    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    result = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert result == ([], 0, expected_dedup_coin_spends, set())
     dedup_coin_spends.update(expected_dedup_coin_spends)
 
@@ -1179,7 +1177,7 @@ async def test_check_item_for_dedup() -> None:
     assert res == (2897056, MempoolInclusionStatus.SUCCESS, None)
     mempool_item = get_mempool_item(mempool_manager, sb_name)
     with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
-        check_item_for_dedup(mempool_item, dedup_coin_spends)
+        find_duplicate_spends(mempool_item, dedup_coin_spends)
 
     # Eligible coin encountered a second time, and another for the first time
     sb, sb_name, res = await generate_and_add_spendbundle(mempool_manager, first_conditions)
@@ -1188,7 +1186,7 @@ async def test_check_item_for_dedup() -> None:
     saved_cost = uint64(44)
     created_coins = {Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1), Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2)}
     expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(first_solution, saved_cost, created_coins)}
-    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    result = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert result == (sb.coin_spends, saved_cost, expected_dedup_coin_spends, created_coins)
     dedup_coin_spends.update(expected_dedup_coin_spends)
 
@@ -1202,7 +1200,7 @@ async def test_check_item_for_dedup() -> None:
     res = await add_spendbundle(mempool_manager, sb, sb_name)
     assert res == (10835510, MempoolInclusionStatus.SUCCESS, None)
     mempool_item = get_mempool_item(mempool_manager, sb_name)
-    result = check_item_for_dedup(mempool_item, dedup_coin_spends)
+    result = find_duplicate_spends(mempool_item, dedup_coin_spends)
     # Only the eligible one that we encountered more than once gets deduplicated
     spends_to_dedup = sb1.coin_spends
     # The other eligible one we encountered for the first time is put here in new_dedups
