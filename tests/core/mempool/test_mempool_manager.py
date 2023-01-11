@@ -7,7 +7,7 @@ from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -17,6 +17,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -72,6 +73,32 @@ async def instantiate_mempool_manager(
     test_block_record = create_test_block_record()
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
+
+
+def test_compute_assert_height() -> None:
+
+    c1 = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 1337)
+    coin_id = c1.name()
+    confirmed_height = uint32(12)
+    coin_records = {coin_id: CoinRecord(c1, confirmed_height, uint32(0), False, uint64(10000))}
+
+    # 42 is the absolute height condition
+    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), None, 0, [], [], 0)], 0, 42, 0, [], 0)
+    assert compute_assert_height(coin_records, conds) == 42
+
+    # 1 is a relative height, but that only amounts to 13, so the absolute
+    # height is more restrictive
+    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 1, 0, [], [], 0)], 0, 42, 0, [], 0)
+    assert compute_assert_height(coin_records, conds) == 42
+
+    # 100 is a relative height, and sinec the coin was confirmed at height 12,
+    # that's 112
+    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 42, 0, [], 0)
+    assert compute_assert_height(coin_records, conds) == 112
+
+    # Same thing but without the absolute height
+    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 0, 0, [], 0)
+    assert compute_assert_height(coin_records, conds) == 112
 
 
 def spend_bundle_from_conditions(conditions: List[List[Any]]) -> SpendBundle:

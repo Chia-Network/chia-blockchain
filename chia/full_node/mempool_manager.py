@@ -20,7 +20,7 @@ from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
-from chia.full_node.pending_tx_cache import PendingTxCache
+from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.clvm_cost import CLVMCost
@@ -29,6 +29,7 @@ from chia.types.fee_rate import FeeRate
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util import cached_bls
 from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.condition_tools import pkm_pairs
@@ -81,6 +82,27 @@ def validate_clvm_and_signature(
     return None, bytes(result), new_cache_entries
 
 
+def compute_assert_height(
+    removal_coin_records: Dict[bytes32, CoinRecord],
+    conds: SpendBundleConditions,
+) -> uint32:
+    """
+    Computes the most restrictive height assertion in the spend bundle. Relative
+    height assertions are resolved using the confirmed heights from the coin
+    records.
+    """
+
+    height: uint32 = uint32(conds.height_absolute)
+
+    for spend in conds.spends:
+        if spend.height_relative is None:
+            continue
+        h = uint32(removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.height_relative)
+        height = max(height, h)
+
+    return height
+
+
 class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
@@ -88,7 +110,10 @@ class MempoolManager:
     get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
     nonzero_fee_minimum_fpc: int
     mempool_max_total_cost: int
-    potential_cache: PendingTxCache
+    # a cache of MempoolItems that conflict with existing items in the pool
+    _conflict_cache: ConflictTxCache
+    # cache of MempoolItems with height conditions making them not valid yet
+    _pending_cache: PendingTxCache
     seen_cache_size: int
     peak: Optional[BlockRecord]
     mempool: Mempool
@@ -118,7 +143,8 @@ class MempoolManager:
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
-        self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
+        self._conflict_cache = ConflictTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
+        self._pending_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1, 1000)
         self.seen_cache_size = 10000
         if single_threaded:
             self.pool = InlineExecutor()
@@ -351,9 +377,15 @@ class MempoolManager:
             self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
             self.mempool.add_to_pool(item)
             return item.cost, MempoolInclusionStatus.SUCCESS, None
+        elif err is Err.MEMPOOL_CONFLICT and item is not None:
+            # The transaction has a conflict with another item in the
+            # mempool, put it aside and re-try it later
+            self._conflict_cache.add(item)
+            return item.cost, MempoolInclusionStatus.PENDING, err
         elif item is not None:
-            # There is an error,  but we still returned a mempool item, this means we should add to the pending pool.
-            self.potential_cache.add(item)
+            # The transasction has a height assertion and is not yet valid.
+            # remember it to try it again later
+            self._pending_cache.add(item)
             return item.cost, MempoolInclusionStatus.PENDING, err
         else:
             # Cannot add to the mempool or pending pool.
@@ -485,7 +517,13 @@ class MempoolManager:
             self.peak.timestamp,
         )
 
-        potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, first_added_height)
+        assert_height: Optional[uint32] = None
+        if tl_error:
+            assert_height = compute_assert_height(removal_record_dict, npc_result.conds)
+
+        potential = MempoolItem(
+            new_spend, uint64(fees), npc_result, cost, spend_name, additions, first_added_height, assert_height
+        )
 
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
@@ -551,8 +589,11 @@ class MempoolManager:
         """
         item = self.mempool.spends.get(bundle_hash, None)
         if not item and include_pending:
-            # no async lock needed since we're not mutating the potential_cache
-            item = self.potential_cache._txs.get(bundle_hash, None)
+            # no async lock needed since we're not mutating the pending_cache
+            item = self._pending_cache.get(bundle_hash)
+        if not item and include_pending:
+            item = self._conflict_cache.get(bundle_hash)
+
         return item
 
     async def new_peak(
@@ -606,7 +647,8 @@ class MempoolManager:
                     # Item is most likely included in the block.
                     included_items.append(item)
 
-        potential_txs = self.potential_cache.drain()
+        potential_txs = self._pending_cache.drain(new_peak.height)
+        potential_txs.update(self._conflict_cache.drain())
         txs_added = []
         for item in potential_txs.values():
             cost, status, error = await self.add_spend_bundle(
