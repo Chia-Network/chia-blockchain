@@ -614,7 +614,7 @@ class FullNodeSimulator(FullNodeAPI):
             return coins_to_receive
 
     def tx_id_in_mempool(self, tx_id: bytes32) -> bool:
-        spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_hash=tx_id)
+        spendbundle = self.full_node.mempool_manager.get_spendbundle(spend_bundle_id=tx_id)
         return spendbundle is not None
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:

@@ -5,13 +5,14 @@ from typing import Dict, List, Optional, Sequence
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.border_types import PublicKeyBytes
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 
 
 def get_pairings(
-    cache: LRUCache[bytes32, GTElement], pks: List[bytes48], msgs: Sequence[bytes], force_cache: bool
+    cache: LRUCache[bytes32, GTElement], pks: List[PublicKeyBytes], msgs: Sequence[bytes], force_cache: bool
 ) -> List[GTElement]:
     pairings: List[Optional[GTElement]] = []
     missing_count: int = 0
@@ -29,7 +30,7 @@ def get_pairings(
         pairings.append(pairing)
 
     # G1Element.from_bytes can be expensive due to subgroup check, so we avoid recomputing it with this cache
-    pk_bytes_to_g1: Dict[bytes48, G1Element] = {}
+    pk_bytes_to_g1: Dict[PublicKeyBytes, G1Element] = {}
     for i, pairing in enumerate(pairings):
         if pairing is None:
             aug_msg = pks[i] + msgs[i]
@@ -55,7 +56,7 @@ LOCAL_CACHE: LRUCache[bytes32, GTElement] = LRUCache(50000)
 
 
 def aggregate_verify(
-    pks: List[bytes48],
+    pks: List[PublicKeyBytes],
     msgs: Sequence[bytes],
     sig: G2Element,
     force_cache: bool = False,

@@ -748,11 +748,10 @@ class FullNodeRpcApi:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
         include_pending: bool = request.get("include_pending", False)
-        tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
-
-        item = self.service.mempool_manager.get_mempool_item(tx_id, include_pending)
+        spend_bundle_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
+        item = self.service.mempool_manager.get_mempool_item(spend_bundle_id, include_pending)
         if item is None:
-            raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
+            raise ValueError(f"Tx id 0x{spend_bundle_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
 
@@ -768,10 +767,9 @@ class FullNodeRpcApi:
 
         cost = 0
         if "spend_bundle" in request:
-            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
-            spend_name = spend_bundle.name()
+            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
             npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_name
+                spend_bundle, None, spend_bundle.name()
             )
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")

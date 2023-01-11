@@ -22,7 +22,8 @@ from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.border_types import PublicKeyBytes
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
@@ -61,7 +62,7 @@ def validate_clvm_and_signature(
         if result.error is not None:
             return Err(result.error), b"", {}
 
-        pks: List[bytes48] = []
+        pks: List[PublicKeyBytes] = []
         msgs: List[bytes] = []
         assert result.conds is not None
         pks, msgs = pkm_pairs(result.conds, additional_data)
@@ -536,10 +537,10 @@ class MempoolManager:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, []
 
-    def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
+    def get_spendbundle(self, spend_bundle_id: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
-        if bundle_hash in self.mempool.spends:
-            return self.mempool.spends[bundle_hash].spend_bundle
+        if spend_bundle_id in self.mempool.spends:
+            return self.mempool.spends[spend_bundle_id].spend_bundle
         return None
 
     def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
@@ -594,11 +595,11 @@ class MempoolManager:
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, err = await self.add_spend_bundle(
-                    item.spend_bundle, item.npc_result, item.spend_bundle_name, item.height_added_to_mempool
+                    item.spend_bundle, item.npc_result, item.name, item.height_added_to_mempool
                 )
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if result == MempoolInclusionStatus.SUCCESS:
-                    self.add_and_maybe_pop_seen(item.spend_bundle_name)
+                    self.add_and_maybe_pop_seen(item.name)
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool.
                 if result == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:
@@ -610,10 +611,10 @@ class MempoolManager:
         txs_added = []
         for item in potential_txs.values():
             cost, status, error = await self.add_spend_bundle(
-                item.spend_bundle, item.npc_result, item.spend_bundle_name, item.height_added_to_mempool
+                item.spend_bundle, item.npc_result, item.name, item.height_added_to_mempool
             )
             if status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
+                txs_added.append((item.spend_bundle, item.npc_result, item.name))
         log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, "
             f"cost: {self.mempool.total_mempool_cost} "

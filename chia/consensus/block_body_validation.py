@@ -19,7 +19,8 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.border_types import PublicKeyBytes
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -465,7 +466,7 @@ async def validate_block_body(
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks: List[bytes48] = []
+    pairs_pks: List[PublicKeyBytes] = []
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None
