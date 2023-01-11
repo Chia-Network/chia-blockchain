@@ -125,6 +125,14 @@ async def generate_and_add_spendbundle(
 
 
 @pytest.mark.asyncio
+async def test_empty_spend_bundle() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    sb = SpendBundle([], G2Element())
+    with pytest.raises(ValidationError, match="Err.INVALID_SPEND_BUNDLE"):
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+
+
+@pytest.mark.asyncio
 async def test_negative_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
