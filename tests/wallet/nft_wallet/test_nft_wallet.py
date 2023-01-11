@@ -1437,6 +1437,7 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert coins[0].owner_did is None
     assert coins[1].owner_did is None
 
+
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
