@@ -10,8 +10,9 @@ from chiabip158 import PyBIP158
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool import DedupCoinSpend, find_duplicate_spends, run_for_cost_and_additions
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
     MempoolManager,
@@ -22,7 +23,7 @@ from chia.full_node.mempool_manager import (
     optional_min,
 )
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -326,10 +327,18 @@ async def generate_and_add_spendbundle(
     return (sb, sb_name, result)
 
 
-def get_mempool_item(mempool_manager: MempoolManager, sb_name: bytes32) -> MempoolItem:
-    mempool_item = mempool_manager.get_mempool_item(sb_name)
-    assert mempool_item is not None
-    return mempool_item
+def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
+    generator = simple_solution_generator(spend_bundle)
+    npc_result = get_name_puzzle_conditions(
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0)
+    )
+    return MempoolItem(
+        spend_bundle=spend_bundle,
+        fee=uint64(0),
+        npc_result=npc_result,
+        spend_bundle_name=spend_bundle.name(),
+        height_added_to_mempool=TEST_HEIGHT,
+    )
 
 
 @pytest.mark.asyncio
@@ -1135,75 +1144,104 @@ def test_run_for_cost_and_additions() -> None:
     assert expected_coins == [created_coin]
 
 
-@pytest.mark.asyncio
-async def test_find_duplicate_spends() -> None:
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        test_coin_records = {
-            TEST_COIN_ID: TEST_COIN_RECORD,
-            TEST_COIN_ID2: TEST_COIN_RECORD2,
-            TEST_COIN_ID3: TEST_COIN_RECORD3,
-        }
-        return test_coin_records.get(coin_id)
-
-    mempool_manager = await instantiate_mempool_manager(get_coin_record)
-
+def test_find_duplicate_spends_nothing_to_do() -> None:
     # No eligible coins, nothing to deduplicate, item gets considered normally
     conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
-    _, sb_name, res = await generate_and_add_spendbundle(mempool_manager, conditions)
-    assert res == (2873056, MempoolInclusionStatus.SUCCESS, None)
-    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    sb = spend_bundle_from_conditions(conditions)
+    mempool_item = mempool_item_from_spendbundle(sb)
     dedup_coin_spends: Dict[bytes32, DedupCoinSpend] = {}
     result = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert result == ([], 0, {}, set())
 
+
+def test_find_duplicate_spends_eligible_1st_time() -> None:
     # Eligible coin encountered for the first time
-    first_conditions = conditions = [
+    conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    _, sb_name, res = await generate_and_add_spendbundle(mempool_manager, first_conditions)
-    assert res == (5177056, MempoolInclusionStatus.SUCCESS, None)
-    mempool_item = get_mempool_item(mempool_manager, sb_name)
-    saved_cost = None
-    first_solution = SerializedProgram.from_program(Program.to(first_conditions))
-    expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(first_solution, saved_cost, set())}
+    sb = spend_bundle_from_conditions(conditions)
+    mempool_item = mempool_item_from_spendbundle(sb)
+    dedup_coin_spends: Dict[bytes32, DedupCoinSpend] = {}
+    solution = SerializedProgram.from_program(Program.to(conditions))
+    expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=None, additions=set())}
     result = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert result == ([], 0, expected_dedup_coin_spends, set())
-    dedup_coin_spends.update(expected_dedup_coin_spends)
+    assert dedup_coin_spends == {}
 
+
+def test_find_duplicate_spends_eligible_but_different_solution() -> None:
     # Eligible coin but different solution from the one we encountered
-    different_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
-    _, sb_name, res = await generate_and_add_spendbundle(mempool_manager, different_conditions)
-    assert res == (2897056, MempoolInclusionStatus.SUCCESS, None)
-    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    initial_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None, additions=set())}
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    sb = spend_bundle_from_conditions(conditions)
+    mempool_item = mempool_item_from_spendbundle(sb)
     with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
         find_duplicate_spends(mempool_item, dedup_coin_spends)
 
+
+def test_find_duplicate_spends_eligible_2nd_time_and_another_1st_time() -> None:
     # Eligible coin encountered a second time, and another for the first time
-    sb, sb_name, res = await generate_and_add_spendbundle(mempool_manager, first_conditions)
-    assert res == (5177056, MempoolInclusionStatus.SUCCESS, None)
-    mempool_item = get_mempool_item(mempool_manager, sb_name)
+    initial_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None, additions=set())}
+    sb1 = spend_bundle_from_conditions(initial_conditions)
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
+    sb = SpendBundle.aggregate([sb1, sb2])
+    mempool_item = mempool_item_from_spendbundle(sb)
     saved_cost = uint64(44)
     created_coins = {Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1), Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2)}
-    expected_dedup_coin_spends = {TEST_COIN_ID: DedupCoinSpend(first_solution, saved_cost, created_coins)}
-    result = find_duplicate_spends(mempool_item, dedup_coin_spends)
-    assert result == (sb.coin_spends, saved_cost, expected_dedup_coin_spends, created_coins)
-    dedup_coin_spends.update(expected_dedup_coin_spends)
+    expected_new_dedups = {
+        TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost, additions=created_coins),
+        TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=None, additions=set()),
+    }
+    spends_to_dedup, cost_saving, new_dedups, dedup_additions = find_duplicate_spends(mempool_item, dedup_coin_spends)
+    # Only the eligible one that we encountered more than once gets deduplicated
+    assert spends_to_dedup == sb1.coin_spends
+    assert cost_saving == saved_cost
+    assert new_dedups == expected_new_dedups
+    assert dedup_additions == created_coins
 
-    # Eligible coin encountered a third time, another for the first time and one non eligible
-    sb1 = spend_bundle_from_conditions(first_conditions)
-    sb2 = spend_bundle_from_conditions(different_conditions, TEST_COIN2)
+
+def test_find_duplicate_spends_eligible_3rd_time_another_2nd_time_and_one_non_eligible() -> None:
+    # Eligible coin encountered a third time, another for the second time and one non eligible
+    initial_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    saved_cost = uint64(44)
+    created_coins = {Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1), Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2)}
+    dedup_coin_spends = {
+        TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost, additions=created_coins),
+        TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=None, additions=set()),
+    }
+    sb1 = spend_bundle_from_conditions(initial_conditions)
+    sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb3_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
     sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
-    sb_name = sb.name()
-    res = await add_spendbundle(mempool_manager, sb, sb_name)
-    assert res == (10835510, MempoolInclusionStatus.SUCCESS, None)
-    mempool_item = get_mempool_item(mempool_manager, sb_name)
-    result = find_duplicate_spends(mempool_item, dedup_coin_spends)
-    # Only the eligible one that we encountered more than once gets deduplicated
-    spends_to_dedup = sb1.coin_spends
-    # The other eligible one we encountered for the first time is put here in new_dedups
-    different_solution = SerializedProgram.from_program(Program.to(different_conditions))
-    new_dedups = {TEST_COIN_ID2: DedupCoinSpend(different_solution, None, set())}
-    assert result == (spends_to_dedup, saved_cost, new_dedups, created_coins)
+    mempool_item = mempool_item_from_spendbundle(sb)
+    spends_to_dedup, cost_saving, new_dedups, dedup_additions = find_duplicate_spends(mempool_item, dedup_coin_spends)
+    expected_spends_to_dedup = []
+    expected_spends_to_dedup.extend(sb1.coin_spends)
+    expected_spends_to_dedup.extend(sb2.coin_spends)
+    assert spends_to_dedup == expected_spends_to_dedup
+    saved_cost2 = uint64(44)
+    created_coins2 = {Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3)}
+    expected_new_dedups = {TEST_COIN_ID2: DedupCoinSpend(second_solution, saved_cost2, created_coins2)}
+    assert cost_saving == saved_cost + saved_cost2
+    assert new_dedups == expected_new_dedups
+    assert dedup_additions == created_coins.union(created_coins2)
