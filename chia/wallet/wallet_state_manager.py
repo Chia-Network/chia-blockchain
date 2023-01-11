@@ -383,11 +383,10 @@ class WalletStateManager:
                     )
                 self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
-            await self.add_interested_puzzle_hashes(
-                [record.puzzle_hash for record in derivation_paths],
-                [record.wallet_id for record in derivation_paths],
-            )
             if len(derivation_paths) > 0:
+                await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+                    [record.puzzle_hash for record in derivation_paths]
+                )
                 self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
         # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
         if mark_existing_as_used and unused > 0 and new_paths:

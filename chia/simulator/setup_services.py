@@ -105,6 +105,7 @@ async def setup_full_node(
     config = local_bt.config
     service_config = config["full_node"]
     service_config["database_path"] = db_name
+    service_config["testing"] = True
     service_config["send_uncompact_interval"] = send_uncompact_interval
     service_config["target_uncompact_proofs"] = 30
     service_config["peer_connect_interval"] = 50
@@ -165,6 +166,7 @@ async def setup_wallet_node(
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
         service_config = config["wallet"]
+        service_config["testing"] = True
         service_config["port"] = 0
         service_config["rpc_port"] = 0
         service_config["initial_num_public_keys"] = initial_num_public_keys
