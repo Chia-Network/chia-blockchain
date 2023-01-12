@@ -119,6 +119,7 @@ class DataLayer:
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
+        self.wallet_rpc.close()
 
     async def _await_closed(self) -> None:
         if self.connection is not None:
@@ -128,6 +129,7 @@ class DataLayer:
         except asyncio.CancelledError:
             pass
         await self.data_store.close()
+        await self.wallet_rpc.await_closed()
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
