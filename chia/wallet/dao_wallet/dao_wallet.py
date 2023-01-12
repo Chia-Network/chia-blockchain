@@ -402,8 +402,9 @@ class DAOWallet:
             # my_amount         ; current amount
             # new_amount_change ; may be negative or positive. Is zero during eve spend
             # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
-            # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
-            # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
+            # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot -
+            #                                              ; assert from the proposal and also create
+            # new_puzhash  ; if this variable is 0 we do the "add_money" spend case and all variables below are unneeded
             # proposal_innerpuz
             # proposal_current_votes ; tally of yes votes
             # proposal_total_votes   ; total votes cast (by number of cat-mojos)
@@ -802,6 +803,7 @@ class DAOWallet:
         return
 
     async def generate_proposal_eve_spend(
+        self,
         eve_coin: Coin,
         full_proposal_puzzle: Program,
         dao_proposal_puzzle: Program,
