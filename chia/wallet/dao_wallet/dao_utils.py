@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 import logging
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -26,6 +26,9 @@ DAO_LOCKUP_MOD_HASH = DAO_LOCKUP_MOD.get_tree_hash()
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER_PUZHASH = SINGLETON_LAUNCHER.get_tree_hash()
+
+
+log = logging.Logger(__name__)
 
 
 def create_new_proposal_puzzle(
@@ -60,32 +63,37 @@ def get_treasury_puzzle(
     proposal_timelock: uint64,
 ) -> Program:
     # (
-        # SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
-        # TREASURY_MOD_HASH
-        # PROPOSAL_MOD_HASH
-        # PROPOSAL_TIMER_MOD_HASH
-        # LOCKUP_MOD_HASH
-        # CAT_MOD_HASH
-        # CAT_TAIL
-        # CURRENT_CAT_ISSUANCE
-        # ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
-        # PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass. Represented as 0 - 10000 (default 5100)
-        # PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
+    # SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+    # TREASURY_MOD_HASH
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # LOCKUP_MOD_HASH
+    # CAT_MOD_HASH
+    # CAT_TAIL
+    # CURRENT_CAT_ISSUANCE
+    # ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
+    # PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass.
+    #              ; PASS_MARGIN is represented as 0 - 10000 (default 5100)
+    # PROPOSAL_TIMELOCK ; relative timelock -- how long proposals should live during this treasury's lifetime
     # )
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_PUZHASH)))
-    puzzle = DAO_TREASURY_MOD.curry(Program.to([
-        singleton_struct,
-        DAO_TREASURY_MOD_HASH,
-        DAO_PROPOSAL_MOD_HASH,
-        DAO_PROPOSAL_TIMER_MOD_HASH,
-        DAO_LOCKUP_MOD_HASH,
-        CAT_MOD_HASH,
-        cat_tail,
-        current_cat_issuance,
-        attendance_required_percentage,
-        proposal_pass_percentage,
-        proposal_timelock,
-    ]))
+    puzzle = DAO_TREASURY_MOD.curry(
+        Program.to(
+            [
+                singleton_struct,
+                DAO_TREASURY_MOD_HASH,
+                DAO_PROPOSAL_MOD_HASH,
+                DAO_PROPOSAL_TIMER_MOD_HASH,
+                DAO_LOCKUP_MOD_HASH,
+                CAT_MOD_HASH,
+                cat_tail,
+                current_cat_issuance,
+                attendance_required_percentage,
+                proposal_pass_percentage,
+                proposal_timelock,
+            ]
+        )
+    )
     return puzzle
 
 
@@ -186,27 +194,29 @@ def get_proposal_timer_puzzle(
     return puzzle
 
 
-def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program):
+def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
     # my_amount         ; current amount
     # new_amount_change ; may be negative or positive. Is zero during eve spend
     # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
-    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot -
+    #                                              ; assert from the proposal and also create
     # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
     # proposal_innerpuz
     # proposal_current_votes ; tally of yes votes
     # proposal_total_votes   ; total votes cast (by number of cat-mojos)
     # type  ; this is used for the recreating self type
     # extra_value  ; this is used for recreating self
+
     type = solution.rest().rest().rest().rest().rest().rest().rest().rest().first()
-    if type == Program.to('n'):
+    if type == Program.to("n"):  # New puzzle hash
         return solution.rest().rest().rest().rest().first().as_atom()
-    elif type == Program.to('u'):
+    elif type == Program.to("u"):  # Unchanged
         return puzzle_reveal
-    elif type == Program.to('r'):
+    elif type == Program.to("r"):  # Recurry by index
         curried_args = uncurry_treasury(puzzle_reveal)
         # TODO: finish this
         breakpoint()
-    return
+    return None
 
 
 def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
@@ -224,15 +234,15 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
         proposal_pass_percentage,
         proposal_timelock,
     ) = curried_args.as_python()[0]
-    return cat_tail_hash
+    return bytes32(cat_tail_hash)
 
 
-def uncurry_treasury(treasury_puzzle: Program):
+def uncurry_treasury(treasury_puzzle: Program) -> Program:
     try:
         mod, curried_args = treasury_puzzle.uncurry()
     except ValueError as e:
-        logging.log.debug("Cannot uncurry treasury puzzle: Args %s error: %s", curried_args, e)
-        return None
+        log.debug("Cannot uncurry treasury puzzle: error: %s", e)
+        raise e
 
     if mod != DAO_TREASURY_MOD:
         raise ValueError("Not a Treasury Mod.")
