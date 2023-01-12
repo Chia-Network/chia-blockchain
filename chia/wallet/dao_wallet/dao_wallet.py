@@ -50,6 +50,27 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 class DAOWallet:
+    """
+    This is a wallet in the sense that it conforms to the interface needed by WalletStateManager.
+    It is not a user-facing wallet. A user cannot spend or receive XCH though a wallet of this type.
+
+    It is expected that a wallet of type DAOCATWallet will be the user-facing wallet, and use a
+    DAOWallet for state-tracking of the Treasury Singleton and its associated Proposals.
+
+    State change Spends (spends this user creates, either from DAOWallet or DAOCATWallet:
+      * Create a proposal
+      * Initial Vote on proposal
+      * Add more votes to a proposal
+      * Collect finished state of a Proposal - spend to read the oracle result and Get our (CAT) coins back
+      * Anyone can send money to the Treasury, whether in possession of a voting CAT or not
+
+    Incoming spends we listen for:
+      * Update Treasury state if treasury is spent
+      * Hear about a finished proposal
+      * Hear about a new proposal -- check interest threshold (how many votes)
+      * Get Updated Proposal Data
+    """
+
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
