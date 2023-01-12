@@ -117,7 +117,9 @@ class DAOWallet:
         proposal_pass_percentage = uint64(10)
         proposal_timelock = uint64(10)
         try:
-            spend_bundle = await self.generate_new_dao(amount_of_cats, attendance_required_percentage, proposal_pass_percentage, proposal_timelock, fee)
+            spend_bundle = await self.generate_new_dao(
+                amount_of_cats, attendance_required_percentage, proposal_pass_percentage, proposal_timelock, fee
+            )
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -201,7 +203,7 @@ class DAOWallet:
 
     @classmethod
     def type(cls) -> uint8:
-        return uint8(WalletType.DECENTRALIZED_ID)
+        return uint8(WalletType.DAO)
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -493,9 +495,7 @@ class DAOWallet:
         assert children_state.created_height
         parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_parent_coin, peer)
         assert parent_spend is not None
-        parent_inner_puz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
-            parent_spend.puzzle_reveal.to_program()
-        )
+        parent_inner_puz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal.to_program())
         if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
             current_inner_puz = parent_inner_puz
         else:
@@ -514,9 +514,7 @@ class DAOWallet:
             current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
 
         current_lineage_proof = LineageProof(
-            parent_parent_coin.parent_coin_info,  # ...
-            parent_inner_puz.get_tree_hash(),
-            parent_parent_coin.amount
+            parent_parent_coin.parent_coin_info, parent_inner_puz.get_tree_hash(), parent_parent_coin.amount  # ...
         )
         await self.add_parent(parent_parent_coin.name(), current_lineage_proof)
 
@@ -532,10 +530,8 @@ class DAOWallet:
                     # convert to DAOCAT wallet
                     data_str = bytes(wallet.cat_info).hex()
                     wallet_info = WalletInfo(
-                        wallet.wallet_info.id,
-                        wallet.wallet_info.name,
-                        WalletType.DAO_CAT,
-                        data_str)
+                        wallet.wallet_info.id, wallet.wallet_info.name, WalletType.DAO_CAT, data_str
+                    )
                     wallet.wallet_info = wallet_info
                     await self.wallet_state_manager.user_store.update_wallet(wallet_info)
                     self.cat_wallet = wallet
@@ -1456,11 +1452,7 @@ class DAOWallet:
         # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from
         # previous_votes  ; set this to 0 if we have passed
         # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from
-        inner_sol = Program.to(
-            [
-
-            ]
-        )
+        inner_sol = Program.to([])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [
