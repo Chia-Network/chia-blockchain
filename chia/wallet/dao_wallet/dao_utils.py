@@ -209,7 +209,8 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     return
 
 
-def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle):
+def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
+    curried_args = uncurry_treasury(treasury_puzzle)
     (
         singleton_struct,
         DAO_TREASURY_MOD_HASH,
@@ -217,13 +218,13 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle):
         DAO_PROPOSAL_TIMER_MOD_HASH,
         DAO_LOCKUP_MOD_HASH,
         CAT_MOD_HASH,
-        cat_tail,
+        cat_tail_hash,
         current_cat_issuance,
         attendance_required_percentage,
         proposal_pass_percentage,
         proposal_timelock,
-    ) = uncurry_treasury(treasury_puzzle)
-    return
+    ) = curried_args.as_python()[0]
+    return cat_tail_hash
 
 
 def uncurry_treasury(treasury_puzzle: Program):

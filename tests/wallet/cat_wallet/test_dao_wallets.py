@@ -37,6 +37,8 @@ class TestDAOWallet:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
+        ph_1 = await wallet_1.get_new_puzzlehash()
+
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
                 full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -53,6 +55,7 @@ class TestDAOWallet:
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         funds = sum(
@@ -72,6 +75,7 @@ class TestDAOWallet:
         )
         assert dao_wallet is not None
         treasury_id = dao_wallet.dao_info.treasury_id
+        cat_tail_hash = dao_wallet.get_cat_tail_hash()
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -84,6 +88,13 @@ class TestDAOWallet:
             treasury_id,
         )
 
+        # Create a cat wallet to test casting from CATWallet to DAOCATWallet in resync_treasury_state
+        cat_wallet_1 = await CATWallet.create_wallet_for_cat(
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
+            cat_tail_hash.hex(),
+        )
+
         dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             wallet_node_1.wallet_state_manager,
             wallet_1,
@@ -91,3 +102,7 @@ class TestDAOWallet:
         )
         assert dao_wallet_1 is not None
         assert dao_wallet.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
+
+        for wallet_id in wallet_node_1.wallet_state_manager.wallets:
+            wal = wallet_node_1.wallet_state_manager.wallets[wallet_id]
+            breakpoint()

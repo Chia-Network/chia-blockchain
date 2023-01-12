@@ -25,6 +25,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
@@ -429,6 +430,11 @@ class DAOWallet:
         children = await wallet_node.fetch_children(coin_id, peer)
         return len(children) > 0
 
+    def get_cat_tail_hash(self) -> bytes32:
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+        return cat_tail_hash
+
     async def resync_treasury_state(self):
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: WalletNode = self.wallet_state_manager.wallet_node
@@ -514,14 +520,43 @@ class DAOWallet:
         )
         await self.add_parent(parent_parent_coin.name(), current_lineage_proof)
 
-        # get cat tail and for loop through our wallets to see if we have a dao cat wallet with this tail
         # if nonexistent, then create one
         cat_tail_hash = get_cat_tail_hash_from_treasury_puzzle(parent_inner_puz)
         # cat_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
+        # get cat tail and for loop through our wallets to see if we have a dao cat wallet with this tail
+        for wallet_id in self.wallet_state_manager.wallets:
+            wallet = self.wallet_state_manager.wallets[wallet_id]
+            if wallet.type() == WalletType.CAT:
+                assert isinstance(wallet, CATWallet)
+                if wallet.cat_info.limitations_program_hash == cat_tail_hash:
+                    # convert to DAOCAT wallet
+                    data_str = bytes(wallet.cat_info).hex()
+                    wallet_info = WalletInfo(
+                        wallet.wallet_info.id,
+                        wallet.wallet_info.name,
+                        WalletType.DAO_CAT,
+                        data_str)
+                    wallet.wallet_info = wallet_info
+                    await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+                    self.cat_wallet = wallet
+                    self.cat_wallet.__class__ = DAOCATWallet  # Probably not the right way to do this
+                    break
+            elif wallet.type() == WalletType.DAO_CAT:
+                assert isinstance(wallet, DAOCATWallet)
+                self.cat_wallet = wallet
+                break
+        else:
+            # Didn't find a cat wallet, so create one
+            self.cat_wallet = await DAOCATWallet.create_wallet_for_cat(
+                self.wallet_state_manager, self.standard_wallet, cat_tail_hash.hex()
+            )
+            assert self.cat_wallet is not None
+
+        cat_wallet_id = self.cat_wallet.wallet_info.id
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
-            self.dao_info.cat_wallet_id,  # cat_wallet_id: int
+            cat_wallet_id,  # cat_wallet_id: int
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
@@ -1223,7 +1258,6 @@ class DAOWallet:
             cat_tail_info,
             amount_of_cats,
         )
-
         assert new_cat_wallet is not None
 
         cat_wallet_id = new_cat_wallet.wallet_info.id
@@ -1359,7 +1393,7 @@ class DAOWallet:
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
         # MH: do you think we should store the cat tail locally as well?
-        cat_wallet = await self.wallet_state_manager.get_wallet_by_id(self.dao_info.cat_wallet_id)
+        cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
             launcher_coin.name(),
