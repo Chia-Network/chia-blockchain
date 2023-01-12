@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, BinaryIO
+from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import G2Element
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
@@ -16,20 +17,20 @@ from chia.util.ints import uint64
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
-    match_puzzle,
-    solve_puzzle,
     get_inner_puzzle,
     get_inner_solution,
+    match_puzzle,
+    solve_puzzle,
 )
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments_old.clvm")

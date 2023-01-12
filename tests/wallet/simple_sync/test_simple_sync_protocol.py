@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import asyncio
 from typing import List, Optional
 
@@ -6,13 +8,15 @@ import pytest
 from clvm.casts import int_to_bytes
 from colorlog import getLogger
 
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates
+from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
@@ -22,10 +26,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.util.wallet_is_synced import wallet_is_synced
 from tests.connection_utils import add_dummy_connection
-from chia.simulator.time_out_assert import time_out_assert
-from chia.simulator.wallet_tools import WalletTool
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -42,7 +44,7 @@ async def get_all_messages_in_queue(queue):
     all_messages = []
     await asyncio.sleep(2)
     while not queue.empty():
-        message, peer = await queue.get()
+        message = await queue.get()
         all_messages.append(message)
     return all_messages
 
@@ -615,3 +617,85 @@ class TestSimpleSyncProtocol:
 
         check_messages_for_hint(all_messages)
         check_messages_for_hint(all_messages_1)
+
+    @pytest.mark.asyncio
+    async def test_ph_subscribe_limits(self, wallet_node_simulator, self_hostname):
+        full_nodes, wallets, _ = wallet_node_simulator
+        full_node_api = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        con = list(fn_server.all_connections.values())[0]
+        phs = []
+        phs.append(32 * b"\0")
+        phs.append(32 * b"\1")
+        phs.append(32 * b"\2")
+        phs.append(32 * b"\3")
+        phs.append(32 * b"\4")
+        phs.append(32 * b"\5")
+        phs.append(32 * b"\6")
+        full_node_api.full_node.config["max_subscribe_items"] = 2
+        assert full_node_api.is_trusted(con) is False
+        msg = wallet_protocol.RegisterForPhUpdates(phs, 0)
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        s = full_node_api.full_node.subscriptions
+        assert len(s._ph_subscriptions) == 2
+        assert s.has_ph_subscription(phs[0])
+        assert s.has_ph_subscription(phs[1])
+        assert not s.has_ph_subscription(phs[2])
+        assert not s.has_ph_subscription(phs[3])
+        full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
+        full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
+        assert full_node_api.is_trusted(con) is True
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        assert len(s._ph_subscriptions) == 4
+        assert s.has_ph_subscription(phs[0])
+        assert s.has_ph_subscription(phs[1])
+        assert s.has_ph_subscription(phs[2])
+        assert s.has_ph_subscription(phs[3])
+        assert not s.has_ph_subscription(phs[4])
+        assert not s.has_ph_subscription(phs[5])
+
+    @pytest.mark.asyncio
+    async def test_coin_subscribe_limits(self, wallet_node_simulator, self_hostname):
+        full_nodes, wallets, _ = wallet_node_simulator
+        full_node_api = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        con = list(fn_server.all_connections.values())[0]
+        coins = []
+        coins.append(32 * b"\0")
+        coins.append(32 * b"\1")
+        coins.append(32 * b"\2")
+        coins.append(32 * b"\3")
+        coins.append(32 * b"\4")
+        coins.append(32 * b"\5")
+        coins.append(32 * b"\6")
+        full_node_api.full_node.config["max_subscribe_items"] = 2
+        assert full_node_api.is_trusted(con) is False
+        msg = wallet_protocol.RegisterForCoinUpdates(coins, 0)
+        msg_response = await full_node_api.register_interest_in_coin(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+        s = full_node_api.full_node.subscriptions
+        assert len(s._coin_subscriptions) == 2
+        assert s.has_coin_subscription(coins[0])
+        assert s.has_coin_subscription(coins[1])
+        assert not s.has_coin_subscription(coins[2])
+        assert not s.has_coin_subscription(coins[3])
+        full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
+        full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
+        assert full_node_api.is_trusted(con) is True
+        msg_response = await full_node_api.register_interest_in_coin(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+        assert len(s._coin_subscriptions) == 4
+        assert s.has_coin_subscription(coins[0])
+        assert s.has_coin_subscription(coins[1])
+        assert s.has_coin_subscription(coins[2])
+        assert s.has_coin_subscription(coins[3])
+        assert not s.has_coin_subscription(coins[4])
+        assert not s.has_coin_subscription(coins[5])

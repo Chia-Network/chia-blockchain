@@ -1,19 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import json
-import traceback
+import logging
 import os
 import sys
-import logging
-
+import traceback
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import (
-    run_plotter,
-    run_command,
-    reset_loop_policy_for_windows,
-    get_venv_bin,
-)
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +150,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     return info
 
 
-progress_bladebit1 = {
+progress_bladebit_ram = {
     "Finished F1 sort": 0.01,
     "Finished forward propagating table 2": 0.06,
     "Finished forward propagating table 3": 0.12,
@@ -175,7 +172,7 @@ progress_bladebit1 = {
 }
 
 
-progress_bladebit2 = {
+progress_bladebit_disk = {
     # "Running Phase 1": 0.01,
     "Finished f1 generation in ": 0.01,
     "Completed table 2 in ": 0.06,
@@ -210,26 +207,9 @@ def plot_bladebit(args, chia_root_path, root_path):
         print(f"Error: {version_or_exception}")
         return
 
-    version = None
-    if args.plotter == "bladebit":
-        version = 1
-        if found and version_or_exception[0] != "1":
-            print(
-                f"You're trying to run bladebit version 1"
-                f" but currently version {'.'.join(version_or_exception)} is installed"
-            )
-            return
-    elif args.plotter == "bladebit2":
-        version = 2
-        if found and version_or_exception[0] != "2":
-            print(
-                f"You're trying to run bladebit version 2"
-                f" but currently version {'.'.join(version_or_exception)} is installed"
-            )
-            return
-
-    if version is None:
-        print(f"Unknown version of bladebit: {args.plotter}")
+    if found and int(version_or_exception[0]) < 2:
+        print(f"Version {'.'.join(version_or_exception)} is detected.")
+        print("bladebit < 2 is not supported any more.")
         return
 
     bladebit_executable_path = get_bladebit_executable_path(root_path)
@@ -251,75 +231,77 @@ def plot_bladebit(args, chia_root_path, root_path):
             args.connect_to_daemon,
         )
     )
+    plot_type = "ramplot" if args.plot_type == "ramplot" else "diskplot"
     call_args = [
         os.fspath(bladebit_executable_path),
-        "-t",
+        "--threads",
         str(args.threads),
-        "-n",
+        "--count",
         str(args.count),
-        "-f",
+        "--farmer-key",
         bytes(plot_keys.farmer_public_key).hex(),
     ]
     if plot_keys.pool_public_key is not None:
-        call_args.append("-p")
+        call_args.append("--pool-key")
         call_args.append(bytes(plot_keys.pool_public_key).hex())
     if plot_keys.pool_contract_address is not None:
-        call_args.append("-c")
+        call_args.append("--pool-contract")
         call_args.append(plot_keys.pool_contract_address)
     if args.warmstart:
-        call_args.append("-w")
+        call_args.append("--warm-start")
     if args.id is not None and args.id != b"":
-        call_args.append("-i")
+        call_args.append("--plot-id")
         call_args.append(args.id.hex())
-    if args.verbose:
-        call_args.append("-v")
-    if args.nonuma:
-        call_args.append("-m")
-    if args.memo is not None and args.memo != b"":
+    if "memo" in args and args.memo is not None and args.memo != b"":
         call_args.append("--memo")
         call_args.append(args.memo)
-    if version > 1:
-        call_args.append("diskplot")
-    if args.buckets:
-        call_args.append("-b")
-        call_args.append(str(args.buckets))
-    if args.tmpdir:
-        call_args.append("-t1")
-        call_args.append(str(args.tmpdir))
-    if args.tmpdir2:
-        call_args.append("-t2")
-        call_args.append(str(args.tmpdir2))
+    if args.nonuma:
+        call_args.append("--no-numa")
     if args.no_cpu_affinity:
         call_args.append("--no-cpu-affinity")
-    if args.cache is not None:
+    if args.verbose:
+        call_args.append("--verbose")
+
+    call_args.append(plot_type)
+
+    if "buckets" in args and args.buckets:
+        call_args.append("--buckets")
+        call_args.append(str(args.buckets))
+    if "tmpdir" in args and args.tmpdir:
+        call_args.append("--temp1")
+        call_args.append(str(args.tmpdir))
+    if "tmpdir2" in args and args.tmpdir2:
+        call_args.append("--temp2")
+        call_args.append(str(args.tmpdir2))
+    if "cache" in args and args.cache is not None:
         call_args.append("--cache")
         call_args.append(str(args.cache))
-    if args.f1_threads:
+    if "f1_threads" in args and args.f1_threads:
         call_args.append("--f1-threads")
         call_args.append(str(args.f1_threads))
-    if args.fp_threads:
+    if "fp_threads" in args and args.fp_threads:
         call_args.append("--fp-threads")
         call_args.append(str(args.fp_threads))
-    if args.c_threads:
+    if "c_threads" in args and args.c_threads:
         call_args.append("--c-threads")
         call_args.append(str(args.c_threads))
-    if args.p2_threads:
+    if "p2_threads" in args and args.p2_threads:
         call_args.append("--p2-threads")
         call_args.append(str(args.p2_threads))
-    if args.p3_threads:
+    if "p3_threads" in args and args.p3_threads:
         call_args.append("--p3-threads")
         call_args.append(str(args.p3_threads))
-    if args.alternate:
+    if "alternate" in args and args.alternate:
         call_args.append("--alternate")
-    if args.no_t1_direct:
+    if "no_t1_direct" in args and args.no_t1_direct:
         call_args.append("--no-t1-direct")
-    if args.no_t2_direct:
+    if "no_t2_direct" in args and args.no_t2_direct:
         call_args.append("--no-t2-direct")
 
     call_args.append(args.finaldir)
 
     try:
-        progress = progress_bladebit1 if version == 1 else progress_bladebit2
+        progress = progress_bladebit_ram if plot_type == "ramplot" else progress_bladebit_disk
         asyncio.run(run_plotter(chia_root_path, args.plotter, call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {e} {type(e)}")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 from typing import Optional
 
@@ -9,7 +11,6 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from tests.util.db_connection import DBConnection
 

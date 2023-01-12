@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 from blspy import G1Element
 
@@ -9,8 +11,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint8
-from chia.util.streamable import streamable, Streamable
+from chia.util.ints import uint8, uint32
+from chia.util.streamable import Streamable, streamable
 
 
 class PoolSingletonState(IntEnum):

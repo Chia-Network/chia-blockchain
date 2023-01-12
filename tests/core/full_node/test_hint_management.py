@@ -29,6 +29,7 @@ spends: List[Spend] = [
             (phs[4], uint64(3), b"1" * 32),
         ],
         [],
+        0,
     ),
     Spend(
         coin_ids[2],
@@ -41,6 +42,7 @@ spends: List[Spend] = [
             (phs[9], uint64(123), b"1" * 32),
         ],
         [],
+        0,
     ),
     Spend(
         coin_ids[1],
@@ -52,8 +54,13 @@ spends: List[Spend] = [
             (phs[6], uint64(5), b"1" * 3),
         ],
         [],
+        0,
     ),
 ]
+
+
+def no_sub(c: bytes32) -> bool:
+    return False
 
 
 @pytest.mark.asyncio
@@ -67,7 +74,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     npc_res = [NPCResult(None, None, uint64(0)), NPCResult(None, sbc, uint64(0))]
 
     scs = StateChangeSummary(br, uint32(0), [], npc_res, [])
-    hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, {}, {})
+    hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, no_sub)
     assert len(lookup_coin_ids) == 0
 
     first_coin_id: bytes32 = Coin(bytes32(spends[0].coin_id), bytes32(phs[4]), uint64(3)).name()
@@ -94,33 +101,38 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     scs = StateChangeSummary(br, uint32(0), [], npc_res, rewards)
 
     # Removal ID and addition PH
-    coin_subscriptions = {coin_ids[1]: {bytes32(b"2" * 32)}}
-    ph_subscriptions = {phs[4]: {bytes32(b"3" * 32)}}
+    has_coin_sub = lambda c: c == coin_ids[1]  # noqa: E731
+    has_ph_sub = lambda ph: ph == phs[4]  # noqa: E731
 
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, coin_subscriptions, ph_subscriptions)
+    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
 
     first_coin_id: bytes32 = Coin(bytes32(spends[0].coin_id), bytes32(phs[4]), uint64(3)).name()
     second_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), bytes32(phs[4]), uint64(6)).name()
     assert set(lookup_coin_ids) == {coin_ids[1], first_coin_id, second_coin_id}
 
     # Removal PH and addition ID
-    coin_subscriptions = {first_coin_id: {bytes32(b"5" * 32)}}
-    ph_subscriptions = {phs[0]: {bytes32(b"6" * 32)}}
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, coin_subscriptions, ph_subscriptions)
+    has_coin_sub = lambda c: c == first_coin_id  # noqa: E731
+    has_ph_sub = lambda ph: ph == phs[0]  # noqa: E731
+
+    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {first_coin_id, coin_ids[0], coin_ids[2]}
 
     # Subscribe to hint
     third_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), phs[9], uint64(123)).name()
-    ph_subscriptions = {bytes32(b"1" * 32): {bytes32(b"7" * 32)}}
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, {}, ph_subscriptions)
+
+    has_ph_sub = lambda ph: ph == bytes32(b"1" * 32)  # noqa: E731
+
+    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {first_coin_id, third_coin_id}
 
     # Reward PH
-    ph_subscriptions = {rewards[0].puzzle_hash: {bytes32(b"8" * 32)}}
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, {}, ph_subscriptions)
+    has_ph_sub = lambda ph: ph == rewards[0].puzzle_hash  # noqa: E731
+
+    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, no_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {rewards[0].name(), rewards[2].name()}
 
     # Reward coin id + reward ph
-    coin_subscriptions = {rewards[1].name(): {bytes32(b"9" * 32)}}
-    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, coin_subscriptions, ph_subscriptions)
+    has_coin_sub = lambda c: c == rewards[1].name()  # noqa: E731
+
+    _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, has_coin_sub, has_ph_sub)
     assert set(lookup_coin_ids) == {rewards[1].name(), rewards[0].name(), rewards[2].name()}

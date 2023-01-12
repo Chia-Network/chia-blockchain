@@ -1,12 +1,17 @@
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
-from typing import List, Optional, Tuple, Iterator
+from __future__ import annotations
+
+from typing import Iterator, List, Optional, Tuple
+
+
 from blspy import G1Element
+
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.singleton import (
     SINGLETON_TOP_LAYER_MOD_HASH,
     SINGLETON_TOP_LAYER_MOD,
@@ -26,6 +31,7 @@ def create_innerpuz(
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
+    recovery_list_hash: bytes32 = None,
 ) -> Program:
     """
     Create DID inner puzzle
@@ -34,9 +40,12 @@ def create_innerpuz(
     :param num_of_backup_ids_needed: Need how many DIDs for the recovery
     :param launcher_id: ID of the launch coin
     :param metadata: DID customized metadata
+    :param recovery_list_hash: Recovery list hash
     :return: DID inner puzzle
     """
     backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
+    if recovery_list_hash is not None:
+        backup_ids_hash = recovery_list_hash
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return DID_INNERPUZ_MOD.curry(p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata)
 

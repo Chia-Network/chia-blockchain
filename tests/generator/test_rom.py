@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
+from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.generator import run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
+from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.consensus.condition_costs import ConditionCost
-from chia.types.spend_bundle_conditions import Spend
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
@@ -92,14 +94,16 @@ class TestROM:
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 
-    def test_get_name_puzzle_conditions(self):
+    def test_get_name_puzzle_conditions(self, softfork_height):
         # this tests that extra block or coin data doesn't confuse `get_name_puzzle_conditions`
 
         gen = block_generator()
         cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False)
+        npc_result = get_name_puzzle_conditions(
+            gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
+        )
         assert npc_result.error is None
         assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
             len(bytes(gen.program)) * COST_PER_BYTE
@@ -112,6 +116,7 @@ class TestROM:
             seconds_relative=0,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
+            flags=ELIGIBLE_FOR_DEDUP,
         )
 
         assert npc_result.conds.spends == [spend]

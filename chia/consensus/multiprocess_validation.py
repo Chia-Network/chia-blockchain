@@ -93,6 +93,7 @@ def batch_pre_validate_blocks(
                         min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
                         cost_per_byte=constants.COST_PER_BYTE,
                         mempool_mode=False,
+                        height=block.height,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:
@@ -368,6 +369,7 @@ def _run_generator(
     constants: ConsensusConstants,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
+    height: uint32,
 ) -> Optional[bytes]:
     """
     Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
@@ -383,6 +385,7 @@ def _run_generator(
             min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
             cost_per_byte=constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=height,
         )
         return bytes(npc_result)
     except ValidationError as e:

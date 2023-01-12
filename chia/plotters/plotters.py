@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 import argparse
 import binascii
 import os
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, Optional
+
 from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
 from chia.plotters.madmax import get_madmax_install_info, plot_madmax
-from pathlib import Path
-from typing import Any, Dict, Optional
 
 
 class Options(Enum):
@@ -88,7 +91,7 @@ madmax_plotter_options = [
     Options.FINAL_DIR,
 ]
 
-bladebit_plotter_options = [
+bladebit_ram_plotter_options = [
     Options.NUM_THREADS,
     Options.PLOT_COUNT,
     Options.FARMERKEY,
@@ -97,12 +100,13 @@ bladebit_plotter_options = [
     Options.ID,
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_NONUMA,
+    Options.BLADEBIT_NO_CPU_AFFINITY,
     Options.VERBOSE,
     Options.CONNECT_TO_DAEMON,
     Options.FINAL_DIR,
 ]
 
-bladebit2_plotter_options = [
+bladebit_disk_plotter_options = [
     Options.NUM_THREADS,
     Options.PLOT_COUNT,
     Options.FARMERKEY,
@@ -437,8 +441,13 @@ def call_plotters(root_path: Path, args):
 
     build_parser(subparsers, root_path, chia_plotter_options, "chiapos", "Create a plot with the default chia plotter")
     build_parser(subparsers, root_path, madmax_plotter_options, "madmax", "Create a plot with madMAx")
-    build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Create a plot with bladebit")
-    build_parser(subparsers, root_path, bladebit2_plotter_options, "bladebit2", "Create a plot with bladebit2")
+
+    bladebit_parser = subparsers.add_parser("bladebit", help="Create a plot with bladebit")
+    subparsers_bb = bladebit_parser.add_subparsers(dest="plot_type", required=True)
+    build_parser(subparsers_bb, root_path, bladebit_ram_plotter_options, "ramplot", "Create a plot using RAM")
+    build_parser(subparsers_bb, root_path, bladebit_disk_plotter_options, "diskplot", "Create a plot using disk")
+
+    subparsers.add_parser("version", help="Show plotter versions")
 
     deprecation_warning = (
         "[DEPRECATED] 'chia plotters install' is no longer available. Use install-plotter.sh/ps1 instead."
@@ -446,7 +455,9 @@ def call_plotters(root_path: Path, args):
     install_parser = subparsers.add_parser("install", help=deprecation_warning)
     install_parser.add_argument("install_plotter", type=str, nargs="*")
 
-    subparsers.add_parser("version", help="Show plotter versions")
+    deprecation_warning_bb2 = "[DEPRECATED] 'chia plotters bladebit2' was integrated to 'chia plotters bladebit'"
+    bladebit2_parser = subparsers.add_parser("bladebit2", help=deprecation_warning_bb2)
+    bladebit2_parser.add_argument("bladebit2_plotter", type=str, nargs="*")
 
     args = plotters.parse_args(args)
 
@@ -456,12 +467,14 @@ def call_plotters(root_path: Path, args):
         plot_chia(args, chia_root_path)
     elif args.plotter == "madmax":
         plot_madmax(args, chia_root_path, root_path)
-    elif args.plotter.startswith("bladebit"):
+    elif args.plotter == "bladebit":
         plot_bladebit(args, chia_root_path, root_path)
     elif args.plotter == "version":
         show_plotters_version(chia_root_path)
     elif args.plotter == "install":
         print(deprecation_warning)
+    elif args.plotter == "bladebit2":
+        print(deprecation_warning_bb2)
 
 
 def get_available_plotters(root_path) -> Dict[str, Any]:

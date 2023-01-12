@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -16,6 +16,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.network import get_host_addr
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -28,13 +29,15 @@ log = logging.getLogger(__name__)
 
 def create_timelord_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
 ) -> Service[Timelord]:
     service_config = config[SERVICE_NAME]
 
-    connect_peers = [PeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])]
+    connect_peers = [
+        PeerInfo(str(get_host_addr(service_config["full_node_peer"]["host"])), service_config["full_node_peer"]["port"])
+    ]
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 

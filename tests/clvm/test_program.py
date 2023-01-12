@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program
 from clvm.EvalError import EvalError
 from clvm.operators import KEYWORD_TO_ATOM
 from clvm_tools.binutils import assemble, disassemble
+
+from chia.types.blockchain_format.program import Program
 
 
 class TestProgram(TestCase):

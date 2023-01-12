@@ -747,9 +747,10 @@ class FullNodeRpcApi:
     async def get_mempool_item_by_tx_id(self, request: Dict) -> EndpointResult:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
+        include_pending: bool = request.get("include_pending", False)
         tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
 
-        item = self.service.mempool_manager.get_mempool_item(tx_id)
+        item = self.service.mempool_manager.get_mempool_item(tx_id, include_pending)
         if item is None:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
@@ -784,17 +785,23 @@ class FullNodeRpcApi:
             estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * cost for time in target_times
         ]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
-        mempool_size = estimator.mempool_size()
+        mempool_size = self.service.mempool_manager.mempool.total_mempool_cost
         mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
-        peak_height = blockchain_state["blockchain_state"]["peak"].height
-        last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
-        peak_with_timestamp = peak_height
-        while last_peak_timestamp is None:
-            peak_with_timestamp -= 1
-            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-            last_peak_timestamp = block_record.timestamp
+        peak = blockchain_state["blockchain_state"]["peak"]
+
+        if peak is None:
+            peak_height = uint32(0)
+            last_peak_timestamp = uint64(0)
+        else:
+            peak_height = peak.height
+            last_peak_timestamp = peak.timestamp
+            peak_with_timestamp = peak_height
+            while last_peak_timestamp is None:
+                peak_with_timestamp -= 1
+                block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+                last_peak_timestamp = block_record.timestamp
 
         dt = datetime.now(timezone.utc)
         utc_time = dt.replace(tzinfo=timezone.utc)

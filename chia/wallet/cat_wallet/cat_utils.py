@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import dataclasses
-from typing import List, Iterator, Optional
+from typing import Iterator, List, Optional
 
 from blspy import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSpend, SpendBundle
@@ -18,6 +20,13 @@ NULL_SIGNATURE = G2Element()
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 
+def empty_program() -> Program:
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to([])  # type: ignore[no-any-return]
+
+
 # information needed to spend a cc
 @dataclasses.dataclass
 class SpendableCAT:
@@ -25,10 +34,10 @@ class SpendableCAT:
     limitations_program_hash: bytes32
     inner_puzzle: Program
     inner_solution: Program
-    limitations_solution: Program = Program.to([])
+    limitations_solution: Program = dataclasses.field(default_factory=empty_program)
     lineage_proof: LineageProof = LineageProof()
     extra_delta: int = 0
-    limitations_program_reveal: Program = Program.to([])
+    limitations_program_reveal: Program = dataclasses.field(default_factory=empty_program)
 
 
 def match_cat_puzzle(puzzle: UncurriedPuzzle) -> Optional[Iterator[Program]]:
