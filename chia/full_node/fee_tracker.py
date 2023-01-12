@@ -483,6 +483,10 @@ class FeeTracker:
 
         self.latest_seen_height = block_height
 
+        self.short_horizon.clear_current(block_height)
+        self.med_horizon.clear_current(block_height)
+        self.long_horizon.clear_current(block_height)
+
         self.short_horizon.update_moving_averages()
         self.med_horizon.update_moving_averages()
         self.long_horizon.update_moving_averages()
@@ -505,6 +509,18 @@ class FeeTracker:
         self.short_horizon.tx_confirmed(blocks_to_confirm, item)
         self.med_horizon.tx_confirmed(blocks_to_confirm, item)
         self.long_horizon.tx_confirmed(blocks_to_confirm, item)
+
+    def add_tx(self, item: MempoolItem) -> None:
+
+        if item.height_added_to_mempool < self.latest_seen_height:
+            self.log.info(f"Processing Item from pending pool: cost={item.cost} fee={item.fee}")
+
+        fee_rate = item.fee_per_cost * 1000
+        bucket_index: int = get_bucket_index(self.buckets, fee_rate)
+
+        self.short_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
+        self.med_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
+        self.long_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
 
     def remove_tx(self, item: MempoolItem) -> None:
         bucket_index = get_bucket_index(self.buckets, item.fee_per_cost * 1000)

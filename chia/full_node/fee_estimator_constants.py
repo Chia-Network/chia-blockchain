@@ -29,7 +29,9 @@ LONG_DECAY = 0.99931
 HALF_SUCCESS_PCT = 0.6  # Require 60 % success rate for target confirmations
 SUCCESS_PCT = 0.85  # Require 85 % success rate for target confirmations
 DOUBLE_SUCCESS_PCT = 0.95  # Require 95 % success rate for target confirmations
-SUFFICIENT_FEE_TXS = 0.1  # Require an avg of 0.1 tx in the combined fee rate bucket per block to have stat significance
+
+# Require an avg of SUFFICIENT_FEE_TXS tx in the combined fee rate bucket per block to have stat. significance
+SUFFICIENT_FEE_TXS = 0.01
 
 FEE_ESTIMATOR_VERSION = 1
 

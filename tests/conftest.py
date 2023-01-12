@@ -132,6 +132,11 @@ def db_version(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[1000000, 3630000])
+def softfork_height(request):
+    return request.param
+
+
 saved_blocks_version = "rc5"
 
 
@@ -626,7 +631,6 @@ async def daemon_connection_and_temp_keychain(get_b_tools):
                 f"wss://127.0.0.1:{get_b_tools._config['daemon_port']}",
                 autoclose=True,
                 autoping=True,
-                heartbeat=60,
                 ssl=get_b_tools.get_daemon_ssl_context(),
                 max_msg_size=52428800,
             ) as ws:
