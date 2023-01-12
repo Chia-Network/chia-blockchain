@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -20,7 +20,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet import singleton
@@ -40,15 +39,9 @@ from chia.wallet.dao_wallet.dao_utils import (
 )
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-    puzzle_for_pk,
-)
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -209,39 +202,14 @@ class DAOWallet:
         return self.wallet_info.id
 
     async def get_confirmed_balance(self, record_list=None) -> uint128:
-        if record_list is None:
-            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
-
-        amount: uint128 = uint128(0)
-        for record in record_list:
-            parent = self.get_parent_for_coin(record.coin)
-            if parent is not None:
-                amount = uint128(amount + record.coin.amount)
-
-        self.log.info(f"Confirmed balance for did wallet is {amount}")
-        return uint128(amount)
+        # This wallet only tracks coins, and does not hold any spendable value
+        return uint128(0)
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
-        addition_amount = 0
+        # No spendable or receivable value
+        return uint64(0)
 
-        for record in unconfirmed_tx:
-            our_spend = False
-            for coin in record.removals:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
-                    our_spend = True
-                    break
-
-            if our_spend is not True:
-                continue
-
-            for coin in record.additions:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
-                    addition_amount += coin.amount
-
-        return uint64(addition_amount)
-
-    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
+    async def get_unconfirmed_balance(self, record_list=None) -> uint128:  # comment
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
     async def select_coins(
@@ -336,95 +304,6 @@ class DAOWallet:
                 uint64(parent_state.coin.amount),
             )
             await self.add_parent(coin.parent_coin_info, parent_info)
-
-    def create_backup(self) -> str:
-        """
-        Create a serialized backup data for DAOInfo
-        :return: Serialized backup data
-        """
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        output_str = f"{self.dao_info.origin_coin.parent_coin_info.hex()}:"
-        output_str += f"{self.dao_info.origin_coin.puzzle_hash.hex()}:"
-        output_str += f"{self.dao_info.origin_coin.amount}:"
-        if len(self.dao_info.backup_ids) > 0:
-            for did in self.dao_info.backup_ids:
-                output_str = output_str + did.hex() + ","
-            output_str = output_str[:-1]
-        output_str += f":{bytes(self.dao_info.current_inner).hex()}:{self.dao_info.num_of_backup_ids_needed}"
-        output_str += f":{self.dao_info.metadata}"
-        return output_str
-
-    async def load_parent(self, dao_info: DAOInfo):
-        """
-        Load the parent info when importing a DID
-        :param dao_info: DID info
-        :return:
-        """
-        # full_puz = singleton.create_fullpuz(innerpuz, origin.name())
-        # All additions in this block here:
-
-        new_pubkey = (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        new_puzhash = puzzle_for_pk(new_pubkey).get_tree_hash()
-        parent_info = None
-        assert dao_info.origin_coin is not None
-        assert dao_info.current_inner is not None
-        new_did_inner_puzhash = get_dao_inner_puzhash_by_p2(
-            new_puzhash,
-            dao_info.backup_ids,
-            dao_info.num_of_backup_ids_needed,
-            dao_info.origin_coin.name(),
-            singleton.metadata_to_program(json.loads(self.dao_info.metadata)),
-        )
-        wallet_node = self.wallet_state_manager.wallet_node
-        peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
-            raise ValueError("Could not find any peers to request puzzle and solution from")
-
-        parent_coin: Coin = dao_info.origin_coin
-        while True:
-            children = await wallet_node.fetch_children(parent_coin.name(), peer)
-            if len(children) == 0:
-                break
-
-            children_state: CoinState = children[0]
-            child_coin = children_state.coin
-            future_parent = LineageProof(
-                child_coin.parent_coin_info,
-                dao_info.current_inner.get_tree_hash(),
-                uint64(child_coin.amount),
-            )
-            await self.add_parent(child_coin.name(), future_parent)
-            if children_state.spent_height != children_state.created_height:
-                dao_info = DAOInfo(
-                    dao_info.origin_coin,
-                    dao_info.backup_ids,
-                    dao_info.num_of_backup_ids_needed,
-                    self.dao_info.parent_info,
-                    dao_info.current_inner,
-                    child_coin,
-                    new_did_inner_puzhash,
-                    bytes(new_pubkey),
-                    False,
-                    dao_info.metadata,
-                )
-
-                await self.save_info(dao_info)
-                assert children_state.created_height
-                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
-                assert parent_spend is not None
-                parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
-                    parent_spend.puzzle_reveal.to_program()
-                )
-                assert parent_innerpuz is not None
-                parent_info = LineageProof(
-                    parent_coin.parent_coin_info,
-                    parent_innerpuz.get_tree_hash(),
-                    uint64(parent_coin.amount),
-                )
-                await self.add_parent(child_coin.parent_coin_info, parent_info)
-            parent_coin = child_coin
-        assert parent_info is not None
 
     async def is_spend_retrievable(self, coin_id):
         wallet_node: WalletNode = self.wallet_state_manager.wallet_node
@@ -595,12 +474,6 @@ class DAOWallet:
             (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
         )
 
-    def get_my_DID(self) -> str:
-        assert self.dao_info.origin_coin is not None
-        core = self.dao_info.origin_coin.name()
-        assert core is not None
-        return core.hex()
-
     async def set_name(self, new_name: str):
         import dataclasses
 
@@ -611,513 +484,12 @@ class DAOWallet:
     async def get_name(self):
         return self.wallet_info.name
 
-    async def create_update_spend(self, fee: uint64 = uint64(0)):
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        coins = await self.select_coins(uint64(1))
-        assert coins is not None
-        coin = coins.pop()
-        new_puzhash = await self.get_new_did_inner_hash()
-        # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_puzhash, "amount": uint64(coin.amount), "memos": [new_puzhash]}],
-            coin_announcements={coin.name()},
-        )
-        innersol: Program = Program.to([1, p2_solution])
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz: Program = self.dao_info.current_inner
-
-        full_puzzle: Program = singleton.create_fullpuz(
-            innerpuz,
-            self.dao_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
-        if fee > 0:
-            announcement_to_make = coin.name()
-            chia_tx = await self.create_tandem_xch_tx(fee, Announcement(coin.name(), announcement_to_make))
-        else:
-            announcement_to_make = None
-            chia_tx = None
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            await self.wallet_state_manager.add_pending_transaction(chia_tx)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_puzhash,
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-
-        return spend_bundle
-
-    async def transfer_did(self, new_puzhash: bytes32, fee: uint64, with_recovery: bool) -> TransactionRecord:
-        """
-        Transfer the current DID to another owner
-        :param new_puzhash: New owner's p2_puzzle
-        :param fee: Transaction fee
-        :param with_recovery: A boolean indicates if the recovery info will be sent through the blockchain
-        :return: Spend bundle
-        """
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        coins = await self.select_coins(uint64(1))
-        assert coins is not None
-        coin = coins.pop()
-        backup_ids = []
-        backup_required = uint64(0)
-        if with_recovery:
-            backup_ids = self.dao_info.backup_ids
-            backup_required = self.dao_info.num_of_backup_ids_needed
-        new_did_puzhash = singleton.get_inner_puzhash_by_p2(
-            new_puzhash,
-            backup_ids,
-            backup_required,
-            self.dao_info.origin_coin.name(),
-            singleton.metadata_to_program(json.loads(self.dao_info.metadata)),
-        )
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_did_puzhash,
-                    "amount": uint64(coin.amount),
-                    "memos": [new_puzhash],
-                }
-            ],
-            coin_announcements={coin.name()},
-        )
-        # Need to include backup list reveal here, even we are don't recover
-        # innerpuz solution is
-        # (mode, p2_solution)
-        innersol: Program = Program.to([2, p2_solution])
-        if with_recovery:
-            innersol = Program.to([2, p2_solution, [], [], [], self.dao_info.backup_ids])
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-
-        full_puzzle: Program = singleton.create_fullpuz(
-            self.dao_info.current_inner,
-            self.dao_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
-        if fee > 0:
-            announcement_to_make = coin.name()
-            chia_tx = await self.create_tandem_xch_tx(fee, Announcement(coin.name(), announcement_to_make))
-        else:
-            chia_tx = None
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            await self.wallet_state_manager.add_pending_transaction(chia_tx)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_puzhash,
-            amount=uint64(coin.amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return did_record
-
-    # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
-    async def create_message_spend(
-        self,
-        coin_announcements: Optional[Set[bytes]] = None,
-        puzzle_announcements: Optional[Set[bytes]] = None,
-        new_innerpuzhash: Optional[bytes32] = None,
-    ):
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        coins = await self.select_coins(uint64(1))
-        assert coins is not None
-        coin = coins.pop()
-        innerpuz: Program = self.dao_info.current_inner
-        # Quote message puzzle & solution
-        if new_innerpuzhash is None:
-            new_innerpuzhash = innerpuz.get_tree_hash()
-
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": [new_innerpuzhash]}],
-            puzzle_announcements=puzzle_announcements,
-            coin_announcements=coin_announcements,
-        )
-        # innerpuz solution is (mode p2_solution)
-        innersol: Program = Program.to([1, p2_solution])
-
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = singleton.create_fullpuz(
-            innerpuz,
-            self.dao_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return await self.sign(unsigned_spend_bundle)
-
-    # This is used to cash out, or update the id_list
-    async def create_exit_spend(self, puzhash: bytes32):
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        coins = await self.select_coins(uint64(1))
-        assert coins is not None
-        coin = coins.pop()
-        message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
-
-        # innerpuz solution is (mode p2_solution)
-        innersol: Program = Program.to([1, [[], message_puz, []]])
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz: Program = self.dao_info.current_inner
-
-        full_puzzle: Program = singleton.create_fullpuz(
-            innerpuz,
-            self.dao_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
-
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzhash,
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return spend_bundle
-
-    # Pushes a SpendBundle to create a message coin on the blockchain
-    # Returns a SpendBundle for the recoverer to spend the message coin
-    async def create_attestment(
-        self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element
-    ) -> Tuple[SpendBundle, str]:
-        """
-        Create an attestment
-        :param recovering_coin_name: Coin ID of the DID
-        :param newpuz: New puzzle hash
-        :param pubkey: New wallet pubkey
-        :return: (SpendBundle, attest string)
-        """
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        coins = await self.select_coins(uint64(1))
-        assert coins is not None and coins != set()
-        coin = coins.pop()
-        message = singleton.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
-        innermessage = message.get_tree_hash()
-        innerpuz: Program = self.dao_info.current_inner
-        # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": []},
-                {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
-            ],
-        )
-        innersol = Program.to([1, p2_solution])
-
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = singleton.create_fullpuz(
-            innerpuz,
-            self.dao_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        message_spend = singleton.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
-        message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        spend_bundle = await self.sign(unsigned_spend_bundle)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=coin.puzzle_hash,
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
-        attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
-        attest_str += f"{self.dao_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return message_spend_bundle, attest_str
-
-    async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
-        assert self.dao_info.current_inner is not None
-        assert self.dao_info.origin_coin is not None
-        coins = await self.select_coins(uint64(1))
-        if coins is not None:
-            coin = coins.pop()
-            parent = coin.parent_coin_info
-            innerpuzhash = self.dao_info.current_inner.get_tree_hash()
-            amount = uint64(coin.amount)
-            return (parent, innerpuzhash, amount)
-        return None
-
-    async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, SpendBundle]:
-        spend_bundle_list = []
-        info_dict = {}
-        try:
-            for attest in attest_data:
-                info = attest.split(":")
-                info_dict[info[0]] = [
-                    bytes.fromhex(info[2]),
-                    bytes.fromhex(info[3]),
-                    uint64(info[4]),
-                ]
-                new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
-                spend_bundle_list.append(new_sb)
-            # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-            my_recovery_list: List[bytes32] = self.dao_info.backup_ids
-
-            # convert info dict into recovery list - same order as wallet
-            info_list = []
-            for entry in my_recovery_list:
-                if entry.hex() in info_dict:
-                    info_list.append(
-                        [
-                            info_dict[entry.hex()][0],
-                            info_dict[entry.hex()][1],
-                            info_dict[entry.hex()][2],
-                        ]
-                    )
-                else:
-                    info_list.append([])
-            message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
-            return info_list, message_spend_bundle
-        except Exception:
-            raise
-
-    async def recovery_spend(
-        self,
-        coin: Coin,
-        puzhash: bytes32,
-        parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
-        pubkey: G1Element,
-        spend_bundle: SpendBundle,
-    ) -> SpendBundle:
-        assert self.dao_info.origin_coin is not None
-
-        # innersol is mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
-        innersol: Program = Program.to(
-            [
-                0,
-                coin.amount,
-                puzhash,
-                parent_innerpuzhash_amounts_for_recovery_ids,
-                bytes(pubkey),
-                self.dao_info.backup_ids,
-                coin.name(),
-            ]
-        )
-        # full solution is (parent_info my_amount solution)
-        assert self.dao_info.current_inner is not None
-        innerpuz: Program = self.dao_info.current_inner
-        full_puzzle: Program = singleton.create_fullpuz(
-            innerpuz,
-            self.dao_info.origin_coin.name(),
-        )
-        parent_info = self.get_parent_for_coin(coin)
-        assert parent_info is not None
-        fullsol = Program.to(
-            [
-                [
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        if index is None:
-            raise ValueError("Unknown pubkey.")
-        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
-        message = bytes(puzhash)
-        sigs = [AugSchemeMPL.sign(private, message)]
-        for _ in spend_bundle.coin_spends:
-            sigs.append(AugSchemeMPL.sign(private, message))
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        # assert AugSchemeMPL.verify(pubkey, message, aggsig)
-        if spend_bundle is None:
-            spend_bundle = SpendBundle(list_of_coinspends, aggsig)
-        else:
-            spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_coinspends, aggsig)])
-
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzhash,
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        new_dao_info = DAOInfo(
-            self.dao_info.origin_coin,
-            self.dao_info.backup_ids,
-            self.dao_info.num_of_backup_ids_needed,
-            self.dao_info.parent_info,
-            self.dao_info.current_inner,
-            self.dao_info.temp_coin,
-            self.dao_info.temp_puzhash,
-            self.dao_info.temp_pubkey,
-            True,
-            self.dao_info.metadata,
-        )
-        await self.save_info(new_dao_info)
-        return spend_bundle
-
     async def get_new_p2_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_p2_inner_puzzle()
         return puzzle.get_tree_hash()
 
     async def get_new_p2_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
-
-    async def get_new_did_innerpuz(self, origin_id=None) -> Program:
-        if self.dao_info.origin_coin is not None:
-            innerpuz = singleton.create_innerpuz(
-                await self.get_new_p2_inner_puzzle(),
-                self.dao_info.backup_ids,
-                uint64(self.dao_info.num_of_backup_ids_needed),
-                self.dao_info.origin_coin.name(),
-                singleton.metadata_to_program(json.loads(self.dao_info.metadata)),
-            )
-        elif origin_id is not None:
-            innerpuz = singleton.create_innerpuz(
-                await self.get_new_p2_inner_puzzle(),
-                self.dao_info.backup_ids,
-                uint64(self.dao_info.num_of_backup_ids_needed),
-                origin_id,
-                singleton.metadata_to_program(json.loads(self.dao_info.metadata)),
-            )
-        else:
-            raise ValueError("must have origin coin")
-
-        return innerpuz
 
     async def get_new_did_inner_hash(self) -> bytes32:
         innerpuz = await self.get_new_did_innerpuz()
@@ -1161,36 +533,6 @@ class DAOWallet:
                 parent_info = ccparent
 
         return parent_info
-
-    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
-        sigs: List[G2Element] = []
-        for spend in spend_bundle.coin_spends:
-
-            puzzle_args = singleton.match_did_puzzle(*spend.puzzle_reveal.to_program().uncurry())
-            if puzzle_args is not None:
-                p2_puzzle, _, _, _, _ = puzzle_args
-                puzzle_hash = p2_puzzle.get_tree_hash()
-                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                error, conditions, cost = conditions_dict_for_solution(
-                    spend.puzzle_reveal.to_program(),
-                    spend.solution.to_program(),
-                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                )
-
-                if conditions is not None:
-                    synthetic_pk = synthetic_secret_key.get_g1()
-                    for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                    ):
-                        try:
-                            assert bytes(synthetic_pk) == pk
-                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                        except AssertionError:
-                            raise ValueError("This spend bundle cannot be signed by the DID wallet")
-
-        agg_sig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def generate_new_dao(
         self,
@@ -1466,19 +808,13 @@ class DAOWallet:
         return unsigned_spend_bundle
 
     async def get_frozen_amount(self) -> uint64:
-        # return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
         return uint64(0)
 
     async def get_spendable_balance(self, unspent_records: Set[WalletCoinRecord] = None) -> uint128:
-        # spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-        #     self.wallet_info.id, unspent_records
-        # )
-        # return spendable_am
         return uint128(0)
 
     async def get_max_send_amount(self, records=None) -> uint128:
-        max_send_amount = await self.get_confirmed_balance()
-        return max_send_amount
+        return uint128(0)
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
