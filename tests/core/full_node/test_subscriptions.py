@@ -83,7 +83,7 @@ def test_overlapping_coin_subscriptions() -> None:
     # subscribed to different coins
     sub.add_coin_subscriptions(peer1, [coin1], 100)
 
-    assert sub.peers_for_coin_id(coin1) == set([peer1])
+    assert sub.peers_for_coin_id(coin1) == {peer1}
     assert sub.peers_for_coin_id(coin2) == set()
 
     sub.add_coin_subscriptions(peer2, [coin2], 100)
@@ -91,8 +91,8 @@ def test_overlapping_coin_subscriptions() -> None:
     assert sub.has_coin_subscription(coin1) is True
     assert sub.has_coin_subscription(coin2) is True
 
-    assert sub.peers_for_coin_id(coin1) == set([peer1])
-    assert sub.peers_for_coin_id(coin2) == set([peer2])
+    assert sub.peers_for_coin_id(coin1) == {peer1}
+    assert sub.peers_for_coin_id(coin2) == {peer2}
 
     # peer1 is now subscribing to both coins
     sub.add_coin_subscriptions(peer1, [coin2], 100)
@@ -100,8 +100,8 @@ def test_overlapping_coin_subscriptions() -> None:
     assert sub.has_coin_subscription(coin1) is True
     assert sub.has_coin_subscription(coin2) is True
 
-    assert sub.peers_for_coin_id(coin1) == set([peer1])
-    assert sub.peers_for_coin_id(coin2) == set([peer1, peer2])
+    assert sub.peers_for_coin_id(coin1) == {peer1}
+    assert sub.peers_for_coin_id(coin2) == {peer1, peer2}
 
     # removing peer1 still leaves the subscription to coin2
     sub.remove_peer(peer1)
@@ -110,7 +110,7 @@ def test_overlapping_coin_subscriptions() -> None:
     assert sub.has_coin_subscription(coin2) is True
 
     assert sub.peers_for_coin_id(coin1) == set()
-    assert sub.peers_for_coin_id(coin2) == set([peer2])
+    assert sub.peers_for_coin_id(coin2) == {peer2}
 
 
 def test_overlapping_ph_subscriptions() -> None:
@@ -125,7 +125,7 @@ def test_overlapping_ph_subscriptions() -> None:
     # subscribed to different phs
     sub.add_ph_subscriptions(peer1, [ph1], 100)
 
-    assert sub.peers_for_puzzle_hash(ph1) == set([peer1])
+    assert sub.peers_for_puzzle_hash(ph1) == {peer1}
     assert sub.peers_for_puzzle_hash(ph2) == set()
 
     sub.add_ph_subscriptions(peer2, [ph2], 100)
@@ -133,8 +133,8 @@ def test_overlapping_ph_subscriptions() -> None:
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
 
-    assert sub.peers_for_puzzle_hash(ph1) == set([peer1])
-    assert sub.peers_for_puzzle_hash(ph2) == set([peer2])
+    assert sub.peers_for_puzzle_hash(ph1) == {peer1}
+    assert sub.peers_for_puzzle_hash(ph2) == {peer2}
 
     # peer1 is now subscribing to both phs
     sub.add_ph_subscriptions(peer1, [ph2], 100)
@@ -142,8 +142,8 @@ def test_overlapping_ph_subscriptions() -> None:
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
 
-    assert sub.peers_for_puzzle_hash(ph1) == set([peer1])
-    assert sub.peers_for_puzzle_hash(ph2) == set([peer1, peer2])
+    assert sub.peers_for_puzzle_hash(ph1) == {peer1}
+    assert sub.peers_for_puzzle_hash(ph2) == {peer1, peer2}
 
     # removing peer1 still leaves the subscription to ph2
     sub.remove_peer(peer1)
@@ -152,7 +152,7 @@ def test_overlapping_ph_subscriptions() -> None:
     assert sub.has_ph_subscription(ph2) is True
 
     assert sub.peers_for_puzzle_hash(ph1) == set()
-    assert sub.peers_for_puzzle_hash(ph2) == set([peer2])
+    assert sub.peers_for_puzzle_hash(ph2) == {peer2}
 
 
 def test_ph_sub_limit() -> None:
@@ -170,9 +170,9 @@ def test_ph_sub_limit() -> None:
     assert sub.has_ph_subscription(ph3) is True
     assert sub.has_ph_subscription(ph4) is False
 
-    assert sub.peers_for_puzzle_hash(ph1) == set([peer1])
-    assert sub.peers_for_puzzle_hash(ph2) == set([peer1])
-    assert sub.peers_for_puzzle_hash(ph3) == set([peer1])
+    assert sub.peers_for_puzzle_hash(ph1) == {peer1}
+    assert sub.peers_for_puzzle_hash(ph2) == {peer1}
+    assert sub.peers_for_puzzle_hash(ph3) == {peer1}
     assert sub.peers_for_puzzle_hash(ph4) == set()
 
     # peer1 should still be limited
@@ -191,7 +191,7 @@ def test_ph_sub_limit() -> None:
     sub.add_ph_subscriptions(peer2, [ph4], 3)
 
     assert sub.has_ph_subscription(ph4) is True
-    assert sub.peers_for_puzzle_hash(ph4) == set([peer2])
+    assert sub.peers_for_puzzle_hash(ph4) == {peer2}
 
     sub.remove_peer(peer1)
     sub.remove_peer(peer2)
@@ -212,7 +212,7 @@ def test_ph_sub_limit_incremental() -> None:
     assert sub.has_ph_subscription(ph3) is False
     assert sub.has_ph_subscription(ph4) is False
 
-    assert sub.peers_for_puzzle_hash(ph1) == set([peer1])
+    assert sub.peers_for_puzzle_hash(ph1) == {peer1}
     assert sub.peers_for_puzzle_hash(ph2) == set()
     assert sub.peers_for_puzzle_hash(ph3) == set()
     assert sub.peers_for_puzzle_hash(ph4) == set()
@@ -225,8 +225,8 @@ def test_ph_sub_limit_incremental() -> None:
     assert sub.has_ph_subscription(ph3) is False
     assert sub.has_ph_subscription(ph4) is False
 
-    assert sub.peers_for_puzzle_hash(ph1) == set([peer1])
-    assert sub.peers_for_puzzle_hash(ph2) == set([peer1])
+    assert sub.peers_for_puzzle_hash(ph1) == {peer1}
+    assert sub.peers_for_puzzle_hash(ph2) == {peer1}
     assert sub.peers_for_puzzle_hash(ph3) == set()
     assert sub.peers_for_puzzle_hash(ph4) == set()
 
@@ -248,9 +248,9 @@ def test_coin_sub_limit() -> None:
     assert sub.has_coin_subscription(coin3) is True
     assert sub.has_coin_subscription(coin4) is False
 
-    assert sub.peers_for_coin_id(coin1) == set([peer1])
-    assert sub.peers_for_coin_id(coin2) == set([peer1])
-    assert sub.peers_for_coin_id(coin3) == set([peer1])
+    assert sub.peers_for_coin_id(coin1) == {peer1}
+    assert sub.peers_for_coin_id(coin2) == {peer1}
+    assert sub.peers_for_coin_id(coin3) == {peer1}
     assert sub.peers_for_coin_id(coin4) == set()
 
     # peer1 should still be limited
@@ -269,7 +269,7 @@ def test_coin_sub_limit() -> None:
     sub.add_coin_subscriptions(peer2, [coin4], 3)
 
     assert sub.has_coin_subscription(coin4) is True
-    assert sub.peers_for_coin_id(coin4) == set([peer2])
+    assert sub.peers_for_coin_id(coin4) == {peer2}
 
     sub.remove_peer(peer1)
     sub.remove_peer(peer2)
@@ -290,7 +290,7 @@ def test_coin_sub_limit_incremental() -> None:
     assert sub.has_coin_subscription(coin3) is False
     assert sub.has_coin_subscription(coin4) is False
 
-    assert sub.peers_for_coin_id(coin1) == set([peer1])
+    assert sub.peers_for_coin_id(coin1) == {peer1}
     assert sub.peers_for_coin_id(coin2) == set()
     assert sub.peers_for_coin_id(coin3) == set()
     assert sub.peers_for_coin_id(coin4) == set()
@@ -303,8 +303,8 @@ def test_coin_sub_limit_incremental() -> None:
     assert sub.has_coin_subscription(coin3) is False
     assert sub.has_coin_subscription(coin4) is False
 
-    assert sub.peers_for_coin_id(coin1) == set([peer1])
-    assert sub.peers_for_coin_id(coin2) == set([peer1])
+    assert sub.peers_for_coin_id(coin1) == {peer1}
+    assert sub.peers_for_coin_id(coin2) == {peer1}
     assert sub.peers_for_coin_id(coin3) == set()
     assert sub.peers_for_coin_id(coin4) == set()
 
