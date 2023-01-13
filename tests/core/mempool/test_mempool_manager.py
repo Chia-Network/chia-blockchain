@@ -242,3 +242,14 @@ async def test_reserve_fee_condition(
     _, status, error = result[2]
     assert status == expected_status
     assert error == expected_error
+
+
+@pytest.mark.asyncio
+async def test_unknown_unspent() -> None:
+    async def get_coin_record(_: bytes32) -> Optional[CoinRecord]:
+        return None
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    assert result == (None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT)
