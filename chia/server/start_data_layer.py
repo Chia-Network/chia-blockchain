@@ -95,7 +95,9 @@ async def async_main() -> int:
         root_path=DEFAULT_ROOT_PATH,
     )
 
-    with contextlib.redirect_stdout(StdOutputLogger(log, logging.INFO)):
+    with contextlib.redirect_stdout(
+        StdOutputLogger(log, logging.INFO)
+    ) if not sys.stdout.isatty() else contextlib.nullcontext():
         create_all_ssl(
             root_path=DEFAULT_ROOT_PATH,
             private_node_names=["data_layer"],
