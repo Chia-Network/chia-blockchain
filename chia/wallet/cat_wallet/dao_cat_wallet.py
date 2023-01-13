@@ -23,6 +23,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
+from chia.wallet.coin_selection import select_coins
 
 
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
@@ -35,9 +36,29 @@ class DAOCATWallet(CATWallet):
     def type(cls) -> uint8:
         return uint8(WalletType.DAO_CAT)
 
-    async def select_coin(amount, proposal_id):
-        # for loop through our coins and check which ones haven't yet voted on that proposal
-        return
+    # MH: at the moment this is mixing clean and dirty coins, meaning we'll have to search for the stored coin info again later
+    # maybe we change this to return the full records and just add the clean ones ourselves later
+    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> Set[Coin]:
+        coins = Set()
+        sum = 0
+        for coin in self.dao_cat_info.locked_coins:
+            compatible = True
+            for prev_vote in coin.previous_votes:
+                if prev_vote == proposal_id:
+                    compatible = False
+                    break
+            if compatible:
+                coins.add(coin.coin)
+                sum += coin.coin.amount
+                if sum >= amount:
+                    break
+        # try and get already locked up coins first
+        if sum >= amount:
+            return coins
+        coins = await select_coins(amount - sum(c.amount for c in coins))
+        assert sum(c.amount for c in coins) >= amount
+        # loop through our coins and check which ones haven't yet voted on that proposal and add them to coins set
+        return coins
 
     async def create_vote_spend(amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
 
