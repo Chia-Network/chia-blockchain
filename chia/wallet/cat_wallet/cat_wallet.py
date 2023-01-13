@@ -137,11 +137,12 @@ class CATWallet:
         # Change and actual CAT coin
         non_ephemeral_coins: List[Coin] = spend_bundle.not_ephemeral_additions()
         cat_coin = None
-        puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
-            parent_spend: CoinSpend = next(spend for spend in spend_bundle.coin_spends if spend.coin.name() == c.parent_coin_info)
+            parent_spend: CoinSpend = next(
+                spend for spend in spend_bundle.coin_spends if spend.coin.name() == c.parent_coin_info
+            )
             mod, curried_args = parent_spend.puzzle_reveal.to_program().uncurry()
-            if mod == CAT_MOD and bytes32(curried_args.at("rf")).as_python() == self.cat_info.limitations_program_hash:
+            if mod == CAT_MOD and bytes32(curried_args.at("rf").as_python()) == self.cat_info.limitations_program_hash:
                 cat_coin = c
 
         if cat_coin is None:
