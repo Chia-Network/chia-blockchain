@@ -389,7 +389,7 @@ class CATWallet:
         return await self.standard_wallet.get_new_puzzlehash()
 
     def require_derivation_paths(self) -> bool:
-        return True
+        return False
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)

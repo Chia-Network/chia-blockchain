@@ -1059,7 +1059,7 @@ class DataLayerWallet:
     ##########
 
     def require_derivation_paths(self) -> bool:
-        return True
+        return False
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         puzzle: Program = self.puzzle_for_pk(pubkey)

@@ -1469,7 +1469,7 @@ class DIDWallet:
         return did_info
 
     def require_derivation_paths(self) -> bool:
-        return True
+        return False
 
 
 if TYPE_CHECKING:
