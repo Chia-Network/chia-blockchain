@@ -139,11 +139,9 @@ class CATWallet:
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
-            info = await puzzle_store.wallet_info_for_puzzle_hash(c.puzzle_hash)
-            if info is None:
-                raise ValueError("Internal Error")
-            id, wallet_type = info
-            if id == self.id():
+            parent_spend: CoinSpend = next(spend for spend in spend_bundle.coin_spends if spend.coin.name() == c.parent_coin_info)
+            mod, curried_args = parent_spend.puzzle_reveal.to_program().uncurry()
+            if mod == CAT_MOD and bytes32(curried_args.at("rf")).as_python() == self.cat_info.limitations_program_hash:
                 cat_coin = c
 
         if cat_coin is None:
