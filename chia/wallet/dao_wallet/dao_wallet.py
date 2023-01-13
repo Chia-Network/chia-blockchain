@@ -421,7 +421,7 @@ class DAOWallet:
 
         # if nonexistent, then create one
         cat_tail_hash = get_cat_tail_hash_from_treasury_puzzle(parent_inner_puz)
-        # cat_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
+        cat_wallet = None
         # get cat tail and for loop through our wallets to see if we have a dao cat wallet with this tail
         for wallet_id in self.wallet_state_manager.wallets:
             wallet = self.wallet_state_manager.wallets[wallet_id]
@@ -435,21 +435,22 @@ class DAOWallet:
                     )
                     wallet.wallet_info = wallet_info
                     await self.wallet_state_manager.user_store.update_wallet(wallet_info)
-                    self.cat_wallet = wallet
-                    self.cat_wallet.__class__ = DAOCATWallet  # Probably not the right way to do this
+                    cat_wallet = wallet
+                    cat_wallet.__class__ = DAOCATWallet  # Probably not the right way to do this
+                    # TODO: fix the above when DAOCATWallet is more fleshed out
                     break
             elif wallet.type() == WalletType.DAO_CAT:
                 assert isinstance(wallet, DAOCATWallet)
-                self.cat_wallet = wallet
+                cat_wallet = wallet
                 break
         else:
             # Didn't find a cat wallet, so create one
-            self.cat_wallet = await DAOCATWallet.create_wallet_for_cat(
+            cat_wallet = await DAOCATWallet.create_wallet_for_cat(
                 self.wallet_state_manager, self.standard_wallet, cat_tail_hash.hex()
             )
-            assert self.cat_wallet is not None
 
-        cat_wallet_id = self.cat_wallet.wallet_info.id
+        assert cat_wallet is not None
+        cat_wallet_id = cat_wallet.wallet_info.id
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32

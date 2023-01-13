@@ -33,4 +33,20 @@ class DAOCATWallet(CATWallet):
 
     @classmethod
     def type(cls) -> uint8:
-            return uint8(WalletType.DAO_CAT)
+        return uint8(WalletType.DAO_CAT)
+
+    async def select_coin(amount, proposal_id):
+        # for loop through our coins and check which ones haven't yet voted on that proposal
+        return
+
+    async def create_vote_spend(amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
+
+        return
+
+    async def enter_vote_state():
+
+        return
+
+    async def exit_vote_state():
+
+        return
