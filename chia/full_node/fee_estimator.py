@@ -39,7 +39,7 @@ class SmartFeeEstimator:
         # get_bucket_index returns left (-1) bucket (-1). Start value is already -1
         # We want +1 from the lowest bucket it failed at. Thus +3
         max_val = len(self.fee_tracker.buckets) - 1
-        start_index = min(get_bucket_index(self.fee_tracker.sorted_buckets, fail_bucket.start) + 3, max_val)
+        start_index = min(get_bucket_index(self.fee_tracker.buckets, fail_bucket.start) + 3, max_val)
 
         fee_val: float = self.fee_tracker.buckets[start_index]
         return fee_val
