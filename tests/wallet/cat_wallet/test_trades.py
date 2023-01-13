@@ -478,3 +478,50 @@ class TestCATTrades:
         await full_node.process_transaction_records(records=txs)
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
+
+    @pytest.mark.asyncio
+    async def test_trade_cancellation_balance_check(self, wallets_prefarm):
+        (
+            [wallet_node_maker, maker_funds],
+            [wallet_node_taker, taker_funds],
+            full_node,
+        ) = wallets_prefarm
+        wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
+
+        xch_to_cat_amount = uint64(100)
+
+        async with wallet_node_maker.wallet_state_manager.lock:
+            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+            )
+
+            tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+
+        await full_node.process_transaction_records(records=tx_records)
+
+        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
+        await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
+        maker_funds -= xch_to_cat_amount
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
+
+        chia_for_cat = {
+            wallet_maker.id(): -(await wallet_maker.get_spendable_balance()),
+            cat_wallet_maker.id(): 4,
+        }
+
+        trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
+
+        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
+            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+            return TradeStatus(trade_rec.status)
+
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
+        assert error is None
+        assert success is True
+        assert trade_make is not None
+        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
+        await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+        await full_node.process_transaction_records(records=txs)
+
+        await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
