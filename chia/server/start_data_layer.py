@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import pathlib
 import sys
@@ -94,18 +95,17 @@ async def async_main() -> int:
         root_path=DEFAULT_ROOT_PATH,
     )
 
-    sys.stdout = StdOutputLogger(log, logging.INFO)
+    with contextlib.redirect_stdout(StdOutputLogger(log, logging.INFO)):
+        create_all_ssl(
+            root_path=DEFAULT_ROOT_PATH,
+            private_node_names=["data_layer"],
+            public_node_names=["data_layer"],
+            overwrite=False,
+        )
 
-    create_all_ssl(
-        root_path=DEFAULT_ROOT_PATH,
-        private_node_names=["data_layer"],
-        public_node_names=["data_layer"],
-        overwrite=False,
-    )
-
-    service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
-    await service.setup_process_global_state()
-    await service.run()
+        service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
+        await service.setup_process_global_state()
+        await service.run()
 
     return 0
 
