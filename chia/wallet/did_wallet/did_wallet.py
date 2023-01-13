@@ -387,10 +387,7 @@ class DIDWallet:
         # Check inner puzzle consistency
         assert self.did_info.origin_coin is not None
         full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
-        try:
-            assert full_puzzle.get_tree_hash() == coin.puzzle_hash
-        except:
-            breakpoint()
+        assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
 
