@@ -32,6 +32,8 @@ from chia.util.ints import uint8, uint32, uint64
 
 @dataclass
 class BucketResult:
+    start_index: int
+    end_index: int
     start: float
     end: float
     within_target: float
@@ -255,6 +257,8 @@ class FeeStat:  # TxConfirmStats
         new_bucket_range = True
         passing = True
         pass_bucket: BucketResult = BucketResult(
+            start_index=0,
+            end_index=0,
             start=0.0,
             end=0.0,
             within_target=0.0,
@@ -263,6 +267,8 @@ class FeeStat:  # TxConfirmStats
             left_mempool=0.0,
         )
         fail_bucket: BucketResult = BucketResult(
+            start_index=0,
+            end_index=0,
             start=0.0,
             end=0.0,
             within_target=0.0,
@@ -307,8 +313,11 @@ class FeeStat:  # TxConfirmStats
                         fail_min_bucket = min(cur_near_bucket, cur_far_bucket)
                         fail_max_bucket = max(cur_near_bucket, cur_far_bucket)
                         self.log.debug(f"Fail_min_bucket: {fail_min_bucket}")
+                        fail_start_index = fail_min_bucket - 1 if fail_min_bucket else 0
                         fail_bucket = BucketResult(
-                            start=self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0,
+                            start_index=fail_start_index,
+                            end_index=fail_max_bucket,
+                            start=self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0.0,
                             end=self.buckets[fail_max_bucket],
                             within_target=n_conf,
                             total_confirmed=total_num,
@@ -351,15 +360,19 @@ class FeeStat:  # TxConfirmStats
                     # This is the correct bucket
                     median = self.m_fee_rate_avg[i] / self.tx_ct_avg[i]
                     break
-            pass_bucket.start = self.buckets[min_bucket - 1] if min_bucket else 0
+            pass_bucket.start = self.buckets[min_bucket - 1] if min_bucket else 0.0
             pass_bucket.end = self.buckets[max_bucket]
+            pass_bucket.start_index = min_bucket - 1 if min_bucket else 0
+            pass_bucket.end_index = max_bucket
 
         if passing and new_bucket_range is False:
             fail_min_bucket = min(cur_near_bucket, cur_far_bucket)
             fail_max_bucket = max(cur_near_bucket, cur_far_bucket)
             fail_bucket = BucketResult(
-                start=self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0,
+                start=self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0.0,
                 end=self.buckets[fail_max_bucket],
+                start_index=fail_min_bucket - 1 if fail_min_bucket else 0,
+                end_index=fail_max_bucket,
                 within_target=n_conf,
                 total_confirmed=total_num,
                 in_mempool=extra_num,
@@ -386,17 +399,11 @@ class FeeStat:  # TxConfirmStats
         return result
 
 
-def clamp(n: int, smallest: int, largest: int) -> int:
-    return max(smallest, min(n, largest))
-
-
 def get_bucket_index(buckets: List[float], fee_rate: float) -> int:
     if len(buckets) < 1:
         raise RuntimeError("get_bucket_index: buckets is invalid ({buckets})")
-    # Choose the bucket to the left if we do not have exactly this fee rate
     # Python's list.bisect_left returns the index to insert a new element into a sorted list
-    bucket_index = bisect_left(buckets, fee_rate) - 1
-    return clamp(bucket_index, 0, len(buckets) - 1)
+    return min(bisect_left(buckets, fee_rate), len(buckets) - 1)
 
 
 def init_buckets() -> List[float]:
