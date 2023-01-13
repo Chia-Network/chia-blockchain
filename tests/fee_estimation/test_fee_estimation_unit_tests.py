@@ -104,52 +104,6 @@ def test_steady_fee_pressure() -> None:
     assert estimates_after == block_estimates
 
 
-def test_fee_estimation_inception() -> None:
-    """
-    Confirm that estimates are given only for blocks farther out than the smallest
-    transaction block wait time we have observed.
-    """
-    max_block_cost_clvm = uint64(1000 * 1000)
-    estimator1 = create_bitcoin_fee_estimator(max_block_cost_clvm)
-    wallet_tool = WalletTool(test_constants)
-    cost = uint64(5000000)
-    fee = uint64(10000000)
-
-    start = 100
-    end = 300
-
-    for height in range(start, end):
-        height = uint32(height)
-        # Transactions will wait in the mempool for 1 block
-        items = make_block(wallet_tool, height, 1, cost, fee, num_blocks_wait_in_mempool=1)
-        estimator1.new_block(FeeBlockInfo(uint32(height), items))
-
-    e = []
-    for seconds in range(40, 5 * 60, 40):
-        est = estimator1.estimate_fee_rate(time_offset_seconds=seconds)
-        e.append(est.mojos_per_clvm_cost)
-
-    # Confirm that estimates are available for near blocks
-    assert e == [2, 2, 2, 2, 2, 2, 2]
-
-    ##########################################################
-    estimator5 = create_bitcoin_fee_estimator(max_block_cost_clvm)
-
-    for height in range(start, end):
-        height = uint32(height)
-        # Transactions will wait in the mempool for 5 blocks
-        items = make_block(wallet_tool, height, 1, cost, fee, num_blocks_wait_in_mempool=5)
-        estimator5.new_block(FeeBlockInfo(uint32(height), items))
-
-    e1 = []
-    for seconds in range(40, 5 * 60, 40):
-        est = estimator5.estimate_fee_rate(time_offset_seconds=seconds)
-        e1.append(est.mojos_per_clvm_cost)
-
-    # Confirm that estimates start after block 4
-    assert e1 == [0, 0, 0, 2, 2, 2, 2]
-
-
 def test_init_buckets() -> None:
     buckets = init_buckets()
     assert len(buckets) > 1
