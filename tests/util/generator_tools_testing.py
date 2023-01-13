@@ -8,10 +8,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
+from chia.util.ints import uint32
 
 
 def run_and_get_removals_and_additions(
-    block: FullBlock, max_cost: int, *, cost_per_byte: int, mempool_mode=False
+    block: FullBlock, max_cost: int, *, cost_per_byte: int, height: uint32, mempool_mode=False
 ) -> Tuple[List[bytes32], List[Coin]]:
     removals: List[bytes32] = []
     additions: List[Coin] = []
@@ -26,6 +27,7 @@ def run_and_get_removals_and_additions(
             max_cost,
             cost_per_byte=cost_per_byte,
             mempool_mode=mempool_mode,
+            height=height,
         )
         assert npc_result.error is None
         rem, add = tx_removals_and_additions(npc_result.conds)

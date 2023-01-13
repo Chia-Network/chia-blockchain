@@ -6,8 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 
 from chia.cmds.cmds_util import execute_with_wallet
-
-# from chia.cmds.coins import coins_cmd
+from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
@@ -925,8 +924,7 @@ def nft_get_info_cmd(
 
 
 # Keep at bottom.
-# Remove coins subcommand from wallet for now pending further testing
-# wallet_cmd.add_command(coins_cmd)
+wallet_cmd.add_command(coins_cmd)
 
 
 @wallet_cmd.group("notifications", short_help="Send/Manage notifications")
