@@ -4,6 +4,7 @@ import sys
 from decimal import Decimal
 from typing import Any, Dict, List, Tuple, Union
 
+from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin
@@ -88,7 +89,7 @@ def print_coins(
                 break
             coin, conf_height = coins[i + j]
             address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix, decimal_only=True)
+            amount_str = print_balance(coin.amount, mojo_per_unit, "", decimal_only=True)
             print(f"Coin ID: 0x{coin.name().hex()}")
             print(target_string.format(address, amount_str, conf_height))
 
@@ -108,11 +109,11 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     min_coin_amount = Decimal(args["min_coin_amount"])
     excluded_amounts = args["excluded_amounts"]
     number_of_coins = args["number_of_coins"]
-    max_dust_amount = Decimal(args["max_dust_amount"])
+    max_amount = Decimal(args["max_amount"])
     target_coin_amount = Decimal(args["target_coin_amount"])
     target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in args["target_coin_ids"]]
     largest = bool(args["largest"])
-    fee = Decimal(args["fee"])
+    final_fee = uint64(int(Decimal(args["fee"]) * units["chia"]))
     if number_of_coins > 500:
         raise ValueError(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
     try:
@@ -124,30 +125,32 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     if not await wallet_client.get_synced():
         print("Wallet not synced. Please wait.")
         return
-    final_max_dust_amount = uint64(int(max_dust_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
+    final_max_amount = uint64(int(max_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_excluded_amounts: List[uint64] = [uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts]
-    final_fee = uint64(int(fee * mojo_per_unit))
     final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
     if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
         removals: List[Coin] = await wallet_client.select_coins(
             amount=final_target_coin_amount + final_fee,
             wallet_id=wallet_id,
-            max_coin_amount=final_max_dust_amount,
+            max_coin_amount=final_max_amount,
             min_coin_amount=final_min_coin_amount,
             excluded_amounts=final_excluded_amounts + [final_target_coin_amount],  # dont reuse coins of same amount.
         )
     else:
         conf_coins, _, _ = await wallet_client.get_spendable_coins(
             wallet_id=wallet_id,
-            max_coin_amount=final_max_dust_amount,
+            max_coin_amount=final_max_amount,
             min_coin_amount=final_min_coin_amount,
             excluded_amounts=final_excluded_amounts,
         )
         if len(target_coin_ids) > 0:
             conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
-        if len(conf_coins) <= 1:
+        if len(conf_coins) == 0:
             print("No coins to combine.")
+            return
+        if len(conf_coins) == 1:
+            print("Only one coin found, you need at least two coins to combine.")
             return
         if largest:
             conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
@@ -176,7 +179,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
 async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id: int = args["id"]
     number_of_coins = args["number_of_coins"]
-    fee = Decimal(args["fee"])
+    final_fee = uint64(int(Decimal(args["fee"]) * units["chia"]))
     # new args
     amount_per_coin = Decimal(args["amount_per_coin"])
     target_coin_id: bytes32 = bytes32.from_hexstr(args["target_coin_id"])
@@ -193,8 +196,6 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
         print("Wallet not synced. Please wait.")
         return
     final_amount_per_coin = uint64(int(amount_per_coin * mojo_per_unit))
-    final_fee = uint64(int(fee * mojo_per_unit))
-
     total_amount = (final_amount_per_coin * number_of_coins) + final_fee
     # get full coin record from name, and validate information about it.
     removal_coin_record: CoinRecord = (await wallet_client.get_coin_records_by_names([target_coin_id]))[0]

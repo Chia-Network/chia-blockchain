@@ -2215,7 +2215,7 @@ class WalletRpcApi:
         nft_ids = []
         fee = uint64(request.get("fee", 0))
         for nft_coin in request["nft_coin_list"]:
-            if "nft_coin_id" not in nft_coin or "nft_coin_id" not in nft_coin:
+            if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])

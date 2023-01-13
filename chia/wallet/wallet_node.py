@@ -9,7 +9,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
@@ -646,52 +646,37 @@ class WalletNode:
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
         # Things, so we don't have to reprocess these later. There can be many things in ph_update_res.
         already_checked_ph: Set[bytes32] = set()
-        continue_while: bool = True
-        all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-        while continue_while:
-            # Get all phs from puzzle store
-            ph_chunks: Iterator[List[bytes32]] = chunks(all_puzzle_hashes, 1000)
-            for chunk in ph_chunks:
-                ph_update_res: List[CoinState] = await subscribe_to_phs(
-                    [p for p in chunk if p not in already_checked_ph], full_node, 0
-                )
+        while not self._shut_down:
+            await self.wallet_state_manager.create_more_puzzle_hashes()
+            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
+            not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
+            if not_checked_puzzle_hashes == set():
+                break
+            for chunk in chunks(list(not_checked_puzzle_hashes), 1000):
+                ph_update_res: List[CoinState] = await subscribe_to_phs(chunk, full_node, 0)
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.receive_state_from_peer(ph_update_res, full_node, update_finished_height=True):
                     # If something goes wrong, abort sync
                     return
-                already_checked_ph.update(chunk)
+            already_checked_ph.update(not_checked_puzzle_hashes)
 
-            # Check if new puzzle hashed have been created
-            await self.wallet_state_manager.create_more_puzzle_hashes()
-            all_puzzle_hashes = await self.get_puzzle_hashes_to_subscribe()
-            continue_while = False
-            for ph in all_puzzle_hashes:
-                if ph not in already_checked_ph:
-                    continue_while = True
-                    break
         self.log.info(f"Successfully subscribed and updated {len(already_checked_ph)} puzzle hashes")
 
         # The number of coin id updates are usually going to be significantly less than ph updates, so we can
         # sync from 0 every time.
-        continue_while = True
-        all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(0)
         already_checked_coin_ids: Set[bytes32] = set()
-        while continue_while:
-            one_k_chunks = chunks(all_coin_ids, 1000)
-            for chunk in one_k_chunks:
+        while not self._shut_down:
+            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
+            not_checked_coin_ids = set(all_coin_ids) - already_checked_coin_ids
+            if not_checked_coin_ids == set():
+                break
+            for chunk in chunks(list(not_checked_coin_ids), 1000):
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
 
                 if not await self.receive_state_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
                     return
-                already_checked_coin_ids.update(chunk)
-
-            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
-            continue_while = False
-            for coin_id in all_coin_ids:
-                if coin_id not in already_checked_coin_ids:
-                    continue_while = True
-                    break
+            already_checked_coin_ids.update(not_checked_coin_ids)
         self.log.info(f"Successfully subscribed and updated {len(already_checked_coin_ids)} coin ids")
 
         # Only update this fully when the entire sync has completed
@@ -705,9 +690,7 @@ class WalletNode:
         self.synced_peers.add(full_node.peer_node_id)
         await self.update_ui()
 
-        end_time = time.time()
-        duration = end_time - start_time
-        self.log.info(f"Sync (trusted: {trusted}) duration was: {duration}")
+        self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
 
     async def receive_state_from_peer(
         self,
@@ -1279,13 +1262,11 @@ class WalletNode:
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
         all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
-        puzzle_store_count = len(all_puzzle_hashes)
         # Get all phs from interested store
         interested_puzzle_hashes = [
             t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
         ]
         all_puzzle_hashes.extend(interested_puzzle_hashes)
-        assert puzzle_store_count + len(interested_puzzle_hashes) == len(set(all_puzzle_hashes))
         return all_puzzle_hashes
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
