@@ -5,7 +5,13 @@ from dataclasses import dataclass, field
 
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
 from chia.full_node.fee_estimation import FeeMempoolInfo
-from chia.full_node.fee_tracker import BucketResult, EstimateResult, FeeTracker, get_estimate_time_intervals
+from chia.full_node.fee_tracker import (
+    BucketResult,
+    EstimateResult,
+    FeeTracker,
+    get_bucket_index,
+    get_estimate_time_intervals,
+)
 from chia.types.fee_rate import FeeRate
 from chia.util.ints import uint32, uint64
 
@@ -33,7 +39,7 @@ class SmartFeeEstimator:
         # get_bucket_index returns left (-1) bucket (-1). Start value is already -1
         # We want +1 from the lowest bucket it failed at. Thus +3
         max_val = len(self.fee_tracker.buckets) - 1
-        start_index = min(self.fee_tracker.get_bucket_index(fail_bucket.start) + 3, max_val)
+        start_index = min(get_bucket_index(self.fee_tracker.buckets, fail_bucket.start) + 3, max_val)
 
         fee_val: float = self.fee_tracker.buckets[start_index]
         return fee_val
@@ -46,7 +52,7 @@ class SmartFeeEstimator:
         estimate_result = self.fee_tracker.estimate_fee(time_offset_seconds)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
-    def get_estimates(self, mempool_info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimateGroup:
+    def get_estimates(self, info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimateGroup:
         self.log.error(self.fee_tracker.buckets)
         short_time_seconds, med_time_seconds, long_time_seconds = get_estimate_time_intervals()
 
@@ -57,7 +63,7 @@ class SmartFeeEstimator:
         if tracking_length < 20:
             return FeeEstimateGroup(error="Not enough data", estimates=[])
 
-        if ignore_mempool is False and mempool_info.current_mempool_cost < int(mempool_info.MAX_BLOCK_COST_CLVM * 0.8):
+        if ignore_mempool is False and info.current_mempool_cost < int(info.mempool_info.max_block_clvm_cost * 0.8):
             return FeeEstimateGroup(
                 error=None,
                 estimates=[

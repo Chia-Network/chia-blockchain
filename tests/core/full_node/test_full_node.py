@@ -5,7 +5,7 @@ import dataclasses
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -20,10 +20,12 @@ from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability, capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
-from chia.simulator.block_tools import get_signage_point, test_constants
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools, get_signage_point, test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -49,8 +51,8 @@ from chia.wallet.transaction_record import TransactionRecord
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
-from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
+from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
 from tests.util.wallet_is_synced import wallet_is_synced
 
@@ -58,7 +60,7 @@ from tests.util.wallet_is_synced import wallet_is_synced
 async def new_transaction_not_requested(incoming, new_spend):
     await asyncio.sleep(3)
     while not incoming.empty():
-        response, peer = await incoming.get()
+        response = await incoming.get()
         if (
             response is not None
             and isinstance(response, Message)
@@ -73,7 +75,7 @@ async def new_transaction_not_requested(incoming, new_spend):
 async def new_transaction_requested(incoming, new_spend):
     await asyncio.sleep(1)
     while not incoming.empty():
-        response, peer = await incoming.get()
+        response = await incoming.get()
         if (
             response is not None
             and isinstance(response, Message)
@@ -1951,3 +1953,41 @@ class TestFullNodeProtocol:
             if block.challenge_chain_sp_proof is not None:
                 assert not block.challenge_chain_sp_proof.normalized_to_identity
             assert not block.challenge_chain_ip_proof.normalized_to_identity
+
+    @pytest.mark.parametrize(
+        argnames=["custom_capabilities", "expect_success"],
+        argvalues=[
+            # standard
+            [capabilities, True],
+            # an additional enabled but unknown capability
+            [[*capabilities, (uint16(max(Capability) + 1), "1")], True],
+            # no capability, not even Chia mainnet
+            # TODO: shouldn't we fail without Capability.BASE?
+            [[], True],
+            # only an unknown capability
+            # TODO: shouldn't we fail without Capability.BASE?
+            [[(uint16(max(Capability) + 1), "1")], True],
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_invalid_capability_can_connect(
+        self,
+        two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+        self_hostname: str,
+        custom_capabilities: List[Tuple[uint16, str]],
+        expect_success: bool,
+    ) -> None:
+        # TODO: consider not testing this against both DB v1 and v2?
+
+        [
+            initiating_full_node_api,
+            listening_full_node_api,
+            initiating_server,
+            listening_server,
+            bt,
+        ] = two_nodes
+
+        initiating_server._local_capabilities_for_handshake = custom_capabilities
+
+        connected = await initiating_server.start_client(PeerInfo(self_hostname, uint16(listening_server._port)), None)
+        assert connected == expect_success, custom_capabilities

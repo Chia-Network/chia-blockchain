@@ -51,14 +51,14 @@ class TestDos:
 
         ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
         await ws.close()
         assert ws.closed
 
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
 
@@ -76,7 +76,7 @@ class TestDos:
         assert ws.closed
         try:
             ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
             assert response.type == WSMsgType.CLOSE
@@ -98,7 +98,7 @@ class TestDos:
 
         ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         await ws.send_bytes(bytes([1] * 1024))
 
@@ -113,7 +113,7 @@ class TestDos:
         assert ws.closed
         try:
             ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
             assert response.type == WSMsgType.CLOSE
@@ -122,9 +122,7 @@ class TestDos:
         await asyncio.sleep(6)
 
         # Ban expired
-        await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-        )
+        await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024)
 
         await session.close()
 
@@ -142,7 +140,7 @@ class TestDos:
 
         ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
 
         # Construct an otherwise valid handshake message

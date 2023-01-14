@@ -72,11 +72,13 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
         yield data_rpc_api
 
 
-async def init_wallet_and_node(one_wallet_and_one_simulator: SimulatorsAndWalletsServices) -> nodes_with_port_bt_ph:
+async def init_wallet_and_node(
+    self_hostname: str, one_wallet_and_one_simulator: SimulatorsAndWalletsServices
+) -> nodes_with_port_bt_ph:
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator
     wallet_node = wallet_service._node
     full_node_api = full_node_service._api
-    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -123,16 +125,16 @@ async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
-    await offer_setup.full_node_api.process_blocks(count=1)
+    await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     return await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer)
 
 
 @pytest.mark.asyncio
 async def test_create_insert_get(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         # test insert
@@ -178,9 +180,11 @@ async def test_create_insert_get(
 
 
 @pytest.mark.asyncio
-async def test_upsert(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path) -> None:
+async def test_upsert(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         # test insert
@@ -207,10 +211,10 @@ async def test_upsert(one_wallet_and_one_simulator_services: SimulatorsAndWallet
 
 @pytest.mark.asyncio
 async def test_create_double_insert(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -244,10 +248,10 @@ async def test_create_double_insert(
 
 @pytest.mark.asyncio
 async def test_keys_values_ancestors(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
@@ -314,9 +318,11 @@ async def test_keys_values_ancestors(
 
 
 @pytest.mark.asyncio
-async def test_get_roots(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path) -> None:
+async def test_get_roots(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -366,10 +372,10 @@ async def test_get_roots(one_wallet_and_one_simulator_services: SimulatorsAndWal
 
 @pytest.mark.asyncio
 async def test_get_root_history(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -419,9 +425,11 @@ async def test_get_root_history(
 
 
 @pytest.mark.asyncio
-async def test_get_kv_diff(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path) -> None:
+async def test_get_kv_diff(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -485,10 +493,10 @@ async def test_get_kv_diff(one_wallet_and_one_simulator_services: SimulatorsAndW
 
 @pytest.mark.asyncio
 async def test_batch_update_matches_single_operations(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -557,7 +565,7 @@ async def test_batch_update_matches_single_operations(
 
 @pytest.mark.asyncio
 async def test_get_owned_stores(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
     num_blocks = 4
@@ -565,7 +573,7 @@ async def test_get_owned_stores(
     assert wallet_service.rpc_server is not None
     wallet_rpc_port = wallet_service.rpc_server.listen_port
     full_node_api = full_node_service._api
-    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -597,10 +605,10 @@ async def test_get_owned_stores(
 
 @pytest.mark.asyncio
 async def test_subscriptions(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -644,6 +652,7 @@ class OfferSetup:
 
 @pytest_asyncio.fixture(name="offer_setup")
 async def offer_setup_fixture(
+    self_hostname: str,
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
 ) -> AsyncIterator[OfferSetup]:
@@ -653,12 +662,12 @@ async def offer_setup_fixture(
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None
-        await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
         assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallets.append(wallet)
 
-        await full_node_api.farm_blocks(count=1, wallet=wallet)
+        await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet)
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: List[StoreSetup] = []
@@ -687,7 +696,7 @@ async def offer_setup_fixture(
         [maker, taker] = store_setups
 
         for sleep_time in backoff_times():
-            await full_node_api.process_blocks(count=1)
+            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             try:
                 await maker.api.get_root({"id": maker.id.hex()})
                 await taker.api.get_root({"id": taker.id.hex()})
@@ -799,7 +808,7 @@ async def process_for_data_layer_keys(
         else:
             if expected_value is None or value == expected_value:
                 break
-        await full_node_api.process_blocks(count=1)
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(sleep_time)
     else:
         raise Exception("failed to confirm the new data")
@@ -1604,7 +1613,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
             offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
         ):
             break
-        await offer_setup.full_node_api.process_blocks(count=1)
+        await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)
     else:
         assert False, "offer was not cancelled"
@@ -1765,10 +1774,10 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
 @pytest.mark.asyncio
 async def test_get_sync_status(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        one_wallet_and_one_simulator_services
+        self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)

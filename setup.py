@@ -8,12 +8,12 @@ dependencies = [
     "aiofiles==22.1.0",  # Async IO for files
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
-    "chiabip158==1.1",  # bip158-style wallet filters
+    "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.16",
-    "clvm-tools-rs==0.1.25",  # Rust implementation of clvm_tools' compiler
+    "chia_rs==0.2.0",
+    "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.3",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
@@ -28,12 +28,12 @@ dependencies = [
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
     "dnspython==2.2.1",  # Query DNS seeds
-    "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
+    "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
     "typing-extensions==4.4.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.2.6",
     "packaging==21.3",
-    "psutil==5.9.1",
+    "psutil==5.9.4",
 ]
 
 upnp_dependencies = [
@@ -41,8 +41,9 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "anyio",
     "build",
-    "coverage",
+    "coverage==7.0.1",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
