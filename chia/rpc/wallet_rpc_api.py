@@ -2270,7 +2270,7 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": nft_dict.keys(), "success": True, "spend_bundle": spend_bundle}
+            return {"wallet_id": list(nft_dict.keys()), "success": True, "spend_bundle": spend_bundle}
         else:
             raise ValueError("Couldn't set DID on given NFT")
 
@@ -2343,7 +2343,7 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": nft_dict.keys(), "success": True, "spend_bundle": spend_bundle}
+            return {"wallet_id": list(nft_dict.keys()), "success": True, "spend_bundle": spend_bundle}
         else:
             raise ValueError("Couldn't transfer given NFTs")
 
