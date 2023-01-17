@@ -1138,10 +1138,9 @@ def test_run_for_cost_and_additions() -> None:
     solution = Program.to(conditions)
     with pytest.raises(ValueError, match="('cost exceeded', '01')"):
         run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(1))
-    created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
-    expected_cost, expected_coins = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
-    assert expected_cost == 44
-    assert expected_coins == [created_coin]
+    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
+    assert cost == uint64(44)
+    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
 
 
 def test_find_duplicate_spends_nothing_to_do() -> None:
