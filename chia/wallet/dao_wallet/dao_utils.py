@@ -117,7 +117,6 @@ def get_lockup_puzzle(
         CAT_MOD_HASH,
         cat_tail,
         previous_votes_list,  # TODO: maybe format check this in this function
-        proposal_timelock,
         innerpuz,
     )
     return puzzle

@@ -20,23 +20,79 @@ from chia.wallet.cat_wallet.cat_utils import (
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
 from chia.wallet.coin_selection import select_coins
+from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle
+from chia.wallet.cat_wallet.lineage_store import CATLineageStore
+from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_info import WalletInfo
 
 
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
 
 
-class DAOCATWallet(CATWallet):
+class DAOCATWallet():
+    wallet_state_manager: WalletStateManager
+    log: logging.Logger
+    wallet_info: WalletInfo
     dao_cat_info: DAOCATInfo
+    standard_wallet: Wallet
+    cost_of_single_tx: Optional[int]
+    lineage_store: CATLineageStore
 
     @classmethod
     def type(cls) -> uint8:
         return uint8(WalletType.DAO_CAT)
 
-    # MH: at the moment this is mixing clean and dirty coins, meaning we'll have to search for the stored coin info again later
+    @staticmethod
+    async def get_or_create_wallet_for_cat(
+        wallet_state_manager: WalletStateManager,
+        wallet: Wallet,
+        limitations_program_hash_hex: str,
+        name: Optional[str] = None,
+    ) -> DAOCATWallet:
+        self = DAOCATWallet()
+        self.cost_of_single_tx = None
+        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+
+        limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
+
+        for id, w in wallet_state_manager.wallets.items():
+            if w.type() == DAOCATWallet.type():
+                assert isinstance(w, DAOCATWallet)
+                if w.get_asset_id() == limitations_program_hash_hex:
+                    self.log.warning("Not creating wallet for already existing DAO CAT wallet")
+                    return w
+
+        self.wallet_state_manager = wallet_state_manager
+        if name is None:
+            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
+
+        limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
+        # TODO: scan and find dao_wallet_id, and free cat wallet id
+        dao_wallet_id = None
+        free_cat_wallet_id = None
+
+        self.dao_cat_info = DAOCATInfo(
+            dao_wallet_id,
+            free_cat_wallet_id,
+            limitations_program_hash,
+            None,
+            [],
+        )
+        info_as_string = bytes(self.dao_cat_info).hex()
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.DAO_CAT, info_as_string)
+
+        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
+        return self
+
     # maybe we change this to return the full records and just add the clean ones ourselves later
     async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> Set[Coin]:
         coins = Set()
@@ -64,10 +120,27 @@ class DAOCATWallet(CATWallet):
 
         return
 
-    async def enter_vote_state():
+    async def enter_vote_state(self, coins: Optional[List[Coin]] = None):
+        innerpuz = await self.get_new_inner_puzzle()
+        puzzle = get_lockup_puzzle(
+            self.cat_info.limitations_program_hash,
+            [],
+            innerpuz,
+        )
 
         return
 
     async def exit_vote_state():
 
         return
+
+    async def add_coin_to_tracked_list():
+
+        return
+
+    async def update_coin_in_tracked_list():
+
+        return
+
+    async def get_asset_id(self):
+        return bytes(self.cat_info.limitations_program_hash).hex()
