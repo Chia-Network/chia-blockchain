@@ -1370,6 +1370,9 @@ class WalletRpcApi:
             puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
             if "memos" in request:
                 memos.append([mem.encode("utf-8") for mem in request["memos"]])
+        coins = None
+        if "coins" in request and len(request["coins"]) > 0:
+            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
@@ -1380,7 +1383,7 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Set[Coin] = {
+            exclude_coins: Optional[Set[Coin]] = {
                 wr.coin
                 for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
                     [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
@@ -1388,13 +1391,14 @@ class WalletRpcApi:
                 if wr is not None
             }
         else:
-            exclude_coins = set()
+            exclude_coins = None
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     fee,
+                    coins=coins,
                     memos=memos if memos else None,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
@@ -1408,6 +1412,7 @@ class WalletRpcApi:
                 amounts,
                 puzzle_hashes,
                 fee,
+                coins=coins,
                 memos=memos if memos else None,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,

@@ -495,6 +495,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
+    removals = await client.select_coins(1750000000000, wallet_id=1)  # we want a coin that won't be selected by default
     outputs = await create_tx_outputs(wallet_2, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])])
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(amount_outputs + 1)
@@ -502,6 +503,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     send_tx_res: TransactionRecord = await client.send_transaction_multi(
         1,
         outputs,
+        coins=removals,
         fee=amount_fee,
     )
     spend_bundle = send_tx_res.spend_bundle
@@ -509,6 +511,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     assert send_tx_res is not None
 
     assert_tx_amounts(send_tx_res, outputs, amount_fee=amount_fee, change_expected=True)
+    assert send_tx_res.removals == removals
 
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
@@ -696,6 +699,16 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
+    # Test CAT spend with a fee and pre-specified removals / coins
+    removals = await client.select_coins(amount=uint64(2), wallet_id=cat_0_id)
+    tx_res = await client.cat_spend(cat_0_id, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals)
+    assert tx_res.wallet_id == cat_0_id
+    spend_bundle = tx_res.spend_bundle
+    assert spend_bundle is not None
+    assert removals[0] in tx_res.removals
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
     # Test unacknowledged CAT
     await wallet_node.wallet_state_manager.interested_store.add_unacknowledged_token(
         asset_id, "Unknown", uint32(10000), bytes32(b"\00" * 32)
@@ -703,8 +716,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     cats = await client.get_stray_cats()
     assert len(cats) == 1
 
-    await time_out_assert(20, get_confirmed_balance, 15, client, cat_0_id)
-    await time_out_assert(20, get_confirmed_balance, 5, client_2, cat_1_id)
+    await time_out_assert(20, get_confirmed_balance, 14, client, cat_0_id)
+    await time_out_assert(20, get_confirmed_balance, 6, client_2, cat_1_id)
 
     # Test CAT coin selection
     selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
