@@ -109,6 +109,7 @@ class WalletRpcApi:
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
             "/farm_block": self.farm_block,  # Only when node simulator is running
+            "/get_timestamp_for_height": self.get_timestamp_for_height,
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
@@ -540,6 +541,9 @@ class WalletRpcApi:
 
         await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}
+
+    async def get_timestamp_for_height(self, request) -> EndpointResult:
+        return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}
 
     ##########################################################################################
     # Wallet Management
