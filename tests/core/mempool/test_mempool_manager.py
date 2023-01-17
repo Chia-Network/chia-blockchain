@@ -1235,10 +1235,7 @@ def test_find_duplicate_spends_eligible_3rd_time_another_2nd_time_and_one_non_el
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
     spends_to_dedup, cost_saving, new_dedups, dedup_additions = find_duplicate_spends(mempool_item, dedup_coin_spends)
-    expected_spends_to_dedup = []
-    expected_spends_to_dedup.extend(sb1.coin_spends)
-    expected_spends_to_dedup.extend(sb2.coin_spends)
-    assert spends_to_dedup == expected_spends_to_dedup
+    assert spends_to_dedup == sb1.coin_spends + sb2.coin_spends
     saved_cost2 = uint64(44)
     created_coins2 = {Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3)}
     expected_new_dedups = {TEST_COIN_ID2: DedupCoinSpend(second_solution, saved_cost2, created_coins2)}
