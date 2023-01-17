@@ -9,6 +9,7 @@ from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 from chia_rs import ELIGIBLE_FOR_DEDUP, Coin
+from clvm.casts import int_from_bytes
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -65,7 +66,7 @@ def run_for_cost_and_additions(
     for condition in conditions.as_python():
         if condition[0] == ConditionOpcode.CREATE_COIN:
             puzzle_hash = bytes32(condition[1])
-            amount = uint64(int.from_bytes(condition[2], "big"))
+            amount = uint64(int_from_bytes(condition[2]))
             created_coins.append(Coin(coin_id, puzzle_hash, amount))
     return (uint64(cost), created_coins)
 
