@@ -1133,6 +1133,21 @@ async def test_sufficient_total_fpc_increase() -> None:
     assert_sb_not_in_pool(mempool_manager, sb3)
 
 
+def test_run_for_cost_and_additions_created_coin_amount_0() -> None:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 0]]
+    solution = Program.to(conditions)
+    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
+    assert cost == uint64(44)
+    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 0)]
+
+
+def test_run_for_cost_and_additions_created_coin_amount_negative() -> None:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
+    solution = Program.to(conditions)
+    with pytest.raises(ValueError, match="Value -1 does not fit into uint64"):
+        run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
+
+
 def test_run_for_cost_and_additions() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     solution = Program.to(conditions)
