@@ -1236,8 +1236,13 @@ def test_find_duplicate_spends_eligible_3rd_time_another_2nd_time_and_one_non_el
     spends_to_dedup, cost_saving, new_dedups, dedup_additions = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert spends_to_dedup == sb1.coin_spends + sb2.coin_spends
     saved_cost2 = uint64(44)
+    assert cost_saving == saved_cost + saved_cost2
     created_coins2 = {Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3)}
     expected_new_dedups = {TEST_COIN_ID2: DedupCoinSpend(second_solution, saved_cost2, created_coins2)}
-    assert cost_saving == saved_cost + saved_cost2
     assert new_dedups == expected_new_dedups
-    assert dedup_additions == created_coins.union(created_coins2)
+    expected_dedup_additions = {
+        Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1),
+        Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2),
+        Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3),
+    }
+    assert dedup_additions == expected_dedup_additions
