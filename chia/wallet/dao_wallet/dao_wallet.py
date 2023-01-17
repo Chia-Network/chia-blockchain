@@ -877,3 +877,6 @@ class DAOWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
+
+    def get_cat_wallet_id(self) -> uint64:
+        return self.dao_info.cat_wallet_id

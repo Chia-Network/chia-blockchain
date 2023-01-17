@@ -24,6 +24,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
@@ -63,21 +64,30 @@ class DAOCATWallet():
 
         limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
 
+        dao_wallet_id = None
+        free_cat_wallet_id = None
         for id, w in wallet_state_manager.wallets.items():
             if w.type() == DAOCATWallet.type():
                 assert isinstance(w, DAOCATWallet)
                 if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing DAO CAT wallet")
                     return w
-
+            elif w.type() == CATWallet.type():
+                assert isinstance(w, CATWallet)
+                if w.get_asset_id() == limitations_program_hash_hex:
+                    free_cat_wallet_id = w.id()
+        assert free_cat_wallet_id is not None
+        for id, w in wallet_state_manager.wallets.items():
+            if w.type() == DAOWallet.type():
+                assert isinstance(w, DAOWallet)
+                if w.get_cat_wallet_id() == free_cat_wallet_id:
+                    dao_wallet_id = w.id()
+        assert dao_wallet_id is not None
         self.wallet_state_manager = wallet_state_manager
         if name is None:
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
-        # TODO: scan and find dao_wallet_id, and free cat wallet id
-        dao_wallet_id = None
-        free_cat_wallet_id = None
 
         self.dao_cat_info = DAOCATInfo(
             dao_wallet_id,
