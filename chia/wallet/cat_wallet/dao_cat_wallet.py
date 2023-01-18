@@ -124,6 +124,9 @@ class DAOCATWallet():
         # loop through our coins and check which ones haven't yet voted on that proposal and add them to coins set
         return coins
 
+    def id(self) -> uint32:
+        return self.wallet_info.id
+
     async def create_vote_spend(amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
 
         return
@@ -150,8 +153,8 @@ class DAOCATWallet():
 
         return
 
-    async def get_asset_id(self):
-        return bytes(self.cat_info.limitations_program_hash).hex()
+    def get_asset_id(self):
+        return bytes(self.dao_cat_info.limitations_program_hash).hex()
 
     async def get_new_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_inner_puzzle()
