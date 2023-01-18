@@ -90,7 +90,7 @@ class TestDAOWallet:
         )
 
         # Create a cat wallet to test casting from CATWallet to DAOCATWallet in resync_treasury_state
-        cat_wallet_1 = await CATWallet.create_wallet_for_cat(
+        cat_wallet_1 = await CATWallet.get_or_create_wallet_for_cat(
             wallet_node_1.wallet_state_manager,
             wallet_1,
             cat_tail_hash.hex(),

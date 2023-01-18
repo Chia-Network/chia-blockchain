@@ -24,7 +24,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
-from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
@@ -78,8 +77,7 @@ class DAOCATWallet():
                     free_cat_wallet_id = w.id()
         assert free_cat_wallet_id is not None
         for id, w in wallet_state_manager.wallets.items():
-            if w.type() == DAOWallet.type():
-                assert isinstance(w, DAOWallet)
+            if w.type() == WalletType.DAO:
                 if w.get_cat_wallet_id() == free_cat_wallet_id:
                     dao_wallet_id = w.id()
         assert dao_wallet_id is not None

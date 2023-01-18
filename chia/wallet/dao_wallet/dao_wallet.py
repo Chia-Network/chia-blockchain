@@ -613,7 +613,7 @@ class DAOWallet:
         await self.save_info(dao_info)
 
         # This will also mint the coins
-        new_cat_wallet = await DAOCATWallet.create_new_cat_wallet(
+        new_cat_wallet = await CATWallet.create_new_cat_wallet(
             self.wallet_state_manager,
             self.standard_wallet,
             cat_tail_info,

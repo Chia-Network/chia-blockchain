@@ -35,7 +35,8 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
-from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz, uncurry_innerpuz
+from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
