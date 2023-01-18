@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Optional
 import logging
+from typing import List, Optional
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -97,9 +98,7 @@ def get_treasury_puzzle(
     return puzzle
 
 
-def get_lockup_puzzle(
-    cat_tail: bytes32, previous_votes_list: List[bytes32], proposal_timelock: uint64, innerpuz: Program
-) -> Program:
+def get_lockup_puzzle(cat_tail: bytes32, previous_votes_list: List[bytes32], innerpuz: Program) -> Program:
     # PROPOSAL_MOD_HASH
     # SINGLETON_MOD_HASH
     # SINGLETON_LAUNCHER_PUZHASH
