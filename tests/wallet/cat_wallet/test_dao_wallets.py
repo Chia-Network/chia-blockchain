@@ -12,6 +12,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
@@ -103,6 +104,9 @@ class TestDAOWallet:
         assert dao_wallet_1 is not None
         assert dao_wallet.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
 
-        for wallet_id in wallet_node_1.wallet_state_manager.wallets:
-            wal = wallet_node_1.wallet_state_manager.wallets[wallet_id]
-            breakpoint()
+        dao_cat_wallet_0 = DAOCATWallet(
+            wallet_node_0.wallet_state_manager,
+            wallet,
+            bytes(cat_tail_hash).hex(),
+        )
+        breakpoint()
