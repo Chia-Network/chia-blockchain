@@ -83,7 +83,7 @@ class DAOCATWallet():
         assert dao_wallet_id is not None
         self.wallet_state_manager = wallet_state_manager
         if name is None:
-            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
+            name = CATWallet.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
 
@@ -128,7 +128,7 @@ class DAOCATWallet():
 
         return
 
-    async def enter_vote_state(self, coins: Optional[List[Coin]] = None):
+    async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None):
         innerpuz = await self.get_new_inner_puzzle()
         puzzle = get_lockup_puzzle(
             self.cat_info.limitations_program_hash,
@@ -136,7 +136,7 @@ class DAOCATWallet():
             innerpuz,
         )
 
-        return
+        return puzzle
 
     async def exit_vote_state():
 
@@ -152,3 +152,13 @@ class DAOCATWallet():
 
     async def get_asset_id(self):
         return bytes(self.cat_info.limitations_program_hash).hex()
+
+    async def get_new_inner_hash(self) -> bytes32:
+        puzzle = await self.get_new_inner_puzzle()
+        return puzzle.get_tree_hash()
+
+    async def get_new_inner_puzzle(self) -> Program:
+        return await self.standard_wallet.get_new_puzzle()
+
+    def require_derivation_paths(self) -> bool:
+        return True

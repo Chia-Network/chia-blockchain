@@ -19,6 +19,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.simulator.time_out_assert import time_out_assert
 from tests.util.wallet_is_synced import wallet_is_synced
+from chia.wallet.util.wallet_types import WalletType
 
 
 class TestDAOWallet:
@@ -103,10 +104,19 @@ class TestDAOWallet:
         )
         assert dao_wallet_1 is not None
         assert dao_wallet.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
+        cat_wallet_0 = None
 
-        dao_cat_wallet_0 = DAOCATWallet(
+        for wallet_id in wallet_node_0.wallet_state_manager.wallets:
+            wal = wallet_node_0.wallet_state_manager.wallets[wallet_id]
+            if wal.type() == WalletType.CAT:
+                cat_wallet_0 = wal
+        assert cat_wallet_0 is not None
+        breakpoint()
+
+        dao_cat_wallet_0 = await DAOCATWallet.get_or_create_wallet_for_cat(
             wallet_node_0.wallet_state_manager,
             wallet,
             bytes(cat_tail_hash).hex(),
         )
+        vs_puz = await dao_cat_wallet_0.get_new_vote_state_puzzle()
         breakpoint()
