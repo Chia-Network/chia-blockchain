@@ -146,22 +146,7 @@ class DAOCATWallet:
                 s += coin.coin.amount
                 if s >= amount:
                     break
-        # try and get already locked up coins first
-        if s >= amount:
-            return coins
-        
-            # spendable_amount: uint128,
-            # max_coin_amount: uint64,
-            # spendable_coins: List[WalletCoinRecord],
-            # unconfirmed_removals: Dict[bytes32, Coin],
-            # log: logging.Logger,
-            # amount: uint128,
-        coins = await select_coins(
-            amount - s,
-
-        )
         assert sum(c.amount for c in coins) >= amount
-        # loop through our coins and check which ones haven't yet voted on that proposal and add them to coins set
         return coins
 
     def id(self) -> uint32:
@@ -181,6 +166,7 @@ class DAOCATWallet:
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
         await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
+        breakpoint()
         return puzzle
 
     async def exit_vote_state():

@@ -120,11 +120,12 @@ class TestDAOWallet:
         )
         vs_puz = await dao_cat_wallet_0.get_new_vote_state_puzzle()
         # breakpoint()
-        cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
+        await cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
+        breakpoint()
         fake_proposal_id = Program.to("proposal_id").get_tree_hash()
         spendable_coins = await dao_cat_wallet_0.wallet_state_manager.get_spendable_coins_for_wallet(
             dao_cat_wallet_0.id(), None
