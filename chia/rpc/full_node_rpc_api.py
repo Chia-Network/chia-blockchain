@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -759,19 +760,38 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item}
 
-    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
-        if "spend_bundle" in request and "cost" in request:
-            raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
-        if "spend_bundle" not in request and "cost" not in request:
-            raise ValueError("Request must contain 'spend_bundle' or 'cost'")
-        if "target_times" not in request:
-            raise ValueError("Request must contain 'target_times' array")
-        if any(t < 0 for t in request["target_times"]):
-            raise ValueError("'target_times' array members must be non-negative")
+    def _get_spendbundle_type_cost(self, name: str):
+        """
+        This is a stopgap until we modify the wallet RPCs to get exact costs for created SpendBundles
+        before we send the mto the Mempool.
+        """
+        maxBlockCostCLVM = 11_000_000_000
 
-        cost = 0
+        txCostEstimates = {
+            "walletSendXCH": math.floor(maxBlockCostCLVM / 1170),
+            "spendCATtx": 36_382_111,
+            "acceptOffer": 721_393_265,
+            "cancelOffer": 212_443_993,
+            "burnNFT": 74_385_541,
+            "assignDIDToNFT": 115_540_006,
+            "transferNFT": 74_385_541,
+            "createPlotNFT": 18_055_407,
+            "claimPoolingReward": 82_668_466,
+            "createDID": 57_360_396,
+        }
+        return txCostEstimates[name]
+
+    async def _validate_fee_estimate_cost(self, request: Dict) -> uint64:
+        c = 0
+        ns = ["spend_bundle", "cost", "spend_type"]
+        for n in ns:
+            if n in request:
+                c += 1
+        if c != 1:
+            raise ValueError(f"Request must contain exactly one of {ns}")
+
         if "spend_bundle" in request:
-            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
             spend_name = spend_bundle.name()
             npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_name
@@ -779,13 +799,27 @@ class FullNodeRpcApi:
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
             cost = npc_result.cost
-        if "cost" in request:
-            cost = uint64(request["cost"])
+        elif "cost" in request:
+            cost = request["cost"]
+        else:
+            cost = self._get_spendbundle_type_cost(request["spend_type"])
+        return uint64(cost)
+
+    def _validate_target_times(self, request: Dict) -> None:
+        if "target_times" not in request:
+            raise ValueError("Request must contain 'target_times' array")
+        if any(t < 0 for t in request["target_times"]):
+            raise ValueError("'target_times' array members must be non-negative")
+
+    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
+        self._validate_target_times(request)
+        spend_cost = await self._validate_fee_estimate_cost(request)
 
         target_times = request["target_times"]
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
         estimates = [
-            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * cost for time in target_times
+            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * spend_cost
+            for time in target_times
         ]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
         mempool_size = self.service.mempool_manager.mempool.total_mempool_cost

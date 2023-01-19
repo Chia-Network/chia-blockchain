@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Tuple
+import re
+from typing import Any, List, Tuple
 
 import pytest
 import pytest_asyncio
@@ -14,6 +15,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.wallet_node import WalletNode
 
@@ -201,3 +203,54 @@ async def test_multiple(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpc
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [1, 5, 10, 15, 60, 120, 180, 240], "cost": 1})
     assert response["estimates"] == [0, 0, 0, 0, 0, 0, 0, 0]
     assert response["target_times"] == [1, 5, 10, 15, 60, 120, 180, 240]
+
+
+def get_test_spendbundle(bt: BlockTools) -> SpendBundle:
+    wallet_a: WalletTool = bt.get_pool_wallet_tool()
+    my_puzzle_hash = wallet_a.get_new_puzzlehash()
+    recevier_puzzle_hash = bytes32(b"0" * 32)
+    coin_to_spend = Coin(bytes32(b"0" * 32), my_puzzle_hash, uint64(1750000000000))
+    return wallet_a.generate_signed_transaction(uint64(coin_to_spend.amount), recevier_puzzle_hash, coin_to_spend)
+
+
+@pytest.mark.asyncio
+async def test_validate_fee_estimate_cost_err(
+    setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
+) -> None:
+    spend_bundle = get_test_spendbundle(bt)
+    client, full_node_rpc_api = setup_node_and_rpc
+    bad_arglist: List[List[Any]] = [
+        [["foo", "bar"]],
+        [["spend_bundle", spend_bundle.to_json_dict()], ["cost", 1]],
+        [["spend_bundle", spend_bundle.to_json_dict()], ["spend_type", "walletSendXCH"]],
+        [["cost", 1], ["spend_type", "walletSendXCH"]],
+        [["spend_bundle", spend_bundle.to_json_dict()], ["cost", 1], ["spend_type", "walletSendXCH"]],
+    ]
+    for args in bad_arglist:
+        print(args)
+        request = {"target_times": [1]}
+        for var, val in args:
+            print(var)
+            request[var] = val
+        with pytest.raises(
+            ValueError, match=re.escape("Request must contain exactly one of ['spend_bundle', 'cost', 'spend_type']")
+        ):
+            _ = await full_node_rpc_api.get_fee_estimate(request)
+
+
+@pytest.mark.asyncio
+async def test_validate_fee_estimate_cost_ok(
+    setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
+) -> None:
+    spend_bundle = get_test_spendbundle(bt)
+    client, full_node_rpc_api = setup_node_and_rpc
+
+    good_arglist: List[List[Any]] = [
+        ["spend_bundle", spend_bundle.to_json_dict()],
+        ["cost", 1],
+        ["spend_type", "walletSendXCH"],
+    ]
+    for var, val in good_arglist:
+        request = {"target_times": [1]}
+        request[var] = val
+        _ = await full_node_rpc_api.get_fee_estimate(request)
