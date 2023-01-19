@@ -1607,14 +1607,6 @@ class WalletStateManager:
         wallet = self.wallets[wallet_id]
         return wallet
 
-    async def clean_resync_tables(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute("DELETE FROM coin_record")
-            await conn.execute("DELETE FROM interested_coins")
-            await conn.execute("DELETE FROM interested_puzzle_hashes")
-            await conn.execute("DELETE FROM key_val_store")
-            await conn.execute("DELETE FROM users_nfts")
-
     async def reorg_rollback(self, height: int) -> List[uint32]:
         """
         Rolls back and updates the coin_store and transaction store. It's possible this height

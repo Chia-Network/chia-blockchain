@@ -104,6 +104,7 @@ class WalletRpcApi:
             "/check_delete_key": self.check_delete_key,
             "/delete_all_keys": self.delete_all_keys,
             # Wallet node
+            "/set_wallet_resync": self.set_wallet_resync,
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
@@ -492,6 +493,19 @@ class WalletRpcApi:
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
+    async def set_wallet_resync(self, request) -> Dict[str, Any]:
+        """
+        Resync the current logged in wallet. The transaction and offer records will be kept.
+        :param request: optionally pass in `enable` as bool to enable/disable resync
+        :return:
+        """
+        assert self.service.wallet_state_manager is not None
+        try:
+            enable = bool(request.get("enable", True))
+        except ValueError:
+            raise ValueError("Please provide a boolean value for `enable` parameter in request")
+        self.service.set_resync_flag(enable)
+        return {"success": True}
 
     async def get_sync_status(self, request: Dict) -> EndpointResult:
         sync_mode = self.service.wallet_state_manager.sync_mode

@@ -45,6 +45,12 @@ class WalletRpcClient(RpcClient):
         except ValueError as e:
             return e.args[0]
 
+    async def set_wallet_resync(self, enable: bool = True) -> None:
+        return await self.fetch(
+            path="set_wallet_resync",
+            request_json={"enable": enable},
+        )
+
     async def get_logged_in_fingerprint(self) -> int:
         return (await self.fetch("get_logged_in_fingerprint", {}))["fingerprint"]
 
