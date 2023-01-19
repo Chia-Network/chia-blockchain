@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -760,26 +759,24 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item}
 
-    def _get_spendbundle_type_cost(self, name: str):
+    def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """
         This is a stopgap until we modify the wallet RPCs to get exact costs for created SpendBundles
         before we send the mto the Mempool.
         """
-        maxBlockCostCLVM = 11_000_000_000
 
-        txCostEstimates = {
-            "walletSendXCH": math.floor(maxBlockCostCLVM / 1170),
-            "spendCATtx": 36_382_111,
-            "acceptOffer": 721_393_265,
-            "cancelOffer": 212_443_993,
-            "burnNFT": 74_385_541,
-            "assignDIDToNFT": 115_540_006,
-            "transferNFT": 74_385_541,
-            "createPlotNFT": 18_055_407,
-            "claimPoolingReward": 82_668_466,
-            "createDID": 57_360_396,
+        tx_cost_estimates = {
+            "send_xch_transaction": 9_401_710,
+            "cat_spend": 36_382_111,
+            "take_offer": 721_393_265,
+            "cancel_offer": 212_443_993,
+            "nft_set_nft_did": 115_540_006,
+            "nft_transfer_nft": 74_385_541,  # burn or transfer
+            "create_new_pool_wallet": 18_055_407,
+            "pw_absorb_rewards": 82_668_466,
+            "create_new_did_wallet": 57_360_396,
         }
-        return txCostEstimates[name]
+        return uint64(tx_cost_estimates[name])
 
     async def _validate_fee_estimate_cost(self, request: Dict) -> uint64:
         c = 0
