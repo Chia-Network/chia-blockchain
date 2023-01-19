@@ -14,6 +14,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.server.ws_connection import WSChiaConnection
+from chia.wallet.lineage_proof import LineageProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
@@ -105,10 +107,34 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         return self
 
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        """Notification from wallet state manager that wallet has been received."""
+        self.log.info(f"CAT wallet has been notified that {coin} was added")
+
+        inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
+        lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
+        breakpoint()
+        await self.add_lineage(coin.name(), lineage_proof)
+
+        lineage = await self.get_lineage_proof_for_coin(coin)
+
+        if lineage is None:
+            try:
+                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
+                    [coin.parent_coin_info], peer=peer
+                )
+                assert coin_state[0].coin.name() == coin.parent_coin_info
+                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                    coin_state[0].spent_height, coin_state[0].coin, peer
+                )
+                await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
+            except Exception as e:
+                self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
+
     # maybe we change this to return the full records and just add the clean ones ourselves later
     async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> Set[Coin]:
-        coins = Set()
-        sum = 0
+        coins = set()
+        s = 0
         for coin in self.dao_cat_info.locked_coins:
             compatible = True
             for prev_vote in coin.previous_votes:
@@ -117,13 +143,23 @@ class DAOCATWallet:
                     break
             if compatible:
                 coins.add(coin.coin)
-                sum += coin.coin.amount
-                if sum >= amount:
+                s += coin.coin.amount
+                if s >= amount:
                     break
         # try and get already locked up coins first
-        if sum >= amount:
+        if s >= amount:
             return coins
-        coins = await select_coins(amount - sum(c.amount for c in coins))
+        
+            # spendable_amount: uint128,
+            # max_coin_amount: uint64,
+            # spendable_coins: List[WalletCoinRecord],
+            # unconfirmed_removals: Dict[bytes32, Coin],
+            # log: logging.Logger,
+            # amount: uint128,
+        coins = await select_coins(
+            amount - s,
+
+        )
         assert sum(c.amount for c in coins) >= amount
         # loop through our coins and check which ones haven't yet voted on that proposal and add them to coins set
         return coins
@@ -142,7 +178,9 @@ class DAOCATWallet:
             [],
             innerpuz,
         )
-
+        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
+        await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
         return puzzle
 
     async def exit_vote_state():
@@ -167,6 +205,7 @@ class DAOCATWallet:
     async def get_new_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
+    # MH: I have a feeling we may want the real full puzzle here
     async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
@@ -182,3 +221,25 @@ class DAOCATWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
+
+    async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
+        result: List[WalletCoinRecord] = []
+
+        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+            self.id(), records
+        )
+
+        for record in record_list:
+            lineage = await self.get_lineage_proof_for_coin(record.coin)
+            if lineage is not None and not lineage.is_none():
+                result.append(record)
+
+        return result
+
+    async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        coins = await self.get_cat_spendable_coins(records)
+        amount = 0
+        for record in coins:
+            amount += record.coin.amount
+
+        return uint128(amount)

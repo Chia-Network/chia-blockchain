@@ -7,6 +7,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
+from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
@@ -111,7 +112,6 @@ class TestDAOWallet:
             if wal.type() == WalletType.CAT:
                 cat_wallet_0 = wal
         assert cat_wallet_0 is not None
-        breakpoint()
 
         dao_cat_wallet_0 = await DAOCATWallet.get_or_create_wallet_for_cat(
             wallet_node_0.wallet_state_manager,
@@ -119,4 +119,16 @@ class TestDAOWallet:
             bytes(cat_tail_hash).hex(),
         )
         vs_puz = await dao_cat_wallet_0.get_new_vote_state_puzzle()
-        breakpoint()
+        # breakpoint()
+        cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        fake_proposal_id = Program.to("proposal_id").get_tree_hash()
+        spendable_coins = await dao_cat_wallet_0.wallet_state_manager.get_spendable_coins_for_wallet(
+            dao_cat_wallet_0.id(), None
+        )
+        assert len(spendable_coins) > 0
+        coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
+        assert len(coins) > 0
