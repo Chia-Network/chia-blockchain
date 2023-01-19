@@ -832,6 +832,10 @@ class DAOWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
+    async def create_add_money_to_treasury_spend():
+
+        return
+
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)
 
