@@ -113,7 +113,7 @@ class DAOCATWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
-        breakpoint()
+        breakpoint()  # if we get here, then success
         await self.add_lineage(coin.name(), lineage_proof)
 
         lineage = await self.get_lineage_proof_for_coin(coin)
