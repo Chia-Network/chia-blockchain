@@ -115,7 +115,7 @@ jobs:
 
     - name: Decode code signing cert into an encrypted file
       if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-      uses: kitek/decode-base64-into-file-action@1
+      uses: kitek/decode-base64-into-file-action@1.0
       with:
         encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
         destination-file: .\win_code_sign_cert.p12
