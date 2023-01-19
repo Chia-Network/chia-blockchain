@@ -17,6 +17,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.fee_rate import FeeRateV2
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32, uint64
+from chia.util.math import monotonically_decrease
 
 log = logging.getLogger(__name__)
 
@@ -146,3 +147,15 @@ def test_get_bucket_index() -> None:
     for rate, expected_index in ((0.5, 0), (1.0 - e, 0), (1.5, 0), (2.0 - e, 0), (2.0 + e, 1), (2.1, 1)):
         result_index = get_bucket_index(buckets, rate)
         assert result_index == expected_index
+
+
+def test_monotonically_decrease() -> None:
+    inputs: List[List[int]]
+    output: List[List[int]]
+    inputs = [[], [-1], [0], [1], [0, 0], [0, 1], [1, 0], [1, 2, 3], [1, 1, 1], [3, 2, 1], [3, 3, 1], [1, 3, 3]]
+    output = [[], [-1], [0], [1], [0, 0], [0, 0], [1, 0], [1, 1, 1], [1, 1, 1], [3, 2, 1], [3, 3, 1], [1, 1, 1]]
+    i: List[int]
+    o: List[int]
+    for i, o in zip(inputs, output):
+        print(o, i)
+        assert o == monotonically_decrease(i)

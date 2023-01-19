@@ -26,6 +26,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
+from chia.util.math import monotonically_decrease
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 
@@ -813,12 +814,14 @@ class FullNodeRpcApi:
         self._validate_target_times(request)
         spend_cost = await self._validate_fee_estimate_cost(request)
 
-        target_times = request["target_times"]
+        target_times: List[int] = request["target_times"]
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
+        target_times.sort()
         estimates = [
             estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * spend_cost
             for time in target_times
         ]
+        estimates = monotonically_decrease(estimates)
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
         mempool_size = self.service.mempool_manager.mempool.total_mempool_cost
         mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees
