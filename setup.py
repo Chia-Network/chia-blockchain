@@ -34,7 +34,6 @@ dependencies = [
     "zstd==1.5.2.6",
     "packaging==21.3",
     "psutil==5.9.4",
-    "anyio",
 ]
 
 upnp_dependencies = [
