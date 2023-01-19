@@ -504,7 +504,11 @@ class WalletRpcApi:
             enable = bool(request.get("enable", True))
         except ValueError:
             raise ValueError("Please provide a boolean value for `enable` parameter in request")
-        self.service.set_resync_flag(enable)
+        fingerprint = self.service.logged_in_fingerprint
+        if fingerprint is not None:
+            self.service.set_resync_flag(fingerprint, enable)
+        else:
+            raise ValueError("You need to login into wallet to use this RPC call")
         return {"success": True}
 
     async def get_sync_status(self, request: Dict) -> EndpointResult:

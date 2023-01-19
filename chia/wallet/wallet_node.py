@@ -227,19 +227,24 @@ class WalletNode:
 
         return key
 
-    def set_resync_flag(self, flag: bool = True):
-        fingerprint = self.logged_in_fingerprint
+    def set_resync_flag(self, fingerprint, flag: bool = True):
         config = load_config(self.root_path, "config.yaml")
-        if flag:
+        if flag is True:
             config["wallet"]["reset_sync_for_fingerprint"] = fingerprint
+            self.log.info("Enabled resync for wallet fingerprint: %s", fingerprint)
         else:
+            self.log.debug(
+                "Trying to disable resync: %s [%s]", fingerprint, config["wallet"].get("reset_sync_for_fingerprint")
+            )
             if config["wallet"].get("reset_sync_for_fingerprint") == fingerprint:
                 del config["wallet"]["reset_sync_for_fingerprint"]
+                self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
         save_config(self.root_path, "config.yaml", config)
 
-    async def reset_sync_db(self, db_path):
+    async def reset_sync_db(self, db_path, fingerprint):
         conn: aiosqlite.Connection
         async with manage_connection(db_path) as conn:
+            self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
             try:
                 # if less than 20 it means we're running on old database and that's
@@ -271,7 +276,10 @@ class WalletNode:
                 commit = False
             finally:
                 if commit:
+                    self.log.info("Reset wallet sync data completed.")
                     await conn.execute("COMMIT")
+                # now disable it
+                self.set_resync_flag(fingerprint, False)
 
     async def _start(self) -> None:
         await self._start_with_fingerprint()
@@ -294,7 +302,8 @@ class WalletNode:
         if private_key is None:
             self.log_out()
             return False
-        if not fingerprint:
+        # override with private key fetched in case it's different from what was passed
+        if fingerprint is None:
             fingerprint = private_key.get_g1().get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
@@ -308,7 +317,7 @@ class WalletNode:
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
         if self.config.get("reset_sync_for_fingerprint") == fingerprint:
-            await self.reset_sync_db(path)
+            await self.reset_sync_db(path, fingerprint)
 
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,

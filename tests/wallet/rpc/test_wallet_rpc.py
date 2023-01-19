@@ -1321,6 +1321,7 @@ async def test_set_wallet_resync(wallet_rpc_environment: WalletRpcTestEnvironmen
     new_config["reset_sync_for_fingerprint"] = config["wallet"]["reset_sync_for_fingerprint"]
     wallet_node_2.config = new_config
     wallet_node_2.root_path = wallet_node.root_path
+    wallet_node_2.local_keychain = wallet_node.local_keychain
     # use second node to start the same wallet, reusing config and db
     await wallet_node_2._start_with_fingerprint(fingerprint)
     assert wallet_node_2._wallet_state_manager
@@ -1329,6 +1330,9 @@ async def test_set_wallet_resync(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert after_txs == before_txs
     # only coin_store was populated in this case, but now should be empty
     assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
+    updated_config = load_config(wallet_node.root_path, "config.yaml")
+    # check that it's disabled after reset
+    assert updated_config["wallet"].get("reset_sync_for_fingerprint") is None
     wallet_node_2._close()
     await wallet_node_2._await_closed()
 
@@ -1359,6 +1363,7 @@ async def test_set_wallet_resync_disable(wallet_rpc_environment: WalletRpcTestEn
     new_config["reset_sync_for_fingerprint"] = config["wallet"].get("reset_sync_for_fingerprint")
     wallet_node_2.config = new_config
     wallet_node_2.root_path = wallet_node.root_path
+    wallet_node_2.local_keychain = wallet_node.local_keychain
     # use second node to start the same wallet, reusing config and db
     await wallet_node_2._start_with_fingerprint(fingerprint)
     assert wallet_node_2._wallet_state_manager
