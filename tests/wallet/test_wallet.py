@@ -129,6 +129,83 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
+    async def test_wallet_clawback_claim(
+            self,
+            two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+            trusted: bool,
+            self_hostname: str,
+    ) -> None:
+        num_blocks = 5
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+        # Set Clawback config
+        wallet_node_2.wallet_state_manager.config["puzzle_decorators"] = {wallet_node_2.logged_in_fingerprint: ["CLAWBACK"]}
+        wallet_node_2.wallet_state_manager.config["clawback_timelock"] = 10
+        wallet_node_2.wallet_state_manager.init_puzzle_decorator_manager()
+        # Set previous derivation to used since they are not Clawback enabled
+        await wallet_node_2.wallet_state_manager.puzzle_store.set_used_up_to(uint32(1000))
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        cb_puzhash = await wallet_1.get_new_puzzlehash()
+        tx_amount = 1000
+        print(f"Deposit to {cb_puzhash.hex()}")
+        # Deposit to Clawback wallet
+        tx = await wallet.generate_signed_transaction(
+            uint64(tx_amount),
+            cb_puzhash,
+            uint64(0),
+        )
+        await wallet.push_transaction(tx)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount
+
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        expected_confirmed_balance -= tx_amount
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+        await time_out_assert(20, wallet_1.get_confirmed_balance, 1000)
+        normal_puzhash = await wallet.get_new_puzzlehash()
+        print(f"Transfer to {normal_puzhash.hex()}")
+        # Transfer to normal wallet
+        tx = await wallet_1.generate_signed_transaction(
+            uint64(500),
+            normal_puzhash,
+            uint64(0),
+        )
+
+        await wallet_1.push_transaction(tx)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        assert await wallet_1.get_unconfirmed_balance() == 500
+        # Check merkle coins
+        await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 1, 1000)
+        await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 1, 1000)
+
+
+
+
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(
         self,
         wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],

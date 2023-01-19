@@ -30,9 +30,11 @@ class ClawbackPuzzleDecorator:
         self, inner_puzzle: Program, primaries: List[Dict[str, Any]], inner_solution: Program
     ) -> Tuple[Program, Program]:
         clawback_info = dataclasses.replace(self.clawback_info, inner_puzzle=inner_puzzle)
-        solution_data = [primary["puzzle_hash"] for primary in primaries]
+        solution_data = [primary["puzzlehash"] for primary in primaries]
         solution_data.append(clawback_info.puzzle_hash())
         validator_solution = Program.to([[solution_data, inner_solution]])
+        print(f"data {solution_data}")
+        print(f"inner sol {inner_solution.as_python()}")
         return clawback_info.outer_puzzle(), validator_solution
 
     def decorate_memos(

@@ -392,6 +392,7 @@ class Wallet:
                 decorated_target_puzhash = self.wallet_state_manager.decorator_manager.decorate_target_puzhash(
                     inner_puzzle, newpuzzlehash
                 )
+                print(f" prev {newpuzzlehash.hex()} new {decorated_target_puzhash.hex()}")
                 memos = self.wallet_state_manager.decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
                 assert memos is not None
                 if primaries is None:
@@ -409,6 +410,8 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+                print(f"Coin puzhash {coin.puzzle_hash.hex()}, Puzhash: {puzzle.get_tree_hash().hex()}")
+                assert puzzle.get_tree_hash() == coin.puzzle_hash
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
@@ -418,7 +421,6 @@ class Wallet:
                 )
                 solution = self.wallet_state_manager.decorator_manager.solve(inner_puzzle, primaries, solution)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
-
                 spends.append(
                     CoinSpend(
                         coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))

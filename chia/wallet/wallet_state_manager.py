@@ -213,7 +213,7 @@ class WalletStateManager:
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.db_path = db_path
-        self.decorator_manager = PuzzleDecoratorManager.create(self.config, wallet_node.logged_in_fingerprint)
+        self.init_puzzle_decorator_manager()
 
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
@@ -267,6 +267,9 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         return self
+
+    def init_puzzle_decorator_manager(self):
+        self.decorator_manager = PuzzleDecoratorManager.create(self.config, self.wallet_node.logged_in_fingerprint)
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
@@ -676,6 +679,7 @@ class WalletStateManager:
 
         # Check if the coin is a merkle coin
         clawback_args = uncurry_clawback(puzzle)
+        print(f"Potential clawback: {puzzle}")
         if clawback_args is not None:
             return await self.handle_clawback(clawback_args, coin_state, coin_spend)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
@@ -1055,6 +1059,7 @@ class WalletStateManager:
         hint_list = compute_coin_hints(coin_spend)
         recipient_derivation_record = None
         target_ph = None
+        print("Found clawback coin")
         # Check if the wallet is the recipient
         for hint in hint_list:
             recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
@@ -1089,7 +1094,7 @@ class WalletStateManager:
         )
         await self.merkle_coin_store.add_coin_record(coin_record)
         if recipient_derivation_record is not None:
-            self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name())
+            self.log.error("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name())
             # Add merkle coin
             await self.merkle_coin_store.add_coin_record(coin_record)
         # Check if the wallet is the sender
@@ -1097,7 +1102,7 @@ class WalletStateManager:
             DerivationRecord
         ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(coin_spend.coin.puzzle_hash)
         if sender_derivation_record is not None:
-            self.log.info("Found Clawback merkle coin %s as the sender.", coin_state.coin.name())
+            self.log.error("Found Clawback merkle coin %s as the sender.", coin_state.coin.name())
             # Add merkle coin
             await self.merkle_coin_store.add_coin_record(coin_record)
         return None, None
@@ -1169,7 +1174,8 @@ class WalletStateManager:
                             ):
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
-                    await self.update_merkle_coin(peer, coin_state, fork_height)
+                    if fork_height is not None:
+                        await self.update_merkle_coin(peer, coin_state, fork_height)
                     if wallet_id is None or wallet_type is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue

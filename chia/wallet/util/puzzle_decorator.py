@@ -55,6 +55,7 @@ class PuzzleDecoratorManager:
         self.decorator_list = []
         assert fingerprint is not None
         decorator_config: Dict[int, List[str]] = config.get("puzzle_decorators", {})
+        print(f"Initial puzzle decorator: {decorator_config}")
         if fingerprint in decorator_config:
             for decorator in decorator_config.get(fingerprint, []):
                 if decorator == PuzzleDecoratorType.CLAWBACK.name:

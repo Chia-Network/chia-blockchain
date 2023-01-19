@@ -15,18 +15,18 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.util.merkle_utils import build_merkle_tree
 
-CB_MOD = load_clvm("cb_outer.clsp", package_or_requirement="chia.wallet.puzzles.clawback")
+CB_MOD = load_clvm("cb_outer.clsp", package_or_requirement="chia.wallet.puzzles.clawback", include_standard_libraries=True)
 CB_MOD_HASH = CB_MOD.get_tree_hash()
-ACH_CLAWBACK_MOD = load_clvm("ach_clawback.clsp", package_or_requirement="chia.wallet.puzzles.clawback")
+ACH_CLAWBACK_MOD = load_clvm("ach_clawback.clsp", package_or_requirement="chia.wallet.puzzles.clawback", include_standard_libraries=True)
 ACH_CLAWBACK_MOD_HASH = ACH_CLAWBACK_MOD.get_tree_hash()
-ACH_COMPLETION_MOD = load_clvm("ach_completion.clsp", package_or_requirement="chia.wallet.puzzles.clawback")
+ACH_COMPLETION_MOD = load_clvm("ach_completion.clsp", package_or_requirement="chia.wallet.puzzles.clawback", include_standard_libraries=True)
 ACH_COMPLETION_MOD_HASH = ACH_COMPLETION_MOD.get_tree_hash()
-P2_MERKLE_MOD = load_clvm("p2_merkle_tree.clsp", package_or_requirement="chia.wallet.puzzles.clawback")
+P2_MERKLE_MOD = load_clvm("p2_merkle_tree.clsp", package_or_requirement="chia.wallet.puzzles.clawback", include_standard_libraries=True)
 P2_MERKLE_MOD_HASH = P2_MERKLE_MOD.get_tree_hash()
 
-VALIDATOR_MOD = load_clvm("validator.clsp", package_or_requirement="chia.wallet.puzzles.clawback")
+VALIDATOR_MOD = load_clvm("validator.clsp", package_or_requirement="chia.wallet.puzzles.clawback", include_standard_libraries=True)
 VALIDATOR_MOD_HASH = VALIDATOR_MOD.get_tree_hash()
-P2_MERKLE_VALIDATOR_MOD = load_clvm("p2_merkle_validator.clsp", package_or_requirement="chia.wallet.puzzles.clawback")
+P2_MERKLE_VALIDATOR_MOD = load_clvm("p2_merkle_validator.clsp", package_or_requirement="chia.wallet.puzzles.clawback", include_standard_libraries=True)
 
 
 @streamable
