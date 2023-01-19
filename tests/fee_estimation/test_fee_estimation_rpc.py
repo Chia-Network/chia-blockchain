@@ -222,9 +222,9 @@ async def test_validate_fee_estimate_cost_err(
     bad_arglist: List[List[Any]] = [
         [["foo", "bar"]],
         [["spend_bundle", spend_bundle.to_json_dict()], ["cost", 1]],
-        [["spend_bundle", spend_bundle.to_json_dict()], ["spend_type", "walletSendXCH"]],
-        [["cost", 1], ["spend_type", "walletSendXCH"]],
-        [["spend_bundle", spend_bundle.to_json_dict()], ["cost", 1], ["spend_type", "walletSendXCH"]],
+        [["spend_bundle", spend_bundle.to_json_dict()], ["spend_type", "send_xch_transaction"]],
+        [["cost", 1], ["spend_type", "send_xch_transaction"]],
+        [["spend_bundle", spend_bundle.to_json_dict()], ["cost", 1], ["spend_type", "send_xch_transaction"]],
     ]
     for args in bad_arglist:
         print(args)
@@ -248,7 +248,7 @@ async def test_validate_fee_estimate_cost_ok(
     good_arglist: List[List[Any]] = [
         ["spend_bundle", spend_bundle.to_json_dict()],
         ["cost", 1],
-        ["spend_type", "walletSendXCH"],
+        ["spend_type", "send_xch_transaction"],
     ]
     for var, val in good_arglist:
         request = {"target_times": [1]}
