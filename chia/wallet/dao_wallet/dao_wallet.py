@@ -803,6 +803,7 @@ class DAOWallet:
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         return
 
+    # TODO: add an amount of dao_cat to spend on voting on the new proposal here
     async def generate_proposal_eve_spend(
         self,
         eve_coin: Coin,
