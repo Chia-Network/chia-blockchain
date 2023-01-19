@@ -254,3 +254,13 @@ async def test_validate_fee_estimate_cost_ok(
         request = {"target_times": [1]}
         request[var] = val
         _ = await full_node_rpc_api.get_fee_estimate(request)
+
+
+@pytest.mark.asyncio
+async def test_get_spendbundle_type_cost_missing(
+    setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
+) -> None:
+    client, full_node_rpc_api = setup_node_and_rpc
+    with pytest.raises(KeyError, match=re.escape("INVALID")):
+        request = {"target_times": [1], "spend_type": "INVALID"}
+        _ = await full_node_rpc_api.get_fee_estimate(request)
