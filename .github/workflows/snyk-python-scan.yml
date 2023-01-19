@@ -46,7 +46,7 @@ jobs:
 
     - name: Setup Python environment
       if: steps.check_secrets.outputs.HAS_SNYK_SECRET
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
