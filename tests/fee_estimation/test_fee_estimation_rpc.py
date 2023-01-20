@@ -264,3 +264,25 @@ async def test_get_spendbundle_type_cost_missing(
     with pytest.raises(KeyError, match=re.escape("INVALID")):
         request = {"target_times": [1], "spend_type": "INVALID"}
         _ = await full_node_rpc_api.get_fee_estimate(request)
+
+
+@pytest.mark.asyncio
+async def test_get_spendbundle_type_cost_spend_count_ok(
+    setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
+) -> None:
+    client, full_node_rpc_api = setup_node_and_rpc
+    spend_counts = [0, 1, 2]
+    for spend_count in spend_counts:
+        request = {"target_times": [1], "spend_type": "send_xch_transaction", "spend_count": spend_count}
+        ret = await full_node_rpc_api.get_fee_estimate(request)
+        print(spend_count, ret)
+
+
+@pytest.mark.asyncio
+async def test_get_spendbundle_type_cost_spend_count_bad(
+    setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
+) -> None:
+    client, full_node_rpc_api = setup_node_and_rpc
+    with pytest.raises(ValueError):
+        request = {"target_times": [1], "spend_type": "send_xch_transaction", "spend_count": -1}
+        _ = await full_node_rpc_api.get_fee_estimate(request)

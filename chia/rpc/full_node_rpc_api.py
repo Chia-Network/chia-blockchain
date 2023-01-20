@@ -800,6 +800,7 @@ class FullNodeRpcApi:
             cost = request["cost"]
         else:
             cost = self._get_spendbundle_type_cost(request["spend_type"])
+            cost *= request.get("spend_count", 1)
         return uint64(cost)
 
     def _validate_target_times(self, request: Dict) -> None:
