@@ -137,9 +137,9 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
         assert isinstance(unft, UncurriedNFT)
         inner_args = unft.inner_puzzle.uncurry()[1]
         inner_ph = inner_args.at("rrrf").get_tree_hash()
-        meta = unft.metadata.as_python()[1][1]
+        meta = unft.metadata.at("rfr").as_atom()
         # check that the target puzzle hashes of transferred nfts matches the metadata entry
-        assert matched_data[inner_ph]["program"].as_python()[1][1] == meta
+        assert matched_data[inner_ph]["program"].at("rfr").as_atom() == meta
         # Check the did is set for each nft
         assert nft.minter_did == did_id
 
@@ -745,9 +745,9 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
         assert isinstance(unft, UncurriedNFT)
         inner_args = unft.inner_puzzle.uncurry()[1]
         inner_ph = inner_args.at("rrrf").get_tree_hash()
-        meta = unft.metadata.as_python()[1][1]
+        meta = unft.metadata.at("rfr").as_atom()
         # check that the target puzzle hashes of transferred nfts matches the metadata entry
-        assert matched_data[inner_ph]["program"].as_python()[1][1] == meta
+        assert matched_data[inner_ph]["program"].at("rfr").as_atom() == meta
         assert not nft.minter_did
 
 
