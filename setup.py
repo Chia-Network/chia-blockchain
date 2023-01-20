@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -13,7 +14,7 @@ dependencies = [
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.0",
-    "clvm-tools-rs==0.1.25",  # Rust implementation of clvm_tools' compiler
+    "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.3",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
@@ -158,6 +159,9 @@ kwargs = dict(
     },
 )
 
+if "setup_file" in sys.modules:
+    # include dev deps in regular deps when run in snyk
+    dependencies.extend(dev_dependencies)
 
 if len(os.environ.get("CHIA_SKIP_SETUP", "")) < 1:
     setup(**kwargs)  # type: ignore

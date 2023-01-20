@@ -109,6 +109,7 @@ class WalletRpcApi:
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
             "/farm_block": self.farm_block,  # Only when node simulator is running
+            "/get_timestamp_for_height": self.get_timestamp_for_height,
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
@@ -541,6 +542,9 @@ class WalletRpcApi:
 
         await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}
+
+    async def get_timestamp_for_height(self, request) -> EndpointResult:
+        return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}
 
     ##########################################################################################
     # Wallet Management
@@ -2255,6 +2259,7 @@ class WalletRpcApi:
         spend_bundles: List[SpendBundle] = []
         refined_tx_list: List[TransactionRecord] = []
         for tx in tx_list:
+            print(tx)
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
             refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
@@ -2270,7 +2275,12 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": list(nft_dict.keys()), "success": True, "spend_bundle": spend_bundle}
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": spend_bundle,
+                "tx_num": len(refined_tx_list),
+            }
         else:
             raise ValueError("Couldn't set DID on given NFT")
 
@@ -2343,7 +2353,12 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": list(nft_dict.keys()), "success": True, "spend_bundle": spend_bundle}
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": spend_bundle,
+                "tx_num": len(refined_tx_list),
+            }
         else:
             raise ValueError("Couldn't transfer given NFTs")
 

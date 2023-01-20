@@ -145,7 +145,10 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(server_info.url + "/" + filename, timeout=timeout, proxy=proxy_url) as resp:
+                headers = {"accept-encoding": "gzip"}
+                async with session.get(
+                    server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
+                ) as resp:
                     resp.raise_for_status()
                     size = int(resp.headers.get("content-length", 0))
                     log.debug(f"Downloading delta file {filename}. Size {size} bytes.")

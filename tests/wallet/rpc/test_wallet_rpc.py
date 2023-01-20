@@ -296,6 +296,19 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert tx.confirmed
 
 
+@pytest.mark.asyncio
+async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    # This tests that the client returns a uint64, rather than raising or returning something unexpected
+    uint64(await client.get_timestamp_for_height(uint32(1)))
+
+
 @pytest.mark.parametrize(
     "output_args, fee, select_coin, is_cat",
     [
