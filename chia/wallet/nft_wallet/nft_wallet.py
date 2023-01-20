@@ -1101,6 +1101,43 @@ class NFTWallet:
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
         return refined_tx_list
 
+    async def bulk_transfer_nft(
+        self,
+        nft_list: List[NFTCoinInfo],
+        puzzle_hash: bytes32,
+        fee: uint64 = uint64(0),
+    ) -> List[TransactionRecord]:
+        self.log.debug("Transfer NFTs %s to %s", nft_list, puzzle_hash.hex())
+        nft_tx_record = []
+        spend_bundles = []
+        first = True
+
+        for nft_coin_info in nft_list:
+            if not first:
+                fee = uint64(0)
+            nft_tx_record.extend(
+                await self.generate_signed_transaction(
+                    [uint64(nft_coin_info.coin.amount)],
+                    [puzzle_hash],
+                    coins={nft_coin_info.coin},
+                    fee=fee,
+                    new_owner=b"",
+                    new_did_inner_hash=b"",
+                )
+            )
+            first = False
+        refined_tx_list: List[TransactionRecord] = []
+        for tx in nft_tx_record:
+            if tx.spend_bundle is not None:
+                spend_bundles.append(tx.spend_bundle)
+                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+
+        if len(spend_bundles) > 0:
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            # Add all spend bundles to the first tx
+            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+        return refined_tx_list
+
     async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())

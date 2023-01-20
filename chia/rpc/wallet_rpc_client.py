@@ -90,6 +90,9 @@ class WalletRpcClient(RpcClient):
     async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})
 
+    async def get_timestamp_for_height(self, height: uint32) -> uint64:
+        return uint64((await self.fetch("get_timestamp_for_height", {"height": height}))["timestamp"])
+
     # Wallet Management APIs
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> Dict:
         request: Dict[str, Any] = {}
