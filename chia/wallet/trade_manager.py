@@ -386,7 +386,9 @@ class TradeManager:
         await self.trade_store.add_trade_record(trade)
         offer: Offer = Offer.from_bytes(trade.offer)
         removals: List[bytes32] = [coin.name() for coin in trade.coins_of_interest]
-        non_offer_coins: Set[Coin] = set(offer.bundle.not_ephemeral_additions()) ^ set([value for values in offer.get_offered_coins().values() for value in values])
+        non_offer_coins: Set[Coin] = set(offer.bundle.not_ephemeral_additions()) ^ set(
+            [value for values in offer.get_offered_coins().values() for value in values]
+        )
         additions: List[bytes32] = [coin.name() for coin in non_offer_coins]
         await self.wallet_state_manager.add_interested_coin_ids([*removals, *additions])
         self.wallet_state_manager.state_changed("offer_added")
