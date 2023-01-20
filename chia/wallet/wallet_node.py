@@ -251,7 +251,7 @@ class WalletNode:
                 # handled, but not if there's more
                 assert len(rows) < 20, (
                     f"Expected 20 tables, found {len(rows)} tables."
-                    " Please check if the new table needs to be added in clean_resync_tables."
+                    " Please check if the new table needs to be added in reset_sync_db."
                 )
             except AssertionError:
                 self.log.exception("Incompatible database to reset")
