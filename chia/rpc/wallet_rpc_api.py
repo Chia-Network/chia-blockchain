@@ -2257,7 +2257,7 @@ class WalletRpcApi:
         for tx in tx_list:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -2331,7 +2331,7 @@ class WalletRpcApi:
         for tx in tx_list:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
