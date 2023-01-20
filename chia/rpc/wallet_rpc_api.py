@@ -1532,10 +1532,14 @@ class WalletRpcApi:
 
         if request.get("advanced", False):
             return {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos},
+                "id": offer.name(),
             }
         else:
-            return {"summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer)}
+            return {
+                "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
+                "id": offer.name(),
+            }
 
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -1543,7 +1547,10 @@ class WalletRpcApi:
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
         if peer is None:
             raise ValueError("No peer connected")
-        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer))}
+        return {
+            "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
+            "id": offer.name(),
+        }
 
     async def take_offer(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
