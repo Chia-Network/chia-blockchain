@@ -204,6 +204,7 @@ def test_treasury() -> None:
             full_treasury_puz.get_tree_hash(),
             Program.to("payment_nonce").get_tree_hash(),
             0,
+            0,
         ]
     )
     conds: Program = full_treasury_puz.run(solution)
