@@ -1354,7 +1354,7 @@ class NFTWallet:
             # the announcements from announcement_set to match the launcher
             # coin annnouncement
             if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(
@@ -1600,7 +1600,7 @@ class NFTWallet:
 
             # Create the eve transaction with targets if present
             if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(
