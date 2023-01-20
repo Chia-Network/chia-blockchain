@@ -142,6 +142,7 @@ class DAOWallet:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+
         return self
 
     @staticmethod
@@ -279,24 +280,24 @@ class DAOWallet:
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
-
-        self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
+        breakpoint()  # TODO: we should be hitting this actually
+        self.log.info(f"DAO wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
-        if self.dao_info.temp_coin is not None:
-            self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
-        new_info = DAOInfo(
-            self.dao_info.origin_coin,
-            self.dao_info.backup_ids,
-            self.dao_info.num_of_backup_ids_needed,
-            self.dao_info.parent_info,
-            inner_puzzle,
-            None,
-            None,
-            None,
-            False,
-            self.dao_info.metadata,
-        )
-        await self.save_info(new_info)
+        # TODO: this is wrong and needs changing
+
+        # new_info = DAOInfo(
+        #     self.dao_info.origin_coin,
+        #     self.dao_info.backup_ids,
+        #     self.dao_info.num_of_backup_ids_needed,
+        #     self.dao_info.parent_info,
+        #     inner_puzzle,
+        #     None,
+        #     None,
+        #     None,
+        #     False,
+        #     self.dao_info.metadata,
+        # )
+        # await self.save_info(new_info)
 
         future_parent = LineageProof(
             coin.parent_coin_info,
@@ -399,18 +400,6 @@ class DAOWallet:
         if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
             current_inner_puz = parent_inner_puz
         else:
-            # my_amount         ; current amount
-            # new_amount_change ; may be negative or positive. Is zero during eve spend
-            # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
-            # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot -
-            #                                              ; assert from the proposal and also create
-            # new_puzhash  ; if this variable is 0 we do the "add_money" spend case and all variables below are unneeded
-            # proposal_innerpuz
-            # proposal_current_votes ; tally of yes votes
-            # proposal_total_votes   ; total votes cast (by number of cat-mojos)
-            # type  ; this is used for the recreating self type
-            # extra_value  ; this is used for recreating self
-
             inner_solution = parent_spend.solution.to_program().rest().rest().first()
             current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
 
@@ -708,16 +697,19 @@ class DAOWallet:
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
-
+        current_coin = Coin(eve_coin.name(), full_treasury_puzzle.get_tree_hash(), eve_coin.amount)
+        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()])
+        await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()])
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
-            Coin(eve_coin.name(), full_treasury_puzzle.get_tree_hash(), eve_coin.amount),
+            current_coin,
             dao_treasury_puzzle,
         )
-        breakpoint()
+        await self.save_info(dao_info)
+        # breakpoint()
         return full_spend
 
     async def generate_treasury_eve_spend(
