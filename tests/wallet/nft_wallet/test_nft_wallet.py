@@ -1284,7 +1284,9 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
         {"wallet_id": nft_wallet_1_id},
         {"nft_coin_id": nft2.nft_coin_id.hex()},
     ]
-    resp = await api_0.nft_set_did_bulk(dict(did_id=hmr_did_id, nft_coin_list=nft_coin_list))
+    resp = await api_0.nft_set_did_bulk(dict(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=1000))
+    assert len(resp["spend_bundle"].coin_spends) == 4
+    assert resp["tx_num"] == 3
     coins_response = await wait_rpc_state_condition(
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) == 1
     )
@@ -1427,7 +1429,9 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
         {"wallet_id": nft_wallet_1_id},
         {"nft_coin_id": nft2.nft_coin_id.hex()},
     ]
-    resp = await api_0.nft_transfer_bulk(dict(target_address=address, nft_coin_list=nft_coin_list))
+    resp = await api_0.nft_transfer_bulk(dict(target_address=address, nft_coin_list=nft_coin_list, fee=1000))
+    assert len(resp["spend_bundle"].coin_spends) == 3
+    assert resp["tx_num"] == 3
     sb = await make_new_block_with(resp, full_node_api, ph)
     # ensure hints are generated
     assert compute_memos(sb)

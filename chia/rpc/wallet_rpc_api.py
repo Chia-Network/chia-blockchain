@@ -2268,7 +2268,7 @@ class WalletRpcApi:
         for tx in tx_list:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -2281,7 +2281,12 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": list(nft_dict.keys()), "success": True, "spend_bundle": spend_bundle}
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": spend_bundle,
+                "tx_num": len(refined_tx_list),
+            }
         else:
             raise ValueError("Couldn't set DID on given NFT")
 
@@ -2342,7 +2347,7 @@ class WalletRpcApi:
         for tx in tx_list:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -2354,7 +2359,12 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": list(nft_dict.keys()), "success": True, "spend_bundle": spend_bundle}
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": spend_bundle,
+                "tx_num": len(refined_tx_list),
+            }
         else:
             raise ValueError("Couldn't transfer given NFTs")
 
