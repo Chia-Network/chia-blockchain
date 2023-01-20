@@ -722,6 +722,7 @@ class DAOWallet:
                 innerpuz.get_tree_hash(),
                 [],  # A list of messages which the treasury will parrot - assert from the proposal and also create
                 0,  # If this variable is 0 then we do the "add_money" spend case
+                0,
             ]
         )
         # full solution is (lineage_proof my_amount inner_solution)
