@@ -25,7 +25,6 @@ class TimedDuplicateFilter(logging.Filter):
         msg = record.getMessage()
 
         if self.regex.match(msg):
-            # self.count += 1
             now = time.time()
             if now - self.last_log_time > self.min_time_wait_secs:
                 self.last_log_time = now
