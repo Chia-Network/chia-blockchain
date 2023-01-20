@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
@@ -29,6 +30,10 @@ class WalletInterestedStore:
             # Table for unknown CATs
             fields = "asset_id text PRIMARY KEY, name text, first_seen_height integer, sender_puzzle_hash text"
             await conn.execute(f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_tokens({fields})")
+
+            # Table for coin states of unknown CATs
+            fields = "coin_state blob PRIMARY KEY, asset_id text, peer blob, fork_height int"
+            await conn.execute(f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_token_states({fields})")
 
         return self
 
@@ -116,3 +121,50 @@ class WalletInterestedStore:
             {"asset_id": cat[0], "name": cat[1], "first_seen_height": cat[2], "sender_puzzle_hash": cat[3]}
             for cat in cats
         ]
+
+    async def add_unacknowledged_coin_state(
+        self,
+        asset_id: bytes32,
+        coin_state: CoinState,
+        peer_id: bytes32,
+        fork_height: Optional[uint32],
+    ) -> None:
+        """
+        Add an unacknowledged coin state of a CAT to the database. It will be inserted into the retry store when the
+        user decides to acknowledge the asset ID.
+        :param asset_id: CAT asset ID
+        :param coin_state: The state being ignored
+        :param peer_id: The ID of the peer who sent the state
+        :param fork_height: The fork height when the state was sent
+        :return: None
+        """
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR IGNORE INTO unacknowledged_asset_token_states VALUES(?, ?, ?, ?)",
+                (bytes(coin_state), asset_id.hex(), peer_id, 0 if fork_height is None else fork_height),
+            )
+            await cursor.close()
+
+    async def get_unacknowledged_states_for_asset_id(
+        self, asset_id: bytes32, delete_after: bool = False
+    ) -> List[Tuple[CoinState, bytes32, uint32]]:
+        """
+        Return all states for a particular asset ID that were ignored
+        :param asset_id: CAT asset ID
+        :param delete_after: Boolean to delete the states after they are returned (default: False)
+        :return: list of coin state, peer id, fork height tuples ready to be inserted into the retry store
+        """
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id.hex(),)
+            )
+
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "DELETE from unacknowledged_asset_token_states WHERE asset_id=?",
+                (asset_id.hex(),),
+            )
+            await cursor.close()
+
+        return [(CoinState.from_bytes(row[0]), bytes32(row[2]), uint32(row[3])) for row in rows]

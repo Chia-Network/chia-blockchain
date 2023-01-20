@@ -646,7 +646,14 @@ class WalletStateManager:
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
-            return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend)
+            return await self.handle_cat(
+                cat_curried_args,
+                parent_coin_state,
+                coin_state,
+                coin_spend,
+                peer,
+                fork_height,
+            )
 
         # Check if the coin is a NFT
         #                                                        hint
@@ -708,6 +715,8 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a CAT
@@ -751,6 +760,12 @@ class WalletStateManager:
                     CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
                     None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
                     parent_coin_state.coin.puzzle_hash,
+                )
+                await self.interested_store.add_unacknowledged_coin_state(
+                    asset_id,
+                    coin_state,
+                    peer.peer_node_id,
+                    fork_height,
                 )
                 self.state_changed("added_stray_cat")
         return wallet_id, wallet_type

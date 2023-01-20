@@ -208,6 +208,12 @@ class CATWallet:
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         await self.wallet_state_manager.add_new_wallet(self, self.id())
+
+        for state in await self.wallet_state_manager.interested_store.get_unacknowledged_states_for_asset_id(
+            limitations_program_hash, delete_after=True
+        ):
+            await self.wallet_state_manager.retry_store.add_state(*state)
+
         return self
 
     @classmethod
