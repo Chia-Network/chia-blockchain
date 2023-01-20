@@ -762,7 +762,7 @@ class FullNodeRpcApi:
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """
         This is a stopgap until we modify the wallet RPCs to get exact costs for created SpendBundles
-        before we send the mto the Mempool.
+        before we send them to the Mempool.
         """
 
         tx_cost_estimates = {
