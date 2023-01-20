@@ -2259,7 +2259,6 @@ class WalletRpcApi:
         spend_bundles: List[SpendBundle] = []
         refined_tx_list: List[TransactionRecord] = []
         for tx in tx_list:
-            print(tx)
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
             refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
