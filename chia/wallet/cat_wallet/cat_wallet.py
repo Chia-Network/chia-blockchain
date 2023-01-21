@@ -840,7 +840,7 @@ class CATWallet:
                     memos=[],
                 )
             )
-        breakpoint()
+        # breakpoint()
         return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:

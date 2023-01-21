@@ -25,7 +25,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
+from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle
@@ -122,7 +122,7 @@ class DAOCATWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
-        breakpoint()  # if we get here, then success
+        # breakpoint()  # if we get here, then success
         await self.add_lineage(coin.name(), lineage_proof)
 
         lineage = await self.get_lineage_proof_for_coin(coin)
@@ -139,6 +139,37 @@ class DAOCATWallet:
                 await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
+
+        # add the new coin to the list of locked coins.
+        # GW: I'm not sure if we want to update the dao cat info here here?
+        #     Should the incoming coins to this wallet already have a proposal ID?
+        # Matt - I changed the dao_cat_info to use previous_votes instead of active_proposal_votes
+        locked_coins = self.dao_cat_info.locked_coins
+        locked_coins.append(LockedCoinInfo(coin, inner_puzzle, []))
+        dao_cat_info: DAOCATInfo = DAOCATInfo(
+            self.dao_cat_info.dao_wallet_id,
+            self.dao_cat_info.free_cat_wallet_id,
+            self.dao_cat_info.limitations_program_hash,
+            self.dao_cat_info.my_tail,
+            locked_coins,
+        )
+        await self.save_info(dao_cat_info)
+
+    async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:
+        """
+        Lineage proofs are stored as a list of parent coins and the lineage proof you will need if they are the
+        parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
+        """
+        self.log.info(f"Adding parent {name.hex()}: {lineage}")
+        if lineage is not None:
+            await self.lineage_store.add_lineage_proof(name, lineage)
+
+    async def get_lineage_proof_for_coin(self, coin: Coin) -> Optional[LineageProof]:
+        return await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
+
+    async def remove_lineage(self, name: bytes32) -> None:
+        self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
+        await self.lineage_store.remove_lineage_proof(name)
 
     # maybe we change this to return the full records and just add the clean ones ourselves later
     async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> Set[Coin]:
@@ -202,15 +233,19 @@ class DAOCATWallet:
 
     # MH: I have a feeling we may want the real full puzzle here
     async def get_new_puzzlehash(self) -> bytes32:
-        # return await self.standard_wallet.get_new_puzzlehash()
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        record = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+        inner_puzzle = self.standard_wallet.puzzle_for_pk(record.pubkey)
+        puzzle = get_lockup_puzzle(
+            self.dao_cat_info.limitations_program_hash,
+            [],
+            inner_puzzle,
+        )
+        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
+        await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
+        return puzzle.get_tree_hash()
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, inner_puzzle)
-        return cat_puzzle
-
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
         puzzle = get_lockup_puzzle(
             self.dao_cat_info.limitations_program_hash,
@@ -218,7 +253,11 @@ class DAOCATWallet:
             inner_puzzle,
         )
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
-        return cat_puzzle.get_tree_hash()
+        return cat_puzzle
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        puzzle = self.puzzle_for_pk(pubkey)
+        return puzzle.get_tree_hash()
 
     def require_derivation_paths(self) -> bool:
         return True
@@ -244,3 +283,12 @@ class DAOCATWallet:
             amount += record.coin.amount
 
         return uint128(amount)
+
+    async def save_info(self, dao_cat_info: DAOCATInfo) -> None:
+        self.dao_cat_info = dao_cat_info
+        current_info = self.wallet_info
+        data_str = bytes(dao_cat_info).hex()
+        wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
+        self.wallet_info = wallet_info
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+

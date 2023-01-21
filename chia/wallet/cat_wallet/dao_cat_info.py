@@ -12,7 +12,7 @@ from chia.util.streamable import Streamable, streamable
 class LockedCoinInfo(Streamable):
     coin: Coin
     inner_puzzle: Program
-    active_proposal_votes: List[bytes32]
+    previous_votes: List[Optional[bytes32]]
 
 
 @streamable

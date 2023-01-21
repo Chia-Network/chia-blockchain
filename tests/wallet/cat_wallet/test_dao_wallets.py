@@ -73,12 +73,19 @@ class TestDAOWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
         await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
-        dao_wallet = await DAOWallet.create_new_dao_and_wallet(
-            wallet_node_0.wallet_state_manager,
-            wallet,
-            200,
-        )
-        assert dao_wallet is not None
+        async with wallet_node_0.wallet_state_manager.lock:
+            dao_wallet = await DAOWallet.create_new_dao_and_wallet(
+                wallet_node_0.wallet_state_manager,
+                wallet,
+                200,
+            )
+            assert dao_wallet is not None
+            # await wallet_node_0.wallet_state_manager.add_new_wallet(dao_wallet, dao_wallet.id())
+
+        tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+        tx_record = tx_queue[0]
+        await full_node_api.process_transaction_records(records=[tx_record])
+
         treasury_id = dao_wallet.dao_info.treasury_id
         cat_tail_hash = dao_wallet.get_cat_tail_hash()
 
@@ -94,11 +101,12 @@ class TestDAOWallet:
         )
 
         # Create a cat wallet to test casting from CATWallet to DAOCATWallet in resync_treasury_state
-        cat_wallet_1 = await CATWallet.get_or_create_wallet_for_cat(
-            wallet_node_1.wallet_state_manager,
-            wallet_1,
-            cat_tail_hash.hex(),
-        )
+        async with wallet_node_1.wallet_state_manager.lock:
+            cat_wallet_1 = await CATWallet.get_or_create_wallet_for_cat(
+                wallet_node_1.wallet_state_manager,
+                wallet_1,
+                cat_tail_hash.hex(),
+            )
 
         dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             wallet_node_1.wallet_state_manager,
@@ -121,11 +129,12 @@ class TestDAOWallet:
             bytes(cat_tail_hash).hex(),
         )
         vs_puz = await dao_cat_wallet_0.get_new_vote_state_puzzle()
-        vs_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
-        # breakpoint()
-        txs = await cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
 
-        # The cat generate_signed_transaction doesn't push the tx, so we do it manually:
+        # GW: Updated the wallet so we can use get_new_puzzle_hash which will get an unused derivation record for the inner puz
+        vs_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
+        txs = await cat_wallet_0.generate_signed_transaction([10], [vs_puzhash])
+
+        # GW: The cat generate_signed_transaction doesn't push the tx, so we do it manually:
         await wallet.wallet_state_manager.add_pending_transaction(txs[0])
         sb = txs[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
@@ -133,13 +142,11 @@ class TestDAOWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        # breakpoint()
         fake_proposal_id = Program.to("proposal_id").get_tree_hash()
         spendable_coins = await dao_cat_wallet_0.wallet_state_manager.get_spendable_coins_for_wallet(
             dao_cat_wallet_0.id(), None
         )
-    
-        breakpoint()
+
         assert len(spendable_coins) > 0
         coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
         assert len(coins) > 0
