@@ -15,11 +15,13 @@ class WalletUserStore:
 
     cache_size: uint32
     db_wrapper: DBWrapper2
+    lock: asyncio.Lock
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
 
+        self.lock = asyncio.Lock()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -54,15 +56,16 @@ class WalletUserStore:
         id: Optional[int] = None,
     ) -> WalletInfo:
 
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
-                "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-                (id, name, wallet_type, data),
-            )
-            await cursor.close()
-            wallet = await self.get_last_wallet()
-            if wallet is None:
-                raise ValueError("Failed to get the just-created wallet")
+        with self.lock
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
+                cursor = await conn.execute(
+                    "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
+                    (id, name, wallet_type, data),
+                )
+                await cursor.close()
+                wallet = await self.get_last_wallet()
+                if wallet is None:
+                    raise ValueError("Failed to get the just-created wallet")
 
         return wallet
 
