@@ -56,7 +56,7 @@ class WalletUserStore:
         id: Optional[int] = None,
     ) -> WalletInfo:
 
-        async with self.lock
+        async with self.lock:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
                 cursor = await conn.execute(
                     "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
