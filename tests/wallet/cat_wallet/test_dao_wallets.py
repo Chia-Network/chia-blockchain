@@ -5,6 +5,7 @@ import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.coin import Coin
 from chia.types.peer_info import PeerInfo
 from chia.types.blockchain_format.program import Program
@@ -18,6 +19,7 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.time_out_assert import time_out_assert
 from tests.util.wallet_is_synced import wallet_is_synced
 from chia.wallet.util.wallet_types import WalletType
@@ -38,7 +40,7 @@ class TestDAOWallet:
         wallet_node_1, server_1 = wallets[1]
         wallet = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-
+        api_0 = WalletRpcApi(wallet_node_0)
         ph = await wallet.get_new_puzzlehash()
         ph_1 = await wallet_1.get_new_puzzlehash()
 
@@ -120,16 +122,23 @@ class TestDAOWallet:
         )
         vs_puz = await dao_cat_wallet_0.get_new_vote_state_puzzle()
         # breakpoint()
-        await cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
+        txs = await cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
+
+        # The cat generate_signed_transaction doesn't push the tx, so we do it manually:
+        sb = txs[0].spend_bundle
+        await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        breakpoint()
+        # breakpoint()
         fake_proposal_id = Program.to("proposal_id").get_tree_hash()
         spendable_coins = await dao_cat_wallet_0.wallet_state_manager.get_spendable_coins_for_wallet(
             dao_cat_wallet_0.id(), None
         )
+    
+        breakpoint()
         assert len(spendable_coins) > 0
         coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
         assert len(coins) > 0
