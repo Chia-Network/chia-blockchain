@@ -139,6 +139,7 @@ class WalletRpcApi:
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
             "/verify_signature": self.verify_signature,
+            "/get_transaction_memo": self.get_transaction_memo,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -838,6 +839,15 @@ class WalletRpcApi:
             "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
+
+    async def get_transaction_memo(self, request: Dict) -> EndpointResult:
+        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
+        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        if tr is None:
+            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
+        if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
+            raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
+        return {transaction_id.hex(): compute_memos(tr.spend_bundle)}
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
