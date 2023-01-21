@@ -107,6 +107,15 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         return self
 
+    async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
+        if record is None:
+            raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
+        inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
+        return inner_puzzle
+
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin} was added")
@@ -164,9 +173,9 @@ class DAOCATWallet:
             innerpuz,
         )
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
+        # breakpoint()
         await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
-        breakpoint()
         return puzzle
 
     async def exit_vote_state():
@@ -193,7 +202,8 @@ class DAOCATWallet:
 
     # MH: I have a feeling we may want the real full puzzle here
     async def get_new_puzzlehash(self) -> bytes32:
-        return await self.standard_wallet.get_new_puzzlehash()
+        # return await self.standard_wallet.get_new_puzzlehash()
+        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
@@ -201,9 +211,14 @@ class DAOCATWallet:
         return cat_puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)
-        limitations_program_hash_hash = Program.to(self.dao_cat_info.limitations_program_hash).get_tree_hash()
-        return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
+        inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
+        puzzle = get_lockup_puzzle(
+            self.dao_cat_info.limitations_program_hash,
+            [],
+            inner_puzzle,
+        )
+        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
+        return cat_puzzle.get_tree_hash()
 
     def require_derivation_paths(self) -> bool:
         return True

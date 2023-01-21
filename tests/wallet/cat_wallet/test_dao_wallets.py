@@ -121,12 +121,13 @@ class TestDAOWallet:
             bytes(cat_tail_hash).hex(),
         )
         vs_puz = await dao_cat_wallet_0.get_new_vote_state_puzzle()
+        vs_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
         # breakpoint()
         txs = await cat_wallet_0.generate_signed_transaction([10], [vs_puz.get_tree_hash()])
 
         # The cat generate_signed_transaction doesn't push the tx, so we do it manually:
+        await wallet.wallet_state_manager.add_pending_transaction(txs[0])
         sb = txs[0].spend_bundle
-        await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
         for i in range(1, num_blocks):

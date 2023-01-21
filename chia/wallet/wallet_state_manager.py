@@ -1529,7 +1529,12 @@ class WalletStateManager:
         coin_record_1: WalletCoinRecord = WalletCoinRecord(
             coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
         )
+
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
+
+        # GW: If we set a breakpoint here for the dao cat wallet id  we then enter the coin_added method for the wallet
+        if wallet_id == 4:
+            breakpoint()
 
         await self.wallets[wallet_id].coin_added(coin, height, peer)
 
