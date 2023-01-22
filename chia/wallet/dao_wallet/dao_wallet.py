@@ -114,6 +114,7 @@ class DAOWallet:
         self.dao_info = DAOInfo(
             bytes32([0] * 32),
             0,
+            0,
             [],
             [],
             None,
@@ -143,6 +144,24 @@ class DAOWallet:
             raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
+        # Now the dao wallet is created we can create the dao_cat wallet
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail = cat_wallet.cat_info.limitations_program_hash
+        new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+            self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
+        )
+        dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,
+            self.dao_info.cat_wallet_id,
+            dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            self.dao_info.current_treasury_coin,
+            self.dao_info.current_treasury_innerpuz,
+        )
+        await self.save_info(dao_info)
+
         return self
 
     @staticmethod
@@ -171,6 +190,7 @@ class DAOWallet:
         self.dao_info = DAOInfo(
             treasury_id,  # treasury_id: bytes32
             0,  # cat_wallet_id: int
+            0,  # dao_cat_wallet_id: int
             [],  # proposals_list: List[ProposalInfo]
             [],  # treasury_id: bytes32
             None,  # current_coin
@@ -187,6 +207,25 @@ class DAOWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
+
+        # Now the dao wallet is created we can create the dao_cat wallet
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail = cat_wallet.cat_info.limitations_program_hash
+        new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+            self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
+        )
+        dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,
+            self.dao_info.cat_wallet_id,
+            dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            self.dao_info.current_treasury_coin,
+            self.dao_info.current_treasury_innerpuz,
+        )
+        await self.save_info(dao_info)
+
         return self
 
     @staticmethod
@@ -411,30 +450,18 @@ class DAOWallet:
         # if nonexistent, then create one
         cat_tail_hash = get_cat_tail_hash_from_treasury_puzzle(parent_inner_puz)
         cat_wallet = None
-        # get cat tail and for loop through our wallets to see if we have a dao cat wallet with this tail
+
+        # Get or create a cat wallet
         for wallet_id in self.wallet_state_manager.wallets:
             wallet = self.wallet_state_manager.wallets[wallet_id]
             if wallet.type() == WalletType.CAT:
                 assert isinstance(wallet, CATWallet)
                 if wallet.cat_info.limitations_program_hash == cat_tail_hash:
-                    # convert to DAOCAT wallet
-                    data_str = bytes(wallet.cat_info).hex()
-                    wallet_info = WalletInfo(
-                        wallet.wallet_info.id, wallet.wallet_info.name, WalletType.DAO_CAT, data_str
-                    )
-                    wallet.wallet_info = wallet_info
-                    await self.wallet_state_manager.user_store.update_wallet(wallet_info)
                     cat_wallet = wallet
-                    cat_wallet.__class__ = DAOCATWallet  # Probably not the right way to do this
-                    # TODO: fix the above when DAOCATWallet is more fleshed out
                     break
-            elif wallet.type() == WalletType.DAO_CAT:
-                assert isinstance(wallet, DAOCATWallet)
-                cat_wallet = wallet
-                break
         else:
             # Didn't find a cat wallet, so create one
-            cat_wallet = await DAOCATWallet.create_wallet_for_cat(
+            cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
                 self.wallet_state_manager, self.standard_wallet, cat_tail_hash.hex()
             )
 
@@ -444,6 +471,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
             cat_wallet_id,  # cat_wallet_id: int
+            0, # dao_wallet_id: int
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
@@ -594,6 +622,7 @@ class DAOWallet:
         dao_info: DAOInfo = DAOInfo(
             launcher_coin.name(),
             self.dao_info.cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             None,
@@ -615,6 +644,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             None,
@@ -703,6 +733,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             current_coin,
@@ -845,6 +876,7 @@ class DAOWallet:
         dao_info: DAOInfo = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             current_list,
             self.dao_info.current_treasury_coin,

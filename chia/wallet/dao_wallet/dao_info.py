@@ -26,6 +26,7 @@ class ProposalInfo(Streamable):
 class DAOInfo(Streamable):
     treasury_id: bytes32
     cat_wallet_id: uint64
+    dao_cat_wallet_id: uint64
     proposals_list: List[ProposalInfo]
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     current_treasury_coin: Optional[Coin]
