@@ -105,7 +105,7 @@ def test_compute_assert_height() -> None:
     assert compute_assert_height(coin_records, conds) == 112
 
 
-def spend_bundle_from_conditions(coin: Coin, conditions: List[List[Any]]) -> SpendBundle:
+def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_COIN) -> SpendBundle:
     solution = Program.to(conditions)
     coin_spend = CoinSpend(coin, IDENTITY_PUZZLE, solution)
     return SpendBundle([coin_spend], G2Element())
@@ -123,7 +123,7 @@ async def generate_and_add_spendbundle(
     coin: Coin,
     conditions: List[List[Any]],
 ) -> Tuple[SpendBundle, bytes32, Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]]:
-    sb = spend_bundle_from_conditions(coin, conditions)
+    sb = spend_bundle_from_conditions(conditions, coin)
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
     return (sb, sb_name, result)
@@ -141,7 +141,7 @@ async def test_empty_spend_bundle() -> None:
 async def test_negative_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
-    sb = spend_bundle_from_conditions(TEST_COIN, conditions)
+    sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="COIN_AMOUNT_NEGATIVE"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
@@ -151,7 +151,7 @@ async def test_valid_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount]]
-    sb = spend_bundle_from_conditions(TEST_COIN, conditions)
+    sb = spend_bundle_from_conditions(conditions)
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
     assert npc_result.error is None
 
@@ -161,7 +161,7 @@ async def test_too_big_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount + 1]]
-    sb = spend_bundle_from_conditions(TEST_COIN, conditions)
+    sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="COIN_AMOUNT_EXCEEDS_MAXIMUM"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
@@ -173,7 +173,7 @@ async def test_duplicate_output() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
     ]
-    sb = spend_bundle_from_conditions(TEST_COIN, conditions)
+    sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="DUPLICATE_OUTPUT"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
@@ -184,7 +184,7 @@ async def test_block_cost_exceeds_max() -> None:
     conditions = []
     for i in range(2400):
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i])
-    sb = spend_bundle_from_conditions(TEST_COIN, conditions)
+    sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="BLOCK_COST_EXCEEDS_MAX"):
         await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
@@ -193,7 +193,7 @@ async def test_block_cost_exceeds_max() -> None:
 async def test_double_spend_prevalidation() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    sb = spend_bundle_from_conditions(TEST_COIN, conditions)
+    sb = spend_bundle_from_conditions(conditions)
     sb_twice: SpendBundle = SpendBundle.aggregate([sb, sb])
     with pytest.raises(ValidationError, match="DOUBLE_SPEND"):
         await mempool_manager.pre_validate_spendbundle(sb_twice, None, sb_twice.name())
@@ -275,12 +275,12 @@ async def test_same_sb_twice_with_eligible_coin() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
-    sb1 = spend_bundle_from_conditions(TEST_COIN, sb1_conditions)
+    sb1 = spend_bundle_from_conditions(sb1_conditions)
     sb2_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3],
         [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
     ]
-    sb2 = spend_bundle_from_conditions(TEST_COIN2, sb2_conditions)
+    sb2 = spend_bundle_from_conditions(sb2_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
