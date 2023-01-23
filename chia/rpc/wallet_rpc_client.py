@@ -689,13 +689,15 @@ class WalletRpcClient(RpcClient):
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
-    async def get_offer_summary(self, offer: Offer, advanced: bool = False) -> Dict[str, Dict[str, int]]:
+    async def get_offer_summary(
+        self, offer: Offer, advanced: bool = False
+    ) -> Tuple[bytes32, Dict[str, Dict[str, int]]]:
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
-        return res["summary"]
+        return bytes32.from_hexstr(res["id"]), res["summary"]
 
-    async def check_offer_validity(self, offer: Offer) -> bool:
+    async def check_offer_validity(self, offer: Offer) -> Tuple[bytes32, bool]:
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
-        return res["valid"]
+        return bytes32.from_hexstr(res["id"]), res["valid"]
 
     async def take_offer(
         self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint64 = uint64(0)
