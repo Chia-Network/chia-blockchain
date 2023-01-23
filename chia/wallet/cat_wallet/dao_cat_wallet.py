@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
-import time
 import traceback
-from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
-
+from typing import List, Optional, Set
 from blspy import AugSchemeMPL, G1Element, G2Element
 from chia.wallet.derivation_record import DerivationRecord
-from chia.types.announcement import Announcement
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -31,7 +32,7 @@ from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle, add_proposal_to_active_list
 from chia.wallet.puzzles.cat_loader import CAT_MOD
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -195,9 +196,11 @@ class DAOCATWallet:
 
     async def create_vote_spend(self, amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
-        coin_spends: List[CoinSpend] = []
         running_sum = 0  # this will be used for change calculation
         change = sum(c.coin.amount for c in coins) - amount
+        extra_delta, limitations_solution = 0, Program.to([])
+        limitations_program_reveal = Program.to([])
+        spendable_cat_list = []
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
@@ -266,12 +269,24 @@ class DAOCATWallet:
                 vote_amount,
                 coin.puzzle_hash
             ])
-            full_puzzle = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lci.inner_puzzle)
-            coin_spends.append(CoinSpend(coin, full_puzzle, solution))
+            lineage_proof = await self.get_lineage_proof_for_coin(coin)
+            assert lineage_proof is not None
+            new_spendable_cat = SpendableCAT(
+                coin,
+                self.cat_info.limitations_program_hash,
+                lci.inner_puzzle,
+                solution,
+                limitations_solution=limitations_solution,
+                extra_delta=extra_delta,
+                lineage_proof=lineage_proof,
+                limitations_program_reveal=limitations_program_reveal,
+            )
+            spendable_cat_list.append(new_spendable_cat)
 
-        # TODO: THIS DOES NOT ACCOUNT FOR THE CAT-NESS OF THESE COINS, THIS MUST BE ADAPTED FOR CATNESS
-        sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
-        return
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
+        spend_bundle = await self.sign(cat_spend_bundle)
+        breakpoint()
+        return spend_bundle
 
     async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None):
         innerpuz = await self.get_new_inner_puzzle()
@@ -360,6 +375,38 @@ class DAOCATWallet:
             amount += record.coin.amount
 
         return uint128(amount)
+
+    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
+        sigs: List[G2Element] = []
+        for spend in spend_bundle.coin_spends:
+            args = match_cat_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
+            if args is not None:
+                _, _, inner_puzzle = args
+                puzzle_hash = inner_puzzle.get_tree_hash()
+                ret = await self.wallet_state_manager.get_keys(puzzle_hash)
+                if ret is None:
+                    # Abort signing the entire SpendBundle - sign all or none
+                    raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
+                pubkey, private = ret
+                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+                error, conditions, cost = conditions_dict_for_solution(
+                    spend.puzzle_reveal.to_program(),
+                    spend.solution.to_program(),
+                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                )
+                if conditions is not None:
+                    synthetic_pk = synthetic_secret_key.get_g1()
+                    for pk, msg in pkm_pairs_for_conditions_dict(
+                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    ):
+                        try:
+                            assert bytes(synthetic_pk) == pk
+                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                        except AssertionError:
+                            raise ValueError("This spend bundle cannot be signed by this DAO CAT wallet")
+
+        agg_sig = AugSchemeMPL.aggregate(sigs)
+        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def save_info(self, dao_cat_info: DAOCATInfo) -> None:
         self.dao_cat_info = dao_cat_info
