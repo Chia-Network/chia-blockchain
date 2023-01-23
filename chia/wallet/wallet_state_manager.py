@@ -1011,6 +1011,7 @@ class WalletStateManager:
 
         assert len(local_records) == len(coin_states)
         for coin_state, local_record in zip(coin_states, local_records):
+            rollback_wallets=self.wallets.copy()  # Shallow copy of wallets in case writer rolls back the db
             try:
                 async with self.db_wrapper.writer():
                     # This only succeeds if we don't raise out of the transaction
@@ -1362,6 +1363,7 @@ class WalletStateManager:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
                 self.log.exception(f"Error adding state... {e}")
+                self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
