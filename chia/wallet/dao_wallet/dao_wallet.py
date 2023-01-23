@@ -77,7 +77,8 @@ class DAOWallet:
     wallet_info: WalletInfo
     dao_info: DAOInfo
     standard_wallet: Wallet
-    cat_wallet: DAOCATWallet
+    cat_wallet: CATWallet
+    dao_cat_wallet: DAOCATWallet
     wallet_id: int
 
     @staticmethod
@@ -967,3 +968,19 @@ class DAOWallet:
 
     def get_cat_wallet_id(self) -> uint64:
         return self.dao_info.cat_wallet_id
+
+    async def create_new_dao_cats(self, amount: uint64):
+        # check there are enough cats to convert
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_balance = await cat_wallet.get_spendable_balance()
+        if cat_balance < amount:
+            raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
+        # get the lockup puzzle hash
+        dao_cat_wallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+        lockup_puzzle_hash = await dao_cat_wallet.get_new_puzzlehash()
+
+        # create the cat spend
+        txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle_hash])
+        for tx in txs:
+            await self.wallet_state_manager.add_pending_transaction(tx)
+        return txs

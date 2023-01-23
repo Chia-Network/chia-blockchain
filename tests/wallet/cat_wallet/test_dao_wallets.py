@@ -106,15 +106,9 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
     dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
 
-    # Lockup some cats with a proposal
-    # TODO: Create a real proposal
-    # GW: Updated the wallet so we can use get_new_puzzle_hash which will get an unused derivation record for the inner puz
-    proposal_vote_amt = 10
-    vs_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
-    txs = await cat_wallet_0.generate_signed_transaction([proposal_vote_amt], [vs_puzhash])
-
-    # GW: The cat generate_signed_transaction doesn't push the tx, so we do it manually:
-    await wallet.wallet_state_manager.add_pending_transaction(txs[0])
+    # Send some cats to the dao_cat lockup
+    dao_cat_amt = 10
+    txs = await dao_wallet_0.create_new_dao_cats(dao_cat_amt)
     sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -131,7 +125,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
     assert len(coins) > 0
     # check that we have selected the coin from dao_cat_wallet
-    assert list(coins)[0].coin.amount == proposal_vote_amt
+    assert list(coins)[0].coin.amount == dao_cat_amt
 
     # send some cats from wallet_0 to wallet_1 so we can test voting
     cat_tx = await cat_wallet_0.generate_signed_transaction([cat_amt], [ph_1])
