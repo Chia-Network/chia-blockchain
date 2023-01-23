@@ -141,7 +141,7 @@ class TestDAOWallet:
         coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
         assert len(coins) > 0
         # check that we have selected the coin from dao_cat_wallet
-        assert list(coins)[0].amount == proposal_vote_amt
+        assert list(coins)[0].coin.amount == proposal_vote_amt
 
         # send some cats from wallet_0 to wallet_1 so we can test voting
         cat_tx = await cat_wallet_0.generate_signed_transaction([cat_amt], [ph_1])

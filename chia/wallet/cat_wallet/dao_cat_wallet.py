@@ -8,7 +8,7 @@ from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
-
+from chia.wallet.derivation_record import DerivationRecord
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -24,11 +24,12 @@ from chia.wallet.cat_wallet.cat_utils import (
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.types.spend_bundle import SpendBundle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle
+from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle, add_proposal_to_active_list
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.wallet_types import WalletType
@@ -172,8 +173,8 @@ class DAOCATWallet:
         await self.lineage_store.remove_lineage_proof(name)
 
     # maybe we change this to return the full records and just add the clean ones ourselves later
-    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> Set[Coin]:
-        coins = set()
+    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> List[LockedCoinInfo]:
+        coins = []
         s = 0
         for coin in self.dao_cat_info.locked_coins:
             compatible = True
@@ -182,18 +183,94 @@ class DAOCATWallet:
                     compatible = False
                     break
             if compatible:
-                coins.add(coin.coin)
+                coins.append(coin)
                 s += coin.coin.amount
                 if s >= amount:
                     break
-        assert sum(c.amount for c in coins) >= amount
+        assert s >= amount
         return coins
 
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def create_vote_spend(amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
+    async def create_vote_spend(self, amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
+        coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
+        coin_spends: List[CoinSpend] = []
+        running_sum = 0  # this will be used for change calculation
+        change = sum(c.coin.amount for c in coins) - amount
+        for lci in coins:
+            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+            # inner_solution
+            # my_amount
+            # new_proposal_vote_id_or_removal_id
+            # proposal_curry_vals
+            # vote_info
+            # vote_amount
+            # my_puzhash
+            coin = lci.coin
 
+            dao_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
+            YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
+            vote_info = 0
+            new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
+            if running_sum + coin.amount < amount:
+                vote_amount = coin.amount
+                running_sum = running_sum + coin.amount
+                # CREATE_COIN new_puzzle coin.amount
+                # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+                primaries = [{
+                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    "amount": uint64(vote_amount),
+                    "memos": [new_innerpuzzle.get_tree_hash()]
+                }]
+                puzzle_announcements = set(
+                    Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
+                )
+                inner_solution = await self.standard_wallet.make_solution(
+                    primaries=primaries,
+                    puzzle_announcements=puzzle_announcements
+                )
+            else:
+                vote_amount = amount - running_sum
+                # CREATE_COIN new_puzzle vote_amount
+                # CREATE_COIN old_puzzle change
+                # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+                primaries = [
+                    {
+                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                        "amount": uint64(vote_amount),
+                        "memos": [new_innerpuzzle.get_tree_hash()]
+                    },
+                    {
+                        "puzzlehash": lci.inner_puzzle.get_tree_hash(),
+                        "amount": uint64(change),
+                        "memos": [lci.inner_puzzle.get_tree_hash()]
+                    },
+                ]
+                puzzle_announcements = set(
+                    Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
+                )
+                inner_solution = await self.standard_wallet.make_solution(
+                    primaries=primaries,
+                    puzzle_announcements=puzzle_announcements
+                )
+            if is_yes_vote:
+                vote_info = 1
+            solution = Program.to([
+                coin.name(),
+                inner_solution,
+                coin.amount,
+                proposal_id,
+                [YES_VOTES, TOTAL_VOTES, INNERPUZ],
+                vote_info,
+                vote_amount,
+                coin.puzzle_hash
+            ])
+            full_puzzle = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lci.inner_puzzle)
+            coin_spends.append(CoinSpend(coin, full_puzzle, solution))
+
+        # TODO: THIS DOES NOT ACCOUNT FOR THE CAT-NESS OF THESE COINS, THIS MUST BE ADAPTED FOR CATNESS
+        sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
         return
 
     async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None):
@@ -291,4 +368,3 @@ class DAOCATWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
-

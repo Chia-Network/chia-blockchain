@@ -36,6 +36,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_new_puzzle_from_treasury_solution,
     get_proposal_puzzle,
     get_cat_tail_hash_from_treasury_puzzle,
+    uncurry_proposal,
 )
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
@@ -604,15 +605,15 @@ class DAOWallet:
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         cat_wallet = None
-        cat_tail = None
+        cat_tail_hash = None
         if self.dao_info.cat_wallet_id is None:
-            cat_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
+            cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
             if cat_wallet is not None:
-                cat_tail = cat_wallet.cat_info.limitations_program_hash
-        if cat_tail is None:
-            cat_tail = generate_cat_tail(cat_origin.name(), launcher_coin.name())
+                cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+        if cat_tail_hash is None:
+            cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
 
-        assert cat_tail is not None
+        assert cat_tail_hash is not None
         cat_tail_info = {
             "identifier": "genesis_by_id_or_proposal",
             "treasury_id": launcher_coin.name(),
@@ -655,7 +656,7 @@ class DAOWallet:
 
         dao_treasury_puzzle = get_treasury_puzzle(
             launcher_coin.name(),
-            cat_tail.get_tree_hash(),
+            cat_tail_hash,
             amount_of_cats,
             attendance_required_percentage,
             proposal_pass_percentage,
@@ -825,7 +826,40 @@ class DAOWallet:
             launcher_coin,
         )
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        return
+        return full_spend
+
+    async def get_proposal_curry_values(self, proposal_id: bytes32):
+        # The proposal_curry_vals used by the dao_lockup puzzle are the following.
+        # We only need to return the bottom 3, I believe
+        # (
+        #   TREASURY_MOD_HASH
+        #   PROPOSAL_TIMER_MOD_HASH
+        #   TREASURY_ID
+        #   YES_VOTES
+        #   TOTAL_VOTES
+        #   INNERPUZHASH
+        # )
+        curried_args = None
+        for prop in self.dao_info.proposals_list:
+            if prop.proposal_id == proposal_id:
+                curried_args = uncurry_proposal(prop.inner_puzzle)
+                break
+
+        assert curried_args is not None
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            TREASURY_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+            TOTAL_VOTES,  # how many people responded
+            INNERPUZ,
+        ) = curried_args
+        return YES_VOTES, TOTAL_VOTES, INNERPUZ
 
     # TODO: add an amount of dao_cat to spend on voting on the new proposal here
     async def generate_proposal_eve_spend(

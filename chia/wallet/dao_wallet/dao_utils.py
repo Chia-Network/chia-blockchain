@@ -57,7 +57,7 @@ def create_new_proposal_puzzle(
 
 def get_treasury_puzzle(
     treasury_id: bytes32,
-    cat_tail: bytes32,
+    cat_tail_hash: bytes32,
     current_cat_issuance: uint64,
     attendance_required_percentage: uint64,
     proposal_pass_percentage: uint64,
@@ -70,7 +70,7 @@ def get_treasury_puzzle(
     # PROPOSAL_TIMER_MOD_HASH
     # LOCKUP_MOD_HASH
     # CAT_MOD_HASH
-    # CAT_TAIL
+    # CAT_TAIL_HASH
     # CURRENT_CAT_ISSUANCE
     # ATTENDANCE_REQUIRED_PERCENTAGE  ; percent of total potential votes needed to have a chance at passing
     # PASS_MARGIN  ; what percentage of votes should be yes (vs no) for a proposal to pass.
@@ -87,7 +87,7 @@ def get_treasury_puzzle(
                 DAO_PROPOSAL_TIMER_MOD_HASH,
                 DAO_LOCKUP_MOD_HASH,
                 CAT_MOD_HASH,
-                cat_tail,
+                cat_tail_hash,
                 current_cat_issuance,
                 attendance_required_percentage,
                 proposal_pass_percentage,
@@ -98,13 +98,13 @@ def get_treasury_puzzle(
     return puzzle
 
 
-def get_lockup_puzzle(cat_tail: bytes32, previous_votes_list: List[bytes32], innerpuz: Program) -> Program:
+def get_lockup_puzzle(cat_tail_hash: bytes32, previous_votes_list: List[bytes32], innerpuz: Program) -> Program:
     # PROPOSAL_MOD_HASH
     # SINGLETON_MOD_HASH
     # SINGLETON_LAUNCHER_PUZHASH
     # LOCKUP_MOD_HASH
     # CAT_MOD_HASH
-    # CAT_TAIL
+    # CAT_TAIL_HASH
     # PREVIOUS_VOTES  ; "active votes" list
     # LOCKUP_TIME
     # INNERPUZ
@@ -114,11 +114,27 @@ def get_lockup_puzzle(cat_tail: bytes32, previous_votes_list: List[bytes32], inn
         SINGLETON_LAUNCHER_PUZHASH,
         DAO_LOCKUP_MOD_HASH,
         CAT_MOD_HASH,
-        cat_tail,
+        cat_tail_hash,
         previous_votes_list,  # TODO: maybe format check this in this function
         innerpuz,
     )
     return puzzle
+
+
+def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32):
+    curried_args = uncurry_lockup(lockup_puzzle)
+    (
+        PROPOSAL_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_PUZHASH,
+        LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
+        CAT_TAIL_HASH,
+        ACTIVE_VOTES,
+        INNERPUZ,
+    ) = curried_args
+    new_active_votes = ACTIVE_VOTES.cons(proposal_id)
+    return get_lockup_puzzle(CAT_TAIL_HASH, new_active_votes, INNERPUZ)
 
 
 def get_proposal_puzzle(
@@ -243,8 +259,51 @@ def uncurry_treasury(treasury_puzzle: Program) -> Program:
         raise e
 
     if mod != DAO_TREASURY_MOD:
-        raise ValueError("Not a Treasury Mod.")
+        raise ValueError("Not a Treasury mod.")
 
+    return curried_args
+
+
+def uncurry_proposal(proposal_puzzle: Program):
+    try:
+        mod, curried_args = proposal_puzzle.uncurry()
+    except ValueError as e:
+        log.debug("Cannot uncurry proposal puzzle: error: %s", e)
+        raise e
+
+    if mod != DAO_PROPOSAL_MOD:
+        raise ValueError("Not a dao proposal mod.")
+    # SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
+    # CAT_MOD_HASH
+    # TREASURY_MOD_HASH
+    # LOCKUP_MOD_HASH
+    # CAT_TAIL_HASH
+    # TREASURY_ID
+    # YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+    # TOTAL_VOTES  ; how many people responded
+    # INNERPUZ
+    return curried_args
+
+
+def uncurry_lockup(lockup_puzzle: Program):
+    try:
+        mod, curried_args = lockup_puzzle.uncurry()
+    except ValueError as e:
+        log.debug("Cannot uncurry lockup puzzle: error: %s", e)
+        raise e
+
+    if mod != DAO_LOCKUP_MOD:
+        raise ValueError("Not a dao cat lockup mod.")
+    # PROPOSAL_MOD_HASH
+    # SINGLETON_MOD_HASH
+    # SINGLETON_LAUNCHER_PUZHASH
+    # LOCKUP_MOD_HASH
+    # CAT_MOD_HASH
+    # CAT_TAIL_HASH
+    # ACTIVE_VOTES  ; "active votes" list
+    # INNERPUZ
     return curried_args
 
 
