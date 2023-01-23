@@ -121,7 +121,7 @@ def get_lockup_puzzle(cat_tail_hash: bytes32, previous_votes_list: List[bytes32]
     return puzzle
 
 
-def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32):
+def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32) -> Program:
     curried_args = uncurry_lockup(lockup_puzzle)
     (
         PROPOSAL_MOD_HASH,
@@ -208,7 +208,7 @@ def get_proposal_timer_puzzle(
     return puzzle
 
 
-def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
+def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
     # my_amount         ; current amount
     # new_amount_change ; may be negative or positive. Is zero during eve spend
     # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
@@ -223,7 +223,7 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
 
     type = solution.rest().rest().rest().rest().rest().rest().rest().rest().first()
     if type == Program.to("n"):  # New puzzle hash
-        return solution.rest().rest().rest().rest().first().as_atom()
+        return bytes32(solution.rest().rest().rest().rest().first().as_atom())
     elif type == Program.to("u"):  # Unchanged
         return puzzle_reveal
     elif type == Program.to("r"):  # Recurry by index
@@ -264,7 +264,7 @@ def uncurry_treasury(treasury_puzzle: Program) -> Program:
     return curried_args
 
 
-def uncurry_proposal(proposal_puzzle: Program):
+def uncurry_proposal(proposal_puzzle: Program) -> Program:
     try:
         mod, curried_args = proposal_puzzle.uncurry()
     except ValueError as e:
@@ -287,7 +287,7 @@ def uncurry_proposal(proposal_puzzle: Program):
     return curried_args
 
 
-def uncurry_lockup(lockup_puzzle: Program):
+def uncurry_lockup(lockup_puzzle: Program) -> Program:
     try:
         mod, curried_args = lockup_puzzle.uncurry()
     except ValueError as e:

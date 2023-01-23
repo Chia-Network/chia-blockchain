@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -21,7 +21,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.wallet.wallet_node import WalletNode
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
@@ -32,10 +31,10 @@ from chia.wallet.dao_wallet.dao_utils import (
     SINGLETON_LAUNCHER,
     curry_singleton,
     generate_cat_tail,
-    get_treasury_puzzle,
+    get_cat_tail_hash_from_treasury_puzzle,
     get_new_puzzle_from_treasury_solution,
     get_proposal_puzzle,
-    get_cat_tail_hash_from_treasury_puzzle,
+    get_treasury_puzzle,
     uncurry_proposal,
 )
 from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -48,6 +47,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import WalletNode
 
 
 class DAOWallet:
@@ -472,7 +472,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
             cat_wallet_id,  # cat_wallet_id: int
-            0, # dao_wallet_id: int
+            0,  # dao_wallet_id: int
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
@@ -828,7 +828,7 @@ class DAOWallet:
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         return full_spend
 
-    async def get_proposal_curry_values(self, proposal_id: bytes32):
+    async def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
         # The proposal_curry_vals used by the dao_lockup puzzle are the following.
         # We only need to return the bottom 3, I believe
         # (
@@ -890,9 +890,8 @@ class DAOWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
-    async def create_add_money_to_treasury_spend():
-
-        return
+    async def create_add_money_to_treasury_spend(self) -> SpendBundle:
+        return SpendBundle([], G2Element.generator())
 
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)
@@ -900,7 +899,7 @@ class DAOWallet:
     async def get_spendable_balance(self, unspent_records: Set[WalletCoinRecord] = None) -> uint128:
         return uint128(0)
 
-    async def get_max_send_amount(self, records=None) -> uint128:
+    async def get_max_send_amount(self, records: Set[WalletCoinRecord] = None) -> uint128:
         return uint128(0)
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
