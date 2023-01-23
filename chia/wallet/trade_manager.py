@@ -385,12 +385,15 @@ class TradeManager:
     async def save_trade(self, trade: TradeRecord) -> None:
         await self.trade_store.add_trade_record(trade)
         offer: Offer = Offer.from_bytes(trade.offer)
-        removals: List[bytes32] = [coin.name() for coin in trade.coins_of_interest]
-        non_offer_coins: Set[Coin] = set(offer.bundle.not_ephemeral_additions()) ^ set(
-            [value for values in offer.get_offered_coins().values() for value in values]
+
+        # We want to subscribe to the coin IDs of all coins that are not the ephemeral offer coins
+        offered_coins: Set[Coin] = set([value for values in offer.get_offered_coins().values() for value in values])
+        non_offer_additions: Set[Coin] = set(offer.bundle.additions()) ^ offered_coins
+        non_offer_removals: Set[Coin] = set(offer.bundle.removals()) ^ offered_coins
+        await self.wallet_state_manager.add_interested_coin_ids(
+            [coin.name() for coin in (*non_offer_removals, *non_offer_additions)]
         )
-        additions: List[bytes32] = [coin.name() for coin in non_offer_coins]
-        await self.wallet_state_manager.add_interested_coin_ids([*removals, *additions])
+
         self.wallet_state_manager.state_changed("offer_added")
 
     async def create_offer_for_ids(
