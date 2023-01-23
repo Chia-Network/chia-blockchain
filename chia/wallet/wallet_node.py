@@ -39,7 +39,12 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof
 from chia.util.chunks import chunks
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, load_config, process_config_start_method, save_config
+from chia.util.config import (
+    WALLET_PEERS_PATH_KEY_DEPRECATED,
+    lock_and_load_config,
+    process_config_start_method,
+    save_config,
+)
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint32, uint64
@@ -228,18 +233,18 @@ class WalletNode:
         return key
 
     def set_resync_flag(self, fingerprint, flag: bool = True):
-        config = load_config(self.root_path, "config.yaml")
-        if flag is True:
-            config["wallet"]["reset_sync_for_fingerprint"] = fingerprint
-            self.log.info("Enabled resync for wallet fingerprint: %s", fingerprint)
-        else:
-            self.log.debug(
-                "Trying to disable resync: %s [%s]", fingerprint, config["wallet"].get("reset_sync_for_fingerprint")
-            )
-            if config["wallet"].get("reset_sync_for_fingerprint") == fingerprint:
-                del config["wallet"]["reset_sync_for_fingerprint"]
-                self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
-        save_config(self.root_path, "config.yaml", config)
+        with lock_and_load_config(self.root_path, "config.yaml") as config:
+            if flag is True:
+                config["wallet"]["reset_sync_for_fingerprint"] = fingerprint
+                self.log.info("Enabled resync for wallet fingerprint: %s", fingerprint)
+            else:
+                self.log.debug(
+                    "Trying to disable resync: %s [%s]", fingerprint, config["wallet"].get("reset_sync_for_fingerprint")
+                )
+                if config["wallet"].get("reset_sync_for_fingerprint") == fingerprint:
+                    del config["wallet"]["reset_sync_for_fingerprint"]
+                    self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
+            save_config(self.root_path, "config.yaml", config)
 
     async def reset_sync_db(self, db_path, fingerprint):
         conn: aiosqlite.Connection
@@ -272,13 +277,18 @@ class WalletNode:
                     await conn.execute("DELETE FROM users_nfts")
             except aiosqlite.Error:
                 self.log.exception("Error resetting sync tables")
-                await conn.execute("ROLLBACK")
                 commit = False
             finally:
-                if commit:
-                    self.log.info("Reset wallet sync data completed.")
-                    await conn.execute("COMMIT")
-                # now disable it
+                try:
+                    if commit:
+                        self.log.info("Reset wallet sync data completed.")
+                        await conn.execute("COMMIT")
+                    else:
+                        self.log.info("Reverting reset resync changes")
+                        await conn.execute("ROLLBACK")
+                except aiosqlite.Error:
+                    self.log.exception("Error finishing reset resync db")
+                # disable the resync in any case
                 self.set_resync_flag(fingerprint, False)
 
     async def _start(self) -> None:

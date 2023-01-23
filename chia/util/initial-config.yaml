@@ -188,7 +188,7 @@ harvester:
   selected_network: *selected_network
 
   # Plots are searched for in the following directories
-  plot_directories: [ ]
+  plot_directories: []
   recursive_plot_scan: False # If True the harvester scans plots recursively in the provided directories.
 
   ssl:
@@ -222,7 +222,7 @@ farmer:
     host: *self_hostname
     port: 8448
 
-  pool_public_keys: [ ]
+  pool_public_keys: []
 
   # Replace this with a real receive address
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
@@ -372,7 +372,7 @@ full_node:
   target_outbound_peer_count: 8
   # IPv4/IPv6 network addresses and CIDR blocks allowed to connect even when target_peer_count has been hit.
   # exempt_peer_networks: ["192.168.0.3", "192.168.1.0/24", "fe80::/10", "2606:4700:4700::64/128"]
-  exempt_peer_networks: [ ]
+  exempt_peer_networks: []
   # Accept at most # of inbound connections for different node types.
   max_inbound_wallet: 20
   max_inbound_farmer: 10
