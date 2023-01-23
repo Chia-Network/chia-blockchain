@@ -179,8 +179,8 @@ class DAOCATWallet:
         s = 0
         for coin in self.dao_cat_info.locked_coins:
             compatible = True
-            for prev_vote in coin.previous_votes:
-                if prev_vote == proposal_id:
+            for active_vote in coin.active_votes:
+                if active_vote == proposal_id:
                     compatible = False
                     break
             if compatible:
