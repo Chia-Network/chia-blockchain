@@ -13,7 +13,7 @@ class TimedDuplicateFilter(logging.Filter):
 
     def __init__(self, regex_str: str, min_time_wait_secs: int, name: str = ""):
         super(TimedDuplicateFilter, self).__init__(name)
-        self.last_log_time = time.time()
+        self.last_log_time = time.monotonic()
         self.regex = re.compile(regex_str)
         self.min_time_wait_secs = min_time_wait_secs
 
@@ -25,7 +25,7 @@ class TimedDuplicateFilter(logging.Filter):
         msg = record.getMessage()
 
         if self.regex.match(msg):
-            now = time.time()
+            now = time.monotonic()
             if now - self.last_log_time > self.min_time_wait_secs:
                 self.last_log_time = now
                 return True
