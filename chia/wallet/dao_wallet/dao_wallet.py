@@ -890,6 +890,30 @@ class DAOWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
+    async def generate_proposal_vote_spend(self, proposal_id: bytes32):
+        proposal_info = None
+        for prop in self.dao_info.proposals_list:
+            if prop.proposal_id == proposal_id:
+                proposal_info = prop
+                break
+        assert proposal_info is not None
+        # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+        # vote_info_or_p2_singleton_mod_hash
+        # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+        #                                       ; the total number of CATs in circulation according to the treasury
+        # previous_votes  ; set this to 0 if we have passed
+        # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+        #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+        # pass_margin  ; this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+
+        # TODO: fill this in when we can take a list of coins in dao_proposal.clvm
+        inner_sol = Program.to([
+
+        ])
+
+        return
+
     async def create_add_money_to_treasury_spend(self) -> SpendBundle:
         return SpendBundle([], G2Element.generator())
 
