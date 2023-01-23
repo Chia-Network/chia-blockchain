@@ -1011,7 +1011,7 @@ class WalletStateManager:
 
         assert len(local_records) == len(coin_states)
         for coin_state, local_record in zip(coin_states, local_records):
-            rollback_wallets=self.wallets.copy()  # Shallow copy of wallets in case writer rolls back the db
+            rollback_wallets = self.wallets.copy()  # Shallow copy of wallets in case writer rolls back the db
             try:
                 async with self.db_wrapper.writer():
                     # This only succeeds if we don't raise out of the transaction
