@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 
-from chia_rs import MEMPOOL_MODE, run_chia_program, run_generator, serialized_length, tree_hash
+from chia_rs import run_chia_program, tree_hash
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 
@@ -222,130 +221,11 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
     return bytes32(std_hash(s))
 
 
-def _serialize(node) -> bytes:
-    if type(node) == SerializedProgram:
-        return bytes(node)
-    else:
-        return SExp.to(node).as_bin()
+# this has to be here to avoid the issue with circular import.
+# TODO: update all import statements
+from .serialized_program import SerializedProgram  # noqa: E402
 
-
-class SerializedProgram:
-    """
-    An opaque representation of a clvm program. It has a more limited interface than a full SExp
-    """
-
-    _buf: bytes = b""
-
-    @classmethod
-    def parse(cls, f) -> "SerializedProgram":
-        length = serialized_length(f.getvalue()[f.tell() :])
-        return SerializedProgram.from_bytes(f.read(length))
-
-    def stream(self, f):
-        f.write(self._buf)
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> "SerializedProgram":
-        ret = SerializedProgram()
-        ret._buf = bytes(blob)
-        return ret
-
-    @classmethod
-    def fromhex(cls, hexstr: str) -> "SerializedProgram":
-        return cls.from_bytes(hexstr_to_bytes(hexstr))
-
-    @classmethod
-    def from_program(cls, p: Program) -> "SerializedProgram":
-        ret = SerializedProgram()
-        ret._buf = bytes(p)
-        return ret
-
-    def to_program(self) -> Program:
-        return Program.from_bytes(self._buf)
-
-    def uncurry(self) -> Tuple["Program", "Program"]:
-        return self.to_program().uncurry()
-
-    def __bytes__(self) -> bytes:
-        return self._buf
-
-    def __str__(self) -> str:
-        return bytes(self).hex()
-
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, str(self))
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, SerializedProgram):
-            return False
-        return self._buf == other._buf
-
-    def __ne__(self, other) -> bool:
-        if not isinstance(other, SerializedProgram):
-            return True
-        return self._buf != other._buf
-
-    def get_tree_hash(self) -> bytes32:
-        return bytes32(tree_hash(self._buf))
-
-    def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, MEMPOOL_MODE, *args)
-
-    def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
-        return self._run(max_cost, 0, *args)
-
-    # returns an optional error code and an optional SpendBundleConditions (from chia_rs)
-    # exactly one of those will hold a value
-    def run_as_generator(
-        self, max_cost: int, flags: int, *args
-    ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
-
-        serialized_args = bytearray()
-        if len(args) > 1:
-            # when we have more than one argument, serialize them into a list
-            for a in args:
-                serialized_args += b"\xff"
-                serialized_args += _serialize(a)
-            serialized_args += b"\x80"
-        else:
-            serialized_args += _serialize(args[0])
-
-        err, ret = run_generator(
-            self._buf,
-            bytes(serialized_args),
-            max_cost,
-            flags,
-        )
-        if err is not None:
-            assert err != 0
-            return err, None
-
-        assert ret is not None
-        return None, ret
-
-    def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:
-        # when multiple arguments are passed, concatenate them into a serialized
-        # buffer. Some arguments may already be in serialized form (e.g.
-        # SerializedProgram) so we don't want to de-serialize those just to
-        # serialize them back again. This is handled by _serialize()
-        serialized_args = bytearray()
-        if len(args) > 1:
-            # when we have more than one argument, serialize them into a list
-            for a in args:
-                serialized_args += b"\xff"
-                serialized_args += _serialize(a)
-            serialized_args += b"\x80"
-        else:
-            serialized_args += _serialize(args[0])
-
-        cost, ret = run_chia_program(
-            self._buf,
-            bytes(serialized_args),
-            max_cost,
-            flags,
-        )
-        return cost, Program.to(ret)
-
+__all__ = ["SerializedProgram", "Program", "NIL"]
 
 NIL = Program.from_bytes(b"\x80")
 
