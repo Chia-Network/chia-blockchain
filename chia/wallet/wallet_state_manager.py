@@ -1366,13 +1366,7 @@ class WalletStateManager:
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
-                    # DO NOT COMMIT TO MAIN
-                    try:
-                        await self.retry_store.remove_state(coin_state)
-                    except Exception as e1:
-                        if isinstance(e1, ValueError):
-                            self.log.error("HACK: IGNORING DB EXCEPTION FROM remove_state for test_dao_creation")
-                    # DO NOT COMMIT TO MAIN
+                    await self.retry_store.remove_state(coin_state)
                 continue
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height, peer)
