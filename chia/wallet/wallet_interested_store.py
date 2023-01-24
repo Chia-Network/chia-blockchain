@@ -32,8 +32,9 @@ class WalletInterestedStore:
             await conn.execute(f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_tokens({fields})")
 
             # Table for coin states of unknown CATs
-            fields = "coin_state blob PRIMARY KEY, asset_id text, peer blob, fork_height int"
+            fields = "coin_state blob PRIMARY KEY, asset_id blob, peer blob, fork_height int"
             await conn.execute(f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_token_states({fields})")
+            await conn.execute("CREATE INDEX IF NOT EXISTS asset_id on unacknowledged_asset_token_states(asset_id)")
 
         return self
 
@@ -141,7 +142,7 @@ class WalletInterestedStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR IGNORE INTO unacknowledged_asset_token_states VALUES(?, ?, ?, ?)",
-                (bytes(coin_state), asset_id.hex(), peer_id, 0 if fork_height is None else fork_height),
+                (bytes(coin_state), asset_id, peer_id, 0 if fork_height is None else fork_height),
             )
             await cursor.close()
 
@@ -157,13 +158,13 @@ class WalletInterestedStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id.hex(),)
+                "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id,)
             )
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "DELETE from unacknowledged_asset_token_states WHERE asset_id=?",
-                (asset_id.hex(),),
+                (asset_id,),
             )
             await cursor.close()
 
