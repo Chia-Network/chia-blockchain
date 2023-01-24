@@ -13,6 +13,7 @@ PYINSTALLER_SPEC_PATH = resource_filename("chia", "pyinstaller.spec")
 bf = False
 bt = True
 
+
 def f() -> int:
     x = 0
 
