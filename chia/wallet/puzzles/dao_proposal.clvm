@@ -1,5 +1,17 @@
 ; This is a proposal which lives inside a singleton, it represents a proposed way to spend DAO money
-; If the proposal passes the INNERPUZ inside it will run, and the DAO Treasury will accept a spend to change itself or spend money
+; If the proposal passes the vote, the INNERPUZ inside it will run, and the DAO Treasury will accept a spend to change itself or spend money
+;
+; ACTIONS:
+; add_votes(vote_amount, vote_info, vote_coin_id, previous_votes, lockup_innerpuzhash) -> Add new votes to to previous_votes by spending CAT with lockup_innerpuzhash and recreate_self
+;    vote_amount:         vote_amount_or_solution
+;    vote_info:           vote_info_or_p2_singleton_mod_hash
+;    vote_coin_id:        vote_coin_id_or_current_cat_issuance
+;    lockup_innerpuzhash: lockup_innerpuzhash_or_attendance_required
+;
+; terminate_this_proposal(solution, current_cat_issuance) -> (run_chialisp OR dont_run_chialisp) AND kill proposal by recreate("u", previous_votes=0)
+;    solution:             vote_amount_or_solution
+;    current_cat_issuance: vote_coin_id_or_current_cat_issuance
+
 
 (mod (
   SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
@@ -12,12 +24,12 @@
   TREASURY_ID
   YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
   TOTAL_VOTES  ; how many people responded
-  INNERPUZ  ; this is what runs if this proposal is successful
+  INNERPUZ  ; this is what runs if this proposal is successful - the inner puzzle of this proposal. Rename as PROPOSAL_PUZZLE ?
   vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-  vote_info_or_p2_singleton_mod_hash
+  vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
   vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
                                         ; the total number of CATs in circulation according to the treasury
-  previous_votes  ; set this to 0 if we have passed
+  previous_votes  ; set this to 0 if we have this proposal has passed (ak: ... or expired ??? Matt, Geoff, See below)
   lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
                                               ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
   pass_margin  ; this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
@@ -148,9 +160,9 @@
 
   (if previous_votes
 
-    ; if we're taking votes
+    ; previous_votes is nonzero, so we adding votes to this proposal. vote_info indicates a YES or NO vote.
     (c
-      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id_or_current_cat_issuance)  ; announce which coin we're taking a vote from, so nobody else gets spent
+      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id_or_current_cat_issuance)  ; announce which coin we're removing a vote from, so no other locked up CAT is spent
       (c
         (list
           ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
@@ -212,7 +224,7 @@
       )
     )
 
-    ; terminate this proposal
+    ; terminate_this_proposal: End the proposal, and run (INNERPUZ solution) if the proposal passed
     (c
       (list CREATE_COIN dao_finished_state ONE (c my_singleton_id 0))  ; move to announce finished mode. See previous comment about proposal amounts
       (c
@@ -263,8 +275,9 @@
                   (> TOTAL_VOTES (calculate_win_percentage vote_coin_id_or_current_cat_issuance lockup_innerpuzhash_or_attendance_required))
                   (> YES_VOTES (calculate_win_percentage TOTAL_VOTES pass_margin))
                 )
-                (a INNERPUZ vote_amount_or_solution)  ; run proposed chialisp
-                (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; we dont run the chialisp, but we still move to the finished state and let the treasury know to remain the same
+                (a INNERPUZ vote_amount_or_solution)  ; run_chialisp: run proposed chialisp ; XXX Matt, Geoff: should we also re-create ourself with previous_votes=0 in this case?
+                (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; dont_run_chialisp: we dont run the chialisp, but we still move to the finished state
+                                                                                    ;    and let the treasury know to remain the same
               )
             )
           )
