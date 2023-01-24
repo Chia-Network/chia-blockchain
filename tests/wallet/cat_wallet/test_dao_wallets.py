@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import List
 
 import pytest
@@ -94,11 +95,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
 
     # Create the other user's wallet from the treasury id
-    dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-        wallet_node_1.wallet_state_manager,
-        wallet_1,
-        treasury_id,
-    )
+    async with wallet_node_0.wallet_state_manager.lock:
+        dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
+            treasury_id,
+        )
     assert dao_wallet_1 is not None
     assert dao_wallet_0.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
 
@@ -107,11 +109,16 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
 
     # Send some cats to the dao_cat lockup
-    dao_cat_amt = 10
-    txs = await dao_wallet_0.create_new_dao_cats(dao_cat_amt)
+    dao_cat_amt = 100
+    async with wallet_node_0.wallet_state_manager.lock:
+        txs = await dao_wallet_0.create_new_dao_cats(dao_cat_amt)
     sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await full_node_api.process_transaction_records(records=txs)
 
+    # Give the full node a moment to catch up if there are no trusted peers
+    if not trusted:
+        await asyncio.sleep(1)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
@@ -128,10 +135,11 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert list(coins)[0].coin.amount == dao_cat_amt
 
     # send some cats from wallet_0 to wallet_1 so we can test voting
-    cat_tx = await cat_wallet_0.generate_signed_transaction([cat_amt], [ph_1])
-    await wallet.wallet_state_manager.add_pending_transaction(cat_tx[0])
-    sb = cat_tx[0].spend_bundle
+    cat_txs = await cat_wallet_0.generate_signed_transaction([cat_amt], [ph_1])
+    await wallet.wallet_state_manager.add_pending_transaction(cat_txs[0])
+    sb = cat_txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await full_node_api.process_transaction_records(records=cat_txs)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
