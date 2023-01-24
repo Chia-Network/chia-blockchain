@@ -29,11 +29,12 @@
   vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
   vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
                                         ; the total number of CATs in circulation according to the treasury
-  previous_votes  ; set this to 0 if we have this proposal has passed (ak: ... or expired ??? Matt, Geoff, See below)
+  previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+                                 ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
   lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
                                               ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-  pass_margin  ; this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
   proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+                     ; we only use this when closing out so set it to 0 and we will do the vote spend case
 
 )
   (include condition_codes.clvm)
@@ -158,9 +159,68 @@
 
   ; main
 
-  (if previous_votes
-
-    ; previous_votes is nonzero, so we adding votes to this proposal. vote_info indicates a YES or NO vote.
+  (if proposal_timelock
+    ; terminate_this_proposal: End the proposal, and run (INNERPUZ solution) if the proposal passed
+    (c
+      (list CREATE_COIN dao_finished_state ONE (c my_singleton_id 0))  ; move to announce finished mode. See previous comment about proposal amounts
+      (c
+        (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
+        (c
+          (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
+            (sha256
+              (calculate_treasury_puzzlehash
+                TREASURY_MOD_HASH
+                (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+                PROPOSAL_MOD_HASH
+                PROPOSAL_TIMER_MOD_HASH
+                CAT_MOD_HASH
+                CAT_TAIL_HASH
+                vote_coin_id_or_current_cat_issuance
+                lockup_innerpuzhash_or_attendance_required  ; check the veracity of these values by if the treasury uses them
+                previous_votes_or_pass_margin  ; check the veracity of these values by if the treasury uses them
+                proposal_timelock  ; check the veracity of these values by if the treasury uses them
+              )
+              (f (r SINGLETON_STRUCT))
+            )
+          )
+          (c
+            (list
+              CREATE_PUZZLE_ANNOUNCEMENT
+              (sha256tree
+                (list
+                  TREASURY_ID
+                  proposal_timelock  ; this is included so that the timer can assert and verify
+                )
+              )
+            )  ; create an announcement so the treasury can sync with us
+            (c
+              (list
+                ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; external timer
+                (calculate_timer_puzhash
+                  PROPOSAL_TIMER_MOD_HASH
+                  PROPOSAL_MOD_HASH
+                  CAT_TAIL_HASH
+                  SINGLETON_STRUCT
+                  TREASURY_ID
+                )
+                (f (r SINGLETON_STRUCT))
+                )
+              )
+              (if
+                (all
+                  (> TOTAL_VOTES (calculate_win_percentage vote_coin_id_or_current_cat_issuance lockup_innerpuzhash_or_attendance_required))
+                  (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin))
+                )
+                (a INNERPUZ vote_amount_or_solution)  ; run_chialisp: run proposed chialisp ; XXX Matt, Geoff: should we also re-create ourself with previous_votes=0 in this case?
+                (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; dont_run_chialisp: we dont run the chialisp, but we still move to the finished state
+                                                                                    ;    and let the treasury know to remain the same
+              )
+            )
+          )
+        )
+      )
+    )
+    ; We are adding votes to this proposal. vote_info indicates a YES or NO vote.
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id_or_current_cat_issuance)  ; announce which coin we're removing a vote from, so no other locked up CAT is spent
       (c
@@ -177,7 +237,7 @@
                 CAT_MOD_HASH
                 CAT_TAIL_HASH
                 PROPOSAL_TIMELOCK
-                previous_votes
+                previous_votes_or_pass_margin
                 lockup_innerpuzhash_or_attendance_required
               )
             )
@@ -217,67 +277,6 @@
                   TREASURY_ID
                 )
                 0
-              )
-            )
-          )
-        )
-      )
-    )
-
-    ; terminate_this_proposal: End the proposal, and run (INNERPUZ solution) if the proposal passed
-    (c
-      (list CREATE_COIN dao_finished_state ONE (c my_singleton_id 0))  ; move to announce finished mode. See previous comment about proposal amounts
-      (c
-        (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
-        (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
-            (sha256
-              (calculate_treasury_puzzlehash
-                TREASURY_MOD_HASH
-                (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-                PROPOSAL_MOD_HASH
-                PROPOSAL_TIMER_MOD_HASH
-                CAT_MOD_HASH
-                CAT_TAIL_HASH
-                vote_coin_id_or_current_cat_issuance
-                lockup_innerpuzhash_or_attendance_required  ; check the veracity of these values by if the treasury uses them
-                pass_margin  ; check the veracity of these values by if the treasury uses them
-                proposal_timelock  ; check the veracity of these values by if the treasury uses them
-              )
-              (f (r SINGLETON_STRUCT))
-            )
-          )
-          (c
-            (list
-              CREATE_PUZZLE_ANNOUNCEMENT
-              (sha256tree
-                (list
-                  TREASURY_ID
-                  proposal_timelock  ; this is included so that the timer can assert and verify
-                )
-              )
-            )  ; create an announcement so the treasury can sync with us
-            (c
-              (list
-                ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; external timer
-                (calculate_timer_puzhash
-                  PROPOSAL_TIMER_MOD_HASH
-                  PROPOSAL_MOD_HASH
-                  CAT_TAIL_HASH
-                  SINGLETON_STRUCT
-                  TREASURY_ID
-                )
-                (f (r SINGLETON_STRUCT))
-                )
-              )
-              (if
-                (all
-                  (> TOTAL_VOTES (calculate_win_percentage vote_coin_id_or_current_cat_issuance lockup_innerpuzhash_or_attendance_required))
-                  (> YES_VOTES (calculate_win_percentage TOTAL_VOTES pass_margin))
-                )
-                (a INNERPUZ vote_amount_or_solution)  ; run_chialisp: run proposed chialisp ; XXX Matt, Geoff: should we also re-create ourself with previous_votes=0 in this case?
-                (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; dont_run_chialisp: we dont run the chialisp, but we still move to the finished state
-                                                                                    ;    and let the treasury know to remain the same
               )
             )
           )

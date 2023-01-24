@@ -37,7 +37,7 @@ def test_proposal() -> None:
     # INNERPUZ  ; this is what runs if this proposal is successful
 
     current_cat_issuance: uint64 = uint64(1000)
-    proposal_pass_percentage: uint64 = uint64(15)
+    proposal_pass_percentage: uint64 = uint64(5100)
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
@@ -58,11 +58,16 @@ def test_proposal() -> None:
         100,
         Program.to(1),
     )
-    # vote_amount_or_solution
-    # vote_info_or_p2_singleton_mod_hash
-    # vote_coin_id_or_current_cat_issuance
-    # previous_votes
-    # pubkey
+    # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+    # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+    # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+    #                                       ; the total number of CATs in circulation according to the treasury
+    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+    #                                ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+    #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+    # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+    #                    ; set this to 0 and we will do the vote spend case
 
     # Test Voting
     solution: Program = Program.to(
@@ -72,6 +77,7 @@ def test_proposal() -> None:
             Program.to("vote_coin").get_tree_hash(),
             [0xFADEDDAB],
             0xCAFEF00D,
+            0,
         ]
     )
     conds: Program = full_proposal.run(solution)
@@ -82,10 +88,8 @@ def test_proposal() -> None:
             [[51, 0xCAFEF00D, 200]],
             P2_SINGLETON_MOD.get_tree_hash(),
             current_cat_issuance,
-            0,
-            LOCKUP_TIME,
+            proposal_pass_percentage,
             1000,
-            5100,
             LOCKUP_TIME,
         ]
     )
@@ -348,14 +352,24 @@ def test_proposal_innerpuz() -> None:
         proposal_innerpuz,
     )
 
+    # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+    # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+    # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+    #                                       ; the total number of CATs in circulation according to the treasury
+    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+    #                                ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+    #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+    # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+    #                    ; set this to 0 and we will do the vote spend case
+
     solution: Program = Program.to(
         [
             [],
             P2_SINGLETON_MOD.get_tree_hash(),
             current_cat_issuance,
-            0,
-            proposal_pass_percentage,
             pass_margin,
+            proposal_pass_percentage,
             LOCKUP_TIME,
         ]
     )
