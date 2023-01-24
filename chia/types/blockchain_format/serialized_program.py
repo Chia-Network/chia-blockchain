@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+import io
+from typing import Optional, Tuple, Type, Union
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, run_generator, serialized_length, tree_hash
 from clvm import SExp
@@ -11,11 +12,14 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.byte_types import hexstr_to_bytes
 
 
-def _serialize(node) -> bytes:
+def _serialize(node: object) -> bytes:
     if type(node) == SerializedProgram:
         return bytes(node)
+    if type(node) == Program:
+        return bytes(node)
     else:
-        return SExp.to(node).as_bin()
+        ret: bytes = SExp.to(node).as_bin()
+        return ret
 
 
 class SerializedProgram:
@@ -26,25 +30,25 @@ class SerializedProgram:
     _buf: bytes = b""
 
     @classmethod
-    def parse(cls, f) -> "SerializedProgram":
+    def parse(cls: Type[SerializedProgram], f: io.BytesIO) -> SerializedProgram:
         length = serialized_length(f.getvalue()[f.tell() :])
         return SerializedProgram.from_bytes(f.read(length))
 
-    def stream(self, f):
+    def stream(self, f: io.BytesIO) -> None:
         f.write(self._buf)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> "SerializedProgram":
+    def from_bytes(cls: Type[SerializedProgram], blob: bytes) -> SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(blob)
         return ret
 
     @classmethod
-    def fromhex(cls, hexstr: str) -> "SerializedProgram":
+    def fromhex(cls: Type[SerializedProgram], hexstr: str) -> SerializedProgram:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
     @classmethod
-    def from_program(cls, p: Program) -> "SerializedProgram":
+    def from_program(cls: Type[SerializedProgram], p: Program) -> SerializedProgram:
         ret = SerializedProgram()
         ret._buf = bytes(p)
         return ret
@@ -52,7 +56,7 @@ class SerializedProgram:
     def to_program(self) -> Program:
         return Program.from_bytes(self._buf)
 
-    def uncurry(self) -> Tuple["Program", "Program"]:
+    def uncurry(self) -> Tuple[Program, Program]:
         return self.to_program().uncurry()
 
     def __bytes__(self) -> bytes:
@@ -61,15 +65,15 @@ class SerializedProgram:
     def __str__(self) -> str:
         return bytes(self).hex()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s(%s)" % (self.__class__.__name__, str(self))
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, SerializedProgram):
             return False
         return self._buf == other._buf
 
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other: object) -> bool:
         if not isinstance(other, SerializedProgram):
             return True
         return self._buf != other._buf
@@ -77,16 +81,16 @@ class SerializedProgram:
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(self._buf))
 
-    def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+    def run_mempool_with_cost(self, max_cost: int, *args: object) -> Tuple[int, Program]:
         return self._run(max_cost, MEMPOOL_MODE, *args)
 
-    def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, *args: object) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)
 
     # returns an optional error code and an optional SpendBundleConditions (from chia_rs)
     # exactly one of those will hold a value
     def run_as_generator(
-        self, max_cost: int, flags: int, *args
+        self, max_cost: int, flags: int, *args: Union[Program, SerializedProgram]
     ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
 
         serialized_args = bytearray()
@@ -112,7 +116,7 @@ class SerializedProgram:
         assert ret is not None
         return None, ret
 
-    def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags: int, *args: object) -> Tuple[int, Program]:
         # when multiple arguments are passed, concatenate them into a serialized
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
