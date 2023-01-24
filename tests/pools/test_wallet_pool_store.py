@@ -9,7 +9,7 @@ from clvm_tools import binutils
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint64
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from tests.util.db_connection import DBConnection
@@ -22,7 +22,7 @@ def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) 
     puzzle_prog = Program.to(binutils.assemble(puzzle))
     solution_prog = Program.to(binutils.assemble(solution))
     if new_coin is None:
-        new_coin = coin_spend.additions()[0]
+        new_coin = compute_additions(coin_spend)[0]
     sol: CoinSpend = CoinSpend(
         new_coin,
         SerializedProgram.from_program(puzzle_prog),

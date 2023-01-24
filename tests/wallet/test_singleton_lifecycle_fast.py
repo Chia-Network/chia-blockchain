@@ -10,7 +10,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
@@ -228,7 +228,7 @@ class SingletonWallet:
         current_coin_name = self.current_state.name()
         for coin_spend in removals:
             if coin_spend.coin.name() == current_coin_name:
-                for coin in coin_spend.additions():
+                for coin in compute_additions(coin_spend):
                     if coin.amount & 1 == 1:
                         parent_puzzle_hash = coin_spend.coin.puzzle_hash
                         parent_puzzle = puzzle_db.puzzle_for_hash(parent_puzzle_hash)
@@ -442,7 +442,7 @@ def find_interesting_singletons(puzzle_db: PuzzleDB, removals: List[CoinSpend]) 
             r = Program.from_bytes(bytes(coin_spend.solution))
             key_value_list = r.rest().rest().first()
 
-            eve_coin = coin_spend.additions()[0]
+            eve_coin = compute_additions(coin_spend)[0]
 
             lineage_proof = lineage_proof_for_coin_spend(coin_spend)
             launcher_id = coin_spend.coin.name()

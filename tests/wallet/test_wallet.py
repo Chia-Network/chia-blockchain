@@ -17,6 +17,7 @@ from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
@@ -533,7 +534,7 @@ class TestWalletSimulator:
 
         # extract coin_spend from generated spend_bundle
         for cs in tx.spend_bundle.coin_spends:
-            if cs.additions() == []:
+            if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
         stolen_sb = await wallet.sign_transaction([stolen_cs])
