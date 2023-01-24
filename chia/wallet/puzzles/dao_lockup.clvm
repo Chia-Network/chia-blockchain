@@ -273,7 +273,7 @@
                 INNERPUZ
               )
               my_amount
-              (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+              (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
               vote_amount
               my_puzhash
               0
