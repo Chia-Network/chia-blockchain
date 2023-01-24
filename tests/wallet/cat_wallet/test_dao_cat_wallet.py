@@ -91,7 +91,7 @@ async def test_cat_spend(self_hostname: str, two_wallet_nodes: SimulatorsAndWall
     assert cat_wallet.cat_info.limitations_program_hash is not None
     asset_id = cat_wallet.get_asset_id()
 
-    cat_wallet_2: CATWallet = await CATWallet.create_wallet_for_cat(
+    cat_wallet_2: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
         wallet_node_2.wallet_state_manager, wallet2, asset_id
     )
 
