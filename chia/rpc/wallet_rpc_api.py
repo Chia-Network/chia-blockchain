@@ -1370,7 +1370,7 @@ class WalletRpcApi:
             puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
             if "memos" in request:
                 memos.append([mem.encode("utf-8") for mem in request["memos"]])
-        coins = None
+        coins: Optional[Set[Coin]] = None
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
         fee: uint64 = uint64(request.get("fee", 0))
