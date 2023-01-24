@@ -40,6 +40,14 @@ async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
     assert False
 
 
+async def get_coin_record_for_test_coins(coin_id: bytes32) -> Optional[CoinRecord]:
+    test_coin_records = {
+        TEST_COIN_ID: TEST_COIN_RECORD,
+        TEST_COIN_ID2: TEST_COIN_RECORD2,
+    }
+    return test_coin_records.get(coin_id)
+
+
 def create_test_block_record(*, height: uint32 = TEST_HEIGHT) -> BlockRecord:
     return BlockRecord(
         IDENTITY_PUZZLE_HASH,
@@ -262,15 +270,7 @@ async def test_unknown_unspent() -> None:
 
 @pytest.mark.asyncio
 async def test_same_sb_twice_with_eligible_coin() -> None:
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        test_coin_records = {
-            TEST_COIN_ID: TEST_COIN_RECORD,
-            TEST_COIN_ID2: TEST_COIN_RECORD2,
-        }
-        return test_coin_records.get(coin_id)
-
-    mempool_manager = await instantiate_mempool_manager(get_coin_record)
-
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
     sb1_conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
