@@ -192,14 +192,16 @@ def test_vote_from_locked_state():
     conditions = [[51, child_puzhash, lockup_coin_amount], [62, message]]
     inner_sol = solution_for_conditions(conditions)
 
-    solution: Program = Program.to([
-        lockup_coin.name(),
-        inner_sol,
-        lockup_coin_amount,
-        proposal_id,
-        proposal_curry_vals,
-        1,
-    ])
+    solution: Program = Program.to(
+        [
+            lockup_coin.name(),
+            inner_sol,
+            lockup_coin_amount,
+            proposal_id,
+            proposal_curry_vals,
+            1,
+        ]
+    )
 
     sc_list: List[SpendableCAT] = [
         SpendableCAT(
@@ -227,13 +229,7 @@ def test_vote_from_locked_state():
     # previous_votes
     # pubkey
     proposal_solution: Program = Program.to(
-        [
-            lockup_coin_amount,
-            1,
-            lockup_coin.name(),
-            PREVIOUS_VOTES,
-            innerpuz.get_tree_hash()
-        ]
+        [lockup_coin_amount, 1, lockup_coin.name(), PREVIOUS_VOTES, innerpuz.get_tree_hash()]
     )
     singleton_solution: Program = Program.to(
         [[Program.to("prop_parent").get_tree_hash(), Program.to(1).get_tree_hash(), 1], 1, proposal_solution]
@@ -345,7 +341,7 @@ def test_close_proposal():
         current_cat_issuance,
         LOCKUP_TIME,
         proposal_pass_percentage,
-        MY_PARENT_SINGLETON_STRUCT,
+        singleton_struct,
         treasury_id,
     )
 
