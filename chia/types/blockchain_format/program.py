@@ -48,9 +48,6 @@ class Program(SExp):
     def fromhex(cls, hexstr: str) -> "Program":
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
-    def to_serialized_program(self) -> "SerializedProgram":
-        return SerializedProgram.from_bytes(bytes(self))
-
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # noqa
@@ -220,12 +217,6 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
         s = b"\1" + atom
     return bytes32(std_hash(s))
 
-
-# this has to be here to avoid the issue with circular import.
-# TODO: update all import statements
-from .serialized_program import SerializedProgram  # noqa: E402
-
-__all__ = ["SerializedProgram", "Program", "NIL"]
 
 NIL = Program.from_bytes(b"\x80")
 
