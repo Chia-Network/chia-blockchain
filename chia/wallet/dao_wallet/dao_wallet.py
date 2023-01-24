@@ -77,7 +77,8 @@ class DAOWallet:
     wallet_info: WalletInfo
     dao_info: DAOInfo
     standard_wallet: Wallet
-    cat_wallet: DAOCATWallet
+    cat_wallet: CATWallet
+    dao_cat_wallet: DAOCATWallet
     wallet_id: int
 
     @staticmethod
@@ -890,6 +891,30 @@ class DAOWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
+    async def generate_proposal_vote_spend(self, proposal_id: bytes32):
+        proposal_info = None
+        for prop in self.dao_info.proposals_list:
+            if prop.proposal_id == proposal_id:
+                proposal_info = prop
+                break
+        assert proposal_info is not None
+        # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+        # vote_info_or_p2_singleton_mod_hash
+        # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+        #                                       ; the total number of CATs in circulation according to the treasury
+        # previous_votes  ; set this to 0 if we have passed
+        # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+        #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+        # pass_margin  ; this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+
+        # TODO: fill this in when we can take a list of coins in dao_proposal.clvm
+        inner_sol = Program.to([
+
+        ])
+
+        return
+
     async def create_add_money_to_treasury_spend(self) -> SpendBundle:
         return SpendBundle([], G2Element.generator())
 
@@ -943,3 +968,19 @@ class DAOWallet:
 
     def get_cat_wallet_id(self) -> uint64:
         return self.dao_info.cat_wallet_id
+
+    async def create_new_dao_cats(self, amount: uint64):
+        # check there are enough cats to convert
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_balance = await cat_wallet.get_spendable_balance()
+        if cat_balance < amount:
+            raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
+        # get the lockup puzzle hash
+        dao_cat_wallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+        lockup_puzzle_hash = await dao_cat_wallet.get_new_puzzlehash()
+
+        # create the cat spend
+        txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle_hash])
+        for tx in txs:
+            await self.wallet_state_manager.add_pending_transaction(tx)
+        return txs
