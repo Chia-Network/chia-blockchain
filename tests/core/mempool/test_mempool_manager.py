@@ -33,6 +33,10 @@ TEST_COIN_AMOUNT2 = uint64(2000000000)
 TEST_COIN2 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2)
 TEST_COIN_ID2 = TEST_COIN2.name()
 TEST_COIN_RECORD2 = CoinRecord(TEST_COIN2, uint32(0), uint32(0), False, TEST_TIMESTAMP)
+TEST_COIN_AMOUNT3 = uint64(3000000000)
+TEST_COIN3 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT3)
+TEST_COIN_ID3 = TEST_COIN3.name()
+TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIMESTAMP)
 TEST_HEIGHT = uint32(1)
 
 
@@ -44,6 +48,7 @@ async def get_coin_record_for_test_coins(coin_id: bytes32) -> Optional[CoinRecor
     test_coin_records = {
         TEST_COIN_ID: TEST_COIN_RECORD,
         TEST_COIN_ID2: TEST_COIN_RECORD2,
+        TEST_COIN_ID3: TEST_COIN_RECORD3,
     }
     return test_coin_records.get(coin_id)
 
@@ -128,8 +133,8 @@ async def add_spendbundle(
 
 async def generate_and_add_spendbundle(
     mempool_manager: MempoolManager,
-    coin: Coin,
     conditions: List[List[Any]],
+    coin: Coin = TEST_COIN,
 ) -> Tuple[SpendBundle, bytes32, Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]]:
     sb = spend_bundle_from_conditions(conditions, coin)
     sb_name = sb.name()
@@ -226,7 +231,7 @@ async def test_minting_coin(
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, TEST_COIN, conditions)
+    result = await generate_and_add_spendbundle(mempool_manager, conditions)
     _, status, error = result[2]
     assert status == expected_status
     assert error == expected_error
@@ -251,7 +256,7 @@ async def test_reserve_fee_condition(
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
     conditions = [[ConditionOpcode.RESERVE_FEE, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, TEST_COIN, conditions)
+    result = await generate_and_add_spendbundle(mempool_manager, conditions)
     _, status, error = result[2]
     assert status == expected_status
     assert error == expected_error
@@ -264,7 +269,7 @@ async def test_unknown_unspent() -> None:
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    _, _, result = await generate_and_add_spendbundle(mempool_manager, TEST_COIN, conditions)
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
     assert result == (None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT)
 
 
@@ -290,3 +295,37 @@ async def test_same_sb_twice_with_eligible_coin() -> None:
     result = await add_spendbundle(mempool_manager, sb, sb_name)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     assert mempool_manager.get_spendbundle(sb_name) == sb
+
+
+@pytest.mark.asyncio
+async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    sb1_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    sb1 = spend_bundle_from_conditions(sb1_conditions)
+    sb2_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3],
+        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+    ]
+    sb2 = spend_bundle_from_conditions(sb2_conditions, TEST_COIN2)
+    sb3_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
+    sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
+    sb = SpendBundle.aggregate([sb1, sb2, sb3])
+    sb_name = sb.name()
+    reordered_sb = SpendBundle.aggregate([sb3, sb1, sb2])
+    reordered_sb_name = reordered_sb.name()
+    assert mempool_manager.get_spendbundle(sb_name) is None
+    assert mempool_manager.get_spendbundle(reordered_sb_name) is None
+    result = await add_spendbundle(mempool_manager, sb, sb_name)
+    expected_cost = uint64(13091510)
+    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    assert mempool_manager.get_spendbundle(sb_name) == sb
+    assert mempool_manager.get_spendbundle(reordered_sb_name) is None
+    # This reordered spend bundle should generate conflicting coin spends with
+    # the previously added spend bundle
+    result = await add_spendbundle(mempool_manager, reordered_sb, reordered_sb_name)
+    assert result == (expected_cost, MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+    assert mempool_manager.get_spendbundle(sb_name) == sb
+    assert mempool_manager.get_spendbundle(reordered_sb_name) is None
