@@ -72,11 +72,11 @@ def test_proposal() -> None:
     # Test Voting
     solution: Program = Program.to(
         [
-            10,
+            [10],
             1,
-            Program.to("vote_coin").get_tree_hash(),
-            [0xFADEDDAB],
-            0xCAFEF00D,
+            [Program.to("vote_coin").get_tree_hash()],
+            [[0xFADEDDAB]],
+            [0xCAFEF00D],
             0,
         ]
     )

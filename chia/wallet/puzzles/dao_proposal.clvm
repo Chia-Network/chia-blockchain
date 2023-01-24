@@ -71,13 +71,11 @@
     LOCKUP_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL_HASH
-    PROPOSAL_TIMELOCK
     previous_votes
     lockup_innerpuzhash
   )
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
                                      lockup_innerpuzhash
-                                     (sha256 ONE PROPOSAL_TIMELOCK)
                                      (sha256tree previous_votes)
                                      (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
@@ -93,6 +91,7 @@
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
+    LOCKUP_MOD_HASH
     TREASURY_MOD_HASH
     CAT_TAIL_HASH
     TREASURY_ID
@@ -106,7 +105,8 @@
                                      (sha256 ONE YES_VOTES)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE CAT_TAIL_HASH)
-				     (sha256 ONE TREASURY_MOD_HASH)
+				                             (sha256 ONE TREASURY_MOD_HASH)
+                                     (sha256 ONE LOCKUP_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -134,26 +134,124 @@
     treasury_singleton_struct
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
+    LOCKUP_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL_HASH
+    CURRENT_CAT_ISSUANCE
+    ATTENDANCE_REQUIRED_PERCENTAGE
     PROPOSAL_PASS_PERCENTAGE
     PROPOSAL_TIMELOCK
-    p2_singleton_mod_hash
     )
     (calculate_singleton_puzzle_hash treasury_singleton_struct
       (puzzle-hash-of-curried-function TREASURY_MOD_HASH
-        (sha256 ONE PROPOSAL_TIMELOCK)
-      	(sha256 ONE PROPOSAL_PASS_PERCENTAGE)
-      	(sha256 ONE CURRENT_CAT_ISSUANCE)
-      	(sha256 ONE CAT_TAIL_HASH)
-      	(sha256 ONE CAT_MOD_HASH)
-      	(sha256 ONE p2_singleton_mod_hash)
-      	(sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-      	(sha256 ONE PROPOSAL_MOD_HASH)
-        (sha256 ONE TREASURY_MOD_HASH)
-        (sha256tree treasury_singleton_struct)
+        (sha256tree (list
+          treasury_singleton_struct
+          TREASURY_MOD_HASH
+          PROPOSAL_MOD_HASH
+          PROPOSAL_TIMER_MOD_HASH
+          LOCKUP_MOD_HASH
+          CAT_MOD_HASH
+          CAT_TAIL_HASH
+          CURRENT_CAT_ISSUANCE
+          ATTENDANCE_REQUIRED_PERCENTAGE
+          PROPOSAL_PASS_PERCENTAGE
+          PROPOSAL_TIMELOCK
+        ))
       )
     )
+  )
+
+  (defun loop_over_vote_coins (
+    SINGLETON_STRUCT
+    CAT_MOD_HASH
+    CAT_TAIL_HASH
+    LOCKUP_MOD_HASH
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    TREASURY_MOD_HASH
+    LOCKUP_MOD_HASH
+    TREASURY_ID
+    YES_VOTES
+    TOTAL_VOTES
+    INNERPUZ
+    coin_id_list
+    vote_amount_list
+    previous_votes
+    lockup_innerpuzhashes
+    vote_info
+    sum
+    output
+  )
+    (if coin_id_list
+      (c
+        (list CREATE_PUZZLE_ANNOUNCEMENT (f coin_id_list))
+        (c
+          (list
+            ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
+            (sha256
+              (wrap_in_cat_layer
+                CAT_MOD_HASH
+                CAT_TAIL_HASH
+                (calculate_lockup_puzzlehash  ; because the message comes from
+                  PROPOSAL_MOD_HASH
+                  (f SINGLETON_STRUCT)
+                  (r (r SINGLETON_STRUCT))
+                  LOCKUP_MOD_HASH
+                  CAT_MOD_HASH
+                  CAT_TAIL_HASH
+                  (f previous_votes)
+                  (f lockup_innerpuzhashes)
+                )
+              )
+              (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
+            )
+          )
+          (loop_over_vote_coins
+            SINGLETON_STRUCT
+            CAT_MOD_HASH
+            CAT_TAIL_HASH
+            LOCKUP_MOD_HASH
+            PROPOSAL_MOD_HASH
+            PROPOSAL_TIMER_MOD_HASH
+            TREASURY_MOD_HASH
+            LOCKUP_MOD_HASH
+            TREASURY_ID
+            YES_VOTES
+            TOTAL_VOTES
+            INNERPUZ
+            (r coin_id_list)
+            (r vote_amount_list)
+            (r previous_votes)
+            (r lockup_innerpuzhashes)
+            vote_info
+            (+ (f vote_amount_list) sum)
+            output
+          )
+        )
+      )
+      (c
+        (list
+          CREATE_COIN  ; recreate self with vote information added
+          (recreate_self
+            SINGLETON_STRUCT
+            PROPOSAL_MOD_HASH
+            PROPOSAL_TIMER_MOD_HASH
+            CAT_MOD_HASH
+            LOCKUP_MOD_HASH
+            TREASURY_MOD_HASH
+            CAT_TAIL_HASH
+            TREASURY_ID
+            (if vote_info (+ YES_VOTES sum) YES_VOTES)
+            (+ TOTAL_VOTES sum)
+            INNERPUZ
+          )
+          ONE  ; why would a proposal hold any value
+          (c TREASURY_ID 0)  ; hint to Treasury ID so people can find it
+        )
+        output
+      )
+    )
+
   )
 
 
@@ -162,7 +260,7 @@
   (if proposal_timelock
     ; terminate_this_proposal: End the proposal, and run (INNERPUZ solution) if the proposal passed
     (c
-      (list CREATE_COIN dao_finished_state ONE (c my_singleton_id 0))  ; move to announce finished mode. See previous comment about proposal amounts
+      (list CREATE_COIN dao_finished_state ONE (c (f (r SINGLETON_STRUCT)) 0))  ; move to announce finished mode. See previous comment about proposal amounts
       (c
         (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
         (c
@@ -173,6 +271,7 @@
                 (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
                 PROPOSAL_MOD_HASH
                 PROPOSAL_TIMER_MOD_HASH
+                LOCKUP_MOD_HASH
                 CAT_MOD_HASH
                 CAT_TAIL_HASH
                 vote_coin_id_or_current_cat_issuance
@@ -221,64 +320,38 @@
       )
     )
     ; We are adding votes to this proposal. vote_info indicates a YES or NO vote.
-    (c
-      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id_or_current_cat_issuance)  ; announce which coin we're removing a vote from, so no other locked up CAT is spent
-      (c
+    (loop_over_vote_coins
+      SINGLETON_STRUCT
+      CAT_MOD_HASH
+      CAT_TAIL_HASH
+      LOCKUP_MOD_HASH
+      PROPOSAL_MOD_HASH
+      PROPOSAL_TIMER_MOD_HASH
+      TREASURY_MOD_HASH
+      LOCKUP_MOD_HASH
+      TREASURY_ID
+      YES_VOTES
+      TOTAL_VOTES
+      INNERPUZ
+      vote_coin_id_or_current_cat_issuance
+      vote_amount_or_solution
+      previous_votes_or_pass_margin
+      lockup_innerpuzhash_or_attendance_required
+      vote_info_or_p2_singleton_mod_hash
+      0
+      (if (any YES_VOTES TOTAL_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
+        ()
         (list
-          ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
-          (sha256
-            (wrap_in_cat_layer
-              CAT_MOD_HASH CAT_TAIL_HASH
-              (calculate_lockup_puzzlehash
-                PROPOSAL_MOD_HASH
-                (f SINGLETON_STRUCT)
-                (r (r SINGLETON_STRUCT))
-                LOCKUP_MOD_HASH
-                CAT_MOD_HASH
-                CAT_TAIL_HASH
-                PROPOSAL_TIMELOCK
-                previous_votes_or_pass_margin
-                lockup_innerpuzhash_or_attendance_required
-              )
-            )
-            (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id_or_current_cat_issuance))
-          )
-        )
-        (c
           (list
-            CREATE_COIN  ; recreate self with vote information added
-            (recreate_self
-              SINGLETON_STRUCT
-              PROPOSAL_MOD_HASH
+            CREATE_COIN
+            (calculate_timer_puzhash
               PROPOSAL_TIMER_MOD_HASH
-              CAT_MOD_HASH
-	            TREASURY_MOD_HASH
+              PROPOSAL_MOD_HASH
               CAT_TAIL_HASH
-              PROPOSAL_PASS_PERCENTAGE
+              SINGLETON_STRUCT
               TREASURY_ID
-              PROPOSAL_TIMELOCK
-              (if vote_info_or_p2_singleton_mod_hash (+ YES_VOTES vote_amount_or_solution) YES_VOTES)
-              (+ TOTAL_VOTES vote_amount_or_solution)
-              INNERPUZ
             )
-            ONE  ; why would a proposal hold any value
-            (c TREASURY_ID 0)  ; hint to Treasury ID so people can find it
-          )
-          (if (any TOTAL_VOTES SUM_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
-            ()
-            (list
-              (list
-                CREATE_COIN
-                (calculate_timer_puzhash
-                  PROPOSAL_TIMER_MOD_HASH
-                  PROPOSAL_MOD_HASH
-                  CAT_TAIL_HASH
-                  SINGLETON_STRUCT
-                  TREASURY_ID
-                )
-                0
-              )
-            )
+            0
           )
         )
       )
