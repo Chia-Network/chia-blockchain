@@ -186,7 +186,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
 
 
 def check_unusual_transaction(amount: Decimal, fee: Decimal):
-    return fee >= amount
+    return fee >= amount or amount == 0
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -209,9 +209,6 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             f"A transaction of amount {amount} and fee {fee} is unusual.\n"
             f"Pass in --override if you are sure you mean to do this."
         )
-        return
-    if amount == 0:
-        print("You can not send an empty transaction")
         return
 
     try:

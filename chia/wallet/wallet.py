@@ -390,10 +390,7 @@ class Wallet:
             if origin_id in (None, coin.name()):
                 origin_id = coin.name()
                 if primaries is None:
-                    if amount > 0:
-                        primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
-                    else:
-                        primaries = []
+                    primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:

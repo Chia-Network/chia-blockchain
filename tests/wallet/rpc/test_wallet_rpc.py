@@ -231,7 +231,8 @@ async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
 
 
 @pytest.mark.asyncio
-async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment):
+@pytest.mark.parametrize("tx_amount", [uint64(15600000), uint64(0)])
+async def test_send_transaction(tx_amount: uint64, wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_2: Wallet = env.wallet_2.wallet
@@ -242,7 +243,6 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    tx_amount = uint64(15600000)
     with pytest.raises(ValueError):
         await client.send_transaction(1, uint64(100000000000000001), addr)
 
