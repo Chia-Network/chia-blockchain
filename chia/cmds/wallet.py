@@ -173,8 +173,8 @@ def get_transactions_cmd(
     default="0",
 )
 @click.option(
-    "-e",
-    "--exclude-coin-ids",
+    "--exclude-coin",
+    "coins_to_exclude",
     multiple=True,
     help="Exclude this coin from being spent.",
 )
@@ -189,7 +189,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    exclude_coin_ids: Tuple[str],
+    coins_to_exclude: Tuple[str],
 ) -> None:
     extra_params = {
         "id": id,
@@ -200,7 +200,7 @@ def send_cmd(
         "override": override,
         "min_coin_amount": min_coin_amount,
         "max_coin_amount": max_coin_amount,
-        "exclude_coin_ids": list(exclude_coin_ids),
+        "exclude_coin_ids": list(coins_to_exclude),
     }
     import asyncio
 
@@ -497,7 +497,7 @@ def take_offer_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-id", "--id", help="The offer ID that you wish to cancel")
+@click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True)
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @click.option("-m", "--fee", help="The fee to use when cancelling the offer securely", default="0")
 def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:

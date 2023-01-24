@@ -20,6 +20,13 @@ NULL_SIGNATURE = G2Element()
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 
+def empty_program() -> Program:
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to([])  # type: ignore[no-any-return]
+
+
 # information needed to spend a cc
 @dataclasses.dataclass
 class SpendableCAT:
@@ -27,10 +34,10 @@ class SpendableCAT:
     limitations_program_hash: bytes32
     inner_puzzle: Program
     inner_solution: Program
-    limitations_solution: Program = Program.to([])
+    limitations_solution: Program = dataclasses.field(default_factory=empty_program)
     lineage_proof: LineageProof = LineageProof()
     extra_delta: int = 0
-    limitations_program_reveal: Program = Program.to([])
+    limitations_program_reveal: Program = dataclasses.field(default_factory=empty_program)
 
 
 def match_cat_puzzle(puzzle: UncurriedPuzzle) -> Optional[Iterator[Program]]:

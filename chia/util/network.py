@@ -16,7 +16,39 @@ from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 
-IPAddress = Union[IPv4Address, IPv6Address]
+
+@dataclass(frozen=True)
+class IPAddress:
+    _inner: Union[IPv4Address, IPv6Address]
+
+    @classmethod
+    def create(cls, ip: str) -> IPAddress:
+        return cls(ip_address(ip))
+
+    def __int__(self) -> int:
+        return int(self._inner)
+
+    def __str__(self) -> str:
+        return str(self._inner)
+
+    def __repr__(self) -> str:
+        return repr(self._inner)
+
+    @property
+    def packed(self) -> bytes:
+        return self._inner.packed
+
+    @property
+    def is_private(self) -> bool:
+        return self._inner.is_private
+
+    @property
+    def is_v4(self) -> bool:
+        return self._inner.version == 4
+
+    @property
+    def is_v6(self) -> bool:
+        return self._inner.version == 6
 
 
 @final
@@ -111,7 +143,7 @@ def class_for_type(type: NodeType) -> Any:
 
 def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     try:
-        return ip_address(host)
+        return IPAddress.create(host)
     except ValueError:
         pass
     addrset: List[
@@ -121,7 +153,7 @@ def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     ips_v4 = []
     ips_v6 = []
     for family, _, _, _, ip_port in addrset:
-        ip = ip_address(ip_port[0])
+        ip = IPAddress.create(ip_port[0])
         if family == socket.AF_INET:
             ips_v4.append(ip)
         if family == socket.AF_INET6:

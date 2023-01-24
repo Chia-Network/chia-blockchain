@@ -174,7 +174,7 @@ class CATWallet:
         return self
 
     @staticmethod
-    async def create_wallet_for_cat(
+    async def get_or_create_wallet_for_cat(
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         limitations_program_hash_hex: str,
@@ -192,7 +192,7 @@ class CATWallet:
                 assert isinstance(w, CATWallet)
                 if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
-                    raise ValueError("Wallet already exists")
+                    return w
 
         self.wallet_state_manager = wallet_state_manager
         if limitations_program_hash_hex in DEFAULT_CATS:
@@ -218,7 +218,7 @@ class CATWallet:
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
     ) -> CATWallet:
-        return await cls.create_wallet_for_cat(
+        return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
             puzzle_driver["tail"].hex(),
@@ -312,7 +312,7 @@ class CATWallet:
 
         return uint128(total_amount)
 
-    async def get_name(self) -> str:
+    def get_name(self) -> str:
         return self.wallet_info.name
 
     async def set_name(self, new_name: str) -> None:
