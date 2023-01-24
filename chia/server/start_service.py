@@ -11,27 +11,20 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
-from chia.daemon.server import service_launch_lock_path
-from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from chia.server.ws_connection import WSChiaConnection
-from chia.util.lock import Lockfile, LockfileError
-
-from ..protocols.shared_protocol import capabilities
-
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
 from chia.cmds.init_funcs import chia_full_version_str
+from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.util.lock import Lockfile, LockfileError
 from chia.util.setproctitle import setproctitle
 
+from ..protocols.shared_protocol import capabilities
 from .reconnect_task import start_reconnect_task
 
 # this is used to detect whether we are running in the main process or not, in
@@ -192,9 +185,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         if self._reconnect_tasks.get(peer) is not None:
             raise ServiceException(f"Peer {peer} already added")
 
-        self._reconnect_tasks[peer] = start_reconnect_task(
-            self._server, peer, self._log, self.config.get("prefer_ipv6", False)
-        )
+        self._reconnect_tasks[peer] = start_reconnect_task(self._server, peer, self._log)
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
@@ -281,6 +272,4 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
 
 def async_run(coro: Coroutine[object, object, T]) -> T:
-    if uvloop is not None:
-        uvloop.install()
     return asyncio.run(coro)

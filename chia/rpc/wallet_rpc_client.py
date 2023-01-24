@@ -1,4 +1,6 @@
-from typing import Dict, List, Optional, Any, Tuple, Union
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
@@ -88,6 +90,9 @@ class WalletRpcClient(RpcClient):
     async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})
 
+    async def get_timestamp_for_height(self, height: uint32) -> uint64:
+        return uint64((await self.fetch("get_timestamp_for_height", {"height": height}))["timestamp"])
+
     # Wallet Management APIs
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> Dict:
         request: Dict[str, Any] = {}
@@ -96,10 +101,10 @@ class WalletRpcClient(RpcClient):
         return (await self.fetch("get_wallets", request))["wallets"]
 
     # Wallet APIs
-    async def get_wallet_balance(self, wallet_id: str) -> Dict:
+    async def get_wallet_balance(self, wallet_id: int) -> Dict:
         return (await self.fetch("get_wallet_balance", {"wallet_id": wallet_id}))["wallet_balance"]
 
-    async def get_transaction(self, wallet_id: str, transaction_id: bytes32) -> TransactionRecord:
+    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
         res = await self.fetch(
             "get_transaction",
             {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
@@ -108,7 +113,7 @@ class WalletRpcClient(RpcClient):
 
     async def get_transactions(
         self,
-        wallet_id: str,
+        wallet_id: int,
         start: int = None,
         end: int = None,
         sort_key: SortKey = None,
@@ -136,7 +141,7 @@ class WalletRpcClient(RpcClient):
 
     async def get_transaction_count(
         self,
-        wallet_id: str,
+        wallet_id: int,
     ) -> List[TransactionRecord]:
         res = await self.fetch(
             "get_transaction_count",
@@ -144,12 +149,12 @@ class WalletRpcClient(RpcClient):
         )
         return res["count"]
 
-    async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
+    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
     async def send_transaction(
         self,
-        wallet_id: str,
+        wallet_id: int,
         amount: uint64,
         address: str,
         fee: uint64 = uint64(0),
@@ -186,7 +191,7 @@ class WalletRpcClient(RpcClient):
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
     async def send_transaction_multi(
-        self, wallet_id: str, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
+        self, wallet_id: int, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
@@ -207,7 +212,7 @@ class WalletRpcClient(RpcClient):
 
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
-    async def delete_unconfirmed_transactions(self, wallet_id: str) -> None:
+    async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
         await self.fetch(
             "delete_unconfirmed_transactions",
             {"wallet_id": wallet_id},
@@ -529,13 +534,13 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def pw_self_pool(self, wallet_id: str, fee: uint64) -> Dict:
+    async def pw_self_pool(self, wallet_id: int, fee: uint64) -> Dict:
         reply = await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee})
         reply = parse_result_transactions(reply)
         return reply
 
     async def pw_join_pool(
-        self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
+        self, wallet_id: int, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
     ) -> Dict:
         request = {
             "wallet_id": int(wallet_id),
@@ -550,7 +555,7 @@ class WalletRpcClient(RpcClient):
         return reply
 
     async def pw_absorb_rewards(
-        self, wallet_id: str, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
+        self, wallet_id: int, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
     ) -> Dict:
         reply = await self.fetch(
             "pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee, "max_spends_in_tx": max_spends_in_tx}
@@ -559,7 +564,7 @@ class WalletRpcClient(RpcClient):
         reply = parse_result_transactions(reply)
         return reply
 
-    async def pw_status(self, wallet_id: str) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
+    async def pw_status(self, wallet_id: int) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
         json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})
         return (
             PoolWalletInfo.from_json_dict(json_dict["state"]),
@@ -583,7 +588,7 @@ class WalletRpcClient(RpcClient):
         }
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_asset_id(self, wallet_id: str) -> bytes32:
+    async def get_cat_asset_id(self, wallet_id: int) -> bytes32:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
@@ -605,13 +610,13 @@ class WalletRpcClient(RpcClient):
         wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(int(res["wallet_id"]))
         return wallet_id, res["name"]
 
-    async def get_cat_name(self, wallet_id: str) -> str:
+    async def get_cat_name(self, wallet_id: int) -> str:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
         return (await self.fetch("cat_get_name", request))["name"]
 
-    async def set_cat_name(self, wallet_id: str, name: str) -> None:
+    async def set_cat_name(self, wallet_id: int, name: str) -> None:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "name": name,
@@ -620,7 +625,7 @@ class WalletRpcClient(RpcClient):
 
     async def cat_spend(
         self,
-        wallet_id: str,
+        wallet_id: int,
         amount: Optional[uint64] = None,
         inner_address: Optional[str] = None,
         fee: uint64 = uint64(0),
@@ -631,7 +636,7 @@ class WalletRpcClient(RpcClient):
         exclude_coin_ids: Optional[List[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
     ) -> TransactionRecord:
-        send_dict = {
+        send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "fee": fee,
             "memos": memos if memos else [],
@@ -684,13 +689,15 @@ class WalletRpcClient(RpcClient):
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
-    async def get_offer_summary(self, offer: Offer, advanced: bool = False) -> Dict[str, Dict[str, int]]:
+    async def get_offer_summary(
+        self, offer: Offer, advanced: bool = False
+    ) -> Tuple[bytes32, Dict[str, Dict[str, int]]]:
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
-        return res["summary"]
+        return bytes32.from_hexstr(res["id"]), res["summary"]
 
-    async def check_offer_validity(self, offer: Offer) -> bool:
+    async def check_offer_validity(self, offer: Offer) -> Tuple[bytes32, bool]:
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
-        return res["valid"]
+        return bytes32.from_hexstr(res["id"]), res["valid"]
 
     async def take_offer(
         self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint64 = uint64(0)
@@ -996,6 +1003,7 @@ class WalletRpcClient(RpcClient):
                 bytes32.from_hexstr(notification["id"]),
                 bytes.fromhex(notification["message"]),
                 uint64(notification["amount"]),
+                uint32(notification["height"]),
             )
             for notification in response["notifications"]
         ]

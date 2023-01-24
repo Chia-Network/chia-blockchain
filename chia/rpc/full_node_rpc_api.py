@@ -185,11 +185,13 @@ class FullNodeRpcApi:
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
             mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
+            mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees
             mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
             mempool_max_total_cost = self.service.mempool_manager.mempool_max_total_cost
         else:
             mempool_size = 0
             mempool_cost = 0
+            mempool_fees = 0
             mempool_min_fee_5m = 0
             mempool_max_total_cost = 0
         if self.service.server is not None:
@@ -216,6 +218,7 @@ class FullNodeRpcApi:
                 "space": space["space"],
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
+                "mempool_fees": mempool_fees,
                 "mempool_min_fees": {
                     # We may give estimates for varying costs in the future
                     # This Dict sets us up for that in the future
@@ -756,19 +759,36 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item}
 
-    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
-        if "spend_bundle" in request and "cost" in request:
-            raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
-        if "spend_bundle" not in request and "cost" not in request:
-            raise ValueError("Request must contain 'spend_bundle' or 'cost'")
-        if "target_times" not in request:
-            raise ValueError("Request must contain 'target_times' array")
-        if any(t < 0 for t in request["target_times"]):
-            raise ValueError("'target_times' array members must be non-negative")
+    def _get_spendbundle_type_cost(self, name: str) -> uint64:
+        """
+        This is a stopgap until we modify the wallet RPCs to get exact costs for created SpendBundles
+        before we send them to the Mempool.
+        """
 
-        cost = 0
+        tx_cost_estimates = {
+            "send_xch_transaction": 9_401_710,
+            "cat_spend": 36_382_111,
+            "take_offer": 721_393_265,
+            "cancel_offer": 212_443_993,
+            "nft_set_nft_did": 115_540_006,
+            "nft_transfer_nft": 74_385_541,  # burn or transfer
+            "create_new_pool_wallet": 18_055_407,
+            "pw_absorb_rewards": 82_668_466,
+            "create_new_did_wallet": 57_360_396,
+        }
+        return uint64(tx_cost_estimates[name])
+
+    async def _validate_fee_estimate_cost(self, request: Dict) -> uint64:
+        c = 0
+        ns = ["spend_bundle", "cost", "spend_type"]
+        for n in ns:
+            if n in request:
+                c += 1
+        if c != 1:
+            raise ValueError(f"Request must contain exactly one of {ns}")
+
         if "spend_bundle" in request:
-            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
             spend_name = spend_bundle.name()
             npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_name
@@ -776,26 +796,68 @@ class FullNodeRpcApi:
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
             cost = npc_result.cost
-        if "cost" in request:
-            cost = uint64(request["cost"])
+        elif "cost" in request:
+            cost = request["cost"]
+        else:
+            cost = self._get_spendbundle_type_cost(request["spend_type"])
+            cost *= request.get("spend_count", 1)
+        return uint64(cost)
+
+    def _validate_target_times(self, request: Dict) -> None:
+        if "target_times" not in request:
+            raise ValueError("Request must contain 'target_times' array")
+        if any(t < 0 for t in request["target_times"]):
+            raise ValueError("'target_times' array members must be non-negative")
+
+    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
+        self._validate_target_times(request)
+        spend_cost = await self._validate_fee_estimate_cost(request)
 
         target_times = request["target_times"]
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
         estimates = [
-            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * cost for time in target_times
+            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * spend_cost
+            for time in target_times
         ]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
-        mempool_size = estimator.mempool_size()
+        mempool_size = self.service.mempool_manager.mempool.total_mempool_cost
+        mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees
+        num_mempool_spends = len(self.service.mempool_manager.mempool.spends)
         mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
-        peak_height = blockchain_state["blockchain_state"]["peak"].height
-        last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
-        peak_with_timestamp = peak_height
-        while last_peak_timestamp is None:
-            peak_with_timestamp -= 1
-            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-            last_peak_timestamp = block_record.timestamp
+        peak = blockchain_state["blockchain_state"]["peak"]
+
+        if peak is None:
+            peak_height = uint32(0)
+            last_peak_timestamp = uint64(0)
+            last_block_cost = 0
+            fee_rate_last_block = 0.0
+            last_tx_block_fees = uint64(0)
+            last_tx_block_height = 0
+        else:
+            peak_height = peak.height
+            last_peak_timestamp = peak.timestamp
+            peak_with_timestamp = peak_height  # Last transaction block height
+            last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+            while last_tx_block is None or last_peak_timestamp is None:
+                peak_with_timestamp -= 1
+                last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+                last_peak_timestamp = last_tx_block.timestamp
+
+            assert last_tx_block is not None  # mypy
+            assert last_peak_timestamp is not None  # mypy
+            assert last_tx_block.fees is not None  # mypy
+
+            record = await self.service.blockchain.block_store.get_full_block(last_tx_block.header_hash)
+
+            last_block_cost = 0
+            fee_rate_last_block = 0.0
+            if record and record.transactions_info and record.transactions_info.cost > 0:
+                last_block_cost = record.transactions_info.cost
+                fee_rate_last_block = record.transactions_info.fees / record.transactions_info.cost
+            last_tx_block_fees = last_tx_block.fees
+            last_tx_block_height = last_tx_block.height
 
         dt = datetime.now(timezone.utc)
         utc_time = dt.replace(tzinfo=timezone.utc)
@@ -806,9 +868,15 @@ class FullNodeRpcApi:
             "target_times": target_times,
             "current_fee_rate": current_fee_rate.mojos_per_clvm_cost,
             "mempool_size": mempool_size,
+            "mempool_fees": mempool_fees,
+            "num_spends": num_mempool_spends,
             "mempool_max_size": mempool_max_size,
             "full_node_synced": synced,
             "peak_height": peak_height,
             "last_peak_timestamp": last_peak_timestamp,
             "node_time_utc": int(utc_timestamp),
+            "last_block_cost": last_block_cost,
+            "fees_last_block": last_tx_block_fees,
+            "fee_rate_last_block": fee_rate_last_block,
+            "last_tx_block_height": last_tx_block_height,
         }

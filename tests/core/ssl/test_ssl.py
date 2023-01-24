@@ -36,6 +36,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             local_capabilities_for_handshake=capabilities,
         )
         await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
+        await wsc.close()
 
 
 class TestSSL:

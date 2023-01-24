@@ -214,7 +214,6 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
         f"wss://127.0.0.1:{daemon1.daemon_port}",
         autoclose=True,
         autoping=True,
-        heartbeat=60,
         ssl_context=get_b_tools.get_daemon_ssl_context(),
         max_msg_size=100 * 1024 * 1024,
     )

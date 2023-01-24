@@ -544,11 +544,11 @@ async def test_nft_offer_nft_for_cat(self_hostname: str, two_wallet_nodes: Any, 
     await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, cats_to_mint)
     await time_out_assert(20, cat_wallet_taker.get_unconfirmed_balance, cats_to_mint)
 
-    wallet_maker_for_taker_cat: CATWallet = await CATWallet.create_wallet_for_cat(
+    wallet_maker_for_taker_cat: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
         wallet_node_0.wallet_state_manager, wallet_maker, cat_wallet_taker.get_asset_id()
     )
 
-    wallet_taker_for_maker_cat: CATWallet = await CATWallet.create_wallet_for_cat(
+    wallet_taker_for_maker_cat: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
         wallet_node_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
     )
 

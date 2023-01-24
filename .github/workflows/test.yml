@@ -127,8 +127,6 @@ jobs:
 
       - name: Coverage Processing
         run: |
-          # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
-          rm coverage-data/*.tests_windows_* coverage-data/.*.tests_windows_*
           coverage combine --rcfile=.coveragerc --data-file coverage-reports/.coverage coverage-data/
           coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/

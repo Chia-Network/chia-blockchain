@@ -68,7 +68,7 @@ jobs:
         python3 -m venv ../venv
         . ../venv/bin/activate
         pip3 install setuptools_scm
-        echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> $GITHUB_OUTPUT
+        echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >>$GITHUB_OUTPUT
         deactivate
 
     - name: Test for secrets access
@@ -79,10 +79,10 @@ jobs:
         unset HAS_GLUE_SECRET
 
         if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> GITHUB_OUTPUT
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >>$GITHUB_OUTPUT
 
         if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> GITHUB_OUTPUT
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >>$GITHUB_OUTPUT
       env:
         AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
         GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
@@ -151,7 +151,7 @@ jobs:
       run: |
         gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
         echo "${gui_ref}"
-        echo "GUI_REF=${gui_ref}" >> $GITHUB_OUTPUT
+        echo "GUI_REF=${gui_ref}" >>$GITHUB_OUTPUT
         echo "rm -rf ./chia-blockchain-gui"
         rm -rf ./chia-blockchain-gui
 
@@ -185,7 +185,7 @@ jobs:
 
     - name: Configure AWS Credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      uses: aws-actions/configure-aws-credentials@v1-node16
+      uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
@@ -248,8 +248,8 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       id: tag-name
       run: |
-        echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >> $GITHUB_OUTPUT
-        echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >>$GITHUB_OUTPUT
+        echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >>$GITHUB_OUTPUT
 
     - name: Upload release artifacts
       if: env.RELEASE == 'true'

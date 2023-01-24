@@ -151,7 +151,7 @@ class NFTWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
+        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
             return
@@ -1092,7 +1092,44 @@ class NFTWallet:
         for tx in nft_tx_record:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+
+        if len(spend_bundles) > 0:
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            # Add all spend bundles to the first tx
+            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+        return refined_tx_list
+
+    async def bulk_transfer_nft(
+        self,
+        nft_list: List[NFTCoinInfo],
+        puzzle_hash: bytes32,
+        fee: uint64 = uint64(0),
+    ) -> List[TransactionRecord]:
+        self.log.debug("Transfer NFTs %s to %s", nft_list, puzzle_hash.hex())
+        nft_tx_record = []
+        spend_bundles = []
+        first = True
+
+        for nft_coin_info in nft_list:
+            if not first:
+                fee = uint64(0)
+            nft_tx_record.extend(
+                await self.generate_signed_transaction(
+                    [uint64(nft_coin_info.coin.amount)],
+                    [puzzle_hash],
+                    coins={nft_coin_info.coin},
+                    fee=fee,
+                    new_owner=b"",
+                    new_did_inner_hash=b"",
+                )
+            )
+            first = False
+        refined_tx_list: List[TransactionRecord] = []
+        for tx in nft_tx_record:
+            if tx.spend_bundle is not None:
+                spend_bundles.append(tx.spend_bundle)
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -1317,7 +1354,7 @@ class NFTWallet:
             # the announcements from announcement_set to match the launcher
             # coin annnouncement
             if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(
@@ -1563,7 +1600,7 @@ class NFTWallet:
 
             # Create the eve transaction with targets if present
             if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(
@@ -1651,6 +1688,9 @@ class NFTWallet:
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
+
+    def get_name(self) -> str:
+        return self.wallet_info.name
 
 
 if TYPE_CHECKING:

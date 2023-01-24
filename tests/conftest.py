@@ -39,6 +39,7 @@ from chia.util.ints import uint16, uint64
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
@@ -128,6 +129,11 @@ def latest_db_version():
 
 @pytest.fixture(scope="function", params=[1, 2])
 def db_version(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[1000000, 3630000])
+def softfork_height(request):
     return request.param
 
 
@@ -349,6 +355,14 @@ async def wallet_node_100_pk():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def simulator_and_wallet() -> AsyncIterator[
+    Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
+]:
+    async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes(request):
     params = {}
     if request and request.param_index > 0:
@@ -459,6 +473,12 @@ async def three_nodes_two_wallets():
 @pytest_asyncio.fixture(scope="function")
 async def wallet_and_node():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+    async for _ in setup_simulators_and_wallets_service(1, 0, {}):
         yield _
 
 
@@ -611,7 +631,6 @@ async def daemon_connection_and_temp_keychain(get_b_tools):
                 f"wss://127.0.0.1:{get_b_tools._config['daemon_port']}",
                 autoclose=True,
                 autoping=True,
-                heartbeat=60,
                 ssl=get_b_tools.get_daemon_ssl_context(),
                 max_msg_size=52428800,
             ) as ws:
@@ -643,9 +662,9 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    wallet_0_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_0)
-    wallet_1_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_1)
-    await full_node_api.process_blocks(count=buffer)
+    wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
+    wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
+    await full_node_api.farm_blocks_to_puzzlehash(count=buffer, guarantee_transaction_blocks=True)
 
     await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)

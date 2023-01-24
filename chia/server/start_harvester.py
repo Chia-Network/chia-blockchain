@@ -15,6 +15,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.network import get_host_addr
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -62,7 +63,9 @@ async def async_main() -> int:
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    farmer_peer = PeerInfo(service_config["farmer_peer"]["host"], service_config["farmer_peer"]["port"])
+    farmer_peer = PeerInfo(
+        str(get_host_addr(service_config["farmer_peer"]["host"])), service_config["farmer_peer"]["port"]
+    )
     service = create_harvester_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS, farmer_peer)
     await service.setup_process_global_state()
     await service.run()

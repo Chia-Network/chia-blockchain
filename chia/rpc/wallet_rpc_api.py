@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import json
@@ -5,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import G1Element, G2Element, PrivateKey, AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -28,7 +30,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
-from chia.util.ints import uint8, uint32, uint64, uint16
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -45,13 +47,13 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
-    match_did_puzzle,
-    program_to_metadata,
     DID_INNERPUZ_MOD,
     create_fullpuz,
+    match_did_puzzle,
+    program_to_metadata,
 )
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
+from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -68,10 +70,10 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_protocol import WalletProtocol
 
 # Timeout for response from wallet/full node for sending a transaction
@@ -107,6 +109,7 @@ class WalletRpcApi:
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
             "/farm_block": self.farm_block,  # Only when node simulator is running
+            "/get_timestamp_for_height": self.get_timestamp_for_height,
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
@@ -184,7 +187,8 @@ class WalletRpcApi:
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
             "/nft_mint_bulk": self.nft_mint_bulk,
-            "/nft_set_did_bulk": self.nft_set_bulk_nft_did,
+            "/nft_set_did_bulk": self.nft_set_did_bulk,
+            "/nft_transfer_bulk": self.nft_transfer_bulk,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -539,6 +543,9 @@ class WalletRpcApi:
         await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}
 
+    async def get_timestamp_for_height(self, request) -> EndpointResult:
+        return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}
+
     ##########################################################################################
     # Wallet Management
     ##########################################################################################
@@ -586,10 +593,9 @@ class WalletRpcApi:
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
-                    cat_wallet = await CATWallet.create_wallet_for_cat(
+                    cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
                         wallet_state_manager, main_wallet, request["asset_id"], name
                     )
-                self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
 
             else:  # undefined mode
@@ -1195,7 +1201,12 @@ class WalletRpcApi:
 
         return {
             "notifications": [
-                {"id": notification.coin_id.hex(), "message": notification.message.hex(), "amount": notification.amount}
+                {
+                    "id": notification.coin_id.hex(),
+                    "message": notification.message.hex(),
+                    "amount": notification.amount,
+                    "height": notification.height,
+                }
                 for notification in notifications
             ]
         }
@@ -1323,7 +1334,7 @@ class WalletRpcApi:
     async def cat_get_name(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
-        name: str = await wallet.get_name()
+        name: str = wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
     async def get_stray_cats(self, request) -> EndpointResult:
@@ -1432,7 +1443,7 @@ class WalletRpcApi:
             else:
                 raise ValueError("The asset ID specified does not belong to a wallet")
         else:
-            return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
+            return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
 
     async def create_offer_for_ids(self, request) -> EndpointResult:
         offer: Dict[str, int] = request["offer"]
@@ -1521,10 +1532,14 @@ class WalletRpcApi:
 
         if request.get("advanced", False):
             return {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos},
+                "id": offer.name(),
             }
         else:
-            return {"summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer)}
+            return {
+                "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
+                "id": offer.name(),
+            }
 
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -1532,7 +1547,10 @@ class WalletRpcApi:
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
         if peer is None:
             raise ValueError("No peer connected")
-        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer))}
+        return {
+            "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
+            "id": offer.name(),
+        }
 
     async def take_offer(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -1682,7 +1700,7 @@ class WalletRpcApi:
     async def did_get_wallet_name(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        name: str = await wallet.get_name()
+        name: str = wallet.get_name()
         return {"success": True, "wallet_id": wallet_id, "name": name}
 
     async def did_update_recovery_ids(self, request) -> EndpointResult:
@@ -2188,7 +2206,7 @@ class WalletRpcApi:
         spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
-    async def nft_set_bulk_nft_did(self, request):
+    async def nft_set_did_bulk(self, request):
         """
         Bulk set DID for NFTs across different wallets.
         accepted `request` dict keys:
@@ -2209,7 +2227,7 @@ class WalletRpcApi:
         nft_ids = []
         fee = uint64(request.get("fee", 0))
         for nft_coin in request["nft_coin_list"]:
-            if "nft_coin_id" not in nft_coin or "nft_coin_id" not in nft_coin:
+            if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])
@@ -2250,7 +2268,7 @@ class WalletRpcApi:
         for tx in tx_list:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -2263,9 +2281,92 @@ class WalletRpcApi:
                 await nft_wallet.update_coin_status(coin, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
-            return {"wallet_id": nft_dict.keys(), "success": True, "spend_bundle": spend_bundle}
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": spend_bundle,
+                "tx_num": len(refined_tx_list),
+            }
         else:
             raise ValueError("Couldn't set DID on given NFT")
+
+    async def nft_transfer_bulk(self, request):
+        """
+        Bulk transfer NFTs to an address.
+        accepted `request` dict keys:
+         - required `nft_coin_list`: [{"nft_coin_id": COIN_ID/NFT_ID, "wallet_id": WALLET_ID},....]
+         - required `target_address`, Transfer NFTs to this address
+         - optional `fee`, in mojos, defaults to 0
+        :param request:
+        :return:
+        """
+        if len(request["nft_coin_list"]) > MAX_NFT_CHUNK_SIZE:
+            return {"success": False, "error": f"You can only transfer {MAX_NFT_CHUNK_SIZE} NFTs at once"}
+        address = request["target_address"]
+        if isinstance(address, str):
+            puzzle_hash = decode_puzzle_hash(address)
+        else:
+            return dict(success=False, error="target_address parameter missing")
+        nft_dict: Dict[uint32, List[NFTCoinInfo]] = {}
+        tx_list: List[TransactionRecord] = []
+        coin_ids = []
+        fee = uint64(request.get("fee", 0))
+        for nft_coin in request["nft_coin_list"]:
+            if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
+                log.error(f"Cannot transfer NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
+                continue
+            wallet_id = uint32(nft_coin["wallet_id"])
+            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
+            assert isinstance(nft_wallet, NFTWallet)
+            nft_coin_id = nft_coin["nft_coin_id"]
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+                nft_id = decode_puzzle_hash(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft(nft_id)
+            else:
+                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+                nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            assert nft_coin_info is not None
+            if wallet_id in nft_dict:
+                nft_dict[wallet_id].append(nft_coin_info)
+            else:
+                nft_dict[wallet_id] = [nft_coin_info]
+        first = True
+        nft_wallet = None
+        for wallet_id, nft_list in nft_dict.items():
+            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
+            assert isinstance(nft_wallet, NFTWallet)
+            if not first:
+                tx_list.extend(await nft_wallet.bulk_transfer_nft(nft_list, puzzle_hash))
+            else:
+                tx_list.extend(await nft_wallet.bulk_transfer_nft(nft_list, puzzle_hash, fee))
+            for coin in nft_list:
+                coin_ids.append(coin.coin.name())
+            first = False
+        spend_bundles: List[SpendBundle] = []
+        refined_tx_list: List[TransactionRecord] = []
+        for tx in tx_list:
+            if tx.spend_bundle is not None:
+                spend_bundles.append(tx.spend_bundle)
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+
+        if len(spend_bundles) > 0:
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            # Add all spend bundles to the first tx
+            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+            for tx in refined_tx_list:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            for coin in coin_ids:
+                await nft_wallet.update_coin_status(coin, True)
+            for wallet_id in nft_dict.keys():
+                self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
+            return {
+                "wallet_id": list(nft_dict.keys()),
+                "success": True,
+                "spend_bundle": spend_bundle,
+                "tx_num": len(refined_tx_list),
+            }
+        else:
+            raise ValueError("Couldn't transfer given NFTs")
 
     async def nft_get_by_did(self, request) -> EndpointResult:
         did_id: Optional[bytes32] = None

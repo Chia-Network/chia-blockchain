@@ -119,6 +119,7 @@ class DataLayer:
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
+        self.wallet_rpc.close()
 
     async def _await_closed(self) -> None:
         if self.connection is not None:
@@ -128,6 +129,7 @@ class DataLayer:
         except asyncio.CancelledError:
             pass
         await self.data_store.close()
+        await self.wallet_rpc.await_closed()
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
@@ -376,6 +378,7 @@ class DataLayer:
 
             try:
                 timeout = self.config.get("client_timeout", 15)
+                proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
                     tree_id,
@@ -385,6 +388,7 @@ class DataLayer:
                     self.server_files_location,
                     timeout,
                     self.log,
+                    proxy_url,
                 )
                 if success:
                     self.log.info(

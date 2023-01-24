@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
+import ipaddress
 import logging
 import time
 import traceback
-import ipaddress
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -10,8 +12,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.rpc.rpc_server import default_get_connections
 from chia.seeder.crawl_store import CrawlStore
@@ -20,8 +22,8 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.path import path_from_root
 from chia.util.ints import uint32, uint64
+from chia.util.path import path_from_root
 
 log = logging.getLogger(__name__)
 
