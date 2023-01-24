@@ -27,7 +27,7 @@ def test_proposal() -> None:
     # CAT_MOD_HASH
     # TREASURY_MOD_HASH
     # LOCKUP_MOD_HASH  ; this is the mod already curried with what it needs - should still be a constant
-    # CAT_TAIL
+    # CAT_TAIL_HASH
     # CURRENT_CAT_ISSUANCE
     # PROPOSAL_PASS_PERCENTAGE
     # TREASURY_ID
@@ -38,7 +38,7 @@ def test_proposal() -> None:
 
     current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
-    CAT_TAIL: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
@@ -52,7 +52,7 @@ def test_proposal() -> None:
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_TAIL,
+        CAT_TAIL_HASH,
         treasury_id,
         20,
         100,
@@ -96,7 +96,7 @@ def test_proposal() -> None:
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_TAIL,
+        CAT_TAIL_HASH,
         treasury_id,
         200,
         350,
@@ -140,14 +140,16 @@ def test_proposal_timer() -> None:
     # proposal_amount
     # proposal_timelock
 
-    solution: Program = Program.to([
-        140,
-        180,
-        Program.to(1).get_tree_hash(),
-        Program.to("parent").get_tree_hash(),
-        23,
-        200,
-    ])
+    solution: Program = Program.to(
+        [
+            140,
+            180,
+            Program.to(1).get_tree_hash(),
+            Program.to("parent").get_tree_hash(),
+            23,
+            200,
+        ]
+    )
     conds: Program = proposal_timer_full.run(solution)
     assert len(conds.as_python()) == 4
 
@@ -220,7 +222,7 @@ def test_treasury() -> None:
             Program.to("proposal_inner").get_tree_hash(),
             100,
             150,
-            'u',
+            "u",
         ]
     )
     conds = full_treasury_puz.run(solution)
@@ -313,7 +315,7 @@ def test_lockup() -> None:
 def test_proposal_innerpuz() -> None:
     current_cat_issuance: uint64 = uint64(200)
     proposal_pass_percentage: uint64 = uint64(15)
-    CAT_TAIL: Program = Program.to("tail").get_tree_hash()
+    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
@@ -339,39 +341,41 @@ def test_proposal_innerpuz() -> None:
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_TAIL,
+        CAT_TAIL_HASH,
         singleton_id,
         200,
         350,
         proposal_innerpuz,
     )
 
-    solution: Program = Program.to([
-        [],
-        P2_SINGLETON_MOD.get_tree_hash(),
-        current_cat_issuance,
-        0,
-        proposal_pass_percentage,
-        pass_margin,
-        LOCKUP_TIME,
-    ])
+    solution: Program = Program.to(
+        [
+            [],
+            P2_SINGLETON_MOD.get_tree_hash(),
+            current_cat_issuance,
+            0,
+            proposal_pass_percentage,
+            pass_margin,
+            LOCKUP_TIME,
+        ]
+    )
 
     full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
 
     # Setup the treasury
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         [
-          singleton_struct,
-          DAO_TREASURY_MOD.get_tree_hash(),
-          DAO_PROPOSAL_MOD.get_tree_hash(),
-          DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-          DAO_LOCKUP_MOD.get_tree_hash(),
-          CAT_MOD.get_tree_hash(),
-          CAT_TAIL,
-          current_cat_issuance,
-          proposal_pass_percentage,
-          pass_margin,
-          LOCKUP_TIME,
+            singleton_struct,
+            DAO_TREASURY_MOD.get_tree_hash(),
+            DAO_PROPOSAL_MOD.get_tree_hash(),
+            DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+            DAO_LOCKUP_MOD.get_tree_hash(),
+            CAT_MOD.get_tree_hash(),
+            CAT_TAIL_HASH,
+            current_cat_issuance,
+            proposal_pass_percentage,
+            pass_margin,
+            LOCKUP_TIME,
         ]
     )
     # my_amount         ; current amount
@@ -395,7 +399,7 @@ def test_proposal_innerpuz() -> None:
             proposal_innerpuz,  # proposal_innerpuz
             200,  # current_votes
             350,  # total_votes
-            'u',  # recreation type
+            "u",  # recreation type
             0,  # extra_value for recreation
         ]
     )
