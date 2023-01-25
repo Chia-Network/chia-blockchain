@@ -1308,6 +1308,20 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert [] == (await client_2.get_notifications([notification.coin_id]))
 
 
+# The signatures below were made from an ephemeral key pair that isn't included in the test code.
+# When modifying this test, any key can be used to generate signatures. Only the pubkey needs to
+# be included in the test code.
+#
+# Example 1:
+# $ chia keys generate
+# $ chia keys sign -d 'hello world' -t 'm/12381/8444/1/1'
+#
+# Example 2:
+# $ chia wallet get_address
+# xch1vk0dj7cx7d638h80mcuw70xqlnr56pmuhzajemn5ym02vhl3mzyqrrd4wp
+# $ chia wallet sign_message -m $(echo -n 'hello world' | xxd -p)
+# -a xch1vk0dj7cx7d638h80mcuw70xqlnr56pmuhzajemn5ym02vhl3mzyqrrd4wp
+#
 @pytest.mark.parametrize(
     ["rpc_request", "rpc_response"],
     [
