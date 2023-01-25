@@ -372,46 +372,46 @@ class TestFullSync:
         # assert we failed somewhere between sub epoch 0 to sub epoch 1
         assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
-    # todo uncomment when none response capability is enabled
-    # @pytest.mark.asyncio
-    # async def test_sync_none_wp_response_backward_comp(self, three_nodes, default_1000_blocks, self_hostname):
-    #     num_blocks_initial = len(default_1000_blocks) - 50
-    #     blocks_950 = default_1000_blocks[:num_blocks_initial]
-    #     full_node_1, full_node_2, full_node_3 = three_nodes
-    #     server_1 = full_node_1.full_node.server
-    #     server_2 = full_node_2.full_node.server
-    #     server_3 = full_node_3.full_node.server
-    #     server_3.set_capabilities(
-    #         [
-    #             (uint16(Capability.BASE.value), "1"),
-    #             (uint16(Capability.BLOCK_HEADERS.value), "1"),
-    #             (uint16(Capability.RATE_LIMITS_V2.value), "1"),
-    #         ]
-    #     )
-    #
-    #     for block in blocks_950:
-    #         await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-    #
-    #     await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-    #     await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
-    #
-    #     peers: List = [c for c in full_node_2.full_node.server.all_connections.values()]
-    #     request = full_node_protocol.RequestProofOfWeight(
-    #         blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
-    #     )
-    #     start = time.time()
-    #     res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=5)
-    #     assert res is None
-    #     duration = time.time() - start
-    #     log.info(f"result was {res}")
-    #     assert duration < 1
-    #
-    #     peers: List = [c for c in full_node_3.full_node.server.all_connections.values()]
-    #     request = full_node_protocol.RequestProofOfWeight(
-    #         blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
-    #     )
-    #     start = time.time()
-    #     res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=6)
-    #     assert res is None
-    #     duration = time.time() - start
-    #     assert duration > 5
+    @pytest.mark.asyncio
+    @pytest.mark.skip("skipping until we re-enable the capability in chia.protocols.shared_protocol")
+    async def test_sync_none_wp_response_backward_comp(self, three_nodes, default_1000_blocks, self_hostname):
+        num_blocks_initial = len(default_1000_blocks) - 50
+        blocks_950 = default_1000_blocks[:num_blocks_initial]
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        server_3.set_capabilities(
+            [
+                (uint16(Capability.BASE.value), "1"),
+                (uint16(Capability.BLOCK_HEADERS.value), "1"),
+                (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+            ]
+        )
+
+        for block in blocks_950:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
+
+        peers: List = [c for c in full_node_2.full_node.server.all_connections.values()]
+        request = full_node_protocol.RequestProofOfWeight(
+            blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
+        )
+        start = time.time()
+        res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=5)
+        assert res is None
+        duration = time.time() - start
+        log.info(f"result was {res}")
+        assert duration < 1
+
+        peers: List = [c for c in full_node_3.full_node.server.all_connections.values()]
+        request = full_node_protocol.RequestProofOfWeight(
+            blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
+        )
+        start = time.time()
+        res = await peers[0].call_api(FullNodeAPI.request_proof_of_weight, request, timeout=6)
+        assert res is None
+        duration = time.time() - start
+        assert duration > 5
