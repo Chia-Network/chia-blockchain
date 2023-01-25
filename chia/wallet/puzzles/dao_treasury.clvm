@@ -20,7 +20,7 @@
   my_inner_puzhash_or_proposal_id ; either the current treasury puzzlehash OR proposal ID
   announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
   new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
-  proposal_innerpuz_or_p2_singleton_coin_id
+  proposal_innerpuz_or_optional_p2_singleton_coin_id
   proposal_current_votes ; tally of yes votes
   proposal_total_votes   ; total votes cast (by number of cat-mojos)
   type  ; this is used for the recreating self type
@@ -196,7 +196,7 @@
                   (f (r SINGLETON_STRUCT))
                   proposal_current_votes
                   proposal_total_votes
-                  proposal_innerpuz_or_p2_singleton_coin_id
+                  proposal_innerpuz_or_optional_p2_singleton_coin_id
                 )
             )
             (launcher_id_for_singleton_struct SINGLETON_STRUCT)
@@ -210,10 +210,10 @@
       ; this is the add money spend case
       (if (> new_amount_change -1)
         (merge_list
-          (if proposal_innerpuz_or_p2_singleton_coin_id
+          (if proposal_innerpuz_or_optional_p2_singleton_coin_id
             (list
-              (list CREATE_PUZZLE_ANNOUNCEMENT proposal_innerpuz_or_p2_singleton_coin_id)
-              (list ASSERT_COIN_ANNOUNCEMENT (sha256 proposal_innerpuz_or_p2_singleton_coin_id '$'))
+              (list CREATE_PUZZLE_ANNOUNCEMENT proposal_innerpuz_or_optional_p2_singleton_coin_id)
+              (list ASSERT_COIN_ANNOUNCEMENT (sha256 proposal_innerpuz_or_optional_p2_singleton_coin_id '$'))
             )
             (list
               (list
@@ -227,6 +227,7 @@
             (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT my_inner_puzhash_or_proposal_id))
 
           )
+          (list CREATE_PUZZLE_ANNOUNCEMENT proposal_innerpuz_or_optional_p2_singleton_coin_id)
         )
         (x)
       )
