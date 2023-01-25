@@ -380,8 +380,6 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
 
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
         tx_amount = 3200000000000
         tx_fee = 10
         tx = await wallet.generate_signed_transaction(
@@ -420,7 +418,7 @@ class TestWalletSimulator:
         trusted: bool,
         self_hostname: str,
     ) -> None:
-        num_blocks = 5
+        num_blocks = 2
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_1 = full_nodes[0]
 
@@ -428,7 +426,9 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
 
         wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
         api_0 = WalletRpcApi(wallet_node)
+        api_1 = WalletRpcApi(wallet_node_2)
         if trusted:
             wallet_node.config["trusted_peers"] = {
                 full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
@@ -440,17 +440,16 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
 
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
         tx_amount = 3200000000000
         tx_fee = 10
-        ph_2 = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+        ph_2 = await wallet_1.get_new_puzzlehash()
         tx = await wallet.generate_signed_transaction(uint64(tx_amount), ph_2, uint64(tx_fee), memos=[ph_2])
         tx_id = tx.name.hex()
         assert tx.spend_bundle is not None
@@ -466,14 +465,15 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount - tx_fee
 
-        expected_confirmed_balance = await full_node_1.farm_blocks_to_puzzlehash(
-            count=num_blocks,
-            guarantee_transaction_blocks=True,
-        )
-        expected_confirmed_balance -= tx_amount + tx_fee
+        await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
-        await time_out_assert(5, wallet.get_confirmed_balance, expected_confirmed_balance)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, expected_confirmed_balance)
+        await time_out_assert(15, wallet_1.get_confirmed_balance, tx_amount)
+        for coin in tx.additions:
+            if coin.amount == tx_amount:
+                tx_id = coin.name().hex()
+        memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
+        assert len(memos[tx_id]) == 1
+        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
 
     @pytest.mark.parametrize(
         "trusted",

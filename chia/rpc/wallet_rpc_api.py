@@ -846,7 +846,22 @@ class WalletRpcApi:
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
         if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
-            raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
+            if tr.type == uint32(TransactionType.INCOMING_TX.value):
+                # Fetch incoming tx coin spend
+                peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+                assert peer is not None
+                assert len(tr.additions) == 1
+                coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+                    [tr.additions[0].parent_coin_info], peer=peer
+                )
+                assert len(coin_state_list) == 1
+                coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                    coin_state_list[0].spent_height, coin_state_list[0].coin, peer
+                )
+                tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
+            else:
+                raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
+        assert tr.spend_bundle is not None
         return {transaction_id.hex(): compute_memos(tr.spend_bundle)}
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
@@ -1809,9 +1824,6 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
         hint_list = compute_coin_hints(coin_spend)
-        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
-            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
-        ).get_tree_hash()
         derivation_record = None
         # Hint is required, if it doesn't have any hint then it should be invalid
         is_invalid = len(hint_list) == 0
@@ -1822,11 +1834,9 @@ class WalletRpcApi:
                 )
             )
             if derivation_record is not None:
+                is_invalid = False
                 break
-            # Check if the mismatch is because of the memo bug
-            if hint == old_inner_puzhash:
-                is_invalid = True
-                break
+            is_invalid = True
         if is_invalid:
             # This is an invalid DID, check if we are owner
             derivation_record = (
