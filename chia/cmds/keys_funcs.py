@@ -11,6 +11,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.errors import KeychainException
@@ -256,18 +257,44 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
     return (current_sk, "m/" + "/".join(path) + "/")
 
 
-def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool):
+def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, json_output: bool):
     sk: PrivateKey = derive_sk_from_hd_path(private_key, hd_path)[0]
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
-    print("Public key:", sk.get_g1())
-    print("Signature:", AugSchemeMPL.sign(sk, data))
+    signing_mode: SigningMode = (
+        SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT if as_bytes else SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+    )
+    pubkey_hex: str = bytes(sk.get_g1()).hex()
+    signature_hex: str = bytes(AugSchemeMPL.sign(sk, data)).hex()
+    if json_output:
+        print(
+            json.dumps(
+                {
+                    "message": message,
+                    "pubkey": pubkey_hex,
+                    "signature": signature_hex,
+                    "signing_mode": signing_mode.value,
+                }
+            )
+        )
+    else:
+        print(f"Message: {message}")
+        print(f"Public Key: {pubkey_hex}")
+        print(f"Signature: {signature_hex}")
+        print(f"Signing Mode: {signing_mode.value}")
 
 
-def verify(message: str, public_key: str, signature: str):
-    messageBytes = bytes(message, "utf-8")
+def verify(message: str, public_key: str, signature: str, as_bytes: bool):
+    data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
-    print(AugSchemeMPL.verify(public_key, messageBytes, signature))
+    print(AugSchemeMPL.verify(public_key, data, signature))
+
+
+def as_bytes_from_signing_mode(signing_mode_str: str) -> bool:
+    if signing_mode_str == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT.value:
+        return True
+    else:
+        return False
 
 
 def _clear_line_part(n: int):

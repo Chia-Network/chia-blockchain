@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 
 from chia.cmds.units import units
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
@@ -18,6 +19,7 @@ from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_full_system, 
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
@@ -263,6 +265,21 @@ class TestSimulation:
         unconfirmed_balance = await wallet.get_unconfirmed_balance()
         confirmed_balance = await wallet.get_confirmed_balance()
         assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
+
+        # Test that we can change the time per block
+        new_time_per_block = uint64(1000)
+        full_node_api.time_per_block = new_time_per_block
+        if count > 0:
+            peak = full_node_api.full_node.blockchain.get_peak()
+            assert isinstance(peak, BlockRecord)
+            start_time = peak.timestamp
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            peak = full_node_api.full_node.blockchain.get_peak()
+            assert isinstance(peak, BlockRecord)
+            end_time = peak.timestamp
+            assert isinstance(start_time, uint64)
+            assert isinstance(end_time, uint64)
+            assert end_time - start_time >= new_time_per_block
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

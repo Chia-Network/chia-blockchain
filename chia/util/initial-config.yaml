@@ -6,6 +6,7 @@ self_hostname: &self_hostname "localhost"
 prefer_ipv6: False
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
+daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -579,6 +580,9 @@ data_layer:
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # The timeout for the client to download a file from a server
   client_timeout: 15
+  # If you need use a proxy for download data you can use this setting sample
+  # proxy_url: http://localhost:8888
+
   # Data for running a data layer server.
   host_ip: 0.0.0.0
   host_port: 8575

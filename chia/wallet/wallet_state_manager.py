@@ -383,11 +383,10 @@ class WalletStateManager:
                     )
                 self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
-            await self.add_interested_puzzle_hashes(
-                [record.puzzle_hash for record in derivation_paths],
-                [record.wallet_id for record in derivation_paths],
-            )
             if len(derivation_paths) > 0:
+                await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+                    [record.puzzle_hash for record in derivation_paths]
+                )
                 self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
         # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
         if mark_existing_as_used and unused > 0 and new_paths:
@@ -1012,8 +1011,10 @@ class WalletStateManager:
 
         assert len(local_records) == len(coin_states)
         for coin_state, local_record in zip(coin_states, local_records):
+            rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
+                    rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
                     # This only succeeds if we don't raise out of the transaction
                     await self.retry_store.remove_state(coin_state)
 
@@ -1363,6 +1364,8 @@ class WalletStateManager:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
                 self.log.exception(f"Error adding state... {e}")
+                if rollback_wallets is not None:
+                    self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:

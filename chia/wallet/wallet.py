@@ -50,6 +50,10 @@ if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
 
 
+# https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
+CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
+
+
 class Wallet:
     wallet_state_manager: Any
     log: logging.Logger
@@ -333,14 +337,16 @@ class Wallet:
             total_amount = amount + fee + primaries_amount
 
         total_balance = await self.get_spendable_balance()
-        if total_amount > total_balance:
-            raise ValueError(f"Can't spend more than wallet balance: {total_balance} mojos")
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
                 raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
+            if total_amount > total_balance:
+                raise ValueError(
+                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
+                )
             exclude_coins_list: Optional[List[Coin]] = None
             if exclude_coins is not None:
                 exclude_coins_list = list(exclude_coins)
@@ -445,10 +451,12 @@ class Wallet:
         )
 
     async def sign_message(self, message: str, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
+        # CHIP-0002 message signing as documented at:
+        # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
-        puzzle: Program = Program.to(("Chia Signed Message", message))
+        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
         return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
 
     async def generate_signed_transaction(

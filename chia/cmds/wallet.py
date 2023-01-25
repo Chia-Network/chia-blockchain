@@ -6,8 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 
 from chia.cmds.cmds_util import execute_with_wallet
-
-# from chia.cmds.coins import coins_cmd
+from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
@@ -498,7 +497,7 @@ def take_offer_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-id", "--id", help="The offer ID that you wish to cancel")
+@click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True)
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @click.option("-m", "--fee", help="The fee to use when cancelling the offer securely", default="0")
 def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
@@ -925,8 +924,7 @@ def nft_get_info_cmd(
 
 
 # Keep at bottom.
-# Remove coins subcommand from wallet for now pending further testing
-# wallet_cmd.add_command(coins_cmd)
+wallet_cmd.add_command(coins_cmd)
 
 
 @wallet_cmd.group("notifications", short_help="Send/Manage notifications")

@@ -23,6 +23,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from tests.util.wallet_is_synced import wallet_is_synced
 
 
@@ -1166,7 +1167,7 @@ class TestDIDWallet:
                 "message": message,
             }
         )
-        puzzle: Program = Program.to(("Chia Signed Message", message))
+        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
             puzzle.get_tree_hash(),
