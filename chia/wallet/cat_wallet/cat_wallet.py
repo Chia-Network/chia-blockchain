@@ -334,7 +334,7 @@ class CATWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.error(f"CAT wallet has been notified that {coin.name().hex()} was added")
+        self.log.info(f"CAT wallet has been notified that {coin} was added")
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
