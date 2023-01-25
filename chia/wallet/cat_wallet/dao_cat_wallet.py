@@ -206,6 +206,9 @@ class DAOCATWallet:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
+        dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
+        YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
+        proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
@@ -217,8 +220,6 @@ class DAOCATWallet:
             # my_puzhash
             coin = lci.coin
 
-            dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
-            YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
             # We also collect 4 pieces of data for the DAOWallet in order to spend the Proposal properly
@@ -383,13 +384,69 @@ class DAOCATWallet:
 
         return spend_bundle
 
-    async def add_coin_to_tracked_list():
+    async def remove_active_proposal(self, proposal_id: bytes32):
+        locked_coins = []
+        for lci in self.dao_info.locked_coins:
+            for active_vote in lci.active_votes:
+                if active_vote == proposal_id:
+                    locked_coins.append(lci)
+                    break
+        extra_delta, limitations_solution = 0, Program.to([])
+        limitations_program_reveal = Program.to([])
+        spendable_cat_list = []
+        cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
+        dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
+        YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
+        proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
+        for lci in locked_coins:
 
-        return
+            coin = lci.coin
+            new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
 
-    async def update_coin_in_tracked_list():
+            # CREATE_COIN new_puzzle coin.amount
+            primaries = [
+                {
+                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [new_innerpuzzle.get_tree_hash()]
+                },
+            ]
+            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+            # inner_solution
+            # my_amount
+            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
+            # proposal_curry_vals
+            # vote_info
+            # vote_amount
+            # my_puzhash
+            solution = Program.to([
+                0,
+                0,
+                coin.amount,
+                proposal_id,
+                proposal_curry_vals,
+                0,
+                0,
+                0,
+            ])
+            lineage_proof = await self.get_lineage_proof_for_coin(coin)
+            assert lineage_proof is not None
+            new_spendable_cat = SpendableCAT(
+                coin,
+                self.cat_info.limitations_program_hash,
+                lci.inner_puzzle,
+                solution,
+                limitations_solution=limitations_solution,
+                extra_delta=extra_delta,
+                lineage_proof=lineage_proof,
+                limitations_program_reveal=limitations_program_reveal,
+            )
+            spendable_cat_list.append(new_spendable_cat)
 
-        return
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
+        spend_bundle = await self.sign(cat_spend_bundle)
+        # TODO: attach a DAOWallet spend creating the oracle announcement
+        return spend_bundle
 
     def get_asset_id(self):
         return bytes(self.dao_cat_info.limitations_program_hash).hex()
