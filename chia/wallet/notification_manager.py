@@ -45,7 +45,7 @@ class NotificationManager:
     async def potentially_add_new_notification(self, coin_state: CoinState, parent_spend: CoinSpend) -> bool:
         if (
             coin_state.spent_height is None
-            or not self.wallet_state_manager.wallet_node.config.get("accept_notifications", False)
+            or not self.wallet_state_manager.wallet_node.config.get("enable_notifications", True)
             or self.wallet_state_manager.wallet_node.config.get("required_notification_amount", 0)
             > coin_state.coin.amount
         ):
