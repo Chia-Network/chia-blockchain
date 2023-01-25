@@ -699,7 +699,6 @@ class TestPoolWalletRpc:
         our_ph = receive_address[0]
         pool_ph = receive_address[1]
 
-        # TODO: get the wallet better
         assert wallet_node_0._wallet_state_manager is not None
 
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
