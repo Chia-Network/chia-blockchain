@@ -1257,7 +1257,7 @@ class WalletRpcApi:
             # Message is expected to be a UTF-8 string
             message_to_verify = bytes(input_message, "utf-8")
         else:
-            raise ValueError(f"Unsupported signing mode: {signing_mode_str}")
+            raise ValueError(f"Unsupported signing mode: {signing_mode_str!r}")
 
         # Verify using the BLS message augmentation scheme
         is_valid = AugSchemeMPL.verify(
