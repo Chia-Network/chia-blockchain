@@ -137,6 +137,36 @@ def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32) ->
     return get_lockup_puzzle(CAT_TAIL_HASH, new_active_votes, INNERPUZ)
 
 
+def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
+    curried_args = uncurry_lockup(lockup_puzzle)
+    (
+        PROPOSAL_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_PUZHASH,
+        LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
+        CAT_TAIL_HASH,
+        ACTIVE_VOTES,
+        INNERPUZ,
+    ) = curried_args
+    return ACTIVE_VOTES
+
+
+def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
+    curried_args = uncurry_lockup(lockup_puzzle)
+    (
+        PROPOSAL_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_PUZHASH,
+        LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
+        CAT_TAIL_HASH,
+        ACTIVE_VOTES,
+        INNERPUZ,
+    ) = curried_args
+    return INNERPUZ
+
+
 def get_proposal_puzzle(
     proposal_id: bytes32,
     cat_tail: bytes32,

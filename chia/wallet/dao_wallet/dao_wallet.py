@@ -23,7 +23,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo
+from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
@@ -77,8 +77,6 @@ class DAOWallet:
     wallet_info: WalletInfo
     dao_info: DAOInfo
     standard_wallet: Wallet
-    cat_wallet: CATWallet
-    dao_cat_wallet: DAOCATWallet
     wallet_id: int
 
     @staticmethod
@@ -891,7 +889,15 @@ class DAOWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
-    async def generate_proposal_vote_spend(self, proposal_id: bytes32):
+    async def generate_proposal_vote_spend(
+        self,
+        proposal_id: bytes32,
+        vote_amounts_list: List[uint64],
+        voting_coin_id_list: List[bytes32],
+        previous_votes_list: List[Program],
+        lockup_innerpuz_list: List[Program],
+        is_yes_vote: bool
+    ):
         proposal_info = None
         for prop in self.dao_info.proposals_list:
             if prop.proposal_id == proposal_id:
@@ -899,18 +905,28 @@ class DAOWallet:
                 break
         assert proposal_info is not None
         # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-        # vote_info_or_p2_singleton_mod_hash
+        # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
-        #                                       ; the total number of CATs in circulation according to the treasury
-        # previous_votes  ; set this to 0 if we have passed
+        #                                     ; the total number of CATs in circulation according to the treasury
+        # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+        #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
         # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-        #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-        # pass_margin  ; this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
         # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+        #                  ; we only use this when closing out so set it to 0 and we will do the vote spend case
 
         # TODO: fill this in when we can take a list of coins in dao_proposal.clvm
-        inner_sol = Program.to([
+        voting_info = 0
+        if is_yes_vote:
+            voting_info = 1
 
+        inner_sol = Program.to([
+            vote_amounts_list,
+            voting_info,
+            voting_coin_id_list,
+            previous_votes_list,
+            lockup_innerpuz_list,
+            0,
         ])
 
         return

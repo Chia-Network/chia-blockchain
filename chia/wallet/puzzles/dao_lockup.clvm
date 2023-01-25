@@ -16,7 +16,7 @@
   my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
   inner_solution
   my_amount
-  new_proposal_vote_id_or_removal_id
+  new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
   proposal_curry_vals
   vote_info
   vote_amount

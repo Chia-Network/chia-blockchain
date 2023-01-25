@@ -30,7 +30,12 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.dao_wallet.dao_utils import get_lockup_puzzle, add_proposal_to_active_list
+from chia.wallet.dao_wallet.dao_utils import (
+    get_lockup_puzzle,
+    add_proposal_to_active_list,
+    get_active_votes_from_lockup_puzzle,
+    get_innerpuz_from_lockup_puzzle,
+)
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.wallet_types import WalletType
@@ -212,10 +217,24 @@ class DAOCATWallet:
             # my_puzhash
             coin = lci.coin
 
-            dao_wallet = self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
+            dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
             YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
+            # We also collect 4 pieces of data for the DAOWallet in order to spend the Proposal properly
+
+            # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+            # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+            # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+            #                                     ; the total number of CATs in circulation according to the treasury
+            # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+            #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+            # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+            #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+            vote_amounts_list = []
+            voting_coin_id_list = []
+            previous_votes_list = []
+            lockup_innerpuz_list = []
             if running_sum + coin.amount < amount:
                 vote_amount = coin.amount
                 running_sum = running_sum + coin.amount
@@ -259,6 +278,10 @@ class DAOCATWallet:
                 )
             if is_yes_vote:
                 vote_info = 1
+            vote_amounts_list.append(vote_amount)
+            voting_coin_id_list.append(coin.name())
+            previous_votes_list.append(get_active_votes_from_lockup_puzzle(lci.inner_puzzle))
+            lockup_innerpuz_list.append(get_innerpuz_from_lockup_puzzle(lci.inner_puzzle))
             solution = Program.to([
                 coin.name(),
                 inner_solution,
@@ -285,6 +308,7 @@ class DAOCATWallet:
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
+        # TODO: connect with DAOWallet and aggregate the proposal spend
         breakpoint()
         return spend_bundle
 
@@ -301,9 +325,63 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
         return puzzle
 
-    async def exit_vote_state():
+    async def exit_vote_state(self, coins: List[LockedCoinInfo]):
+        extra_delta, limitations_solution = 0, Program.to([])
+        limitations_program_reveal = Program.to([])
+        spendable_cat_list = []
+        cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
+        for lci in coins:
 
-        return
+            coin = lci.coin
+            new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
+
+            # CREATE_COIN new_puzzle coin.amount
+            primaries = [
+                {
+                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [new_innerpuzzle.get_tree_hash()]
+                },
+            ]
+            inner_solution = await self.standard_wallet.make_solution(
+                primaries=primaries,
+            )
+            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+            # inner_solution
+            # my_amount
+            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
+            # proposal_curry_vals
+            # vote_info
+            # vote_amount
+            # my_puzhash
+            solution = Program.to([
+                0,
+                inner_solution,
+                coin.amount,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ])
+            lineage_proof = await self.get_lineage_proof_for_coin(coin)
+            assert lineage_proof is not None
+            new_spendable_cat = SpendableCAT(
+                coin,
+                self.cat_info.limitations_program_hash,
+                lci.inner_puzzle,
+                solution,
+                limitations_solution=limitations_solution,
+                extra_delta=extra_delta,
+                lineage_proof=lineage_proof,
+                limitations_program_reveal=limitations_program_reveal,
+            )
+            spendable_cat_list.append(new_spendable_cat)
+
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
+        spend_bundle = await self.sign(cat_spend_bundle)
+
+        return spend_bundle
 
     async def add_coin_to_tracked_list():
 

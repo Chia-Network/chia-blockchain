@@ -11,7 +11,7 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class LockedCoinInfo(Streamable):
     coin: Coin
-    inner_puzzle: Program
+    inner_puzzle: Program  # This is the lockup puzzle, not the lockup_puzzle's inner_puzzle
     active_votes: List[Optional[bytes32]]
 
 
