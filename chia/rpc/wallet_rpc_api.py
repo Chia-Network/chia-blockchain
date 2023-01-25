@@ -1238,11 +1238,14 @@ class WalletRpcApi:
         signing_mode_str: Optional[str] = request.get("signing_mode")
         # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
         # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        signing_mode = (
-            SigningMode(signing_mode_str)
-            if signing_mode_str is not None
-            else SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        )
+        if signing_mode_str is None:
+            signing_mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        else:
+            try:
+                signing_mode = SigningMode(signing_mode_str)
+            except ValueError:
+                raise ValueError(f"Invalid signing mode: {signing_mode_str}")
+
         if signing_mode == SigningMode.CHIP_0002:
             # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
@@ -1253,6 +1256,8 @@ class WalletRpcApi:
         elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
             # Message is expected to be a UTF-8 string
             message_to_verify = bytes(input_message, "utf-8")
+        else:
+            raise ValueError(f"Unsupported signing mode: {signing_mode_str}")
 
         # Verify using the BLS message augmentation scheme
         is_valid = AugSchemeMPL.verify(
