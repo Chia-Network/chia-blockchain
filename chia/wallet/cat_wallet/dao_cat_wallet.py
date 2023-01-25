@@ -458,7 +458,6 @@ class DAOCATWallet:
     async def get_new_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    # MH: I have a feeling we may want the real full puzzle here
     async def get_new_puzzlehash(self) -> bytes32:
         record = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         inner_puzzle = self.standard_wallet.puzzle_for_pk(record.pubkey)

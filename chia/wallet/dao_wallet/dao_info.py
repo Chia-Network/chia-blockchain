@@ -19,6 +19,7 @@ class ProposalInfo(Streamable):
     voted: bool
     current_coin: Coin
     current_innerpuz: Optional[Program]
+    timer_coin: Coin
 
 
 @streamable
