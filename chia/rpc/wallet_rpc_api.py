@@ -25,6 +25,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
+from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -70,7 +71,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
@@ -1238,15 +1239,44 @@ class WalletRpcApi:
         :param request:
         :return:
         """
+        input_message: str = request["message"]
+        signing_mode_str: Optional[str] = request.get("signing_mode")
+        # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
+        # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        if signing_mode_str is None:
+            signing_mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        else:
+            try:
+                signing_mode = SigningMode(signing_mode_str)
+            except ValueError:
+                raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
+
+        if signing_mode == SigningMode.CHIP_0002:
+            # CHIP-0002 message signatures are made over the tree hash of:
+            #   ("Chia Signed Message", message)
+            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
+        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
+            # Message is expected to be a hex string
+            message_to_verify = hexstr_to_bytes(input_message)
+        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
+            # Message is expected to be a UTF-8 string
+            message_to_verify = bytes(input_message, "utf-8")
+        else:
+            raise ValueError(f"Unsupported signing mode: {signing_mode_str!r}")
+
+        # Verify using the BLS message augmentation scheme
         is_valid = AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
-            bytes.fromhex(request["message"]),
-            G2Element.from_bytes(bytes.fromhex(request["signature"])),
+            G1Element.from_bytes(hexstr_to_bytes(request["pubkey"])),
+            message_to_verify,
+            G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
         )
         if "address" in request:
+            # For signatures made by the sign_message_by_address/sign_message_by_id
+            # endpoints, the "address" field should contain the p2_address of the NFT/DID
+            # that was used to sign the message.
             puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
             if puzzle_hash != puzzle_hash_for_synthetic_public_key(
-                G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+                G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             ):
                 return {"isValid": False, "error": "Public key doesn't match the address"}
         if is_valid:
@@ -1264,7 +1294,12 @@ class WalletRpcApi:
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
             request["message"], puzzle_hash
         )
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+        return {
+            "success": True,
+            "pubkey": str(pubkey),
+            "signature": str(signature),
+            "signing_mode": SigningMode.CHIP_0002.value,
+        }
 
     async def sign_message_by_id(self, request) -> EndpointResult:
         """
@@ -1315,7 +1350,8 @@ class WalletRpcApi:
             "success": True,
             "pubkey": str(pubkey),
             "signature": str(signature),
-            "latest_coin_id": latest_coin_id.hex(),
+            "latest_coin_id": latest_coin_id.hex() if latest_coin_id is not None else None,
+            "signing_mode": SigningMode.CHIP_0002.value,
         }
 
     ##########################################################################################

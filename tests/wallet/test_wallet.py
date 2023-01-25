@@ -25,6 +25,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced, wallets_are_synced
@@ -772,7 +773,7 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         message = "Hello World"
         response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
-        puzzle: Program = Program.to(("Chia Signed Message", message))
+        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
