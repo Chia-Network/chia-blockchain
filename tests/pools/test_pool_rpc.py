@@ -43,7 +43,7 @@ from tests.util.wallet_is_synced import wallet_is_synced
 # TODO: Compare deducted fees in all tests against reported total_fee
 
 log = logging.getLogger(__name__)
-FEE_AMOUNT = uint64(2_000_000_000_000)
+FEE_AMOUNT = uint64(29_000)
 MAX_WAIT_SECS = 30  # A high value for WAIT_SECS is useful when paused in the debugger
 
 
@@ -443,9 +443,8 @@ class TestPoolWalletRpc:
                 guarantee_transaction_block=True,
             )
 
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+            for block in blocks[-3:]:
+                await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
             bal = await client.get_wallet_balance(2)
@@ -534,32 +533,26 @@ class TestPoolWalletRpc:
                 guarantee_transaction_block=True,
             )
 
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+            block_count = 3
+            for block in blocks[-block_count:]:
+                await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
-            # TODO: why 2 with three blocks?
-            pool_expected_confirmed_balance += 2 * 1_750_000_000_000
-            main_expected_confirmed_balance += 2 * 250_000_000_000
+            pool_expected_confirmed_balance += block_count * 1_750_000_000_000
+            main_expected_confirmed_balance += block_count * 250_000_000_000
 
             main_bal = await client.get_wallet_balance(1)
             assert main_bal["confirmed_wallet_balance"] == main_expected_confirmed_balance
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == pool_expected_confirmed_balance
 
-            # TODO: why?
-            await full_node_api.farm_blocks_to_puzzlehash(count=6)
-            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
-
             # Claim
             absorb_tx: TransactionRecord = (await client.pw_absorb_rewards(2, uint64(fee), 1))["transaction"]
             await full_node_api.process_transaction_records(records=[absorb_tx])
             main_expected_confirmed_balance -= fee
             main_expected_confirmed_balance += 1_750_000_000_000
-
-            # TODO: explain and put this somewhere better.  the extra 0.25 from the third block above?
-            main_expected_confirmed_balance += 250_000_000_000
+            pool_expected_confirmed_balance -= 1_750_000_000_000
 
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
@@ -613,23 +606,27 @@ class TestPoolWalletRpc:
                 guarantee_transaction_block=True,
             )
 
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
-
-            # Pooled plots don't have balance
+            block_count = 3
+            for block in blocks[-block_count:]:
+                await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
-            main_expected_confirmed_balance += 2 * 250_000_000_000
-            # TODO: deal with the extra block more clearly
-            main_expected_confirmed_balance += 250_000_000_000
+            # Pooled plots don't have balance
+            main_expected_confirmed_balance += block_count * 250_000_000_000
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 0
 
-            # Claim 2 * 1.75, and farm a new 1.75
-            absorb_tx: TransactionRecord = (await client.pw_absorb_rewards(2, uint64(fee)))["transaction"]
+            # Claim block_count * 1.75
+            ret = await client.pw_absorb_rewards(2, uint64(fee))
+            absorb_tx: TransactionRecord = ret["transaction"]
+            if fee == 0:
+                assert ret["fee_transaction"] is None
+            else:
+                assert ret["fee_transaction"].fee_amount == fee
+            assert absorb_tx.fee_amount == fee
             await full_node_api.process_transaction_records(records=[absorb_tx])
             main_expected_confirmed_balance -= fee
-            main_expected_confirmed_balance += 2 * 1_750_000_000_000
+            main_expected_confirmed_balance += block_count * 1_750_000_000_000
 
             async def status_updated() -> bool:
                 new_st: PoolWalletInfo = (await client.pw_status(2))[0]
@@ -639,23 +636,6 @@ class TestPoolWalletRpc:
             new_status = (await client.pw_status(2))[0]
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 0
-
-            # Claim another 1.75
-            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
-            ret = await client.pw_absorb_rewards(2, fee)
-            absorb_tx = ret["transaction"]
-            if fee == 0:
-                assert ret["fee_transaction"] is None
-            else:
-                assert ret["fee_transaction"].fee_amount == fee
-            assert absorb_tx.fee_amount == fee
-
-            await full_node_api.wait_transaction_records_entered_mempool(records=[absorb_tx])
-            await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
-            # TODO: review values
-            # main_expected_confirmed_balance -= fee
-            main_expected_confirmed_balance += 2 * 1_750_000_000_000
-            main_expected_confirmed_balance += 250_000_000_000
 
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             bal = await client.get_wallet_balance(2)
@@ -702,10 +682,6 @@ class TestPoolWalletRpc:
 
             bal2 = await client.get_wallet_balance(2)
             assert bal2["confirmed_wallet_balance"] == 0
-            # Note: as written, confirmed balance will not reflect on absorbs, because the fee
-            # is paid back into the same client's wallet in this test.
-            tx1 = await client.get_transactions(1)
-            assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
 
     @pytest.mark.asyncio
     async def test_self_pooling_to_pooling(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
