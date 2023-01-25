@@ -1244,7 +1244,7 @@ class WalletRpcApi:
             try:
                 signing_mode = SigningMode(signing_mode_str)
             except ValueError:
-                raise ValueError(f"Invalid signing mode: {signing_mode_str}")
+                raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
 
         if signing_mode == SigningMode.CHIP_0002:
             # CHIP-0002 message signatures are made over the tree hash of:
