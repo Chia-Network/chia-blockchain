@@ -11,6 +11,7 @@ from blspy import AugSchemeMPL, G2Element
 from chia_rs import ELIGIBLE_FOR_DEDUP, Coin
 from clvm.casts import int_from_bytes
 
+from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
@@ -19,7 +20,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
@@ -59,19 +59,25 @@ class DedupCoinSpend:
 
 
 def run_for_cost_and_additions(
-    coin_id: bytes32, puzzle_reveal: SerializedProgram, solution: SerializedProgram, max_cost: uint64
+    coin_id: bytes32,
+    puzzle_reveal: SerializedProgram,
+    solution: SerializedProgram,
+    max_cost: uint64,
+    npc_result: NPCResult,
 ) -> Tuple[uint64, List[Coin]]:
-    cost, conditions_program = puzzle_reveal.run_mempool_with_cost(max_cost, solution)
+    if npc_result.conds is None:
+        raise ValueError("Invalid NPCResult")
     created_coins = []
-    for s in conditions_program.as_iter():
-        atoms = s.as_atom_list()
-        if len(atoms) == 0:
-            raise ValueError("Invalid condition while running for cost and additions")
-        if atoms[0] == ConditionOpcode.CREATE_COIN:
-            puzzle_hash = bytes32(atoms[1])
-            amount = uint64(int_from_bytes(atoms[2]))
-            created_coins.append(Coin(coin_id, puzzle_hash, amount))
-    return (uint64(cost), created_coins)
+    for spend in npc_result.conds.spends:
+        if spend.coin_id == coin_id:
+            for coin_tuple in spend.create_coin:
+                puzzle_hash = bytes32(coin_tuple[0])
+                amount = uint64(coin_tuple[1])
+                created_coins.append(Coin(coin_id, puzzle_hash, amount))
+    create_coins_cost = len(created_coins) * ConditionCost.CREATE_COIN.value
+    clvm_cost, _ = puzzle_reveal.run_mempool_with_cost(max_cost, solution)
+    saved_cost = uint64(clvm_cost + create_coins_cost)
+    return (saved_cost, created_coins)
 
 
 def find_duplicate_spends(
@@ -124,7 +130,7 @@ def find_duplicate_spends(
             # If we never ran this before, additions should be empty
             assert len(duplicate_additions) == 0
             spend_cost, created_coins = run_for_cost_and_additions(
-                coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost
+                coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost, item.npc_result
             )
             duplicate_cost = spend_cost
             duplicate_additions.update(created_coins)

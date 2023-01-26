@@ -309,6 +309,12 @@ def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_
     return SpendBundle([coin_spend], G2Element())
 
 
+def npc_result_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_COIN) -> NPCResult:
+    sb = spend_bundle_from_conditions(conditions, coin)
+    generator = simple_solution_generator(sb)
+    return get_name_puzzle_conditions(generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0))
+
+
 async def add_spendbundle(
     mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
 ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
@@ -1136,25 +1142,20 @@ async def test_sufficient_total_fpc_increase() -> None:
 def test_run_for_cost_and_additions_created_coin_amount_0() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 0]]
     solution = Program.to(conditions)
-    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
-    assert cost == uint64(44)
+    npc_result = npc_result_from_conditions(conditions)
+    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50), npc_result)
+    assert cost == uint64(1800044)
     assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 0)]
-
-
-def test_run_for_cost_and_additions_created_coin_amount_negative() -> None:
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
-    solution = Program.to(conditions)
-    with pytest.raises(ValueError, match="Value -1 does not fit into uint64"):
-        run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
 
 
 def test_run_for_cost_and_additions() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     solution = Program.to(conditions)
+    npc_result = npc_result_from_conditions(conditions)
     with pytest.raises(ValueError, match="('cost exceeded', '01')"):
-        run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(1))
-    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50))
-    assert cost == uint64(44)
+        run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(1), npc_result)
+    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50), npc_result)
+    assert cost == uint64(1800044)
     assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
 
 
@@ -1213,7 +1214,7 @@ def test_find_duplicate_spends_eligible_2nd_time_and_another_1st_time() -> None:
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
-    saved_cost = uint64(44)
+    saved_cost = uint64(3600044)
     created_coins = {Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1), Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2)}
     expected_new_dedups = {
         TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost, additions=created_coins),
@@ -1236,7 +1237,7 @@ def test_find_duplicate_spends_eligible_3rd_time_another_2nd_time_and_one_non_el
     initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
     second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
     second_solution = SerializedProgram.from_program(Program.to(second_conditions))
-    saved_cost = uint64(44)
+    saved_cost = uint64(3600044)
     created_coins = {Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1), Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2)}
     dedup_coin_spends = {
         TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost, additions=created_coins),
@@ -1250,7 +1251,7 @@ def test_find_duplicate_spends_eligible_3rd_time_another_2nd_time_and_one_non_el
     mempool_item = mempool_item_from_spendbundle(sb)
     spends_to_dedup, cost_saving, new_dedups, dedup_additions = find_duplicate_spends(mempool_item, dedup_coin_spends)
     assert spends_to_dedup == sb1.coin_spends + sb2.coin_spends
-    saved_cost2 = uint64(44)
+    saved_cost2 = uint64(1800044)
     assert cost_saving == saved_cost + saved_cost2
     created_coins2 = {Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3)}
     expected_new_dedups = {TEST_COIN_ID2: DedupCoinSpend(second_solution, saved_cost2, created_coins2)}
