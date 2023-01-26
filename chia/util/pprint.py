@@ -38,15 +38,3 @@ def int_list_to_ranges(array: List[int]) -> List[Range]:
 
 def print_compact_ranges(array: List[int]) -> str:
     return str(int_list_to_ranges(array))
-
-
-def test_print_compact_ranges() -> None:
-    assert print_compact_ranges([]) == "[]"
-    assert print_compact_ranges([1]) == "[1]"
-    assert print_compact_ranges([1, 2]) == "[1 to 2]"
-    assert print_compact_ranges([2, 1]) == "[1 to 2]"
-    assert print_compact_ranges([1, 3, 4]) == "[1, 3 to 4]"
-    assert print_compact_ranges([1, 2, 4]) == "[1 to 2, 4]"
-    assert print_compact_ranges([1, 2, 4, 5]) == "[1 to 2, 4 to 5]"
-
-    assert print_compact_ranges([-1, -2]) == "[-2 to -1]"

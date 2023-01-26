@@ -5,10 +5,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from sqlite3 import Row
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
-import pytest
-
+from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.pprint import print_compact_ranges
@@ -21,18 +20,6 @@ from chia.wallet.util.wallet_types import WalletType
 # TODO: Check used contiguous
 # TODO: Check for missing DID Wallets
 # TODO: Use require_derivation_paths() to see whcih Wallets need derivations
-
-
-def find_duplicates(array: List[int]) -> Set[int]:
-    seen = set()
-    duplicates = set()
-
-    for i in array[1:]:
-        if i in seen:
-            duplicates.add(i)
-        seen.add(i)
-
-    return duplicates
 
 
 def check_for_gaps(array: List[int], start: int, end: int, *, data_type: str = "Element") -> List[str]:
@@ -314,27 +301,3 @@ async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool =
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(scan("", sys.argv[1]))
-
-
-def test_check_for_gaps_end_lt_start() -> None:
-    with pytest.raises(ValueError):
-        _ = check_for_gaps([], 2, 0)
-
-
-def test_check_for_gaps_empty_array() -> None:
-    with pytest.raises(ValueError):
-        _ = check_for_gaps([], 1, 2)
-
-
-def test_check_for_gaps_wrong_first() -> None:
-    e = check_for_gaps([1, 1], 0, 1)
-    assert "expected=0 actual=1" in e
-
-
-def test_check_for_gaps_duplicates() -> None:
-    e = check_for_gaps([1, 1], 1, 2)
-    assert "Duplicate: 1" in e
-
-
-def test_check_for_gaps_start_equal_end_ok() -> None:
-    assert [] == check_for_gaps([0], 0, 0)
