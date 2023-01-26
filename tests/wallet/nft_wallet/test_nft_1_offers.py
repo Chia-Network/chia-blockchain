@@ -87,7 +87,6 @@ async def test_nft_offer_sell_nft(self_hostname: str, two_wallet_nodes: Any, tru
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
@@ -107,7 +106,6 @@ async def test_nft_offer_sell_nft(self_hostname: str, two_wallet_nodes: Any, tru
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
@@ -143,7 +141,6 @@ async def test_nft_offer_sell_nft(self_hostname: str, two_wallet_nodes: Any, tru
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
@@ -199,7 +196,6 @@ async def test_nft_offer_sell_nft(self_hostname: str, two_wallet_nodes: Any, tru
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
@@ -249,7 +245,6 @@ async def test_nft_offer_request_nft(self_hostname: str, two_wallet_nodes: Any, 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
@@ -269,7 +264,6 @@ async def test_nft_offer_request_nft(self_hostname: str, two_wallet_nodes: Any, 
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, wallet_taker.get_pending_change_balance, 0)
 
@@ -305,7 +299,6 @@ async def test_nft_offer_request_nft(self_hostname: str, two_wallet_nodes: Any, 
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
@@ -352,7 +345,6 @@ async def test_nft_offer_request_nft(self_hostname: str, two_wallet_nodes: Any, 
 
     await full_node_api.process_transaction_records(records=tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     async def maker_1_taker_0() -> bool:
         return (
@@ -407,7 +399,6 @@ async def test_nft_offer_sell_did_to_did(self_hostname: str, two_wallet_nodes: A
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
@@ -427,7 +418,6 @@ async def test_nft_offer_sell_did_to_did(self_hostname: str, two_wallet_nodes: A
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
 
@@ -465,7 +455,6 @@ async def test_nft_offer_sell_did_to_did(self_hostname: str, two_wallet_nodes: A
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
     # TAKER SETUP -  WITH DID
@@ -483,7 +472,6 @@ async def test_nft_offer_sell_did_to_did(self_hostname: str, two_wallet_nodes: A
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, wallet_taker.get_pending_change_balance, 0)
 
@@ -590,7 +578,6 @@ async def test_nft_offer_sell_nft_for_cat(self_hostname: str, two_wallet_nodes: 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
@@ -610,7 +597,6 @@ async def test_nft_offer_sell_nft_for_cat(self_hostname: str, two_wallet_nodes: 
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
@@ -647,7 +633,6 @@ async def test_nft_offer_sell_nft_for_cat(self_hostname: str, two_wallet_nodes: 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
     # TAKER SETUP -  NO DID
@@ -679,7 +664,6 @@ async def test_nft_offer_sell_nft_for_cat(self_hostname: str, two_wallet_nodes: 
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, cats_to_mint)
     await time_out_assert(20, cat_wallet_maker.get_unconfirmed_balance, cats_to_mint)
@@ -786,7 +770,6 @@ async def test_nft_offer_request_nft_for_cat(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
@@ -806,7 +789,6 @@ async def test_nft_offer_request_nft_for_cat(
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, wallet_taker.get_pending_change_balance, 0)
     await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds - 1)
@@ -843,7 +825,6 @@ async def test_nft_offer_request_nft_for_cat(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
-
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
@@ -872,7 +853,6 @@ async def test_nft_offer_request_nft_for_cat(
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
-
 
     await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, cats_to_mint)
     await time_out_assert(20, cat_wallet_maker.get_unconfirmed_balance, cats_to_mint)
@@ -983,7 +963,6 @@ async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
 
-
     funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
@@ -1001,7 +980,6 @@ async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, 
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
-
 
     await time_out_assert(20, wallet_maker.get_pending_change_balance, 0)
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds - 1)
@@ -1036,7 +1014,6 @@ async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, 
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
-
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
@@ -1239,7 +1216,6 @@ async def test_complex_nft_offer(self_hostname: str, two_wallet_nodes: Any, trus
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
-
 
     funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
     funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)])

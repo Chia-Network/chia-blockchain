@@ -55,7 +55,6 @@ class TestCATWallet:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
                 wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
@@ -117,7 +116,6 @@ class TestCATWallet:
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(

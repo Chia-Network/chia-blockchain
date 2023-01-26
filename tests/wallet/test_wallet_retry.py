@@ -53,7 +53,6 @@ async def test_wallet_tx_retry(
     await farm_blocks(full_node_1, reward_ph, 2)
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
-
     transaction: TransactionRecord = await wallet_1.generate_signed_transaction(uint64(100), reward_ph)
     sb1: Optional[SpendBundle] = transaction.spend_bundle
     assert sb1 is not None
@@ -77,7 +76,6 @@ async def test_wallet_tx_retry(
 
     # Wait for wallet to catch up
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
-
 
     async def check_transaction_in_mempool_or_confirmed(transaction: TransactionRecord) -> bool:
         txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
