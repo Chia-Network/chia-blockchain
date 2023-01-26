@@ -511,10 +511,12 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity")
 @click.option("-v", "--verbose", help="Print more information", is_flag=True)
-@click.option("--db-path", help="The path to a wallet DB. Default is active wallet DB.")
+@click.option("--db-path", help="The path to a wallet DB. Default is to scan all active wallet DBs.")
 @click.pass_context
+#TODO: accept multiple dbs on commandline
+#TODO: Convert to Path earlier
 def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
-    """check, scan, diagnose, fsck"""
+    """check, scan, diagnose, fsck Chia Wallet DBs"""
     import asyncio
 
     from chia.cmds.check_wallet_db import scan
