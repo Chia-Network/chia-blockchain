@@ -232,9 +232,9 @@ class WalletNode:
 
         return key
 
-    def set_resync_flag(self, fingerprint, flag: bool = True):
+    def set_resync_on_startup(self, fingerprint, enabled: bool = True):
         with lock_and_load_config(self.root_path, "config.yaml") as config:
-            if flag is True:
+            if enabled is True:
                 config["wallet"]["reset_sync_for_fingerprint"] = fingerprint
                 self.log.info("Enabled resync for wallet fingerprint: %s", fingerprint)
             else:
@@ -254,10 +254,8 @@ class WalletNode:
             try:
                 # if less than 20 it means we're running on old database and that's
                 # handled, but not if there's more
-                assert len(rows) < 20, (
-                    f"Expected 20 tables, found {len(rows)} tables."
-                    " Please check if the new table needs to be added in reset_sync_db."
-                )
+                if len(rows) < 20:
+                    raise AssertionError(f"Expected 20 tables or less, found {len(rows)} tables. Cancelling resync.")
             except AssertionError:
                 self.log.exception("Incompatible database to reset")
                 return
@@ -289,7 +287,7 @@ class WalletNode:
                 except aiosqlite.Error:
                     self.log.exception("Error finishing reset resync db")
                 # disable the resync in any case
-                self.set_resync_flag(fingerprint, False)
+                self.set_resync_on_startup(fingerprint, False)
 
     async def _start(self) -> None:
         await self._start_with_fingerprint()
