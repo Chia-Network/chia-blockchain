@@ -18,7 +18,6 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 class TestCATWallet:
@@ -54,7 +53,8 @@ class TestCATWallet:
         )
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
@@ -116,7 +116,8 @@ class TestCATWallet:
         )
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(

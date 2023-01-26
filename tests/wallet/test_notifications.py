@@ -16,7 +16,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.notification_store import NotificationStore
-from tests.util.wallet_is_synced import wallets_are_synced
 
 
 # For testing backwards compatibility with a DB change to add height
@@ -86,7 +85,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await time_out_assert(30, wallets_are_synced, True, [wallet_node_1, wallet_node_2], full_node_api)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)
 
     funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
     funds_2 = 0
