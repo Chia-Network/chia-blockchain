@@ -50,7 +50,7 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
     create_fullpuz,
     match_did_puzzle,
-    program_to_metadata,
+    program_to_metadata, metadata_to_program,
 )
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -1863,10 +1863,22 @@ class WalletRpcApi:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 else:
-                    return {
-                        "success": False,
-                        "error": f"Cannot recover DID {launcher_id.hex()} because the last spend is metadata update.",
-                    }
+                    # Try override
+                    if "recovery_list_hash" in request:
+                        recovery_list_hash = bytes.fromhex(request["recovery_list_hash"])
+                    num_verification = request.get("num_verification", num_verification)
+                    if "metadata" in request:
+                        metadata = metadata_to_program(request["metadata"])
+                    did_puzzle = DID_INNERPUZ_MOD.curry(
+                        our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                    )
+                    full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                    if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                        return {
+                            "success": False,
+                            "error": f"Cannot recover DID {launcher_id.hex()}"
+                                     f" because the last spend updated recovery_list_hash/num_verification/metadata.",
+                        }
             # Check if we have the DID wallet
             did_wallet: Optional[DIDWallet] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
