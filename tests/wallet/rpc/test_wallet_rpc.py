@@ -1307,7 +1307,7 @@ async def test_set_wallet_resync(wallet_rpc_environment: WalletRpcTestEnvironmen
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
-    await client.set_wallet_resync()
+    await client.set_wallet_resync_on_startup()
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
     assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
@@ -1338,7 +1338,7 @@ async def test_set_wallet_resync(wallet_rpc_environment: WalletRpcTestEnvironmen
 
 
 @pytest.mark.asyncio
-async def test_set_wallet_resync_disable(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -1348,12 +1348,12 @@ async def test_set_wallet_resync_disable(wallet_rpc_environment: WalletRpcTestEn
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
-    await client.set_wallet_resync()
+    await client.set_wallet_resync_on_startup()
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
     assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
     before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
-    await client.set_wallet_resync(False)
+    await client.set_wallet_resync_on_startup(False)
     wallet_node._close()
     await wallet_node._await_closed()
     config = load_config(wallet_node.root_path, "config.yaml")

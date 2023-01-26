@@ -104,7 +104,7 @@ class WalletRpcApi:
             "/check_delete_key": self.check_delete_key,
             "/delete_all_keys": self.delete_all_keys,
             # Wallet node
-            "/set_wallet_resync": self.set_wallet_resync,
+            "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
@@ -493,7 +493,7 @@ class WalletRpcApi:
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
-    async def set_wallet_resync(self, request) -> Dict[str, Any]:
+    async def set_wallet_resync_on_startup(self, request) -> Dict[str, Any]:
         """
         Resync the current logged in wallet. The transaction and offer records will be kept.
         :param request: optionally pass in `enable` as bool to enable/disable resync
