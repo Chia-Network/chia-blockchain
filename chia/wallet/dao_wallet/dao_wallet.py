@@ -41,6 +41,7 @@ from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
+from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -1000,3 +1001,50 @@ class DAOWallet:
         for tx in txs:
             await self.wallet_state_manager.add_pending_transaction(tx)
         return txs
+
+    @staticmethod
+    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
+        # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
+        # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
+        return get_most_recent_singleton_coin_from_coin_spend(spend)
+
+    async def get_tip(self) -> Tuple[uint32, CoinSpend]:
+        return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
+
+    # TODO: Find a nice way to express interest in more than one singleton.
+    #     e.g. def register_singleton_for_wallet()
+    async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
+        """
+        We are being notified of a singleton state transition. A Singleton has been spent.
+        Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
+        """
+        tip: Tuple[uint32, CoinSpend] = await self.get_tip()
+        tip_spend = tip[1]
+
+        tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
+        assert tip_coin is not None
+        spent_coin_name: bytes32 = tip_coin.name()
+
+        if spent_coin_name != new_state.coin.name():
+            history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
+            if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
+                self.log.info(f"Already have state transition: {new_state.coin.name().hex()}")
+            else:
+                self.log.warning(
+                    f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+                )
+            return False
+
+        # Consume new DAOBlockchainInfo
+
+        return True
+
+    async def new_peak(self, peak_height: uint64) -> None:
+        """
+        new_peak is called from the WalletStateManager whenever there is a new peak
+        # This is where we can attempt to push spends, check on time locks, etc.
+        """
+
+        # Check to see if a proposal timer has expired
+
+        pass

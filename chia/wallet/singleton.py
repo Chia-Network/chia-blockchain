@@ -1,7 +1,12 @@
-from typing import Dict, Optional
+from __future__ import annotations
+
+from typing import Dict, Optional, List
+
+from chia_rs import Coin
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.curry_and_treehash import curry_and_treehash, calculate_hash_of_quoted_mod_hash
 
@@ -85,3 +90,11 @@ def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
+
+
+def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
+    additions: List[Coin] = coin_sol.additions()
+    for coin in additions:
+        if coin.amount % 2 == 1:
+            return coin
+    return None

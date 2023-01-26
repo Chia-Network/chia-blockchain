@@ -146,3 +146,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     cat_wallet_1_bal = await cat_wallet_1.get_confirmed_balance()
     assert cat_wallet_1_bal == cat_amt
+
+
+def test_dao_singleton_update()
+    pass

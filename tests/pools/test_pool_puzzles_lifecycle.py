@@ -15,7 +15,6 @@ from chia.pools.pool_puzzles import (
     create_travel_spend,
     create_waiting_room_inner_puzzle,
     get_delayed_puz_info_from_launcher_spend,
-    get_most_recent_singleton_coin_from_coin_spend,
     get_pubkey_from_member_inner_puzzle,
     get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
     is_pool_singleton_inner_puzzle,
@@ -23,6 +22,7 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
     uncurry_pool_waitingroom_inner_puzzle,
 )
+from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from chia.pools.pool_wallet_info import PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

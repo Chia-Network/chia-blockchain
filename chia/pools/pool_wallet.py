@@ -17,7 +17,6 @@ from chia.pools.pool_puzzles import (
     create_travel_spend,
     create_waiting_room_inner_puzzle,
     get_delayed_puz_info_from_launcher_spend,
-    get_most_recent_singleton_coin_from_coin_spend,
     is_pool_member_inner_puzzle,
     is_pool_waitingroom_inner_puzzle,
     launcher_id_to_p2_puzzle_hash,
@@ -26,6 +25,7 @@ from chia.pools.pool_puzzles import (
     uncurry_pool_member_inner_puzzle,
     uncurry_pool_waitingroom_inner_puzzle,
 )
+from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from chia.pools.pool_wallet_info import (
     FARMING_TO_POOL,
     LEAVING_POOL,
@@ -260,8 +260,8 @@ class PoolWallet:
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
         Updates the Pool state (including DB) with new singleton spends.
-        The DB must be committed after calling this method. All validation should be done here. Returns True iff
-        the spend is a valid transition spend for the singleton, False otherwise.
+        The DB must be committed after calling this method. All validation should be done here.
+        Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]

@@ -42,6 +42,7 @@ from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -1226,21 +1227,22 @@ class WalletStateManager:
                                         unconfirmed_record.name, uint32(coin_state.spent_height)
                                     )
 
-                        if record.wallet_type == WalletType.POOLING_WALLET:
+                        if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
+                            wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
-                                pool_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=PoolWallet)
+                                singleton_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=wallet_type_to_class[record.wallet_type])
                                 curr_coin_state: CoinState = coin_state
 
                                 while curr_coin_state.spent_height is not None:
                                     cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
                                         curr_coin_state.spent_height, curr_coin_state.coin, peer
                                     )
-                                    success = await pool_wallet.apply_state_transition(
+                                    success = await singleton_wallet.apply_state_transition(
                                         cs, uint32(curr_coin_state.spent_height)
                                     )
                                     if not success:
                                         break
-                                    new_singleton_coin: Optional[Coin] = pool_wallet.get_next_interesting_coin(cs)
+                                    new_singleton_coin: Optional[Coin] = singleton_wallet.get_next_interesting_coin(cs)
                                     if new_singleton_coin is None:
                                         # No more singleton (maybe destroyed?)
                                         break
@@ -1290,7 +1292,7 @@ class WalletStateManager:
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
                                 continue
-                            if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):
+                            if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):#xxx
                                 continue
                             if child.spent_height is None:
                                 # TODO handle spending launcher later block
@@ -1334,7 +1336,7 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            pool_wallet = await PoolWallet.create(
+                            pool_wallet = await PoolWallet.create(#xxx TODO ctrl-f pool_wallet
                                 self,
                                 self.main_wallet,
                                 child.coin.name(),
