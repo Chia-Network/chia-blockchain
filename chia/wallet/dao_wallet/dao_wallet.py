@@ -48,7 +48,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
 
 
 class DAOWallet:
@@ -120,6 +119,7 @@ class DAOWallet:
             [],
             None,
             None,
+            0,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -160,6 +160,7 @@ class DAOWallet:
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
         )
         await self.save_info(dao_info)
 
@@ -196,6 +197,7 @@ class DAOWallet:
             [],  # treasury_id: bytes32
             None,  # current_coin
             None,  # current innerpuz
+            0,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -224,6 +226,7 @@ class DAOWallet:
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
         )
         await self.save_info(dao_info)
 
@@ -368,7 +371,7 @@ class DAOWallet:
             await self.add_parent(coin.parent_coin_info, parent_info)
 
     async def is_spend_retrievable(self, coin_id):
-        wallet_node: WalletNode = self.wallet_state_manager.wallet_node
+        wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         children = await wallet_node.fetch_children(coin_id, peer)
         return len(children) > 0
@@ -380,7 +383,7 @@ class DAOWallet:
 
     async def resync_treasury_state(self):
         parent_coin_id: bytes32 = self.dao_info.treasury_id
-        wallet_node: WalletNode = self.wallet_state_manager.wallet_node
+        wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
@@ -477,6 +480,7 @@ class DAOWallet:
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
             current_inner_puz,  # current innerpuz
+            self.dao_info.singleton_block_height,
         )
 
         future_parent = LineageProof(
@@ -628,6 +632,7 @@ class DAOWallet:
             self.dao_info.parent_info,
             None,
             None,
+            0,
         )
         await self.save_info(dao_info)
 
@@ -650,6 +655,7 @@ class DAOWallet:
             self.dao_info.parent_info,
             None,
             None,
+            0,
         )
 
         await self.save_info(dao_info)
@@ -739,6 +745,7 @@ class DAOWallet:
             self.dao_info.parent_info,
             current_coin,
             dao_treasury_puzzle,
+            self.dao_info.singleton_block_height,
         )
         await self.save_info(dao_info)
         # breakpoint()
@@ -956,6 +963,7 @@ class DAOWallet:
             current_list,
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
         )
         await self.save_info(dao_info)
 

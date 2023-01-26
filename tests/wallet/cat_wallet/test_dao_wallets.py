@@ -148,5 +148,5 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert cat_wallet_1_bal == cat_amt
 
 
-def test_dao_singleton_update()
+def test_dao_singleton_update():
     pass

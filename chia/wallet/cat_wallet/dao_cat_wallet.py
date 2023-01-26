@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Any
 from blspy import AugSchemeMPL, G1Element, G2Element
 from chia.wallet.derivation_record import DerivationRecord
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -42,7 +42,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_state_manager import WalletStateManager
 
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
 CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
@@ -50,7 +49,7 @@ QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 class DAOCATWallet:
-    wallet_state_manager: WalletStateManager
+    wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
     dao_cat_info: DAOCATInfo
@@ -64,7 +63,7 @@ class DAOCATWallet:
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
