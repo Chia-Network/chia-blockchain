@@ -23,12 +23,16 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -45,7 +49,7 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 class DIDWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     did_info: DIDInfo
@@ -56,7 +60,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         amount: uint64,
         backups_ids: List = [],
@@ -126,7 +130,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet_from_recovery(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         backup_data: str,
         name: Optional[str] = None,
@@ -241,7 +245,7 @@ class DIDWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
@@ -1136,9 +1140,7 @@ class DIDWallet:
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
-        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            did_hash
-        )
+        record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
@@ -1149,6 +1151,8 @@ class DIDWallet:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_puzzle.get_tree_hash()
             )
+        if record is None:
+            raise ValueError(f"Cannot find derivation record for puzzle hash {p2_puzzle.get_tree_hash()}")
         if not (self.did_info.num_of_backup_ids_needed > 0 and len(self.did_info.backup_ids) == 0):
             # We have the recovery list, don't reset it
             old_recovery_list_hash = None
@@ -1334,9 +1338,6 @@ class DIDWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
 
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
-
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
@@ -1470,6 +1471,18 @@ class DIDWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
+
+    async def get_coins_to_offer(
+        self,
+        asset_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("DID wallet does not support offering coins")
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+        raise RuntimeError("DID wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:

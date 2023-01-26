@@ -1126,7 +1126,15 @@ class DataLayerWallet:
             }
         )
 
-    async def get_coins_to_offer(self, launcher_id: bytes32, *args: Any, **kwargs: Any) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self,
+        launcher_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        if launcher_id is None:
+            raise ValueError("DL wallet can only offer coins when given a launcher ID")
         record = await self.get_latest_singleton(launcher_id)
         if record is None:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
@@ -1323,7 +1331,7 @@ class DataLayerWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("DataLayerWallet does not support select_coins()")
+        raise RuntimeError("DataLayer wallet does not support select_coins")
 
 
 def verify_offer(

@@ -9,6 +9,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 if TYPE_CHECKING:
@@ -62,6 +63,28 @@ class WalletProtocol(Protocol):
         ...
 
     def get_name(self) -> str:
+        ...
+
+    #
+    # This function arguably doesn't belong inside the protocol as it is overloaded
+    # The Standard and CAT wallets use the amounts and ignore asset_id
+    # The NFT and DataLayer wallets use the asset_id and ignore amounts
+    # The DID and Pool wallets don't implement it at all
+    # Putting this here maintains the existing code flow in trade_manager.py
+    # and this is valuable as it is a complex flow
+    #
+    # TODO: refactor this to avoid the overloading and clean up trade_manager.py
+    #
+    async def get_coins_to_offer(
+        self,
+        asset_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        ...
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
         ...
 
     # WalletStateManager is only imported for type hinting thus leaving pylint

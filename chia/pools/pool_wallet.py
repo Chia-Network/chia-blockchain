@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import final
@@ -41,11 +41,11 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -53,6 +53,9 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 @final
@@ -63,7 +66,7 @@ class PoolWallet:
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
     DEFAULT_MAX_CLAIM_SPENDS = 100
 
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     standard_wallet: Wallet
@@ -323,7 +326,7 @@ class PoolWallet:
     @classmethod
     async def create(
         cls,
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         launcher_coin_id: bytes32,
         block_spends: List[CoinSpend],
@@ -364,7 +367,7 @@ class PoolWallet:
     @classmethod
     async def create_from_db(
         cls,
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
@@ -384,7 +387,7 @@ class PoolWallet:
 
     @staticmethod
     async def create_new_pool_wallet_transaction(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         main_wallet: Wallet,
         initial_target_state: PoolState,
         fee: uint64 = uint64(0),
@@ -792,7 +795,7 @@ class PoolWallet:
             self.log.info(f"Bad max_spends_in_tx value of {max_spends_in_tx}. Set to {self.DEFAULT_MAX_CLAIM_SPENDS}.")
             max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
 
-        unspent_coin_records: List[CoinRecord] = list(
+        unspent_coin_records: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
         if len(unspent_coin_records) == 0:
@@ -967,16 +970,28 @@ class PoolWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("PoolWallet does not support select_coins()")
+        raise RuntimeError("Pool wallet does not support select_coins()")
 
     def require_derivation_paths(self) -> bool:
         return False
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        raise RuntimeError("PoolWallet does not support puzzle_hash_for_pk")
+        raise RuntimeError("Pool wallet does not support puzzle_hash_for_pk")
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+    async def get_coins_to_offer(
+        self,
+        asset_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("Pool Wallet does not support offering coins")
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+        raise RuntimeError("Pool wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:

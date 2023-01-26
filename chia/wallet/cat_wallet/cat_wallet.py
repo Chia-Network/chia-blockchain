@@ -385,9 +385,6 @@ class CATWallet:
     async def get_new_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    async def get_new_puzzlehash(self) -> bytes32:
-        return await self.standard_wallet.get_new_puzzlehash()
-
     def require_derivation_paths(self) -> bool:
         return True
 
@@ -491,9 +488,6 @@ class CATWallet:
                 _, _, inner_puzzle = args
                 puzzle_hash = inner_puzzle.get_tree_hash()
                 ret = await self.wallet_state_manager.get_keys(puzzle_hash)
-                if ret is None:
-                    # Abort signing the entire SpendBundle - sign all or none
-                    raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
                 pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
@@ -876,11 +870,13 @@ class CATWallet:
     async def get_coins_to_offer(
         self,
         asset_id: Optional[bytes32],
-        amount: uint64,
+        amount: Optional[uint64],
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
+        if amount is None:
+            raise ValueError("The CAT wallet cannot offer coins without an amount")
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)

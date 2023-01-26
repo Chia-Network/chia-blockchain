@@ -445,7 +445,6 @@ class NFTWallet:
                     puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
             for ph in puzzle_hashes:
                 keys = await self.wallet_state_manager.get_keys(ph)
-                assert keys
                 pks[bytes(keys[0])] = private = keys[1]
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 synthetic_pk = synthetic_secret_key.get_g1()
@@ -513,9 +512,6 @@ class NFTWallet:
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
 
-    async def convert_puzzle_hash(self, puzhash: bytes32) -> bytes32:
-        return puzhash
-
     async def get_nft(self, launcher_id: bytes32) -> Optional[NFTCoinInfo]:
         return await self.nft_store.get_nft_by_id(launcher_id)
 
@@ -544,10 +540,13 @@ class NFTWallet:
 
     async def get_coins_to_offer(
         self,
-        nft_id: bytes32,
-        *args: Any,
-        **kwargs: Any,
+        nft_id: Optional[bytes32],
+        amount: Optional[uint64],
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
+        if nft_id is None:
+            raise ValueError("An NFT ID must be specified")
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")

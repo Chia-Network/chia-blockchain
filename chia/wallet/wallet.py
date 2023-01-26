@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -20,6 +20,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -48,6 +49,7 @@ from chia.wallet.wallet_info import WalletInfo
 
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
@@ -55,7 +57,7 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
     secret_key_store: SecretKeyStore
@@ -63,7 +65,7 @@ class Wallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         info: WalletInfo,
         name: str = None,
     ):
@@ -166,18 +168,8 @@ class Wallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         return puzzle_hash_for_pk(pubkey)
 
-    async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
-
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
-        maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
-        if maybe is None:
-            error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
-            self.log.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Get puzzle for pubkey
-        public_key, secret_key = maybe
+        public_key, secret_key = await self.wallet_state_manager.get_keys(puzzle_hash)
 
         # HACK
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
@@ -593,12 +585,14 @@ class Wallet:
     async def get_coins_to_offer(
         self,
         asset_id: Optional[bytes32],
-        amount: uint64,
+        amount: Optional[uint64],
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
+        if amount is None:
+            raise ValueError("The standard wallet cannot offer coins without an amount")
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
@@ -612,6 +606,9 @@ class Wallet:
 
     def get_name(self) -> str:
         return "Standard Wallet"
+
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+        raise RuntimeError("Standard wallet does not support get_puzzle_info")
 
 
 if TYPE_CHECKING:
