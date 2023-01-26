@@ -49,8 +49,8 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request
@@ -669,10 +669,10 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: List[MempoolItem] = await self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
+        items: List[SpendBundle] = await self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
 
         for item in items:
-            transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
+            transaction = full_node_protocol.RespondTransaction(item)
             msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
             await peer.send_message(msg)
         return None

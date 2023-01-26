@@ -667,24 +667,19 @@ class MempoolManager:
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         return txs_added
 
-    async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:
-        items: List[MempoolItem] = []
+    async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:
+        items: List[SpendBundle] = []
         counter = 0
-        broke_from_inner_loop = False
 
         assert limit > 0
 
         # Send 100 with the highest fee per cost
         for dic in reversed(self.mempool.sorted_spends.values()):
-            if broke_from_inner_loop:
-                break
             for item in dic.values():
                 if counter == limit:
-                    broke_from_inner_loop = True
-                    break
+                    return items
                 if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                     continue
-                items.append(item)
+                items.append(item.spend_bundle)
                 counter += 1
-
         return items
