@@ -16,7 +16,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
@@ -221,7 +221,7 @@ class NFTWallet:
             nft_puzzles.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
         )
         child_puzzle_hash = child_puzzle.get_tree_hash()
-        for new_coin in coin_spend.additions():
+        for new_coin in compute_additions(coin_spend):
             self.log.debug(
                 "Comparing addition: %s with %s, amount: %s ",
                 new_coin.puzzle_hash,
@@ -1038,7 +1038,9 @@ class NFTWallet:
 
                         if duplicate_payments != []:
                             payments = duplicate_payments
-                            royalty_coin = next(c for c in new_coin_spend.additions() if c.puzzle_hash == royalty_ph)
+                            royalty_coin = next(
+                                c for c in compute_additions(new_coin_spend) if c.puzzle_hash == royalty_ph
+                            )
                             parent_spend = new_coin_spend
                             continue
                         else:
