@@ -1143,7 +1143,7 @@ def test_run_for_cost_and_additions_created_coin_amount_0() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 0]]
     solution = Program.to(conditions)
     npc_result = npc_result_from_conditions(conditions)
-    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50), npc_result)
+    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, npc_result)
     assert cost == uint64(1800044)
     assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 0)]
 
@@ -1152,9 +1152,7 @@ def test_run_for_cost_and_additions() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     solution = Program.to(conditions)
     npc_result = npc_result_from_conditions(conditions)
-    with pytest.raises(ValueError, match="('cost exceeded', '01')"):
-        run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(1), npc_result)
-    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, uint64(50), npc_result)
+    cost, additions = run_for_cost_and_additions(TEST_COIN_ID, IDENTITY_PUZZLE, solution, npc_result)
     assert cost == uint64(1800044)
     assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
 

@@ -62,7 +62,6 @@ def run_for_cost_and_additions(
     coin_id: bytes32,
     puzzle_reveal: SerializedProgram,
     solution: SerializedProgram,
-    max_cost: uint64,
     npc_result: NPCResult,
 ) -> Tuple[uint64, List[Coin]]:
     if npc_result.conds is None:
@@ -75,7 +74,7 @@ def run_for_cost_and_additions(
                 amount = uint64(coin_tuple[1])
                 created_coins.append(Coin(coin_id, puzzle_hash, amount))
     create_coins_cost = len(created_coins) * ConditionCost.CREATE_COIN.value
-    clvm_cost, _ = puzzle_reveal.run_mempool_with_cost(max_cost, solution)
+    clvm_cost, _ = puzzle_reveal.run_mempool_with_cost(npc_result.cost, solution)
     saved_cost = uint64(clvm_cost + create_coins_cost)
     return (saved_cost, created_coins)
 
@@ -130,7 +129,7 @@ def find_duplicate_spends(
             # If we never ran this before, additions should be empty
             assert len(duplicate_additions) == 0
             spend_cost, created_coins = run_for_cost_and_additions(
-                coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.cost, item.npc_result
+                coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.npc_result
             )
             duplicate_cost = spend_cost
             duplicate_additions.update(created_coins)
