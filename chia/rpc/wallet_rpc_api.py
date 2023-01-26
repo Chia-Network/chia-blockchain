@@ -1824,6 +1824,9 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
         hint_list = compute_coin_hints(coin_spend)
+        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
+            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+        ).get_tree_hash()
         derivation_record = None
         # Hint is required, if it doesn't have any hint then it should be invalid
         is_invalid = len(hint_list) == 0
@@ -1834,9 +1837,11 @@ class WalletRpcApi:
                 )
             )
             if derivation_record is not None:
-                is_invalid = False
                 break
-            is_invalid = True
+            # Check if the mismatch is because of the memo bug
+            if hint == old_inner_puzhash:
+                is_invalid = True
+                break
         if is_invalid:
             # This is an invalid DID, check if we are owner
             derivation_record = (
