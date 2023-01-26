@@ -99,6 +99,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
 
     for case in ("block all", "block too low", "allow", "allow_larger"):
         if case == "block all":
+            wallet_node_2.config["enable_notifications"] = False
             wallet_node_2.config["required_notification_amount"] = 100
             AMOUNT = uint64(100)
             FEE = uint64(0)
@@ -141,7 +142,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     assert notifications[0].message == b"allow_larger"
     assert notifications[0].height == allow_larger_height
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(1, None))
-    assert len(notifications) == 2
+    assert len(notifications) == 1
     assert notifications[0].message == b"allow"
     assert notifications[0].height == allow_height
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 1))
