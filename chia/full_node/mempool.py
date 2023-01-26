@@ -67,12 +67,11 @@ def run_for_cost_and_additions(
     if npc_result.conds is None:
         raise ValueError("Invalid NPCResult")
     created_coins = []
-    for spend in npc_result.conds.spends:
-        if spend.coin_id == coin_id:
-            for coin_tuple in spend.create_coin:
-                puzzle_hash = bytes32(coin_tuple[0])
-                amount = uint64(coin_tuple[1])
-                created_coins.append(Coin(coin_id, puzzle_hash, amount))
+    relevant_spend = next(s for s in npc_result.conds.spends if s.coin_id == coin_id)
+    for coin_tuple in relevant_spend.create_coin:
+        puzzle_hash = bytes32(coin_tuple[0])
+        amount = uint64(coin_tuple[1])
+        created_coins.append(Coin(coin_id, puzzle_hash, amount))
     create_coins_cost = len(created_coins) * ConditionCost.CREATE_COIN.value
     clvm_cost, _ = puzzle_reveal.run_mempool_with_cost(npc_result.cost, solution)
     saved_cost = uint64(clvm_cost + create_coins_cost)
