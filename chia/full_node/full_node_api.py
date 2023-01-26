@@ -669,7 +669,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: List[SpendBundle] = await self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
+        items: List[SpendBundle] = self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
 
         for item in items:
             transaction = full_node_protocol.RespondTransaction(item)

@@ -667,7 +667,7 @@ class MempoolManager:
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         return txs_added
 
-    async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:
+    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:
         items: List[SpendBundle] = []
         counter = 0
 
