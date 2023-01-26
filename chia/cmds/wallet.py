@@ -509,6 +509,19 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
 
 
+@wallet_cmd.command("check", short_help="Check wallet DB integrity")
+@click.option("-v", "--verbose", help="Print more information", is_flag=True)
+@click.option("--db-path", help="The path to a wallet DB. Default is active wallet DB.")
+@click.pass_context
+def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
+    """check, scan, diagnose, fsck"""
+    import asyncio
+
+    from chia.cmds.check_wallet_db import scan
+
+    asyncio.run(scan(ctx.obj["root_path"], db_path, verbose=verbose))
+
+
 @wallet_cmd.group("did", short_help="DID related actions")
 def did_cmd():
     pass
