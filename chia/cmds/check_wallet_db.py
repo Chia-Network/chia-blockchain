@@ -218,7 +218,7 @@ class WalletDBReader:
                 max_id = dpi[-1]
                 h = ["  hardened", "unhardened"][hardened]
                 errors.extend(
-                    check_for_gaps(dpi, 0, max_id, data_type=f"DerivationPaths for {h} wallet_id={wallet_id}")
+                    check_for_gaps(dpi, 0, max_id, data_type=f"DerivationPath indexes for {h} wallet_id={wallet_id}")
                 )
         return errors
 
