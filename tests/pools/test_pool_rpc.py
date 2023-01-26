@@ -127,6 +127,8 @@ async def one_wallet_node_and_rpc(
             self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
         )
 
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
+
         yield client, wallet_node_0, full_node_api, balance, bt
 
         client.close()
@@ -177,6 +179,8 @@ async def setup(
     await full_node_api.farm_blocks_to_wallet(count=3, wallet=wallet_0)
 
     wallet_nodes = [wallet_node_0, wallet_node_1]
+    await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
+
     yield (
         full_node_api,
         wallet_nodes,
