@@ -43,15 +43,16 @@ class NotificationManager:
         return self
 
     async def potentially_add_new_notification(self, coin_state: CoinState, parent_spend: CoinSpend) -> bool:
+        coin_name: bytes32 = coin_state.coin.name()
         if (
             coin_state.spent_height is None
             or not self.wallet_state_manager.wallet_node.config.get("accept_notifications", False)
             or self.wallet_state_manager.wallet_node.config.get("required_notification_amount", 0)
             > coin_state.coin.amount
+            or await self.notification_store.notification_exists(coin_name)
         ):
             return False
         else:
-            coin_name: bytes32 = coin_state.coin.name()
             memos: Dict[bytes32, List[bytes]] = compute_memos_for_spend(parent_spend)
             coin_memos: List[bytes] = memos.get(coin_name, [])
             if (
@@ -59,6 +60,8 @@ class NotificationManager:
                 and construct_notification(bytes32(coin_memos[0]), uint64(coin_state.coin.amount)).get_tree_hash()
                 == coin_state.coin.puzzle_hash
             ):
+                if len(coin_memos[1]) > 10000:  # 10KB
+                    return False
                 await self.notification_store.add_notification(
                     Notification(
                         coin_state.coin.name(),
