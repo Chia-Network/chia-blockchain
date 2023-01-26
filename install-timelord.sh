@@ -54,6 +54,7 @@ ubuntu_cmake_install() {
 		sudo apt-get remove --purge cmake -y
 		hash -r
 		sudo snap install cmake --classic
+		# shellcheck disable=SC1091
 		. /etc/profile
 	else
 		echo "Ubuntu 20.04LTS and newer support CMake 3.16+"
@@ -87,7 +88,7 @@ if [ -e "$THE_PATH" ]; then
 	echo "$THE_PATH"
 	echo "vdf_client already exists, no action taken"
 else
-	if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN; then
+	if [ -e venv/bin/python ] && test "$UBUNTU_DEBIAN"; then
 		echo "Installing chiavdf dependencies on Ubuntu/Debian"
 		# If Ubuntu version is older than 20.04LTS then upgrade CMake
 		ubuntu_cmake_install
@@ -98,7 +99,7 @@ else
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ] && test $RHEL_BASED; then
+	elif [ -e venv/bin/python ] && test "$RHEL_BASED"; then
 		echo "Installing chiavdf dependencies on RedHat/CentOS/Fedora"
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
 		echo "yum install gcc gcc-c++ gmp-devel $PYTHON_DEV_DEPENDENCY libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
@@ -107,7 +108,7 @@ else
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
-	elif [ -e venv/bin/python ] && test $MACOS; then
+	elif [ -e venv/bin/python ] && test "$MACOS"; then
 		echo "Installing chiavdf dependencies for MacOS."
 		brew install boost cmake gmp
 		echo "Installing chiavdf from source."

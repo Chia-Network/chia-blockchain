@@ -96,6 +96,9 @@ class WalletRpcClient(RpcClient):
     async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})
 
+    async def get_timestamp_for_height(self, height: uint32) -> uint64:
+        return uint64((await self.fetch("get_timestamp_for_height", {"height": height}))["timestamp"])
+
     # Wallet Management APIs
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> Dict:
         request: Dict[str, Any] = {}
@@ -638,6 +641,7 @@ class WalletRpcClient(RpcClient):
         exclude_amounts: Optional[List[uint64]] = None,
         exclude_coin_ids: Optional[List[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
+        removals: Optional[List[Coin]] = None,
     ) -> TransactionRecord:
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -660,6 +664,8 @@ class WalletRpcClient(RpcClient):
             send_dict["additions"] = additions_hex
         else:
             raise ValueError("Must specify either amount and inner_address or additions")
+        if removals is not None and len(removals) > 0:
+            send_dict["coins"] = [c.to_json_dict() for c in removals]
         res = await self.fetch("cat_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
@@ -692,13 +698,15 @@ class WalletRpcClient(RpcClient):
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
-    async def get_offer_summary(self, offer: Offer, advanced: bool = False) -> Dict[str, Dict[str, int]]:
+    async def get_offer_summary(
+        self, offer: Offer, advanced: bool = False
+    ) -> Tuple[bytes32, Dict[str, Dict[str, int]]]:
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
-        return res["summary"]
+        return bytes32.from_hexstr(res["id"]), res["summary"]
 
-    async def check_offer_validity(self, offer: Offer) -> bool:
+    async def check_offer_validity(self, offer: Offer) -> Tuple[bytes32, bool]:
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
-        return res["valid"]
+        return bytes32.from_hexstr(res["id"]), res["valid"]
 
     async def take_offer(
         self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint64 = uint64(0)
@@ -1030,10 +1038,10 @@ class WalletRpcClient(RpcClient):
         )
         return TransactionRecord.from_json_dict_convenience(response["tx"])
 
-    async def sign_message_by_address(self, address: str, message: str) -> Tuple[str, str]:
+    async def sign_message_by_address(self, address: str, message: str) -> Tuple[str, str, str]:
         response = await self.fetch("sign_message_by_address", {"address": address, "message": message})
-        return response["pubkey"], response["signature"]
+        return response["pubkey"], response["signature"], response["signing_mode"]
 
-    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str]:
+    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str, str]:
         response = await self.fetch("sign_message_by_id", {"id": id, "message": message})
-        return response["pubkey"], response["signature"]
+        return response["pubkey"], response["signature"], response["signing_mode"]

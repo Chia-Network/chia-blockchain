@@ -13,6 +13,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import WalletType
 
 
 async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -125,13 +126,14 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     if not await wallet_client.get_synced():
         print("Wallet not synced. Please wait.")
         return
+    is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly combining Chia
     final_max_amount = uint64(int(max_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_excluded_amounts: List[uint64] = [uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts]
     final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
     if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
         removals: List[Coin] = await wallet_client.select_coins(
-            amount=final_target_coin_amount + final_fee,
+            amount=(final_target_coin_amount + final_fee) if is_xch else final_target_coin_amount,
             wallet_id=wallet_id,
             max_coin_amount=final_max_amount,
             min_coin_amount=final_min_coin_amount,
@@ -163,11 +165,11 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     if input("Would you like to Continue? (y/n): ") != "y":
         return
     total_amount: uint128 = uint128(sum(coin.amount for coin in removals))
-    if total_amount - final_fee <= 0:
+    if is_xch and total_amount - final_fee <= 0:
         print("Total amount is less than 0 after fee, exiting.")
         return
     target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
-    additions = [{"amount": total_amount - final_fee, "puzzle_hash": target_ph}]
+    additions = [{"amount": (total_amount - final_fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         wallet_id, additions, removals, final_fee
     )
@@ -195,8 +197,11 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     if not await wallet_client.get_synced():
         print("Wallet not synced. Please wait.")
         return
+    is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly spitting Chia
     final_amount_per_coin = uint64(int(amount_per_coin * mojo_per_unit))
-    total_amount = (final_amount_per_coin * number_of_coins) + final_fee
+    total_amount = final_amount_per_coin * number_of_coins
+    if is_xch:
+        total_amount += final_fee
     # get full coin record from name, and validate information about it.
     removal_coin_record: CoinRecord = (await wallet_client.get_coin_records_by_names([target_coin_id]))[0]
     if removal_coin_record.coin.amount < total_amount:

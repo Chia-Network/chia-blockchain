@@ -1114,6 +1114,7 @@ class FullNodeAPI:
                     self.full_node.constants.MAX_BLOCK_COST_CLVM,
                     cost_per_byte=self.full_node.constants.COST_PER_BYTE,
                     mempool_mode=False,
+                    height=request.height,
                 ),
             )
 

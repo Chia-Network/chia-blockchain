@@ -13,6 +13,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.mempool_item import MempoolItem
+from chia.types.mojos import Mojos
 from chia.util.ints import uint64
 
 
@@ -31,6 +32,7 @@ class Mempool:
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
         self.removal_coin_id_to_spendbundle_ids: Dict[bytes32, List[bytes32]] = {}
         self.total_mempool_cost: CLVMCost = CLVMCost(uint64(0))
+        self.total_mempool_fees: Mojos = Mojos(uint64(0))
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
@@ -75,8 +77,9 @@ class Mempool:
             if len(dic.values()) == 0:
                 del self.sorted_spends[item.fee_per_cost]
             self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost - item.cost))
+            self.total_mempool_fees = Mojos(uint64(self.total_mempool_fees - item.fee))
             assert self.total_mempool_cost >= 0
-            info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now())
+            info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, self.total_mempool_fees, datetime.now())
             if reason != MempoolRemoveReason.BLOCK_INCLUSION:
                 self.fee_estimator.remove_mempool_item(info, item)
 
@@ -106,7 +109,8 @@ class Mempool:
             self.removal_coin_id_to_spendbundle_ids[coin_id].append(item.name)
 
         self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost + item.cost))
-        info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, datetime.now())
+        self.total_mempool_fees = Mojos(uint64(self.total_mempool_fees + item.fee))
+        info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, self.total_mempool_fees, datetime.now())
         self.fee_estimator.add_mempool_item(info, item)
 
     def at_full_capacity(self, cost: int) -> bool:

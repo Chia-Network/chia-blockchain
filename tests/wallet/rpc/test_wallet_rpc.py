@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from operator import attrgetter
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import pytest
 import pytest_asyncio
@@ -13,8 +13,11 @@ from blspy import G2Element
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.rpc_server import RpcServer
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
+from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
@@ -25,6 +28,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
+from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -53,6 +57,7 @@ log = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class WalletBundle:
+    service: Service
     node: WalletNode
     rpc_client: WalletRpcClient
     wallet: Wallet
@@ -148,8 +153,8 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
         hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
 
-    wallet_bundle_1: WalletBundle = WalletBundle(wallet_node, client, wallet)
-    wallet_bundle_2: WalletBundle = WalletBundle(wallet_node_2, client_2, wallet_2)
+    wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
+    wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
     node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
 
     yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
@@ -230,6 +235,13 @@ async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
     return (await client.get_wallet_balance(wallet_id))["unconfirmed_wallet_balance"]
 
 
+def update_verify_signature_request(request: Dict[str, Any], prefix_hex_values: bool):
+    updated_request = request.copy()
+    updated_request["pubkey"] = ("0x" if prefix_hex_values else "") + updated_request["pubkey"]
+    updated_request["signature"] = ("0x" if prefix_hex_values else "") + updated_request["signature"]
+    return updated_request
+
+
 @pytest.mark.asyncio
 async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
@@ -294,6 +306,19 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     tx = await client.get_transaction(1, transaction_id=tx.name)
     assert tx.confirmed
+
+
+@pytest.mark.asyncio
+async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    # This tests that the client returns a uint64, rather than raising or returning something unexpected
+    uint64(await client.get_timestamp_for_height(uint32(1)))
 
 
 @pytest.mark.parametrize(
@@ -495,6 +520,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
+    removals = await client.select_coins(1750000000000, wallet_id=1)  # we want a coin that won't be selected by default
     outputs = await create_tx_outputs(wallet_2, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])])
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(amount_outputs + 1)
@@ -502,6 +528,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     send_tx_res: TransactionRecord = await client.send_transaction_multi(
         1,
         outputs,
+        coins=removals,
         fee=amount_fee,
     )
     spend_bundle = send_tx_res.spend_bundle
@@ -509,6 +536,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     assert send_tx_res is not None
 
     assert_tx_amounts(send_tx_res, outputs, amount_fee=amount_fee, change_expected=True)
+    assert send_tx_res.removals == removals
 
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
@@ -696,6 +724,16 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
+    # Test CAT spend with a fee and pre-specified removals / coins
+    removals = await client.select_coins(amount=uint64(2), wallet_id=cat_0_id)
+    tx_res = await client.cat_spend(cat_0_id, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals)
+    assert tx_res.wallet_id == cat_0_id
+    spend_bundle = tx_res.spend_bundle
+    assert spend_bundle is not None
+    assert removals[0] in tx_res.removals
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
     # Test unacknowledged CAT
     await wallet_node.wallet_state_manager.interested_store.add_unacknowledged_token(
         asset_id, "Unknown", uint32(10000), bytes32(b"\00" * 32)
@@ -703,8 +741,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     cats = await client.get_stray_cats()
     assert len(cats) == 1
 
-    await time_out_assert(20, get_confirmed_balance, 15, client, cat_0_id)
-    await time_out_assert(20, get_confirmed_balance, 5, client_2, cat_1_id)
+    await time_out_assert(20, get_confirmed_balance, 14, client, cat_0_id)
+    await time_out_assert(20, get_confirmed_balance, 6, client_2, cat_1_id)
 
     # Test CAT coin selection
     selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
@@ -766,12 +804,15 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     )
     assert offer is not None
 
-    summary = await wallet_1_rpc.get_offer_summary(offer)
-    advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
+    id, summary = await wallet_1_rpc.get_offer_summary(offer)
+    assert id == offer.name()
+    id, advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
+    assert id == offer.name()
     assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
     assert advanced_summary == summary
 
-    assert await wallet_1_rpc.check_offer_validity(offer)
+    id, valid = await wallet_1_rpc.check_offer_validity(offer)
+    assert id == offer.name()
 
     all_offers = await wallet_1_rpc.get_all_offers(file_contents=True)
     assert len(all_offers) == 1
@@ -1294,6 +1335,130 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     notification = (await client_2.get_notifications())[0]
     assert await client_2.delete_notifications([notification.coin_id])
     assert [] == (await client_2.get_notifications([notification.coin_id]))
+
+
+# The signatures below were made from an ephemeral key pair that isn't included in the test code.
+# When modifying this test, any key can be used to generate signatures. Only the pubkey needs to
+# be included in the test code.
+#
+# Example 1:
+# $ chia keys generate
+# $ chia keys sign -d 'hello world' -t 'm/12381/8444/1/1'
+#
+# Example 2:
+# $ chia wallet get_address
+# xch1vk0dj7cx7d638h80mcuw70xqlnr56pmuhzajemn5ym02vhl3mzyqrrd4wp
+# $ chia wallet sign_message -m $(echo -n 'hello world' | xxd -p)
+# -a xch1vk0dj7cx7d638h80mcuw70xqlnr56pmuhzajemn5ym02vhl3mzyqrrd4wp
+#
+@pytest.mark.parametrize(
+    ["rpc_request", "rpc_response"],
+    [
+        # Valid signatures
+        (
+            # chia keys sign -d "Let's eat, Grandma" -t "m/12381/8444/1/1"
+            {
+                "message": "4c65742773206561742c204772616e646d61",  # Let's eat, Grandma
+                "pubkey": (
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
+                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                ),
+                "signature": (
+                    "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
+                    "e534ffddf096199ae936b272dac88c936e8774bfc7a6f24025085026db3b7c3c41b472db3daf99b5e6cabf2"
+                    "6034d8782d10ef148d"
+                ),
+            },
+            {"isValid": True},
+        ),
+        (
+            # chia wallet sign_message -m $(echo -n 'Happy happy joy joy' | xxd -p)
+            # -a xch1e2pcue5q7t4sg8gygz3aht369sk78rzzs92zx65ktn9a9qurw35saajvkh
+            {
+                "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
+                "pubkey": (
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
+                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                ),
+                "signature": (
+                    "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
+                    "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
+                    "91246eb1c7f1b66a6a"
+                ),
+                "signing_mode": SigningMode.CHIP_0002.value,
+            },
+            {"isValid": True},
+        ),
+        (
+            # chia wallet sign_message -m $(echo -n 'Happy happy joy joy' | xxd -p)
+            # -a xch1e2pcue5q7t4sg8gygz3aht369sk78rzzs92zx65ktn9a9qurw35saajvkh
+            {
+                "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
+                "pubkey": (
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
+                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                ),
+                "signature": (
+                    "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
+                    "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
+                    "91246eb1c7f1b66a6a"
+                ),
+                "signing_mode": SigningMode.CHIP_0002.value,
+                "address": "xch1e2pcue5q7t4sg8gygz3aht369sk78rzzs92zx65ktn9a9qurw35saajvkh",
+            },
+            {"isValid": True},
+        ),
+        # Negative tests
+        (
+            # Message was modified
+            {
+                "message": "4c6574277320656174204772616e646d61",  # Let's eat Grandma
+                "pubkey": (
+                    "89d8e2a225c2ff543222bd0f2ba457a44acbdd147e4dfa02"
+                    "eadaef73eae49450dc708fd7c86800b60e8bc456e77563e4"
+                ),
+                "signature": (
+                    "8006f63537563f038321eeda25f3838613d8f938e95f19d1d19ccbe634e9ee4d69552536aab08b4fe961305"
+                    "e534ffddf096199ae936b272dac88c936e8774bfc7a6f24025085026db3b7c3c41b472db3daf99b5e6cabf2"
+                    "6034d8782d10ef148d"
+                ),
+            },
+            {"isValid": False, "error": "Signature is invalid."},
+        ),
+        (
+            # Valid signature but address doesn't match pubkey
+            {
+                "message": "4861707079206861707079206a6f79206a6f79",  # Happy happy joy joy
+                "pubkey": (
+                    "8e156d106f1b0ff0ebbe5ab27b1797a19cf3e895a7a435b0"
+                    "03a1df2dd477d622be928379625b759ef3b388b286ee8658"
+                ),
+                "signature": (
+                    "a804111f80be2ed0d4d3fdd139c8fe20cd506b99b03592563d85292abcbb9cd6ff6df2e7a13093e330d66aa"
+                    "5218bbe0e17677c9a23a9f18dbe488b7026be59d476161f5e6f0eea109cd7be22b1f74fda9c80c6b845ecc6"
+                    "91246eb1c7f1b66a6a"
+                ),
+                "signing_mode": SigningMode.CHIP_0002.value,
+                "address": "xch1d0rekc2javy5gpruzmcnk4e4qq834jzlvxt5tcgl2ylt49t26gdsjen7t0",
+            },
+            {"isValid": False, "error": "Public key doesn't match the address"},
+        ),
+    ],
+)
+@pytest.mark.parametrize("prefix_hex_strings", [True, False], ids=["with 0x", "no 0x"])
+@pytest.mark.asyncio
+async def test_verify_signature(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+    rpc_request: Dict[str, Any],
+    rpc_response: Dict[str, Any],
+    prefix_hex_strings: bool,
+):
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    assert rpc_server is not None
+    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    req = update_verify_signature_request(rpc_request, prefix_hex_strings)
+    res = await api.verify_signature(req)
+    assert res == rpc_response
 
 
 @pytest.mark.asyncio

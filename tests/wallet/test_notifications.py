@@ -83,12 +83,12 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    for i in range(0, 1):
+    for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(30, wallets_are_synced, True, [wallet_node_1, wallet_node_2], full_node_api)
 
-    funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
     funds_2 = 0
 
     await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
@@ -97,7 +97,8 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     notification_manager_1 = wsm_1.notification_manager
     notification_manager_2 = wsm_2.notification_manager
 
-    for case in ("block all", "block too low", "allow", "allow_larger"):
+    for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
+        msg: bytes = bytes(case, "utf8")
         if case == "block all":
             wallet_node_2.config["required_notification_amount"] = 100
             AMOUNT = uint64(100)
@@ -113,13 +114,17 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
             else:
                 AMOUNT = uint64(750000000000)
             FEE = uint64(1)
+        elif case == "block_too_large":
+            msg = bytes([0] * 10001)
+            AMOUNT = uint64(750000000000)
+            FEE = uint64(0)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         if case == "allow":
             allow_height = peak.height + 1
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
-        tx = await notification_manager_1.send_new_notification(ph_2, bytes(case, "utf8"), AMOUNT, fee=FEE)
+        tx = await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, fee=FEE)
         await wsm_1.add_pending_transaction(tx)
         await time_out_assert_not_none(
             5,
