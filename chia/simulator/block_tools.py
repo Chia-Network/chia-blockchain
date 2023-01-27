@@ -262,52 +262,58 @@ class BlockTools:
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
-        if self.local_keychain:
-            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=self.log)
-        elif not self.automated_testing and fingerprint is not None:
-            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
-        else:  # if we are automated testing or if we don't have a fingerprint.
-            keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
-            )
-        assert keychain_proxy is not None
-        if fingerprint is None:  # if we are not specifying an existing key
-            await keychain_proxy.delete_all_keys()
-            self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
-            self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-            self.farmer_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy)
-            )
-            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
-        else:
-            self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-            self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+        keychain_proxy: Optional[KeychainProxy]
+        try:
+            if self.local_keychain:
+                keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
+            elif not self.automated_testing and fingerprint is not None:
+                keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            else:  # if we are automated testing or if we don't have a fingerprint.
+                keychain_proxy = await connect_to_keychain_and_validate(
+                    self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
+                )
+            assert keychain_proxy is not None
+            if fingerprint is None:  # if we are not specifying an existing key
+                await keychain_proxy.delete_all_keys()
+                self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
+                self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+                self.farmer_master_sk = await keychain_proxy.add_private_key(
+                    bytes_to_mnemonic(self.farmer_master_sk_entropy)
+                )
+                self.pool_master_sk = await keychain_proxy.add_private_key(
+                    bytes_to_mnemonic(self.pool_master_sk_entropy),
+                )
+            else:
+                self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
 
-        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
-        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+            self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
-        if reward_ph is None:
-            self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-            )
-            self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-            )
-        else:
-            self.farmer_ph = reward_ph
-            self.pool_ph = reward_ph
-        if self.automated_testing:
-            self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
-        else:
-            self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
-        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
+            if reward_ph is None:
+                self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                    master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+                )
+                self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                    master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+                )
+            else:
+                self.farmer_ph = reward_ph
+                self.pool_ph = reward_ph
+            if self.automated_testing:
+                self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
+            else:
+                self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
+            self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
-        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
-        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia keys generate`")
+            self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+            if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
+                raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
-        self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
-        await keychain_proxy.close()  # close the keychain proxy
+            self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+        finally:
+            if keychain_proxy is not None:
+                await keychain_proxy.close()  # close the keychain proxy
 
     def change_config(self, new_config: Dict):
         self._config = new_config
