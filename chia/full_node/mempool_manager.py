@@ -669,17 +669,15 @@ class MempoolManager:
 
     def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:
         items: List[SpendBundle] = []
-        counter = 0
 
         assert limit > 0
 
         # Send 100 with the highest fee per cost
         for dic in reversed(self.mempool.sorted_spends.values()):
             for item in dic.values():
-                if counter == limit:
+                if len(items) == limit:
                     return items
                 if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                     continue
                 items.append(item.spend_bundle)
-                counter += 1
         return items
