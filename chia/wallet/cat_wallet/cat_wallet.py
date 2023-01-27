@@ -664,7 +664,7 @@ class CATWallet:
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                cat_coins.pop().puzzle_hash
+                list(cat_coins)[0].puzzle_hash
             )
             if derivation_record is not None:
                 changepuzzlehash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
