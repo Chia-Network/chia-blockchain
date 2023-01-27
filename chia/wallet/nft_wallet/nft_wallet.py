@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, T
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -21,6 +22,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -542,12 +544,7 @@ class NFTWallet:
         else:
             raise ValueError("Invalid NFT puzzle.")
 
-    async def get_coins_to_offer(
-        self,
-        nft_id: bytes32,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Set[Coin]:
+    async def get_coins_to_offer(self, nft_id: bytes32) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
@@ -861,17 +858,42 @@ class NFTWallet:
                     wallet = wallet_state_manager.main_wallet
                 else:
                     wallet = await wallet_state_manager.get_wallet_for_asset_id(asset.hex())
+
                 if asset in royalty_payments:
                     royalty_amount: int = sum(p.amount for _, p in royalty_payments[asset])
                 else:
                     royalty_amount = 0
-                if asset is None:
+
+                offered_coins: Set[Coin]
+                if isinstance(wallet, Wallet):
                     coin_amount_needed: int = abs(amount) + royalty_amount + fee
+                    offered_coins = await wallet.get_coins_to_offer(
+                        amount=uint64(coin_amount_needed),
+                        min_coin_amount=min_coin_amount,
+                        max_coin_amount=max_coin_amount,
+                    )
                 else:
                     coin_amount_needed = abs(amount) + royalty_amount
-                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(
-                    asset, coin_amount_needed, min_coin_amount, max_coin_amount
-                )
+
+                    if isinstance(wallet, CATWallet):
+                        offered_coins = await wallet.get_coins_to_offer(
+                            amount=uint64(coin_amount_needed),
+                            min_coin_amount=min_coin_amount,
+                            max_coin_amount=max_coin_amount,
+                        )
+                    elif isinstance(wallet, NFTWallet):
+                        if asset is None:
+                            # TODO: yuck
+                            raise RuntimeError("failed to identify an asset ID while building an NFT offer")
+                        offered_coins = await wallet.get_coins_to_offer(nft_id=asset)
+                    elif isinstance(wallet, DataLayerWallet):
+                        if asset is None:
+                            # TODO: yuck
+                            raise RuntimeError("failed to identify an asset ID while building a DataLayer offer")
+                        offered_coins = await wallet.get_coins_to_offer(launcher_id=asset)
+                    else:
+                        raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+
                 if len(offered_coins) == 0:
                     raise ValueError(f"Did not have asset ID {asset.hex() if asset is not None else 'XCH'} to offer")
                 offered_coins_by_asset[asset] = offered_coins
