@@ -1287,7 +1287,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     await generate_funds(full_node_api, env.wallet_1)
 
-    env.wallet_2.node.config["accept_notifications"] = True
+    env.wallet_2.node.config["enable_notifications"] = True
     env.wallet_2.node.config["required_notification_amount"] = 100000000000
     tx = await client.send_notification(
         await wallet_2.get_new_puzzlehash(),

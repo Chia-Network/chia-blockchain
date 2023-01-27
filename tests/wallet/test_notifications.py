@@ -110,11 +110,12 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
         msg: bytes = bytes(case, "utf8")
         if case == "block all":
+            wallet_node_2.config["enable_notifications"] = False
             wallet_node_2.config["required_notification_amount"] = 100
             AMOUNT = uint64(100)
             FEE = uint64(0)
         elif case == "block too low":
-            wallet_node_2.config["accept_notifications"] = True
+            wallet_node_2.config["enable_notifications"] = True
             AMOUNT = uint64(1)
             FEE = uint64(0)
         elif case in ("allow", "allow_larger"):

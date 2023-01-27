@@ -46,8 +46,8 @@ class NotificationManager:
         coin_name: bytes32 = coin_state.coin.name()
         if (
             coin_state.spent_height is None
-            or not self.wallet_state_manager.wallet_node.config.get("accept_notifications", False)
-            or self.wallet_state_manager.wallet_node.config.get("required_notification_amount", 0)
+            or not self.wallet_state_manager.wallet_node.config.get("enable_notifications", True)
+            or self.wallet_state_manager.wallet_node.config.get("required_notification_amount", 100000000)
             > coin_state.coin.amount
             or await self.notification_store.notification_exists(coin_name)
         ):
