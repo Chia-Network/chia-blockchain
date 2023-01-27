@@ -279,7 +279,6 @@ class WalletNode:
                 names = names - set(required_tables)
                 for name in names:
                     for ignore_name in ignore_tables:
-                        print(f"Comparing {name} {ignore_name} {name.startswith(ignore_name)}")
                         if name.startswith(ignore_name):
                             break
                     else:
