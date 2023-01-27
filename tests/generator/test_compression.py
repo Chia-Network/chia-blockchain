@@ -168,7 +168,7 @@ class TestCompression(TestCase):
 
 class TestDecompression(TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestDecompression, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.maxDiff = None
 
     def test_deserialization(self):
