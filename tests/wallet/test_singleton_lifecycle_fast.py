@@ -8,7 +8,8 @@ from clvm_tools import binutils
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
@@ -354,7 +355,7 @@ def claim_p2_singleton(
     )
     p2_singleton_coin_spend = CoinSpend(
         p2_singleton_coin,
-        p2_singleton_puzzle.to_serialized_program(),
+        SerializedProgram.from_program(p2_singleton_puzzle),
         p2_singleton_solution,
     )
     expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, bytes(b"$")).name()

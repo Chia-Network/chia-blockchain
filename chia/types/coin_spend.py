@@ -5,7 +5,7 @@ from typing import List
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.chain_utils import additions_for_solution, fee_for_solution
 from chia.util.streamable import Streamable, streamable
 
