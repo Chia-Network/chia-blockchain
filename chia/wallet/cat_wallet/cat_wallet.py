@@ -663,7 +663,13 @@ class CATWallet:
             primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
 
         if change > 0:
-            changepuzzlehash = await self.get_new_inner_hash()
+            derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                cat_coins.pop().puzzle_hash
+            )
+            if derivation_record is not None:
+                changepuzzlehash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
+            else:
+                changepuzzlehash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change), "memos": []})
 
         limitations_program_reveal = Program.to([])
