@@ -219,7 +219,7 @@ class WalletRpcApi:
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
         payloads = []
-        if change in {"sync_changed", "coin_added"}:
+        if change in {"sync_changed", "coin_added", "add_connection", "close_connection"}:
             # Metrics is the only current consumer for this event
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
