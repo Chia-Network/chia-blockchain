@@ -161,7 +161,9 @@ class NotificationStore:
 
     async def notification_exists(self, id: bytes32) -> bool:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)) as cursor:
+            async with conn.execute(
+                "SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)
+            ) as cursor:
                 row = await cursor.fetchone()
                 assert row is not None
                 exists: bool = row[0] > 0

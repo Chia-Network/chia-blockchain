@@ -99,9 +99,12 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
 
     func = notification_manager_2.potentially_add_new_notification
     notification_manager_2.most_recent_args = tuple()
-    async def track_coin_state(*args):
+
+    async def track_coin_state(*args: Any) -> bool:
         notification_manager_2.most_recent_args = args
-        return await func(*args)
+        result: bool = await func(*args)
+        return result
+
     notification_manager_2.potentially_add_new_notification = track_coin_state
 
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
