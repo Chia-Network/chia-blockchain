@@ -530,12 +530,12 @@ async def test_get_items_not_in_filter() -> None:
     assert result == []
 
     # Negative limit
-    result = await mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
-    assert result == [mempool_item3, mempool_item2, mempool_item1]
+    with pytest.raises(AssertionError):
+        await mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
 
     # Zero limit
-    result = await mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
-    assert result == []
+    with pytest.raises(AssertionError):
+        await mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
 
     # Filter only one of the spend bundles
     sb3_filter = PyBIP158([bytearray(sb3_name)])
