@@ -46,7 +46,7 @@ class NotificationStore:
                 "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
             )
 
-            await conn.execute("CREATE TABLE IF NOT EXISTS all_ids(coin_id blob PRIMARY KEY)")
+            await conn.execute("CREATE TABLE IF NOT EXISTS all_notification_ids(coin_id blob PRIMARY KEY)")
 
             try:
                 await conn.execute("ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0")
@@ -77,7 +77,7 @@ class NotificationStore:
                 ),
             )
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO all_ids (coin_id) VALUES(?)",
+                "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)",
                 (notification.coin_id,),
             )
             await cursor.close()
@@ -161,7 +161,7 @@ class NotificationStore:
 
     async def notification_exists(self, id: bytes32) -> bool:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT EXISTS (SELECT 1 from all_ids WHERE coin_id=?)", (id,)) as cursor:
+            async with conn.execute("SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)) as cursor:
                 row = await cursor.fetchone()
                 assert row is not None
                 exists: bool = row[0] > 0
