@@ -97,6 +97,16 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     notification_manager_1 = wsm_1.notification_manager
     notification_manager_2 = wsm_2.notification_manager
 
+    func = notification_manager_2.potentially_add_new_notification
+    notification_manager_2.most_recent_args = tuple()
+
+    async def track_coin_state(*args: Any) -> bool:
+        notification_manager_2.most_recent_args = args
+        result: bool = await func(*args)
+        return result
+
+    notification_manager_2.potentially_add_new_notification = track_coin_state
+
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
         msg: bytes = bytes(case, "utf8")
         if case == "block all":
@@ -165,3 +175,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     await notification_manager_2.notification_store.add_notification(notifications[0])
     await notification_manager_2.notification_store.delete_notifications([n.coin_id for n in notifications])
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
+
+    assert not await func(*notification_manager_2.most_recent_args)
+    await notification_manager_2.notification_store.delete_all_notifications()
+    assert not await func(*notification_manager_2.most_recent_args)
