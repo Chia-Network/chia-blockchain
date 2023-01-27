@@ -4,6 +4,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
 from blspy import G1Element, G2Element
+from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -503,3 +504,51 @@ async def test_ephemeral_timelock(
     assert await get_coin_record_for_test_coins(created_coin.name()) is None
     _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
     assert (status, error) == (expected_status, expected_error)
+
+
+@pytest.mark.asyncio
+async def test_get_items_not_in_filter() -> None:
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    _, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
+    mempool_item1 = mempool_manager.get_mempool_item(sb1_name)
+    conditions2 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    _, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
+    mempool_item2 = mempool_manager.get_mempool_item(sb2_name)
+    conditions3 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    _, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
+    mempool_item3 = mempool_manager.get_mempool_item(sb3_name)
+
+    # Don't filter anything
+    empty_filter = PyBIP158([])
+    result = await mempool_manager.get_items_not_in_filter(empty_filter)
+    assert result == [mempool_item3, mempool_item2, mempool_item1]
+
+    # Filter everything
+    full_filter = PyBIP158([bytearray(sb1_name), bytearray(sb2_name), bytearray(sb3_name)])
+    result = await mempool_manager.get_items_not_in_filter(full_filter)
+    assert result == []
+
+    # Negative limit
+    result = await mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
+    assert result == [mempool_item3, mempool_item2, mempool_item1]
+
+    # Zero limit
+    result = await mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
+    assert result == []
+
+    # Filter only one of the spend bundles
+    sb3_filter = PyBIP158([bytearray(sb3_name)])
+
+    # With a limit of one, sb2 has the highest FPC
+    result = await mempool_manager.get_items_not_in_filter(sb3_filter, limit=1)
+    assert result == [mempool_item2]
+
+    # With a higher limit, all bundles aside from sb3 get included
+    result = await mempool_manager.get_items_not_in_filter(sb3_filter, limit=5)
+    assert result == [mempool_item2, mempool_item1]
+
+    # Filter two of the spend bundles
+    sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
+    result = await mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
+    assert result == [mempool_item1]
