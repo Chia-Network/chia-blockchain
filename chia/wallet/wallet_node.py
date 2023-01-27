@@ -274,21 +274,19 @@ class WalletNode:
         async with manage_connection(db_path) as conn:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
-            try:
-                names = set([x[0] for x in rows])
-                names = names - set(required_tables)
-                for name in names:
-                    for ignore_name in ignore_tables:
-                        if name.startswith(ignore_name):
-                            break
-                    else:
-                        raise AssertionError(
-                            f"Mismatch in expected schema to reset, found unexpected table: {name}. "
-                            "Please check if you've run all migration scripts."
-                        )
-            except AssertionError:
-                self.log.exception("Incompatible wallet database to reset")
-                return False
+            names = set([x[0] for x in rows])
+            names = names - set(required_tables)
+            for name in names:
+                for ignore_name in ignore_tables:
+                    if name.startswith(ignore_name):
+                        break
+                else:
+                    self.log.error(
+                        f"Mismatch in expected schema to reset, found unexpected table: {name}. "
+                        "Please check if you've run all migration scripts."
+                    )
+                    return False
+
             await conn.execute("BEGIN")
             commit = True
             tables = [row[0] for row in rows]
