@@ -248,13 +248,13 @@ class WalletNode:
 
     async def reset_sync_db(self, db_path, fingerprint):
         conn: aiosqlite.Connection
-        ignore_tables = ["lineage_proofs_"]
+        # are not part of core wallet tables, but might appear later
+        ignore_tables = set(["lineage_proofs_", "sqlite_"])
         required_tables = [
             "coin_record",
             "transaction_record",
             "derivation_paths",
             "users_wallets",
-            "sqlite_sequence",
             "users_nfts",
             "action_queue",
             "key_val_store",
@@ -270,6 +270,7 @@ class WalletNode:
             "notifications",
             "retry_store",
         ]
+
         async with manage_connection(db_path) as conn:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
@@ -278,13 +279,16 @@ class WalletNode:
                 names = names - set(required_tables)
                 for name in names:
                     for ignore_name in ignore_tables:
+                        print(f"Comparing {name} {ignore_name} {name.startswith(ignore_name)}")
                         if name.startswith(ignore_name):
-                            continue
-                    raise AssertionError(
-                        "Mismatch in expected schema to reset. Please check if you've run all migration scripts."
-                    )
+                            break
+                    else:
+                        raise AssertionError(
+                            f"Mismatch in expected schema to reset, found unexpected table: {name}. "
+                            "Please check if you've run all migration scripts."
+                        )
             except AssertionError:
-                self.log.exception("Incompatible database to reset")
+                self.log.exception("Incompatible wallet database to reset")
                 return False
             await conn.execute("BEGIN")
             commit = True

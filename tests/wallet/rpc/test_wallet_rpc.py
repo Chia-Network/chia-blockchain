@@ -1580,6 +1580,12 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
     conn: aiosqlite.Connection
     async with dbw.writer() as conn:
+        await conn.execute("ALTER TABLE coin_record RENAME coin_record_temp")
+    assert not await wallet_node.reset_sync_db(db_path, fingerprint)
+    async with dbw.writer() as conn:
+        await conn.execute("ALTER TABLE coin_record_temp RENAME coin_record")
+    assert await wallet_node.reset_sync_db(db_path, fingerprint)
+    async with dbw.writer() as conn:
         await conn.execute("CREATE TABLE testing_schema (a int, b bool)")
     assert not await wallet_node.reset_sync_db(db_path, fingerprint)
     async with dbw.writer() as conn:
