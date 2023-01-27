@@ -248,17 +248,44 @@ class WalletNode:
 
     async def reset_sync_db(self, db_path, fingerprint):
         conn: aiosqlite.Connection
+        ignore_tables = ["lineage_proofs_"]
+        required_tables = [
+            "coin_record",
+            "transaction_record",
+            "derivation_paths",
+            "users_wallets",
+            "sqlite_sequence",
+            "users_nfts",
+            "action_queue",
+            "key_val_store",
+            "trade_records",
+            "pool_state_transitions",
+            "singleton_records",
+            "mirrors",
+            "launchers",
+            "interested_coins",
+            "interested_puzzle_hashes",
+            "unacknowledged_asset_tokens",
+            "coin_of_interest_to_trade_record",
+            "notifications",
+            "retry_store",
+        ]
         async with manage_connection(db_path) as conn:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
             try:
-                # if less than 20 it means we're running on old database and that's
-                # handled, but not if there's more
-                if len(rows) < 20:
-                    raise AssertionError(f"Expected 20 tables or less, found {len(rows)} tables. Cancelling resync.")
+                names = set([x[0] for x in rows])
+                names = names - set(required_tables)
+                for name in names:
+                    for ignore_name in ignore_tables:
+                        if name.startswith(ignore_name):
+                            continue
+                    raise AssertionError(
+                        "Mismatch in expected schema to reset. Please check if you've run all migration scripts."
+                    )
             except AssertionError:
                 self.log.exception("Incompatible database to reset")
-                return
+                return False
             await conn.execute("BEGIN")
             commit = True
             tables = [row[0] for row in rows]
@@ -288,6 +315,7 @@ class WalletNode:
                     self.log.exception("Error finishing reset resync db")
                 # disable the resync in any case
                 self.set_resync_on_startup(fingerprint, False)
+            return commit
 
     async def _start(self) -> None:
         await self._start_with_fingerprint()
