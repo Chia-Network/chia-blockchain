@@ -105,10 +105,12 @@ def make_test_conds(
     seconds_absolute: uint64 = uint64(0),
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
-        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, [], [], 0)],
+        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, None, None, [], [], 0)],
         0,
         height_absolute,
         seconds_absolute,
+        None,
+        None,
         [],
         0,
     )
@@ -215,21 +217,29 @@ def test_compute_assert_height() -> None:
     coin_records = {coin_id: CoinRecord(c1, confirmed_height, uint32(0), False, uint64(10000))}
 
     # 42 is the absolute height condition
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), None, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 1 is a relative height, but that only amounts to 13, so the absolute
     # height is more restrictive
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 1, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 100 is a relative height, and sinec the coin was confirmed at height 12,
     # that's 112
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 112
 
     # Same thing but without the absolute height
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 0, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 112
 
 
