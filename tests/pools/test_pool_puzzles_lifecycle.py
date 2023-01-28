@@ -4,6 +4,7 @@ import copy
 from typing import List
 from unittest import TestCase
 
+import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -246,15 +247,15 @@ class TestPoolPuzzles(TestCase):
             )
         )[0]
         # Spend it and hope it fails!
-        try:
+        with pytest.raises(
+            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+        ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol], G2Element()),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
                 DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
-        except BadSpendBundleError as e:
-            assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
 
         # SPEND A NON-REWARD P2_SINGLETON (Negative test)
         # create the dummy coin
@@ -276,15 +277,15 @@ class TestPoolPuzzles(TestCase):
             ),
         )
         # Spend it and hope it fails!
-        try:
+        with pytest.raises(
+            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+        ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol, bad_coinsol], G2Element()),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
                 DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
-        except BadSpendBundleError as e:
-            assert str(e) == "condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
 
         # ENTER WAITING ROOM
         # find the singleton
@@ -334,15 +335,13 @@ class TestPoolPuzzles(TestCase):
             (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it and hope it fails!
-        try:
+        with pytest.raises(BadSpendBundleError, match="condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([return_coinsol], sig),
                 time,
                 DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
                 DEFAULT_CONSTANTS.COST_PER_BYTE,
             )
-        except BadSpendBundleError as e:
-            assert str(e) == "condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"
 
         # ABSORB WHILE IN WAITING ROOM
         time = CoinTimestamp(10000060, 3)
