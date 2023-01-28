@@ -1983,8 +1983,9 @@ def generator_condition_tester(
     quote: bool = True,
     max_cost: int = MAX_BLOCK_COST_CLVM,
     height: uint32,
+    coin_amount: int = 123,
 ) -> NPCResult:
-    prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
+    prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} {coin_amount} (() (q . ())))))"  # noqa
     print(f"program: {prg}")
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
     generator = BlockGenerator(program, [], [])
@@ -2508,7 +2509,9 @@ class TestMaliciousGenerators:
         condition = CREATE_UNIQUE_COINS.format(num=6094)
 
         with assert_runtime(seconds=0.3, label=request.node.name):
-            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+            npc_result = generator_condition_tester(
+                condition, quote=False, height=softfork_height, coin_amount=123000000
+            )
 
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1

@@ -242,7 +242,7 @@ class TestPoolPuzzles(TestCase):
         # filter for only the singleton solution
         singleton_coinsol: CoinSpend = list(
             filter(
-                lambda e: e.coin.amount == START_AMOUNT,
+                lambda e: e.coin.amount != START_AMOUNT,
                 coin_sols,
             )
         )[0]
