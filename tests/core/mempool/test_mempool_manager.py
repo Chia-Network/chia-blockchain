@@ -289,7 +289,8 @@ async def test_valid_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount]]
-    sb = spend_bundle_from_conditions(conditions)
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, max_amount)
+    sb = spend_bundle_from_conditions(conditions, coin)
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
     assert npc_result.error is None
 
@@ -356,10 +357,14 @@ async def test_minting_coin(
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    _, status, error = result[2]
-    assert status == expected_status
-    assert error == expected_error
+    try:
+        result = await generate_and_add_spendbundle(mempool_manager, conditions)
+        _, status, error = result[2]
+        assert status == expected_status
+        assert error == expected_error
+    except ValidationError as e:
+        assert expected_status == MempoolInclusionStatus.FAILED
+        assert e.code == expected_error
 
 
 @pytest.mark.asyncio
@@ -381,10 +386,14 @@ async def test_reserve_fee_condition(
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
     conditions = [[ConditionOpcode.RESERVE_FEE, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    _, status, error = result[2]
-    assert status == expected_status
-    assert error == expected_error
+    try:
+        result = await generate_and_add_spendbundle(mempool_manager, conditions)
+        _, status, error = result[2]
+        assert status == expected_status
+        assert error == expected_error
+    except ValidationError as e:
+        assert expected_status == MempoolInclusionStatus.FAILED
+        assert e.code == expected_error
 
 
 @pytest.mark.asyncio
