@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from sqlite3 import Row
-from typing import Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
@@ -15,7 +15,6 @@ from chia.wallet.util.wallet_types import WalletType
 
 # TODO: Add verbose: print start and end derivation index per wallet
 # TODO: Check for missing paired wallets (eg. No DID wallet for an NFT)
-# TODO: Print name and ID of WalletType
 # TODO: Use fancy command line library
 # TODO: Check used contiguous
 # TODO: Check for missing DID Wallets
@@ -56,7 +55,7 @@ def check_for_gaps(array: List[int], start: int, end: int, *, data_type: str = "
 
 
 class FromDB:
-    def __init__(self, row: Row, fields: List[str]) -> None:
+    def __init__(self, row: Iterable[Any], fields: List[str]) -> None:
         self.fields = fields
         for field, value in zip(fields, row):
             setattr(self, field, value)
@@ -68,20 +67,39 @@ class FromDB:
         return s
 
 
+def wallet_type_name(
+    wallet_type: int,
+) -> str:
+    if wallet_type in set(wt.value for wt in WalletType):
+        return f"{WalletType(wallet_type).name} ({wallet_type})"
+    else:
+        return f"INVALID_WALLET_TYPE ({wallet_type})"
+
+
+def cwr(row: Row) -> List[Any]:
+    r = []
+    for i, v in enumerate(row):
+        if i == 2:
+            r.append(wallet_type_name(v))
+        else:
+            r.append(v)
+    return r
+
+
 class DerivationPath(FromDB):
     derivation_index: int
     pubkey: str
     puzzle_hash: str
-    wallet_type: int
+    wallet_type: WalletType
     wallet_id: int
-    used: int
-    hardened: int
+    used: int  # 1 or 0
+    hardened: int  # 1 or 0
 
 
 class Wallet(FromDB):
-    id: int
+    id: int  # id >= 1
     name: str
-    wallet_type: int
+    wallet_type: WalletType
     data: str
 
 
@@ -113,6 +131,7 @@ class WalletDBReader:
     async def get_all_wallets(self) -> List[Wallet]:
         wallet_fields = ["id", "name", "wallet_type", "data"]
         async with self.db_wrapper.reader_no_transaction() as reader:
+            # TODO: if table doesn't exist
             cursor = await reader.execute(f"""SELECT {", ".join(wallet_fields)} FROM users_wallets""")
             rows = await cursor.fetchall()
             return [Wallet(r, wallet_fields) for r in rows]
@@ -120,6 +139,7 @@ class WalletDBReader:
     async def get_derivation_paths(self) -> List[DerivationPath]:
         fields = ["derivation_index", "pubkey", "puzzle_hash", "wallet_type", "wallet_id", "used", "hardened"]
         async with self.db_wrapper.reader_no_transaction() as reader:
+            # TODO: if table doesn't exist
             cursor = await reader.execute(f"""SELECT {", ".join(fields)} FROM derivation_paths;""")
             rows = await cursor.fetchall()
             return [DerivationPath(row, fields) for row in rows]
@@ -143,13 +163,14 @@ class WalletDBReader:
             errors = []
             try:
                 main_wallet_id = 1
-                main_wallet_type = 0
+                main_wallet_type = WalletType.STANDARD_WALLET
                 row = await execute_fetchone(reader, "SELECT * FROM users_wallets WHERE id=?", (main_wallet_id,))
                 if row is None:
                     errors.append(f"There is no wallet with ID {main_wallet_id} in table users_wallets")
                 elif row[2] != main_wallet_type:
                     errors.append(
-                        f"We expect wallet {main_wallet_id} to have type {main_wallet_type}, but it has {row[2]}"
+                        f"We expect wallet {main_wallet_id} to have type {wallet_type_name(main_wallet_type)}, "
+                        f"but it has {wallet_type_name(row[2])}"
                     )
             except Exception as e:
                 errors.append(f"Exception while trying to access wallet {main_wallet_id} from users_wallets: {e}")
@@ -165,7 +186,7 @@ class WalletDBReader:
 
             if self.verbose:
                 print("\nWallets:")
-                print(*rows, sep=",\n")
+                print(*[cwr(r) for r in rows], sep=",\n")
             # Check for invalid wallet types in users_wallets
             invalid_wallet_types = set()
             for row in rows:
@@ -246,8 +267,8 @@ class WalletDBReader:
 
         for k, v in wrong_type.items():
             errors.append(
-                f"""{["  ", "un"][int(k[0])]}hardened Wallet ID {k[1]} uses type {k[2]} in derivation_paths, """
-                f"""but type {k[3]} in wallet table at these derivation indices: {v}"""
+                f"""{["  ", "un"][int(k[0])]}hardened Wallet ID {k[1]} uses type {wallet_type_name(k[2])} in """
+                f"derivation_paths, but type {wallet_type_name(k[3])} in wallet table at these derivation indices: {v}"
             )
 
         return errors
