@@ -13,12 +13,9 @@ from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.pprint import print_compact_ranges
 from chia.wallet.util.wallet_types import WalletType
 
-# TODO: Add verbose: print start and end derivation index per wallet
 # TODO: Check for missing paired wallets (eg. No DID wallet for an NFT)
-# TODO: Use fancy command line library
 # TODO: Check used contiguous
 # TODO: Check for missing DID Wallets
-# TODO: Use require_derivation_paths() to see whcih Wallets need derivations
 
 
 def check_for_gaps(array: List[int], start: int, end: int, *, data_type: str = "Element") -> List[str]:
@@ -76,7 +73,7 @@ def wallet_type_name(
         return f"INVALID_WALLET_TYPE ({wallet_type})"
 
 
-def cwr(row: Row) -> List[Any]:
+def _cwr(row: Row) -> List[Any]:
     r = []
     for i, v in enumerate(row):
         if i == 2:
@@ -84,6 +81,10 @@ def cwr(row: Row) -> List[Any]:
         else:
             r.append(v)
     return r
+
+
+# wallet_types_that_dont_need_derivations: See require_derivation_paths for each wallet type
+wallet_types_that_dont_need_derivations = {WalletType.POOLING_WALLET, WalletType.NFT}
 
 
 class DerivationPath(FromDB):
@@ -116,6 +117,7 @@ def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath])
     d = dp_by_wallet_id(derivation_paths)
     print("Min, Max, Count of derivations for each wallet:")
     for wallet_id, derivation_index_list in d.items():
+        # TODO: Fix count by separating hardened and unhardened
         print(
             f"Wallet ID {wallet_id:2} derivation index min: {derivation_index_list[0]} "
             f"max: {derivation_index_list[-1]} count: {len(derivation_index_list)}"
@@ -186,7 +188,7 @@ class WalletDBReader:
 
             if self.verbose:
                 print("\nWallets:")
-                print(*[cwr(r) for r in rows], sep=",\n")
+                print(*[_cwr(r) for r in rows], sep=",\n")
             # Check for invalid wallet types in users_wallets
             invalid_wallet_types = set()
             for row in rows:
@@ -201,11 +203,11 @@ class WalletDBReader:
     ) -> List[str]:
         p = []
         d = dp_by_wallet_id(derivation_paths)  # TODO: calc this once, pass in
-        for wid in [w.id for w in wallets]:
-            if wid not in d:
-                p.append(wid)
+        for w in wallets:
+            if w.wallet_type not in wallet_types_that_dont_need_derivations and w.id not in d:
+                p.append(w.id)
         if len(p) > 0:
-            return [f"Wallet IDs with no derivations: {p}"]
+            return [f"Wallet IDs with no derivations that require them: {p}"]
         return []
 
     def check_derivations_are_compact(self, wallets: List[Wallet], derivation_paths: List[DerivationPath]) -> List[str]:
