@@ -2105,9 +2105,9 @@ class TestGeneratorConditions:
         cond = 52
         # even though the generator outputs 3 conditions, we only need to return one copy
         # with all the fees accumulated
-        npc_result = generator_condition_tester(f"({cond} 100) " * 3, height=softfork_height)
+        npc_result = generator_condition_tester(f"({cond} 10) " * 3, height=softfork_height)
         assert npc_result.error is None
-        assert npc_result.conds.reserve_fee == 300
+        assert npc_result.conds.reserve_fee == 30
         assert len(npc_result.conds.spends) == 1
 
     def test_duplicate_outputs(self, softfork_height):
