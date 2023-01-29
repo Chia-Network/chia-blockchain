@@ -1270,7 +1270,6 @@ class WalletNode:
         start_validation = time.time()
         (
             valid,
-            summaries,
             block_records,
         ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
         if not valid:

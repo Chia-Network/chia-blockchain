@@ -10,7 +10,6 @@ from typing import IO, List, Optional, Tuple
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
 from chia.util.setproctitle import getproctitle, setproctitle
@@ -49,12 +48,12 @@ class WalletWeightProofHandler:
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
-    ) -> Tuple[bool, List[SubEpochSummary], List[BlockRecord]]:
+    ) -> Tuple[bool, List[BlockRecord]]:
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
         if summaries is None or sub_epoch_weight_list is None:
             log.error("weight proof failed sub epoch data validation")
-            return False, [], []
+            return False, []
         validate_from = get_fork_ses_idx(old_proof, weight_proof)
         task = asyncio.create_task(
             validate_weight_proof_inner(
@@ -72,7 +71,7 @@ class WalletWeightProofHandler:
         self._weight_proof_tasks.append(task)
         valid, block_records = await task
         self._weight_proof_tasks.remove(task)
-        return valid, summaries, block_records
+        return valid, block_records
 
 
 def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
