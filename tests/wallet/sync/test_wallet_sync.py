@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
-from chia.types.blockchain_format.coin import Coin
 from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
@@ -23,6 +22,7 @@ from chia.server.outbound_message import Message, make_msg
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
