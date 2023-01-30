@@ -47,12 +47,7 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import (
-    DID_INNERPUZ_MOD,
-    create_fullpuz,
-    match_did_puzzle,
-    program_to_metadata,
-)
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle, program_to_metadata
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
@@ -62,6 +57,7 @@ from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -140,6 +136,7 @@ class WalletRpcApi:
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
             "/verify_signature": self.verify_signature,
+            "/get_transaction_memo": self.get_transaction_memo,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -239,6 +236,7 @@ class WalletRpcApi:
             "added_stray_cat",
             "pending_transaction",
             "tx_update",
+            "new_on_chain_notification",
         }:
             payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
@@ -839,6 +837,30 @@ class WalletRpcApi:
             "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
+
+    async def get_transaction_memo(self, request: Dict) -> EndpointResult:
+        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
+        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        if tr is None:
+            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
+        if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
+            if tr.type == uint32(TransactionType.INCOMING_TX.value):
+                # Fetch incoming tx coin spend
+                peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+                assert peer is not None
+                assert len(tr.additions) == 1
+                coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+                    [tr.additions[0].parent_coin_info], peer=peer
+                )
+                assert len(coin_state_list) == 1
+                coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                    coin_state_list[0].spent_height, coin_state_list[0].coin, peer
+                )
+                tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
+            else:
+                raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
+        assert tr.spend_bundle is not None
+        return {transaction_id.hex(): compute_memos(tr.spend_bundle)}
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
