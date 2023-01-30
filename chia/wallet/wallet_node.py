@@ -89,12 +89,6 @@ class WalletNode:
 
     log: logging.Logger = logging.getLogger(__name__)
 
-    # Normal operation data
-    # cached_blocks: Dict = dataclasses.field(default_factory=dict)
-    # future_block_hashes: Dict = dataclasses.field(default_factory=dict)
-
-    # Sync data
-    # proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[Callable[..., Any]] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
     _weight_proof_handler: Optional[WalletWeightProofHandler] = None
