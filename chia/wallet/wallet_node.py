@@ -635,6 +635,10 @@ class WalletNode:
             return False
 
         trusted: bool = self.is_trusted(full_node)
+        if not trusted and await self.check_for_synced_trusted_peer(target_height):
+            self.log.info("abort untrusted, connected to trusted node")
+            return
+
         self.log.info(f"Starting sync trusted: {trusted} to peer {full_node.peer_host}")
         start_time = time.time()
 
@@ -1024,9 +1028,6 @@ class WalletNode:
         if self.is_trusted(peer):
             await self.new_peak_from_trusted(new_peak_hb, latest_timestamp, peer)
         else:
-            if await self.check_for_synced_trusted_peer(new_peak_hb.height):
-                self.log.info("Cancelling untrusted sync, we are connected to a synced trusted peer")
-                return
             if not await self.new_peak_from_untrusted(new_peak_hb, peer):
                 return
 
@@ -1099,6 +1100,9 @@ class WalletNode:
 
     async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection):
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        if self.check_for_synced_trusted_peer(new_peak_hb.height):
+            self.log.info("abort untrusted, connected to trusted node")
+            return
         weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, new_peak_hb)
         old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
