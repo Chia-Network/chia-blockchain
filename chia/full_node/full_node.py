@@ -81,6 +81,8 @@ from chia.util.safe_cancel_task import cancel_task_safe
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
+    peak_full_block: FullBlock
+    state_change_summary: StateChangeSummary
     mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]  # The result of calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
@@ -421,7 +423,7 @@ class FullNode:
             assert full_peak is not None
             state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
             ppp_result: PeakPostProcessingResult = await self.peak_post_processing(full_peak, state_change_summary)
-            await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
+            await self.peak_post_processing_2(None, ppp_result)
         if self.config["send_uncompact_interval"] != 0:
             sanitize_weight_proof_only = False
             if "sanitize_weight_proof_only" in self.config:
@@ -588,7 +590,7 @@ class FullNode:
                                 peak_fb,
                                 state_change_summary,
                             )
-                            await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
+                            await self.peak_post_processing_2(peer, ppp_result)
                         except Exception:
                             # Still do post processing after cancel (or exception)
                             peak_fb = await self.blockchain.get_full_peak()
@@ -1316,8 +1318,8 @@ class FullNode:
             if peak_fb is not None:
                 assert peak is not None
                 state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
-                ppp_result: PeakPostProcessingResult = await self.peak_post_processing(peak_fb, state_change_summary)
-                await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
+                ppp_result = await self.peak_post_processing(peak_fb, state_change_summary)
+                await self.peak_post_processing_2(None, ppp_result)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
@@ -1492,20 +1494,26 @@ class FullNode:
                 self.full_node_store.previous_generator = generator_arg
 
         return PeakPostProcessingResult(
-            mempool_new_peak_result, fns_peak_result, hints_to_add, lookup_coin_ids, sub_slots[1]
+            block,
+            state_change_summary,
+            mempool_new_peak_result,
+            fns_peak_result,
+            hints_to_add,
+            lookup_coin_ids,
+            sub_slots[1],
         )
 
     async def peak_post_processing_2(
         self,
-        block: FullBlock,
         peer: Optional[WSChiaConnection],
-        state_change_summary: StateChangeSummary,
         ppp_result: PeakPostProcessingResult,
     ) -> None:
         """
         Does NOT need to be called under the blockchain lock. Handle other parts of post processing like communicating
         with peers
         """
+        block = ppp_result.peak_full_block
+        state_change_summary = ppp_result.state_change_summary
         if ppp_result.fns_peak_result.new_signage_points is not None and peer is not None:
             for index, sp in ppp_result.fns_peak_result.new_signage_points:
                 assert (
@@ -1729,8 +1737,7 @@ class FullNode:
             validation_time = time.time() - validation_start
 
         if ppp_result is not None:
-            assert state_change_summary is not None
-            await self.peak_post_processing_2(block, peer, state_change_summary, ppp_result)
+            await self.peak_post_processing_2(peer, ppp_result)
 
         percent_full_str = (
             (
