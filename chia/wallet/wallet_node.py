@@ -8,6 +8,8 @@ import random
 import sys
 import time
 import traceback
+from asyncio import Event
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
@@ -39,7 +41,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
 from chia.util.chunks import chunks
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method, start_method_values
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
@@ -232,10 +234,12 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
 
-        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
-        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        multiprocessing_start_method: start_method_values = process_config_start_method(
+            config=self.config, log=self.log
+        )
+        multiprocessing_context: BaseContext = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
-        self.synced_peers = set()
+        self.synced_peers: Set[bytes32] = set()
         private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint())
         if private_key is None:
             self.log_out()
@@ -271,13 +275,15 @@ class WalletNode:
 
         self.last_wallet_tx_resend_time: float = time.time()
         self.last_state_retry_time: float = time.time()
-        self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
+        self.wallet_tx_resend_timeout_secs: float = self.config.get("tx_resend_timeout_secs", 60 * 60.0)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
-        self._shut_down = False
-        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
-        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
+        self._shut_down: bool = False
+        self._process_new_subscriptions_task: asyncio.Task[None] = asyncio.create_task(
+            self._process_new_subscriptions()
+        )
+        self._retry_failed_states_task: asyncio.Task[None] = asyncio.create_task(self._retry_failed_states())
 
-        self.sync_event = asyncio.Event()
+        self.sync_event: Event = asyncio.Event()
         self.log_in(private_key)
         self.wallet_state_manager.set_sync_mode(False)
 
