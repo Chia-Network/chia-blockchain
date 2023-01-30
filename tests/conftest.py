@@ -16,6 +16,7 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 
 # Set spawn after stdlib imports, but before other imports
+from chia.clvm.spend_sim import CostLogger
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -748,3 +749,12 @@ def chia_root_fixture(tmp_path: Path, scripts_path: Path) -> ChiaRoot:
     root.run(args=["configure", "--set-log-level", "INFO"])
 
     return root
+
+
+@pytest.fixture(name="cost_logger", scope="session")
+def cost_logger_fixture() -> Iterator[CostLogger]:
+    cost_logger = CostLogger()
+    yield cost_logger
+    print()
+    print()
+    print(cost_logger.log_cost_statistics())

@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import sim_and_client
+from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -39,7 +39,7 @@ NIL_PH = Program.to(None).get_tree_hash()
 
 
 @pytest.mark.asyncio
-async def test_graftroot() -> None:
+async def test_graftroot(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Create the coin we're testing
         all_values: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
@@ -117,6 +117,10 @@ async def test_graftroot() -> None:
 
             # If this is the satisfactory merkle tree
             if filtered_values == all_values:
+                cost_logger.add_cost(
+                    "DL Graftroot - fake singleton w/ announce + prove two rows in a DL merkle tree + create one child",
+                    final_bundle,
+                )
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
                 # clear the mempool
                 same_height = sim.block_height

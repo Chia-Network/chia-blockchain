@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -13,9 +14,10 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -52,6 +54,31 @@ async def sim_and_client(
         yield sim, client
     finally:
         await sim.close()
+
+
+class CostLogger:
+    def __init__(self) -> None:
+        self.cost_dict: Dict[str, int] = {}
+        self.cost_dict_no_puzs: Dict[str, int] = {}
+
+    def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
+        program: BlockGenerator = simple_solution_generator(spend_bundle)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            program, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, mempool_mode=True
+        )
+        self.cost_dict[descriptor] = npc_result.cost
+        cost_to_subtract: int = 0
+        for cs in spend_bundle.coin_spends:
+            cost_to_subtract += len(bytes(cs.puzzle_reveal)) * DEFAULT_CONSTANTS.COST_PER_BYTE
+        self.cost_dict_no_puzs[descriptor] = npc_result.cost - cost_to_subtract
+        return spend_bundle
+
+    def log_cost_statistics(self) -> str:
+        merged_dict = {
+            "standard cost": self.cost_dict,
+            "no puzzle reveals": self.cost_dict_no_puzs,
+        }
+        return json.dumps(merged_dict, indent=4)
 
 
 @streamable
