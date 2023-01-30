@@ -578,6 +578,7 @@ class FullNode:
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self._blockchain_lock_high_priority:
+                    ppp_result: Optional[PeakPostProcessingResult] = None
                     state_change_summary: Optional[StateChangeSummary]
                     success, state_change_summary = await self.receive_block_batch(response.blocks, peer, None)
                     if not success:
@@ -586,11 +587,10 @@ class FullNode:
                         try:
                             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
                             assert peak_fb is not None
-                            ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                            ppp_result = await self.peak_post_processing(
                                 peak_fb,
                                 state_change_summary,
                             )
-                            await self.peak_post_processing_2(peer, ppp_result)
                         except Exception:
                             # Still do post processing after cancel (or exception)
                             peak_fb = await self.blockchain.get_full_peak()
@@ -599,6 +599,8 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
+                    if ppp_result is not None:
+                        await self.peak_post_processing_2(peer, ppp_result)
         except (asyncio.CancelledError, Exception):
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
             raise
@@ -1310,6 +1312,7 @@ class FullNode:
         if self._server is None:
             return None
 
+        ppp_result = None
         async with self._blockchain_lock_high_priority:
             await self.sync_store.clear_sync_info()
 
@@ -1319,7 +1322,8 @@ class FullNode:
                 assert peak is not None
                 state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
                 ppp_result = await self.peak_post_processing(peak_fb, state_change_summary)
-                await self.peak_post_processing_2(None, ppp_result)
+        if ppp_result is not None:
+            await self.peak_post_processing_2(None, ppp_result)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
