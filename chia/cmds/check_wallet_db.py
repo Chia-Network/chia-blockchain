@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from sqlite3 import Row
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
@@ -14,8 +14,58 @@ from chia.util.pprint import print_compact_ranges
 from chia.wallet.util.wallet_types import WalletType
 
 # TODO: Check for missing paired wallets (eg. No DID wallet for an NFT)
-# TODO: Check used contiguous
 # TODO: Check for missing DID Wallets
+
+
+def _validate_args_addresses_used(wallet_id: int, last_index: int, last_hardened: int, dp: DerivationPath) -> None:
+    if last_hardened:
+        if last_hardened != dp.hardened:
+            raise ValueError(f"Invalid argument: Mix of hardened and unhardened columns wallet_id={wallet_id}")
+
+    if last_index:
+        if last_index != dp.derivation_index:
+            raise ValueError(f"Invalid argument: noncontiguous derivation_index at {last_index} wallet_id={wallet_id}")
+
+
+def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> List[str]:
+    """
+    The used column for addresses in the derivation_paths table should be a
+    zero or greater run of 1's, followed by a zero or greater run of 0's.
+    There should be no used derivations after seeing a used derivation.
+    """
+    errors: List[str] = []
+    saw_unused = False
+
+    for wallet_id, dps in dp_by_wallet_id(derivation_paths).items():
+        bad_used_values: Set[int] = set()
+        ordering_errors: List[str] = []
+        # last_index = None
+        # last_hardened = None
+        for dp in dps:
+            # _validate_args_addresses_used(wallet_id, last_index, last_hardened, dp)
+
+            if saw_unused and dp.used == 1 and ordering_errors == []:
+                ordering_errors.append(
+                    f"Wallet {dp.wallet_id}: "
+                    f"Used address after unused address at derivation index {dp.derivation_index}"
+                )
+
+            if dp.used == 1:
+                pass
+            elif dp.used == 0:
+                saw_unused = True
+            else:
+                bad_used_values.add(dp.used)
+
+            # last_hardened = dp.hardened
+            # last_index = dp.derivation_index
+
+        if len(bad_used_values) > 0:
+            errors.append(f"Wallet {wallet_id}: Bad values in 'used' column: {bad_used_values}")
+        if ordering_errors != []:
+            errors.extend(ordering_errors)
+
+    return errors
 
 
 def check_for_gaps(array: List[int], start: int, end: int, *, data_type: str = "Element") -> List[str]:
@@ -104,17 +154,25 @@ class Wallet(FromDB):
     data: str
 
 
-def dp_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[int]]:
+def dp_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[DerivationPath]]:
     d = defaultdict(list)
-    for dp in derivation_paths:
-        d[dp.wallet_id].append(dp.derivation_index)
+    for derivation_path in derivation_paths:
+        d[derivation_path.wallet_id].append(derivation_path)
     for k, v in d.items():
-        d[k] = sorted(v)
+        d[k] = sorted(v, key=lambda dp: dp.derivation_index)
     return d
 
 
-def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath]) -> None:
+def derivation_indices_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[int]]:
     d = dp_by_wallet_id(derivation_paths)
+    di = {}
+    for k, v in d.items():
+        di[k] = [dp.derivation_index for dp in v]
+    return di
+
+
+def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath]) -> None:
+    d = derivation_indices_by_wallet_id(derivation_paths)
     print("Min, Max, Count of derivations for each wallet:")
     for wallet_id, derivation_index_list in d.items():
         # TODO: Fix count by separating hardened and unhardened
@@ -202,7 +260,7 @@ class WalletDBReader:
         self, wallets: List[Wallet], derivation_paths: List[DerivationPath]
     ) -> List[str]:
         p = []
-        d = dp_by_wallet_id(derivation_paths)  # TODO: calc this once, pass in
+        d = derivation_indices_by_wallet_id(derivation_paths)  # TODO: calc this once, pass in
         for w in wallets:
             if w.wallet_type not in wallet_types_that_dont_need_derivations and w.id not in d:
                 p.append(w.id)
@@ -296,6 +354,8 @@ class WalletDBReader:
             errors.extend(self.check_wallets_missing_derivations(wallets, derivation_paths))
             errors.extend(self.check_unexpected_derivation_entries(wallets, derivation_paths))
             errors.extend(self.check_derivations_are_compact(wallets, derivation_paths))
+            errors.extend(check_addresses_used_contiguous(derivation_paths))
+
             if len(errors) > 0:
                 print("\n    ---- Errors Found ----")
                 print("\n".join(errors))
