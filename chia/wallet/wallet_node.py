@@ -113,7 +113,7 @@ class WalletNode:
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 300
-    last_wallet_tx_resend_time: int = 0
+    last_wallet_tx_resend_time: float = 0.0
     # Duration in seconds
     wallet_tx_resend_timeout_secs: int = 1800
     _new_peak_queue: Optional[NewPeakQueue] = None
@@ -269,8 +269,8 @@ class WalletNode:
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
-        self.last_wallet_tx_resend_time = int(time.time())
-        self.last_state_retry_time = int(time.time())
+        self.last_wallet_tx_resend_time: float = time.time()
+        self.last_state_retry_time: float = time.time()
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
@@ -350,7 +350,7 @@ class WalletNode:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
-        current_time = int(time.time())
+        current_time = time.time()
         retry_accepted_txs = False
         if self.last_wallet_tx_resend_time < current_time - self.wallet_tx_resend_timeout_secs:
             self.last_wallet_tx_resend_time = current_time
@@ -378,7 +378,7 @@ class WalletNode:
         while not self._shut_down:
             try:
                 await asyncio.sleep(5)
-                current_time = int(time.time())
+                current_time = time.time()
                 if self.last_state_retry_time < current_time - 10:
                     self.last_state_retry_time = current_time
                     if self.wallet_state_manager is None:
@@ -447,10 +447,10 @@ class WalletNode:
                     # Note: this can take a while when we have a lot of transactions. We want to process these
                     # before new_peaks, since new_peak_wallet requires that we first obtain the state for that peak.
                     self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
-                    request: wallet_protocol.CoinStateUpdate = item.data[0]
+                    state_update_request: wallet_protocol.CoinStateUpdate = item.data[0]
                     peer = item.data[1]
                     assert peer is not None
-                    await self.state_update_received(request, peer)
+                    await self.state_update_received(state_update_request, peer)
                 elif item.item_type == NewPeakQueueTypes.NEW_PEAK_WALLET:
                     self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
                     # This can take a VERY long time, because it might trigger a long sync. It is OK if we miss some
