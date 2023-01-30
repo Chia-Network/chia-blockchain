@@ -1261,13 +1261,13 @@ class WalletNode:
         return weight_proof, summaries, block_records
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
-        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        all_puzzle_hashes = await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes()
         # Get all phs from interested store
         interested_puzzle_hashes = [
             t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
         ]
-        all_puzzle_hashes.extend(interested_puzzle_hashes)
-        return all_puzzle_hashes
+        all_puzzle_hashes.update(interested_puzzle_hashes)
+        return list(all_puzzle_hashes)
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
         all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
