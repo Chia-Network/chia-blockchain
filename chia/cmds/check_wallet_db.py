@@ -68,7 +68,7 @@ def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> L
     return errors
 
 
-def check_for_gaps(array: List[int], start: int, end: int, *, data_type: str = "Element") -> List[str]:
+def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: str = "Elements") -> List[str]:
     """
     Check for compact sequence:
     Check that every value from start to end is present in array, and no more.
@@ -92,11 +92,11 @@ def check_for_gaps(array: List[int], start: int, end: int, *, data_type: str = "
     duplicates = find_duplicates(array)
 
     if len(missing) > 0:
-        errors.append(f"Missing {data_type}: {print_compact_ranges(list(missing))}")
+        errors.append(f"Missing {data_type_plural}: {print_compact_ranges(list(missing))}")
     if len(extras) > 0:
-        errors.append(f"Unexpected {data_type}: {extras}")
+        errors.append(f"Unexpected {data_type_plural}: {extras}")
     if len(duplicates) > 0:
-        errors.append(f"Duplicates {data_type}: {duplicates}")
+        errors.append(f"Duplicate {data_type_plural}: {duplicates}")
 
     return errors
 
@@ -242,7 +242,7 @@ class WalletDBReader:
                 cursor = await reader.execute("""SELECT * FROM users_wallets""")
                 rows = await cursor.fetchall()
                 max_id = max_id_row[0]
-            errors.extend(check_for_gaps([r[0] for r in rows], main_wallet_id, max_id, data_type="Wallet IDs"))
+            errors.extend(check_for_gaps([r[0] for r in rows], main_wallet_id, max_id, data_type_plural="Wallet IDs"))
 
             if self.verbose:
                 print("\nWallets:")
@@ -286,7 +286,9 @@ class WalletDBReader:
                 max_id = dpi[-1]
                 h = ["  hardened", "unhardened"][hardened]
                 errors.extend(
-                    check_for_gaps(dpi, 0, max_id, data_type=f"DerivationPath indexes for {h} wallet_id={wallet_id}")
+                    check_for_gaps(
+                        dpi, 0, max_id, data_type_plural=f"DerivationPath indexes for {h} wallet_id={wallet_id}"
+                    )
                 )
         return errors
 

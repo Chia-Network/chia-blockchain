@@ -9,23 +9,30 @@ from chia.wallet.util.wallet_types import WalletType
 
 
 def test_check_for_gaps_end_lt_start() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="incorrect arguments"):
         _ = check_for_gaps([], 2, 0)
 
 
-def test_check_for_gaps_empty_array() -> None:
-    with pytest.raises(ValueError):
-        _ = check_for_gaps([], 1, 2)
+def test_check_for_gaps_empty_array_ok() -> None:
+    e = check_for_gaps([], 1, 2)
+    assert e == ["Missing Elements: [1 to 2]"]
+
+
+def test_check_for_gaps_middle() -> None:
+    e = check_for_gaps([2], 1, 3)
+    assert e == ["Missing Elements: [1, 3]"]
 
 
 def test_check_for_gaps_wrong_first() -> None:
     e = check_for_gaps([1, 1], 0, 1)
-    assert "expected=0 actual=1" in e
+    assert "Missing Elements: [0]" in e
+    assert "Duplicate Elements: {1}" in e
 
 
 def test_check_for_gaps_duplicates() -> None:
     e = check_for_gaps([1, 1], 1, 2)
-    assert "Duplicate: 1" in e
+    assert "Missing Elements: [2]" in e
+    assert "Duplicate Elements: {1}" in e
 
 
 def test_check_for_gaps_start_equal_end_ok() -> None:
