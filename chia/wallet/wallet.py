@@ -401,7 +401,15 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    primaries.append({"puzzlehash": coin.puzzle_hash, "amount": uint64(change), "memos": []})
+                    if (
+                        self.wallet_state_manager.config.get("reuse_public_key_for_change", False)
+                        and newpuzzlehash != coin.puzzle_hash
+                    ):
+                        print(f"{newpuzzlehash.hex()} {coin.puzzle_hash.hex()}")
+                        change_puzzle_hash: bytes32 = coin.puzzle_hash
+                    else:
+                        change_puzzle_hash = await self.get_new_puzzlehash()
+                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())

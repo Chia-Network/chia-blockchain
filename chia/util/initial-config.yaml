@@ -492,6 +492,7 @@ wallet:
   connect_to_unknown_peers: True
 
   initial_num_public_keys: 425
+  reuse_public_key_for_change: False
 
   dns_servers:
     - "dns-introducer.chia.net"

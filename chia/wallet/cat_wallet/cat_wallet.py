@@ -666,8 +666,13 @@ class CATWallet:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 list(cat_coins)[0].puzzle_hash
             )
-            if derivation_record is not None:
+            if derivation_record is not None and self.wallet_state_manager.config.get(
+                "reuse_public_key_for_change", False
+            ):
                 changepuzzlehash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
+                if changepuzzlehash in set([p.puzzle_hash for p in payments]):
+                    # We cannot create two coins for one puzzle at the same time, create a new puzhash for the change
+                    changepuzzlehash = await self.get_new_inner_hash()
             else:
                 changepuzzlehash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change), "memos": []})
