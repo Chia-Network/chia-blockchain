@@ -28,6 +28,7 @@ from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
 from chia.util.log_exceptions import log_exceptions
+from chia.util.logging import TimedDuplicateFilter
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
@@ -549,10 +550,10 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         ):
             if not is_localhost(self.peer_host):
-                self.log.debug(
-                    f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
-                    f"peer: {self.peer_host}"
-                )
+                msg = f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                f"peer: {self.peer_host}"
+                self.log.debug(msg)
+                self.log.addFilter(TimedDuplicateFilter(msg, 60))
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
