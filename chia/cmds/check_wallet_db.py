@@ -34,9 +34,9 @@ def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> L
     There should be no used derivations after seeing a used derivation.
     """
     errors: List[str] = []
-    saw_unused = False
 
     for wallet_id, dps in dp_by_wallet_id(derivation_paths).items():
+        saw_unused = False
         bad_used_values: Set[int] = set()
         ordering_errors: List[str] = []
         # last_index = None

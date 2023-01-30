@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import Dict, List
 
 import pytest
 
@@ -100,3 +100,12 @@ def test_check_addresses_used_contiguous() -> None:
         assert ["Wallet 1: Used address after unused address at derivation index 1"] == check_addresses_used_contiguous(
             dp_list
         )
+
+
+def test_check_addresses_used_contiguous_multiple_wallets() -> None:
+    multi_used_lists: List[Dict[int, List[int]]] = [{0: [1, 1], 1: [1, 1]}, {0: [0, 0], 1: [1, 1]}]
+    for entry in multi_used_lists:
+        dp_list: List[DerivationPath] = []
+        for wallet_id, used_list in entry.items():
+            dp_list.extend(used_list_to_dp_list(used_list, wallet_id))
+        assert [] == check_addresses_used_contiguous(dp_list)
