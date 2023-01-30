@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
-from chia_rs.chia_rs import Coin
+from chia.types.blockchain_format.coin import Coin
 from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
