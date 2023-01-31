@@ -77,6 +77,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self.max_request_body_size = max_request_body_size
 
         self._log = logging.getLogger(service_name)
+        self._log.warning(f"Starting service {self._service_name} ...")
         self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
         self.service_config = self.config[service_name]
@@ -155,7 +156,10 @@ class Service(Generic[_T_RpcServiceProtocol]):
         for peer in self._reconnect_tasks.keys():
             self.add_peer(peer)
 
-        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
+        self._log.warning(
+            f"Started {self._service_name} service on network_id: {self._network_id} "
+            f"at port {self._advertised_port}"
+        )
 
         self._rpc_close_task = None
         if self._rpc_info:
@@ -225,6 +229,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
     def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
+            self._log.warning("Stopping service {self._service_name} at port {self._advertised_port} ...")
 
             # start with UPnP, since this can take a while, we want it to happen
             # in the background while shutting down everything else
@@ -268,7 +273,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         self._did_start = False
         self._is_stopping.clear()
-        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
+        self._log.warning(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
 
 def async_run(coro: Coroutine[object, object, T]) -> T:
