@@ -72,7 +72,7 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 
         uint8(0),
         False,
         uint32(height - 1),
-        TEST_TIMESTAMP,
+        timestamp,
         None,
         uint64(0),
         None,
@@ -85,6 +85,7 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 
 
 async def instantiate_mempool_manager(
     get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
+    *,
     current_block_height: uint32 = TEST_HEIGHT,
     current_block_timestamp: uint64 = TEST_TIMESTAMP,
 ) -> MempoolManager:
@@ -127,10 +128,10 @@ def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_
 
 
 async def add_spendbundle(
-    mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32, first_added_height: uint32 = TEST_HEIGHT
+    mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
 ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
-    return await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, first_added_height)
+    return await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
 
 
 async def generate_and_add_spendbundle(
@@ -339,27 +340,30 @@ async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
     [
         (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS, None),
         (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS, None),
+        # Relative 0 seconds is okay
         (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS, None),
         (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
         (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS, None),
         (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS, None),
+        # Relative 0 height is not okay (unlike relative 0 seconds)
         (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
         (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
         (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.SUCCESS, None),
         (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.SUCCESS, None),
         (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 6, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
         (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 7, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, TEST_TIMESTAMP - 1, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, TEST_TIMESTAMP, MempoolInclusionStatus.SUCCESS, None),
+        # Current block timestamp is 10050
+        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, MempoolInclusionStatus.SUCCESS, None),
+        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10050, MempoolInclusionStatus.SUCCESS, None),
         (
             ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
-            TEST_TIMESTAMP + 1,
+            10051,
             MempoolInclusionStatus.FAILED,
             Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
         ),
         (
             ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
-            TEST_TIMESTAMP + 2,
+            10052,
             MempoolInclusionStatus.FAILED,
             Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
         ),
@@ -373,8 +377,8 @@ async def test_ephemeral_timelock(
 ) -> None:
     mempool_manager = await instantiate_mempool_manager(
         get_coin_record=get_coin_record_for_test_coins,
-        current_block_height=TEST_HEIGHT,
-        current_block_timestamp=TEST_TIMESTAMP,
+        current_block_height=uint32(5),
+        current_block_timestamp=uint64(10050),
     )
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1], [opcode, lock_value]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
@@ -384,8 +388,5 @@ async def test_ephemeral_timelock(
     sb = SpendBundle.aggregate([sb1, sb2])
     # We shouldn't have a record of this ephemeral coin
     assert await get_coin_record_for_test_coins(created_coin.name()) is None
-    # This ephemeral coin has entered the mempool at the current block height
-    assert mempool_manager.peak is not None
-    assert mempool_manager.peak.height == TEST_HEIGHT
-    _, status, error = await add_spendbundle(mempool_manager, sb, sb.name(), first_added_height=TEST_HEIGHT)
+    _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
     assert (status, error) == (expected_status, expected_error)
