@@ -967,22 +967,20 @@ class FullNode:
             self.log.info(f"Selected peak {target_peak}")
             # Check which peers are updated to this height
 
-            peers: List[bytes32] = []
+            peers = self.server.get_connections(NodeType.FULL_NODE)
             coroutines = []
-            for peer in self.server.all_connections.values():
-                if peer.connection_type == NodeType.FULL_NODE:
-                    peers.append(peer.peer_node_id)
-                    coroutines.append(
-                        peer.call_api(
-                            FullNodeAPI.request_block,
-                            full_node_protocol.RequestBlock(target_peak.height, True),
-                            timeout=10,
-                        )
+            for peer in peers:
+                coroutines.append(
+                    peer.call_api(
+                        FullNodeAPI.request_block,
+                        full_node_protocol.RequestBlock(target_peak.height, True),
+                        timeout=10,
                     )
+                )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
                 if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
                     self.sync_store.peer_has_block(
-                        target_peak.header_hash, peers[i], target_peak.weight, target_peak.height, False
+                        target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
 
