@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 import click
@@ -36,6 +35,17 @@ async def print_fee_info(node_client: FullNodeRpcClient, json_flag: bool) -> Non
     print("")
 
 
+async def fees_cmd_async(ctx: click.Context, rpc_port: Optional[int], json: bool) -> None:
+
+    from chia.cmds.cmds_util import get_any_service_client
+
+    node_client: Optional[FullNodeRpcClient]
+    async with get_any_service_client("full_node", rpc_port, ctx.obj["root_path"]) as node_config_fp:
+        node_client, config, _ = node_config_fp
+        if node_client is not None:
+            await print_fee_info(node_client, json)
+
+
 @click.command("fees", short_help="Show network fee estimates")
 @click.option(
     "-p",
@@ -51,14 +61,12 @@ async def print_fee_info(node_client: FullNodeRpcClient, json_flag: bool) -> Non
     "-j",
     "--json",
     is_flag=True,
+    type=bool,
+    default=False,
     help="print json",
 )
 @click.pass_context
-async def fees_cmd(rpc_port: Optional[int], root_path: Path, json_flag: bool) -> None:
-    from chia.cmds.cmds_util import get_any_service_client
+def fees_cmd(ctx: click.Context, rpc_port: Optional[int], json: bool) -> None:
+    import asyncio
 
-    node_client: Optional[FullNodeRpcClient]
-    async with get_any_service_client("full_node", rpc_port, root_path) as node_config_fp:
-        node_client, config, _ = node_config_fp
-        if node_client is not None:
-            await print_fee_info(node_client, json_flag)
+    asyncio.run(fees_cmd_async(ctx, rpc_port, json))

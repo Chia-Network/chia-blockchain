@@ -11,6 +11,7 @@ from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
 from chia.cmds.farm import farm_cmd
+from chia.cmds.fees import fees_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
@@ -125,6 +126,7 @@ cli.add_command(peer_cmd)
 cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
+cli.add_command(fees_cmd)
 
 
 def main() -> None:
