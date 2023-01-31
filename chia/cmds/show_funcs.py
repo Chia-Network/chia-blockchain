@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -164,7 +165,7 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
     target_times = [60, 120, 300]
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
-    print(res)
+    print(json.dumps(res))
     print("\n")
     print(f"  Mempool max cost: {res['mempool_max_size']:>12} CLVM cost")
     print(f"      Mempool cost: {res['mempool_size']:>12} CLVM cost")
