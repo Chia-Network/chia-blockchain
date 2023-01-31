@@ -365,6 +365,7 @@ class Wallet:
         spend_value = sum([coin.amount for coin in coins])
 
         change = spend_value - total_amount
+        self.log.error(f"coins: {coins}, total_amount: {total_amount}")
         if negative_change_allowed:
             change = max(0, change)
 
