@@ -53,7 +53,7 @@ async def get_coin_record_for_test_coins(coin_id: bytes32) -> Optional[CoinRecor
     return test_coin_records.get(coin_id)
 
 
-def create_test_block_record(*, height: uint32 = TEST_HEIGHT) -> BlockRecord:
+def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 = TEST_TIMESTAMP) -> BlockRecord:
     return BlockRecord(
         IDENTITY_PUZZLE_HASH,
         IDENTITY_PUZZLE_HASH,
@@ -84,10 +84,12 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT) -> BlockRecord:
 
 
 async def instantiate_mempool_manager(
-    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]]
+    get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
+    current_block_height: uint32 = TEST_HEIGHT,
+    current_block_timestamp: uint64 = TEST_TIMESTAMP,
 ) -> MempoolManager:
     mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
-    test_block_record = create_test_block_record()
+    test_block_record = create_test_block_record(height=current_block_height, timestamp=current_block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
@@ -125,10 +127,10 @@ def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_
 
 
 async def add_spendbundle(
-    mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
+    mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32, first_added_height: uint32 = TEST_HEIGHT
 ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
-    return await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, TEST_HEIGHT)
+    return await mempool_manager.add_spend_bundle(sb, npc_result, sb_name, first_added_height)
 
 
 async def generate_and_add_spendbundle(
@@ -369,7 +371,11 @@ async def test_ephemeral_timelock(
     expected_status: MempoolInclusionStatus,
     expected_error: Optional[Err],
 ) -> None:
-    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    mempool_manager = await instantiate_mempool_manager(
+        get_coin_record=get_coin_record_for_test_coins,
+        current_block_height=TEST_HEIGHT,
+        current_block_timestamp=TEST_TIMESTAMP,
+    )
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1], [opcode, lock_value]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
     sb1 = spend_bundle_from_conditions(conditions)
@@ -378,5 +384,8 @@ async def test_ephemeral_timelock(
     sb = SpendBundle.aggregate([sb1, sb2])
     # We shouldn't have a record of this ephemeral coin
     assert await get_coin_record_for_test_coins(created_coin.name()) is None
-    _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
+    # This ephemeral coin has entered the mempool at the current block height
+    assert mempool_manager.peak is not None
+    assert mempool_manager.peak.height == TEST_HEIGHT
+    _, status, error = await add_spendbundle(mempool_manager, sb, sb.name(), first_added_height=TEST_HEIGHT)
     assert (status, error) == (expected_status, expected_error)
