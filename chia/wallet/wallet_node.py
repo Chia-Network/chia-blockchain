@@ -1572,12 +1572,17 @@ class WalletNode:
             peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
         return True
 
-    async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
+    async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> Optional[CoinSpend]:
         solution_response = await peer.call_api(
             FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
+            msg = f"Was not able to obtain solution for coin {coin} at height {height}"
+            f" from peer {peer.peer_host} response: {solution_response}"
+            self.log.warning(msg)
+            return None
+            # raise PeerRequestException(msg)
+
         assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
         assert solution_response.response.coin_name == coin.name()
 

@@ -6,6 +6,7 @@ import logging
 import multiprocessing.context
 import time
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
@@ -91,6 +92,15 @@ from chia.wallet.wallet_user_store import WalletUserStore
 TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
 
 
+@dataclass
+class CoinStateRetryInfo:
+    """When and from whom we received a CoinState we couldn't process"""
+
+    peer_ip: str
+    time_received: float
+    fork_height: Optional[uint32]
+
+
 class WalletStateManager:
     constants: ConsensusConstants
     config: Dict
@@ -99,6 +109,7 @@ class WalletStateManager:
     user_store: WalletUserStore
     nft_store: WalletNftStore
     basic_store: KeyValStore
+    coin_states_to_retry: Dict[CoinState, List[CoinStateRetryInfo]] = defaultdict(list)
 
     start_index: int
 
@@ -637,6 +648,11 @@ class WalletStateManager:
             parent_coin_state.spent_height, parent_coin_state.coin, peer
         )
         if coin_spend is None:
+            self.log.warning(
+                f"Could not find a puzzle solution for parent coin state {parent_coin_state}"
+                f"while researching coin state: {coin_state} peer: {peer.peer_host} "
+                f"fork_height: {fork_height}"
+            )
             return None, None
 
         puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
@@ -1046,6 +1062,15 @@ class WalletStateManager:
                         wallet_type = local_record.wallet_type
                     elif coin_state.created_height is not None:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
+                        if wallet_id is None or wallet_type is None:
+                            # We can't process this right now - we probably need to retry it later
+                            self.log.warning(
+                                f"Failed to determine coin type for {coin_state} at {fork_height} from {peer.peer_host}"
+                                f"Previous incidents: {self.coin_states_to_retry[coin_state]}"
+                            )
+                            self.coin_states_to_retry[coin_state].append(
+                                CoinStateRetryInfo(peer.peer_host, time.time(), fork_height)
+                            )
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
                             if (
@@ -1073,7 +1098,7 @@ class WalletStateManager:
                         # TODO implements this coin got reorged
                         # TODO: we need to potentially roll back the pool wallet here
                         pass
-                    # if the new coin has not been spent (i.e not ephemeral)
+                    # if the new coin has not been spent (i.e. not ephemeral)
                     elif coin_state.created_height is not None and coin_state.spent_height is None:
                         if local_record is None:
                             await self.coin_added(
