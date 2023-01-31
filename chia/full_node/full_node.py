@@ -877,11 +877,6 @@ class FullNode:
         # Remove all ph | coin id subscription for this peer
         self.subscriptions.remove_peer(connection.peer_node_id)
 
-    def _num_needed_peers(self) -> int:
-        assert self.server.all_connections is not None
-        diff: int = int(self.config["target_peer_count"]) - len(self.server.all_connections)
-        return diff if diff >= 0 else 0
-
     def _close(self) -> None:
         self._shut_down = True
         if self._init_weight_proof is not None:
