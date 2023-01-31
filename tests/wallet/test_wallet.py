@@ -838,9 +838,22 @@ class TestWalletSimulator:
             wallet_node_2.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        # Test general string
         message = "Hello World"
         response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test hex string
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True}
+        )
+        puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),

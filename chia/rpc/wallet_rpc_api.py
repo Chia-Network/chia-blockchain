@@ -1314,7 +1314,7 @@ class WalletRpcApi:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request["message"], puzzle_hash
+            request["message"], puzzle_hash, request.get("is_hex", False)
         )
         return {
             "success": True,
@@ -1343,7 +1343,7 @@ class WalletRpcApi:
             if selected_wallet is None:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"])
+            pubkey, signature = await selected_wallet.sign_message(request["message"], request.get("is_hex", False))
             latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1))
             latest_coin_id = None
             if len(latest_coin) > 0:
@@ -1362,7 +1362,9 @@ class WalletRpcApi:
                 return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
 
             assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+            pubkey, signature = await selected_wallet.sign_message(
+                request["message"], target_nft, request.get("is_hex", False)
+            )
             latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
