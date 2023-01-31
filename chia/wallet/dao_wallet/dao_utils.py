@@ -8,6 +8,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.singleton import create_fullpuz
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
@@ -170,26 +171,22 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
 def get_proposal_puzzle(
     proposal_id: bytes32,
     cat_tail: bytes32,
-    proposal_pass_percentage: uint64,
     treasury_id: bytes32,
-    proposal_timelock: uint64,
     votes_sum: int,
     total_votes: uint64,
     innerpuz: Program,
 ) -> Program:
-    # SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+    # SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
     # PROPOSAL_MOD_HASH
-    # PROPOSAL_TIMER_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
     # CAT_MOD_HASH
     # TREASURY_MOD_HASH
     # LOCKUP_MOD_HASH
-    # CAT_TAIL
-    # PROPOSAL_PASS_PERCENTAGE
+    # CAT_TAIL_HASH
     # TREASURY_ID
-    # PROPOSAL_TIMELOCK
-    # VOTES_SUM  ; yes votes are +1, no votes are -1
+    # YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
     # TOTAL_VOTES  ; how many people responded
-    # INNERPUZ  ; this is what runs if this proposal is successful
+    # INNERPUZ  ; this is what runs if this proposal is successful - the inner puzzle of this proposal. Rename as PROPOSAL_PUZZLE ?
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
     puzzle = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
@@ -199,9 +196,7 @@ def get_proposal_puzzle(
         DAO_TREASURY_MOD_HASH,
         DAO_LOCKUP_MOD_HASH,
         cat_tail,
-        proposal_pass_percentage,
         treasury_id,
-        proposal_timelock,
         votes_sum,
         total_votes,
         innerpuz,
@@ -238,6 +233,8 @@ def get_proposal_timer_puzzle(
     return puzzle
 
 
+# This takes the treasury puzzle and treasury solution, not the full puzzle and full solution
+# This also returns the treasury puzzle and not the full puzzle
 def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
     # my_amount         ; current amount
     # new_amount_change ; may be negative or positive. Is zero during eve spend
@@ -258,9 +255,77 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
         return puzzle_reveal
     elif type == Program.to("r"):  # Recurry by index
         curried_args = uncurry_treasury(puzzle_reveal)
+        (
+            singleton_struct,
+            DAO_TREASURY_MOD_HASH,
+            DAO_PROPOSAL_MOD_HASH,
+            DAO_PROPOSAL_TIMER_MOD_HASH,
+            DAO_LOCKUP_MOD_HASH,
+            CAT_MOD_HASH,
+            cat_tail_hash,
+            current_cat_issuance,
+            attendance_required_percentage,
+            proposal_pass_percentage,
+            proposal_timelock,
+        ) = curried_args
         # TODO: finish this
         breakpoint()
     return None
+
+
+# This takes the proposal puzzle and proposal solution, not the full puzzle and full solution
+# This also returns the proposal puzzle and not the full puzzle
+def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
+    # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+    # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+    # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+    #                                     ; the total number of CATs in circulation according to the treasury
+    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+    #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+    #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+    # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+    #                  ; we only use this when closing out so set it to 0 and we will do the vote spend case
+    if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
+        print()
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            TREASURY_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+            TOTAL_VOTES,  # how many people responded
+            INNERPUZ,
+        ) = uncurry_proposal(puzzle_reveal)
+        added_votes = solution.first().as_atom()
+        new_total_votes = TOTAL_VOTES.as_atom() + added_votes
+        if solution.rest().first() == Program.to(0):
+            new_yes_votes = YES_VOTES
+        else:
+            new_yes_votes = YES_VOTES.as_atom() + added_votes
+        return DAO_PROPOSAL_MOD.curry(
+            SINGLETON_STRUCT,
+            DAO_PROPOSAL_MOD_HASH,
+            DAO_PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            DAO_TREASURY_MOD_HASH,
+            DAO_LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            new_yes_votes,
+            new_total_votes,
+            INNERPUZ,
+        )
+    else:
+        return DAO_FINISHED_STATE
+
+
+def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
+    return create_fullpuz(DAO_FINISHED_STATE, proposal_id)
 
 
 def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
@@ -277,8 +342,8 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
         attendance_required_percentage,
         proposal_pass_percentage,
         proposal_timelock,
-    ) = curried_args.as_python()[0]
-    return bytes32(cat_tail_hash)
+    ) = curried_args
+    return bytes32(cat_tail_hash.as_atom())
 
 
 def uncurry_treasury(treasury_puzzle: Program) -> Program:

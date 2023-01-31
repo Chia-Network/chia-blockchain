@@ -23,12 +23,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
+# from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import (
     SINGLETON_LAUNCHER,
+    DAO_PROPOSAL_MOD,
+    DAO_TREASURY_MOD,
     curry_singleton,
     generate_cat_tail,
     get_cat_tail_hash_from_treasury_puzzle,
@@ -36,12 +38,18 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_proposal_puzzle,
     get_treasury_puzzle,
     uncurry_proposal,
+    get_finished_state_puzzle,
+    get_new_puzzle_from_proposal_solution,
 )
-from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
+# from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
-from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
+from chia.wallet.singleton import (
+    get_most_recent_singleton_coin_from_coin_spend,
+    get_innerpuzzle_from_puzzle,
+    get_singleton_id_from_puzzle,
+)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -792,6 +800,8 @@ class DAOWallet:
             launcher_coin.name(),
             cat_tail_hash,
             self.dao_info.treasury_id,
+            0,
+            0,
             proposed_puzzle_hash,
         )
 
@@ -1019,6 +1029,75 @@ class DAOWallet:
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
 
+    async def add_or_update_proposal_info(
+        self,
+        new_state: CoinSpend,
+        block_height: uint32,
+    ):
+        new_dao_info = self.dao_info.copy()
+        puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        solution = new_state.solution.rest().rest().first()  # get proposal solution from full singleton solution
+        singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
+        YES_VOTES, TOTAL_VOTES, INNERPUZ = self.get_proposal_curry_values(puzzle)  # not sure if we're going to use this
+        if TOTAL_VOTES < self.dao_info.filter_below_vote_amount:
+            return  # ignore all proposals below the filter amount
+        current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
+            get_new_puzzle_from_proposal_solution(puzzle, solution)
+            # TODO: update current_innerpuz and find timer coin
+        else:
+            # If we have entered the finished state
+            # TODO: we need to alert the user that they can free up their coins
+            current_innerpuz = get_finished_state_puzzle(singleton_id)
+            timer_coin = None
+
+        index = 0
+        for current_info in new_dao_info.proposals_list:
+            # Search for current proposal_info
+            if current_info.proposal_id == singleton_id:
+                # If we are receiving a voting spend update
+                if current_info.singleton_block_height <= block_height:
+                    # TODO: what do we do here?
+                    print()
+                else:
+                    new_proposal_info = ProposalInfo(
+                        singleton_id,
+                        puzzle,
+                        current_info.amount_voted,
+                        current_info.is_yes_vote,
+                        current_coin,
+                        current_innerpuz,
+                        current_info.timer_coin,
+                        block_height,
+                    )
+                    new_dao_info.proposals_list[index] = new_proposal_info
+                    await self.save_info(new_dao_info)
+                    return
+            index = index + 1
+
+        # If we reach here then we don't currently know about this coin
+        new_proposal_info = ProposalInfo(
+            singleton_id,
+            puzzle,
+            0,  # assume we haven't voted any if we don't already know about this
+            None,
+            current_coin,
+            current_innerpuz,
+            timer_coin,  # if this is None then the proposal has finished
+            block_height  # block height that current proposal singleton coin was created in
+        )
+        new_dao_info.proposals_list.append(new_proposal_info)
+        await self.save_info(new_dao_info)
+        return
+
+    async def update_treasury_info(
+        self,
+        new_state: CoinSpend,
+        block_height: uint32,
+    ):
+
+        return
+
     # TODO: Find a nice way to express interest in more than one singleton.
     #     e.g. def register_singleton_for_wallet()
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
@@ -1044,6 +1123,19 @@ class DAOWallet:
             return False
 
         # Consume new DAOBlockchainInfo
+        # Determine if this is a treasury spend or a proposal spend
+        puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        try:
+            mod, curried_args = puzzle.uncurry()
+        except ValueError as e:
+            self.log.warning("Cannot uncurry puzzle in DAO Wallet: error: %s", e)
+            raise e
+        if mod == DAO_PROPOSAL_MOD:
+            await self.update_treasury_info(new_state, block_height)
+        elif mod == DAO_TREASURY_MOD:
+            await self.add_or_update_proposal_info(new_state, block_height)
+        else:
+            raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
 
         return True
 

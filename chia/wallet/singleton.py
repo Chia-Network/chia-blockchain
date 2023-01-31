@@ -46,6 +46,22 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
     return Program(INNER_PUZZLE)
 
 
+def get_singleton_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
+    """
+    Extract the singleton ID from a singleton puzzle
+    :param puzzle: Singleton puzzle
+    :return: Inner puzzle
+    """
+    r = puzzle.uncurry()
+    if r is None:
+        return None
+    inner_f, args = r
+    if not is_did_core(inner_f):
+        return None
+    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    return Program(SINGLETON_STRUCT).rest().first().as_atom()
+
+
 def metadata_to_program(metadata: Dict[str, str]) -> Program:
     """
     Convert the metadata dict to a Chialisp program
