@@ -191,6 +191,13 @@ jobs:
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
+    - name: Prepare Debian Bookworm with Python 3.10
+      if: ${{ matrix.distribution.name == 'debian:bookworm' }}
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get install --yes python3.10
+
     - name: Prepare Fedora
       if: ${{ matrix.distribution.type == 'fedora' }}
       run: |
