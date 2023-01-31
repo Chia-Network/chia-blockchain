@@ -118,6 +118,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "new_signage_point",
+                    data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "new_farming_info":
             payloads.append(
                 create_payload_dict(
@@ -125,6 +133,14 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "new_farming_info",
+                    change_data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "harvester_update":
@@ -136,6 +152,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "harvester_removed":
             payloads.append(
                 create_payload_dict(
@@ -143,6 +167,14 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_removed",
+                    change_data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "submitted_partial":
@@ -158,6 +190,24 @@ class FarmerRpcApi:
             payloads.append(
                 create_payload_dict(
                     "proof",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "add_connection":
+            payloads.append(
+                create_payload_dict(
+                    "add_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "close_connection":
+            payloads.append(
+                create_payload_dict(
+                    "close_connection",
                     change_data,
                     self.service_name,
                     "metrics",

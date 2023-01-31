@@ -98,7 +98,7 @@ class Harvester:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection):
-        pass
+        self.state_changed("add_connection")
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback

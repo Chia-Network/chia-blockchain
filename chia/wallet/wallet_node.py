@@ -555,6 +555,8 @@ class WalletNode:
         if peer.peer_node_id in self.node_peaks:
             self.node_peaks.pop(peer.peer_node_id)
 
+        self.wallet_state_manager.state_changed("close_connection")
+
     async def on_connect(self, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
             return None
