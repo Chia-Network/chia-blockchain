@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 import click
@@ -12,7 +13,7 @@ async def print_fee_info(node_client: FullNodeRpcClient, json_flag: bool) -> Non
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
     if json_flag:
-        print(res)
+        print(json.dumps(res))
         return
 
     print("\n")
