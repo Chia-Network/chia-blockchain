@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 from blspy import G2Element
 
+from chia.clvm.spend_sim import sim_and_client
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -168,10 +169,8 @@ class TestOfferLifecycle:
     cost: Dict[str, int] = {}
 
     @pytest.mark.asyncio()
-    async def test_complex_offer(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_complex_offer(self):
+        async with sim_and_client() as (sim, sim_client):
             coins_needed: Dict[Optional[str], List[int]] = {
                 None: [500, 400, 300],
                 "red": [250, 100],
@@ -312,8 +311,6 @@ class TestOfferLifecycle:
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             self.cost["complex offer"] = cost_of_spend_bundle(offer_bundle)
             await sim.farm_block()
-        finally:
-            await sim.close()
 
     def test_cost(self):
         import json
