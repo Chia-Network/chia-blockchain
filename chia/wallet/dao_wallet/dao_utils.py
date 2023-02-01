@@ -165,7 +165,7 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         ACTIVE_VOTES,
         INNERPUZ,
     ) = curried_args
-    return Program(INNERPUZ)
+    return INNERPUZ
 
 
 def get_proposal_puzzle(
@@ -346,7 +346,7 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
     return bytes32(cat_tail_hash.as_atom())
 
 
-def uncurry_treasury(treasury_puzzle: Program) -> Program:
+def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
     try:
         mod, curried_args = treasury_puzzle.uncurry()
     except ValueError as e:
@@ -355,8 +355,7 @@ def uncurry_treasury(treasury_puzzle: Program) -> Program:
 
     if mod != DAO_TREASURY_MOD:
         raise ValueError("Not a Treasury mod.")
-
-    return curried_args
+    return curried_args.first().as_iter()
 
 
 def uncurry_proposal(proposal_puzzle: Program) -> Program:

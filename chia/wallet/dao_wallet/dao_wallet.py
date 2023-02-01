@@ -92,6 +92,7 @@ class DAOWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount_of_cats: uint64,
+        filter_amount: uint64 = 1,
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ) -> DAOWallet:
@@ -128,6 +129,7 @@ class DAOWallet:
             None,
             None,
             0,
+            filter_amount,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -169,6 +171,7 @@ class DAOWallet:
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount
         )
         await self.save_info(dao_info)
 
@@ -179,6 +182,7 @@ class DAOWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         treasury_id: bytes32,
+        filter_amount: uint64 = 1,
         name: Optional[str] = None,
     ):
         """
@@ -206,6 +210,7 @@ class DAOWallet:
             None,  # current_coin
             None,  # current innerpuz
             0,
+            filter_amount,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -235,6 +240,7 @@ class DAOWallet:
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount
         )
         await self.save_info(dao_info)
 
@@ -489,6 +495,7 @@ class DAOWallet:
             child_coin,  # current_coin
             current_inner_puz,  # current innerpuz
             self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
         )
 
         future_parent = LineageProof(
@@ -641,6 +648,7 @@ class DAOWallet:
             None,
             None,
             0,
+            self.dao_info.filter_below_vote_amount
         )
         await self.save_info(dao_info)
 
@@ -664,6 +672,7 @@ class DAOWallet:
             None,
             None,
             0,
+            self.dao_info.filter_below_vote_amount,
         )
 
         await self.save_info(dao_info)
@@ -754,6 +763,7 @@ class DAOWallet:
             current_coin,
             dao_treasury_puzzle,
             self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
         # breakpoint()
@@ -974,6 +984,7 @@ class DAOWallet:
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
 
