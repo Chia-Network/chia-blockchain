@@ -6,7 +6,7 @@ import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -91,10 +91,8 @@ class TestCATLifecycle:
     cost: Dict[str, int] = {}
 
     @pytest.mark.asyncio()
-    async def test_cat_mod(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_cat_mod(self):
+        async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -249,14 +247,9 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution],
             )
 
-        finally:
-            await sim.close()
-
     @pytest.mark.asyncio()
-    async def test_complex_spend(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_complex_spend(self):
+        async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -343,14 +336,10 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution] * 4,
                 extra_deltas=[13, -21, 21, -13],
             )
-        finally:
-            await sim.close()
 
     @pytest.mark.asyncio()
-    async def test_genesis_by_id(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_genesis_by_id(self):
+        async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
             await sim.farm_block(standard_acs_ph)
@@ -387,14 +376,9 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution],
             )
 
-        finally:
-            await sim.close()
-
     @pytest.mark.asyncio()
-    async def test_genesis_by_puzhash(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_genesis_by_puzhash(self):
+        async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
             await sim.farm_block(standard_acs_ph)
@@ -431,14 +415,9 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution],
             )
 
-        finally:
-            await sim.close()
-
     @pytest.mark.asyncio()
-    async def test_everything_with_signature(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_everything_with_signature(self):
+        async with sim_and_client() as (sim, sim_client):
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             tail: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
             checker_solution: Program = EverythingWithSig.solve([], {})
@@ -541,14 +520,9 @@ class TestCATLifecycle:
                 additional_spends=[acs_bundle],
             )
 
-        finally:
-            await sim.close()
-
     @pytest.mark.asyncio()
-    async def test_delegated_tail(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_delegated_tail(self):
+        async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
             await sim.farm_block(standard_acs_ph)
@@ -600,9 +574,6 @@ class TestCATLifecycle:
                 signatures=[signature],
                 limitations_solutions=[checker_solution],
             )
-
-        finally:
-            await sim.close()
 
     def test_cost(self):
         import json

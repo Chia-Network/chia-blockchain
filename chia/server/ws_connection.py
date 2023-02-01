@@ -16,7 +16,7 @@ from typing_extensions import Protocol, final
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_requires_reply, message_response_ok
+from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.capabilities import known_active_capabilities
@@ -392,13 +392,14 @@ class WSChiaConnection:
             if response is not None:
                 response_message = Message(response.type, full_message.id, response.data)
                 await self.send_message(response_message)
+            # todo uncomment when enabling none response capability
             # check that this call needs a reply
-            elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and self.has_capability(
-                Capability.NONE_RESPONSE
-            ):
-                # this peer can accept None reply's, send empty msg back, so it doesn't wait for timeout
-                response_message = Message(uint8(ProtocolMessageTypes.none_response.value), full_message.id, b"")
-                await self.send_message(response_message)
+            # elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and self.has_capability(
+            #     Capability.NONE_RESPONSE
+            # ):
+            #     # this peer can accept None reply's, send empty msg back, so it doesn't wait for timeout
+            #     response_message = Message(uint8(ProtocolMessageTypes.none_response.value), full_message.id, b"")
+            #     await self.send_message(response_message)
         except TimeoutError:
             self.log.error(f"Timeout error for: {message_type}")
         except Exception as e:
@@ -472,7 +473,8 @@ class WSChiaConnection:
             f"Time for request {request_metadata.request_type.name}: {self.get_peer_logging()} = "
             f"{time.time() - request_start_t}, None? {response is None}"
         )
-        if response is None or response.type == ProtocolMessageTypes.none_response.value:
+        # todo or response.type == ProtocolMessageTypes.none_response.value when enabling none response
+        if response is None or response.data == b"":
             return None
         sent_message_type = ProtocolMessageTypes(request.type)
         recv_message_type = ProtocolMessageTypes(response.type)

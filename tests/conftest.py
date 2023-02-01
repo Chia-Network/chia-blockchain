@@ -16,7 +16,6 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 
 # Set spawn after stdlib imports, but before other imports
-from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -702,14 +701,6 @@ async def timelord(bt):
 async def timelord_service(bt):
     async for _ in setup_timelord(uint16(0), False, test_constants, bt):
         yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_sim():
-    sim = await SpendSim.create()
-    sim_client = SimClient(sim)
-    await sim.farm_block()
-    return sim, sim_client
 
 
 @pytest.fixture(scope="function")

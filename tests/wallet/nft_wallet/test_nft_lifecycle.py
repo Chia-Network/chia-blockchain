@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import itertools
-from typing import List, Tuple
+from typing import List
 
 import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.clvm.spend_sim import sim_and_client
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -28,10 +28,8 @@ ACS_PH = ACS.get_tree_hash()
 
 @pytest.mark.asyncio()
 @pytest.mark.parametrize("metadata_updater", ["default"])
-async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updater: str) -> None:
-    sim, sim_client = setup_sim
-
-    try:
+async def test_state_layer(metadata_updater: str) -> None:
+    async with sim_and_client() as (sim, sim_client):
         if metadata_updater == "default":
             METADATA: Program = metadata_to_program(
                 {
@@ -132,15 +130,11 @@ async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updat
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
             state_layer_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, METADATA_UPDATER_PUZZLE_HASH, ACS)
-    finally:
-        await sim.close()
 
 
 @pytest.mark.asyncio()
-async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
-    sim, sim_client = setup_sim
-
-    try:
+async def test_ownership_layer() -> None:
+    async with sim_and_client() as (sim, sim_client):
         TARGET_OWNER = bytes32([0] * 32)
         TARGET_TP = Program.to([8])  # (x)
         # (a (i 11 (q 4 19 (c 43 (q ()))) (q 8)) 1) or
@@ -239,15 +233,11 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             TARGET_TP,
             ACS,
         ).get_tree_hash()
-    finally:
-        await sim.close()
 
 
 @pytest.mark.asyncio()
-async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -> None:
-    sim, sim_client = setup_sim
-
-    try:
+async def test_default_transfer_program() -> None:
+    async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
@@ -363,5 +353,3 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
         result = await sim_client.push_tx(empty_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-    finally:
-        await sim.close()
