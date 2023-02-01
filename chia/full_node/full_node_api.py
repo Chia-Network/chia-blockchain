@@ -658,7 +658,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        msg, _ = await self.full_node.respond_end_of_sub_slot(request, peer)
+        msg, _ = await self.full_node.add_end_of_sub_slot(request.end_of_slot_bundle, peer)
         return msg
 
     @api_request(peer_required=True)
@@ -1070,8 +1070,7 @@ class FullNodeAPI:
         ):
             return None
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
-        full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
-        msg, added = await self.full_node.respond_end_of_sub_slot(full_node_message, peer)
+        msg, added = await self.full_node.add_end_of_sub_slot(request.end_of_sub_slot_bundle, peer)
         if not added:
             self.log.error(
                 f"Was not able to add end of sub-slot: "

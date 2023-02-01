@@ -2100,11 +2100,11 @@ class FullNode:
                 await self.send_peak_to_timelords(peer=timelord_peer)
         return None
 
-    async def respond_end_of_sub_slot(
-        self, request: full_node_protocol.RespondEndOfSubSlot, peer: WSChiaConnection
+    async def add_end_of_sub_slot(
+        self, end_of_slot_bundle: EndOfSubSlotBundle, peer: WSChiaConnection
     ) -> Tuple[Optional[Message], bool]:
 
-        fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
+        fetched_ss = self.full_node_store.get_sub_slot(end_of_slot_bundle.challenge_chain.get_hash())
 
         # We are not interested in sub-slots which have the same challenge chain but different reward chain. If there
         # is a reorg, we will find out through the broadcast of blocks instead.
@@ -2114,16 +2114,16 @@ class FullNode:
 
         async with self.timelord_lock:
             fetched_ss = self.full_node_store.get_sub_slot(
-                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             )
             if (
                 (fetched_ss is None)
-                and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                and end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
                 != self.constants.GENESIS_CHALLENGE
             ):
                 # If we don't have the prev, request the prev instead
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                    request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                    end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     uint8(0),
                     bytes32([0] * 32),
                 )
@@ -2142,7 +2142,7 @@ class FullNode:
 
             # Adds the sub slot and potentially get new infusions
             new_infusions = self.full_node_store.new_finished_sub_slot(
-                request.end_of_slot_bundle,
+                end_of_slot_bundle,
                 self.blockchain,
                 peak,
                 await self.blockchain.get_full_peak(),
@@ -2151,19 +2151,19 @@ class FullNode:
             if new_infusions is not None:
                 self.log.info(
                     f"⏲️  Finished sub slot, SP {self.constants.NUM_SPS_SUB_SLOT}/{self.constants.NUM_SPS_SUB_SLOT}, "
-                    f"{request.end_of_slot_bundle.challenge_chain.get_hash()}, "
+                    f"{end_of_slot_bundle.challenge_chain.get_hash()}, "
                     f"number of sub-slots: {len(self.full_node_store.finished_sub_slots)}, "
-                    f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
-                    f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
+                    f"RC hash: {end_of_slot_bundle.reward_chain.get_hash()}, "
+                    f"Deficit {end_of_slot_bundle.reward_chain.deficit}"
                 )
                 # Reset farmer response timer for sub slot (SP 0)
                 self.signage_point_times[0] = time.time()
                 # Notify full nodes of the new sub-slot
                 broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                    request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                    request.end_of_slot_bundle.challenge_chain.get_hash(),
+                    end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                    end_of_slot_bundle.challenge_chain.get_hash(),
                     uint8(0),
-                    request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
+                    end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
                 await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
@@ -2173,9 +2173,9 @@ class FullNode:
 
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
-                    request.end_of_slot_bundle.challenge_chain.get_hash(),
-                    request.end_of_slot_bundle.challenge_chain.get_hash(),
-                    request.end_of_slot_bundle.reward_chain.get_hash(),
+                    end_of_slot_bundle.challenge_chain.get_hash(),
+                    end_of_slot_bundle.challenge_chain.get_hash(),
+                    end_of_slot_bundle.reward_chain.get_hash(),
                     next_difficulty,
                     next_sub_slot_iters,
                     uint8(0),
@@ -2186,7 +2186,7 @@ class FullNode:
             else:
                 self.log.info(
                     f"End of slot not added CC challenge "
-                    f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
+                    f"{end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
                 )
         return None, False
 

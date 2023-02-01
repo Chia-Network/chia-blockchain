@@ -385,9 +385,7 @@ class TestRpc:
 
             # Properly fetch an EOS
             for eos in blocks[-1].finished_sub_slots:
-                await full_node_api_1.full_node.respond_end_of_sub_slot(
-                    full_node_protocol.RespondEndOfSubSlot(eos), peer
-                )
+                await full_node_api_1.full_node.add_end_of_sub_slot(eos, peer)
 
             res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
             assert res is not None
