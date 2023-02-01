@@ -14,7 +14,7 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -160,9 +160,7 @@ class TestBlockHeaderValidation:
                 assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
 
                 # Also fails calling the outer methods, but potentially with a different error
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK
-                )
+                await _validate_and_add_block(empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
                 new_finished_ss_2 = recursive_replace(
                     block.finished_sub_slots[0],
@@ -186,7 +184,7 @@ class TestBlockHeaderValidation:
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_2, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                    empty_blockchain, block_bad_2, expected_result=AddBlockResult.INVALID_BLOCK
                 )
 
                 # 3c
@@ -218,7 +216,7 @@ class TestBlockHeaderValidation:
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_3, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                    empty_blockchain, block_bad_3, expected_result=AddBlockResult.INVALID_BLOCK
                 )
 
                 # 3d
@@ -249,7 +247,7 @@ class TestBlockHeaderValidation:
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_4, expected_result=ReceiveBlockResult.INVALID_BLOCK
+                    empty_blockchain, block_bad_4, expected_result=AddBlockResult.INVALID_BLOCK
                 )
             await _validate_and_add_block(empty_blockchain, block)
             log.info(
@@ -471,7 +469,7 @@ class TestBlockHeaderValidation:
         )
 
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
-        await _validate_and_add_block(empty_blockchain, block_0_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
+        await _validate_and_add_block(empty_blockchain, block_0_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_non_genesis(self, empty_blockchain, bt):
@@ -498,7 +496,7 @@ class TestBlockHeaderValidation:
             blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
-        await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
+        await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_empty_ss(self, empty_blockchain, bt):
@@ -525,7 +523,7 @@ class TestBlockHeaderValidation:
             blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
-        await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
+        await _validate_and_add_block(empty_blockchain, block_1_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_genesis_no_icc(self, empty_blockchain, bt):
@@ -681,7 +679,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
                 )
                 assert error.code == Err.INVALID_ICC_HASH_CC
-                await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
+                await _validate_and_add_block(blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
                 # 2i
                 new_finished_ss_bad_rc = recursive_replace(
@@ -751,7 +749,7 @@ class TestBlockHeaderValidation:
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING,
         )
         assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
-        await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
+        await _validate_and_add_block(blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_empty_sub_slots_epoch(self, empty_blockchain, default_400_blocks, bt):
@@ -765,10 +763,10 @@ class TestBlockHeaderValidation:
         for block in blocks_base:
             await _validate_and_add_block(empty_blockchain, block, skip_prevalidation=True)
         await _validate_and_add_block(
-            empty_blockchain, blocks_1[-1], expected_result=ReceiveBlockResult.NEW_PEAK, skip_prevalidation=True
+            empty_blockchain, blocks_1[-1], expected_result=AddBlockResult.NEW_PEAK, skip_prevalidation=True
         )
         await _validate_and_add_block(
-            empty_blockchain, blocks_2[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN, skip_prevalidation=True
+            empty_blockchain, blocks_2[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, skip_prevalidation=True
         )
 
     @pytest.mark.asyncio
@@ -1233,25 +1231,19 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1], "reward_chain_block.challenge_chain_sp_vdf.challenge", std_hash(b"1")
                 )
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK
-                )
+                await _validate_and_add_block(empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
                 block_bad = recursive_replace(
                     blocks[-1],
                     "reward_chain_block.challenge_chain_sp_vdf.output",
                     bad_element,
                 )
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK
-                )
+                await _validate_and_add_block(empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
                 block_bad = recursive_replace(
                     blocks[-1],
                     "reward_chain_block.challenge_chain_sp_vdf.number_of_iterations",
                     uint64(1111111111111),
                 )
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK
-                )
+                await _validate_and_add_block(empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
                 block_bad = recursive_replace(
                     blocks[-1],
                     "challenge_chain_sp_proof",
@@ -1697,7 +1689,7 @@ class TestBlockHeaderValidation:
 
 
 co = ConditionOpcode
-rbr = ReceiveBlockResult
+rbr = AddBlockResult
 
 
 class TestPreValidation:
@@ -1741,7 +1733,7 @@ class TestPreValidation:
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
-                assert result == ReceiveBlockResult.NEW_PEAK
+                assert result == AddBlockResult.NEW_PEAK
                 log.info(
                     f"Added block {block.height} total iters {block.total_iters} "
                     f"new slot? {len(block.finished_sub_slots)}, time {end_rb - start_rb}"
@@ -1827,7 +1819,7 @@ class TestBodyValidation:
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
         code, err, state_change = await b.receive_block(blocks[-1], repl_preval_results)
-        assert code == ReceiveBlockResult.NEW_PEAK
+        assert code == AddBlockResult.NEW_PEAK
         assert err is None
         assert state_change.fork_height == 2
 
@@ -1923,16 +1915,16 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
                 ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
             ]:
-                expected = ReceiveBlockResult.NEW_PEAK
+                expected = AddBlockResult.NEW_PEAK
 
             # before soft-fork 2, the timestamp we compared against was the
             # current block's timestamp as opposed to the previous tx-block's
             # timestamp. These conditions used to be valid, before the soft-fork
             if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and lock_value > 0 and lock_value <= 10:
-                expected = ReceiveBlockResult.NEW_PEAK
+                expected = AddBlockResult.NEW_PEAK
 
             if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
-                expected = ReceiveBlockResult.NEW_PEAK
+                expected = AddBlockResult.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
 
@@ -1970,7 +1962,7 @@ class TestBodyValidation:
             assert pre_validation_results is not None
             assert (await b.receive_block(blocks[-1], pre_validation_results[0]))[0] == expected
 
-            if expected == ReceiveBlockResult.NEW_PEAK:
+            if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin was in fact spent
                 c = await b.coin_store.get_coin_record(coin.name())
                 assert c is not None and c.spent
@@ -1980,8 +1972,8 @@ class TestBodyValidation:
     @pytest.mark.parametrize(
         "with_garbage,expected",
         [
-            (True, (ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_CONDITION, None)),
-            (False, (ReceiveBlockResult.NEW_PEAK, None, 2)),
+            (True, (AddBlockResult.INVALID_BLOCK, Err.INVALID_CONDITION, None)),
+            (False, (AddBlockResult.NEW_PEAK, None, 2)),
         ],
     )
     async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected, bt):
@@ -2111,7 +2103,7 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_SECONDS_RELATIVE,
                 ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
             ]:
-                expected = ReceiveBlockResult.INVALID_BLOCK
+                expected = AddBlockResult.INVALID_BLOCK
 
         else:
             constants = test_constants
@@ -2126,7 +2118,7 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
                 ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
             ]:
-                expected = ReceiveBlockResult.NEW_PEAK
+                expected = AddBlockResult.NEW_PEAK
 
             # before the softfork, we compared ASSERT_SECONDS_* conditions
             # against the current block's timestamp, so we need to
@@ -2182,7 +2174,7 @@ class TestBodyValidation:
             assert pre_validation_results is not None
             assert (await b.receive_block(blocks[-1], pre_validation_results[0]))[0] == expected
 
-            if expected == ReceiveBlockResult.NEW_PEAK:
+            if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin1 was in fact spent
                 c = await b.coin_store.get_coin_record(coin1.name())
                 assert c is not None and c.spent
@@ -2675,9 +2667,9 @@ class TestBodyValidation:
         #         farmer_reward_puzzle_hash=bt.pool_ph,
         #         pool_reward_puzzle_hash=bt.pool_ph,
         #     )
-        #     assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        #     assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
-        #     assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        #     assert (await b.receive_block(blocks[0]))[0] == AddBlockResult.NEW_PEAK
+        #     assert (await b.receive_block(blocks[1]))[0] == AddBlockResult.NEW_PEAK
+        #     assert (await b.receive_block(blocks[2]))[0] == AddBlockResult.NEW_PEAK
 
         #     wt: WalletTool = bt_2.get_pool_wallet_tool()
 
@@ -2913,8 +2905,8 @@ class TestBodyValidation:
             await _validate_and_add_block(b, block)
 
         blocks_reorg = bt.get_consecutive_blocks(2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
-        await _validate_and_add_block(b, blocks_reorg[-2], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
-        await _validate_and_add_block(b, blocks_reorg[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, blocks_reorg[-2], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
 
         # Coin does not exist in reorg
         blocks_reorg = bt.get_consecutive_blocks(
@@ -2928,7 +2920,7 @@ class TestBodyValidation:
         blocks_reorg = bt.get_consecutive_blocks(
             1, block_list_input=blocks_reorg[:-1], guarantee_transaction_block=True, transaction_data=agg
         )
-        await _validate_and_add_block(b, blocks_reorg[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
 
         blocks_reorg = bt.get_consecutive_blocks(
             1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
@@ -2944,7 +2936,7 @@ class TestBodyValidation:
         )
         for block in blocks_reorg[-10:]:
             await _validate_and_add_block_multi_result(
-                b, block, expected_result=[ReceiveBlockResult.ADDED_AS_ORPHAN, ReceiveBlockResult.NEW_PEAK]
+                b, block, expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.NEW_PEAK]
             )
 
         # ephemeral coin is spent
@@ -3106,9 +3098,9 @@ class TestReorgs:
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
-                await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK)
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
             elif reorg_block.height < 15:
-                await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
             elif reorg_block.height >= 15:
                 await _validate_and_add_block(b, reorg_block)
         assert b.get_peak().height == 16
@@ -3141,13 +3133,13 @@ class TestReorgs:
         for reorg_block in test_long_reorg_blocks:
             if reorg_block.height < num_blocks_chain_2_start:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
+                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
                 )
             elif reorg_block.weight <= chain_1_weight:
                 await _validate_and_add_block_multi_result(
                     b,
                     reorg_block,
-                    [ReceiveBlockResult.ADDED_AS_ORPHAN, ReceiveBlockResult.ALREADY_HAVE_BLOCK],
+                    [AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
                     skip_prevalidation=True,
                 )
             elif reorg_block.weight > chain_1_weight:
@@ -3181,7 +3173,7 @@ class TestReorgs:
                 await _validate_and_add_block_multi_result(
                     b,
                     reorg_block,
-                    expected_result=[ReceiveBlockResult.ADDED_AS_ORPHAN, ReceiveBlockResult.ALREADY_HAVE_BLOCK],
+                    expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
                 )
             elif reorg_block.height >= 15:
                 await _validate_and_add_block(b, reorg_block)
@@ -3189,7 +3181,7 @@ class TestReorgs:
         # Back to original chain
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, blocks, seed=b"3")
 
-        await _validate_and_add_block(b, blocks_reorg_chain_2[-3], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, blocks_reorg_chain_2[-3], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
         await _validate_and_add_block(b, blocks_reorg_chain_2[-2])
         await _validate_and_add_block(b, blocks_reorg_chain_2[-1])
 
@@ -3353,11 +3345,11 @@ async def test_reorg_new_ref(empty_blockchain, bt):
     for i, block in enumerate(blocks_reorg_chain):
         fork_point_with_peak = None
         if i < 10:
-            expected = ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            expected = AddBlockResult.ALREADY_HAVE_BLOCK
         elif i < 20:
-            expected = ReceiveBlockResult.ADDED_AS_ORPHAN
+            expected = AddBlockResult.ADDED_AS_ORPHAN
         else:
-            expected = ReceiveBlockResult.NEW_PEAK
+            expected = AddBlockResult.NEW_PEAK
             fork_point_with_peak = uint32(1)
         await _validate_and_add_block(b, block, expected_result=expected, fork_point_with_peak=fork_point_with_peak)
     assert b.get_peak().height == 20
@@ -3405,11 +3397,11 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
     blocks = bt.get_consecutive_blocks(4, blocks, previous_generator=[uint32(5)], transaction_data=spend_bundle2)
 
     for block in blocks[:5]:
-        await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.NEW_PEAK)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
 
     # fake the fork_height to make every new block look like a reorg
     for block in blocks[5:]:
-        await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.NEW_PEAK, fork_point_with_peak=2)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_point_with_peak=2)
     assert b.get_peak().height == 13
 
 
@@ -3454,7 +3446,7 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
     )
 
     for block in blocks_reorg_chain[10:-1]:
-        await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
 
     # Incorrectly set the height as spent in DB to trigger an error
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")

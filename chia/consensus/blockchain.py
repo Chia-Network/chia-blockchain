@@ -54,7 +54,7 @@ from chia.util.setproctitle import getproctitle, setproctitle
 log = logging.getLogger(__name__)
 
 
-class ReceiveBlockResult(Enum):
+class AddBlockResult(Enum):
     """
     When Blockchain.receive_block(b) is called, one of these results is returned,
     showing whether the block was added to the chain (extending the peak),
@@ -198,7 +198,7 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: PreValidationResult,
         fork_point_with_peak: Optional[uint32] = None,
-    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[StateChangeSummary]]:
+    ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -223,18 +223,18 @@ class Blockchain(BlockchainInterface):
 
         genesis: bool = block.height == 0
         if self.contains_block(block.header_hash):
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
+            return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if not self.contains_block(block.prev_header_hash) and not genesis:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+            return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
         if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
-            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+            return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
         if pre_validation_result.error is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None
+            return AddBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None
         assert required_iters is not None
 
         error_code, _ = await validate_block_body(
@@ -252,7 +252,7 @@ class Blockchain(BlockchainInterface):
             validate_signature=not pre_validation_result.validated_signature,
         )
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code, None
+            return AddBlockResult.INVALID_BLOCK, error_code, None
 
         block_record = block_to_block_record(
             self.constants,
@@ -300,9 +300,9 @@ class Blockchain(BlockchainInterface):
 
         if state_change_summary is not None:
             # new coin records added
-            return ReceiveBlockResult.NEW_PEAK, None, state_change_summary
+            return AddBlockResult.NEW_PEAK, None, state_change_summary
         else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+            return AddBlockResult.ADDED_AS_ORPHAN, None, None
 
     async def _reconsider_peak(
         self,
