@@ -43,6 +43,7 @@ from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
+from chia.util.logging import TimedDuplicateFilter
 from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
@@ -104,6 +105,9 @@ class Farmer:
         self.server: Any = None
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
+        self.log.addFilter(TimedDuplicateFilter("No pool specific authentication_token_timeout.*", 60 * 10))
+        self.log.addFilter(TimedDuplicateFilter("No pool specific difficulty has been set.*", 60 * 10))
+
         self.started = False
         self.harvester_handshake_task: Optional[asyncio.Task] = None
 

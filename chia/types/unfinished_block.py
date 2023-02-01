@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint32
