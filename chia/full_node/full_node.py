@@ -629,7 +629,7 @@ class FullNode:
             unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
             curr_height: int = target_height
             found_fork_point = False
-            responses = []
+            blocks = []
             while curr_height > peak_height - 5:
                 # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
                 # already have the unfinished block, from when it was broadcast, so we just need to download the header,
@@ -644,14 +644,14 @@ class FullNode:
                     raise ValueError(
                         f"Failed to fetch block {curr_height} from {peer.get_peer_logging()}, wrong type {type(curr)}"
                     )
-                responses.append(curr)
+                blocks.append(curr.block)
                 if self.blockchain.contains_block(curr.block.prev_header_hash) or curr_height == 0:
                     found_fork_point = True
                     break
                 curr_height -= 1
             if found_fork_point:
-                for response in reversed(responses):
-                    await self.respond_block(response, peer)
+                for block in reversed(blocks):
+                    await self.add_block(block, peer)
         except (asyncio.CancelledError, Exception):
             self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
             raise
@@ -1581,16 +1581,15 @@ class FullNode:
         await self.server.send_to_all([msg], NodeType.WALLET)
         self._state_changed("new_peak")
 
-    async def respond_block(
+    async def add_block(
         self,
-        respond_block: full_node_protocol.RespondBlock,
+        block: FullBlock,
         peer: Optional[WSChiaConnection] = None,
         raise_on_disconnected: bool = False,
     ) -> Optional[Message]:
         """
-        Receive a full block from a peer full node (or ourselves).
+        Add a full block from a peer full node (or ourselves).
         """
-        block: FullBlock = respond_block.block
         if self.sync_store.get_sync_mode():
             return None
 
@@ -1649,7 +1648,7 @@ class FullNode:
                     f"same farmer with the same pospace."
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
-                return await self.respond_block(block_response, peer)
+                return await self.add_block(new_block, peer)
         state_change_summary: Optional[StateChangeSummary] = None
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with self._blockchain_lock_high_priority:
@@ -2094,7 +2093,7 @@ class FullNode:
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
         try:
-            await self.respond_block(full_node_protocol.RespondBlock(block), raise_on_disconnected=True)
+            await self.add_block(block, raise_on_disconnected=True)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
             if timelord_peer is not None:

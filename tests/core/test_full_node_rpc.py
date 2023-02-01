@@ -78,7 +78,7 @@ class TestRpc:
                 await full_node_api_1.full_node.respond_unfinished_block(
                     full_node_protocol.RespondUnfinishedBlock(unf), None
                 )
-                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block), None)
+                await full_node_api_1.full_node.add_block(block, None)
 
             assert len(await client.get_unfinished_block_headers()) > 0
             assert len(await client.get_all_block(0, 2)) == 2
@@ -130,7 +130,7 @@ class TestRpc:
                 pool_reward_puzzle_hash=ph,
             )
             for block in blocks[-2:]:
-                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+                await full_node_api_1.full_node.add_block(block)
             assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
 
@@ -336,7 +336,7 @@ class TestRpc:
 
             blocks = bt.get_consecutive_blocks(5)
             for block in blocks:
-                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+                await full_node_api_1.full_node.add_block(block)
 
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
 
@@ -363,7 +363,7 @@ class TestRpc:
             assert res is None
 
             # Add the last block
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+            await full_node_api_1.full_node.add_block(blocks[-1])
             await full_node_api_1.respond_signage_point(
                 full_node_protocol.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
             )
@@ -398,10 +398,10 @@ class TestRpc:
             assert not res["reverted"]
 
             # Do another one but without sending the slot
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+            await full_node_api_1.full_node.add_block(blocks[-1])
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             selected_eos = blocks[-1].finished_sub_slots[-1]
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
+            await full_node_api_1.full_node.add_block(blocks[-1])
 
             res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
             assert res is not None
@@ -412,7 +412,7 @@ class TestRpc:
             # Perform a reorg
             blocks = bt.get_consecutive_blocks(12, seed=b"1234")
             for block in blocks:
-                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+                await full_node_api_1.full_node.add_block(block)
 
             # Signage point is no longer in the blockchain
             res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
