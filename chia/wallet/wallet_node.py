@@ -1218,7 +1218,7 @@ class WalletNode:
             assert header_block.weight >= peak.weight
         for block in blocks:
             # Set blockchain to the latest peak
-            res, err = await self.wallet_state_manager.blockchain.receive_block(block)
+            res, err = await self.wallet_state_manager.blockchain.add_block(block)
             if res == AddBlockResult.INVALID_BLOCK:
                 raise ValueError(err)
 
