@@ -1409,7 +1409,7 @@ class FullNodeAPI:
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_compact_proof_of_time(request)
+        await self.full_node.add_compact_proof_of_time(request)
         return None
 
     @api_request(peer_required=True, bytes_required=True, execute_task=True)
