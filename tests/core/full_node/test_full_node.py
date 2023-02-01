@@ -1887,7 +1887,7 @@ class TestFullNodeProtocol:
         for invalid_compact_proof in timelord_protocol_invalid_messages:
             await full_node_1.full_node.respond_compact_proof_of_time(invalid_compact_proof)
         for invalid_compact_proof in full_node_protocol_invalid_messaages:
-            await full_node_1.full_node.respond_compact_vdf(invalid_compact_proof, peer)
+            await full_node_1.full_node.add_compact_vdf(invalid_compact_proof, peer)
         stored_blocks = await full_node_1.get_all_full_blocks()
         for block in stored_blocks:
             for sub_slot in block.finished_sub_slots:
