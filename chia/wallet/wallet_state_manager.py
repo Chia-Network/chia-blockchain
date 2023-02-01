@@ -29,7 +29,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
@@ -56,7 +56,6 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
-from chia.wallet.singleton import create_fullpuz
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
@@ -67,6 +66,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -1013,8 +1013,10 @@ class WalletStateManager:
 
         assert len(local_records) == len(coin_states)
         for coin_state, local_record in zip(coin_states, local_records):
+            rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
+                    rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
                     # This only succeeds if we don't raise out of the transaction
                     await self.retry_store.remove_state(coin_state)
 
@@ -1230,7 +1232,9 @@ class WalletStateManager:
                         if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
                             wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
-                                singleton_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=wallet_type_to_class[record.wallet_type])
+                                singleton_wallet = self.get_wallet(
+                                    id=uint32(record.wallet_id), required_type=wallet_type_to_class[record.wallet_type]
+                                )
                                 curr_coin_state: CoinState = coin_state
 
                                 while curr_coin_state.spent_height is not None:
@@ -1292,7 +1296,7 @@ class WalletStateManager:
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
                                 continue
-                            if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):#xxx
+                            if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):  # xxx
                                 continue
                             if child.spent_height is None:
                                 # TODO handle spending launcher later block
@@ -1336,7 +1340,7 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            pool_wallet = await PoolWallet.create(#xxx TODO ctrl-f pool_wallet
+                            pool_wallet = await PoolWallet.create(  # xxx TODO ctrl-f pool_wallet
                                 self,
                                 self.main_wallet,
                                 child.coin.name(),
@@ -1344,7 +1348,7 @@ class WalletStateManager:
                                 uint32(child.spent_height),
                                 name="pool_wallet",
                             )
-                            launcher_spend_additions = launcher_spend.additions()
+                            launcher_spend_additions = compute_additions(launcher_spend)
                             assert len(launcher_spend_additions) == 1
                             coin_added = launcher_spend_additions[0]
                             coin_name = coin_added.name()
@@ -1365,6 +1369,8 @@ class WalletStateManager:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
                 self.log.exception(f"Error adding state... {e}")
+                if rollback_wallets is not None:
+                    self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:

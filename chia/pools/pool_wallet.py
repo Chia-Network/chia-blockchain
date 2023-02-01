@@ -25,7 +25,6 @@ from chia.pools.pool_puzzles import (
     uncurry_pool_member_inner_puzzle,
     uncurry_pool_waitingroom_inner_puzzle,
 )
-from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from chia.pools.pool_wallet_info import (
     FARMING_TO_POOL,
     LEAVING_POOL,
@@ -39,14 +38,16 @@ from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -550,7 +551,7 @@ class PoolWallet:
 
         tip = (await self.get_tip())[1]
         tip_coin = tip.coin
-        singleton = tip.additions()[0]
+        singleton = compute_additions(tip)[0]
         singleton_id = singleton.name()
         assert outgoing_coin_spend.coin.parent_coin_info == tip_coin.name()
         assert outgoing_coin_spend.coin.name() == singleton_id

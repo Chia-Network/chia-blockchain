@@ -26,7 +26,8 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend

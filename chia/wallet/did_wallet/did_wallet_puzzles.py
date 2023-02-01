@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Optional, Tuple
-
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from blspy import G1Element
 
@@ -13,10 +12,10 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
-    SINGLETON_TOP_LAYER_MOD_HASH,
-    SINGLETON_TOP_LAYER_MOD,
     LAUNCHER_PUZZLE_HASH,
-    is_did_core,
+    SINGLETON_TOP_LAYER_MOD,
+    SINGLETON_TOP_LAYER_MOD_HASH,
+    is_singleton,
 )
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
@@ -173,4 +172,28 @@ def check_is_did_puzzle(puzzle: Program) -> bool:
     if r is None:
         return False
     inner_f, args = r
-    return is_did_core(inner_f)
+    return is_singleton(inner_f)
+
+
+def metadata_to_program(metadata: Dict) -> Program:
+    """
+    Convert the metadata dict to a Chialisp program
+    :param metadata: User defined metadata
+    :return: Chialisp program
+    """
+    kv_list = []
+    for key, value in metadata.items():
+        kv_list.append((key, value))
+    return Program.to(kv_list)
+
+
+def program_to_metadata(program: Program) -> Dict:
+    """
+    Convert a program to a metadata dict
+    :param program: Chialisp program contains the metadata
+    :return: Metadata dict
+    """
+    metadata = {}
+    for key, val in program.as_python():
+        metadata[str(key, "utf-8")] = str(val, "utf-8")
+    return metadata

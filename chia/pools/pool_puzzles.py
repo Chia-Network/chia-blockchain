@@ -11,7 +11,8 @@ from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
 from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint32, uint64

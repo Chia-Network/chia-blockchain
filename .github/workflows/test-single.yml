@@ -85,6 +85,14 @@ jobs:
             matrix: '3.10'
             exclude_from:
               limited: True
+          - name: '3.11'
+            file_name: '3.11'
+            action: '3.11'
+            apt: '3.11'
+            install_sh: '3.11'
+            matrix: '3.11'
+            exclude_from:
+              limited: True
         exclude:
           - os:
               matrix: macos

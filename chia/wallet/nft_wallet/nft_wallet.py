@@ -17,7 +17,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
@@ -45,7 +45,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -222,7 +222,7 @@ class NFTWallet:
             nft_puzzles.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
         )
         child_puzzle_hash = child_puzzle.get_tree_hash()
-        for new_coin in coin_spend.additions():
+        for new_coin in compute_additions(coin_spend):
             self.log.debug(
                 "Comparing addition: %s with %s, amount: %s ",
                 new_coin.puzzle_hash,
@@ -538,7 +538,7 @@ class NFTWallet:
             pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            puzzle: Program = Program.to(("Chia Signed Message", message))
+            puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
             return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
         else:
             raise ValueError("Invalid NFT puzzle.")
@@ -1039,7 +1039,9 @@ class NFTWallet:
 
                         if duplicate_payments != []:
                             payments = duplicate_payments
-                            royalty_coin = next(c for c in new_coin_spend.additions() if c.puzzle_hash == royalty_ph)
+                            royalty_coin = next(
+                                c for c in compute_additions(new_coin_spend) if c.puzzle_hash == royalty_ph
+                            )
                             parent_spend = new_coin_spend
                             continue
                         else:
@@ -1093,7 +1095,7 @@ class NFTWallet:
         for tx in nft_tx_record:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -1130,7 +1132,7 @@ class NFTWallet:
         for tx in nft_tx_record:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
-                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
@@ -1355,7 +1357,7 @@ class NFTWallet:
             # the announcements from announcement_set to match the launcher
             # coin annnouncement
             if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(
@@ -1601,7 +1603,7 @@ class NFTWallet:
 
             # Create the eve transaction with targets if present
             if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(

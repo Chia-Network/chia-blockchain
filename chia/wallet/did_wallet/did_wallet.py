@@ -8,12 +8,10 @@ import time
 from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
-
-import chia.wallet.singleton
 from blspy import AugSchemeMPL, G1Element, G2Element
 
+import chia.wallet.singleton
 from chia.full_node.full_node_api import FullNodeAPI
-
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -23,11 +21,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-
-from chia.util.ints import uint64, uint32, uint8, uint128
-from chia.wallet.singleton import create_fullpuz
-from chia.wallet.util.transaction_type import TransactionType
-
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
@@ -36,7 +29,6 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
-from chia.wallet.singleton import create_fullpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -44,11 +36,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     puzzle_hash_for_pk,
 )
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
+from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -1192,7 +1185,7 @@ class DIDWallet:
             pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            puzzle: Program = Program.to(("Chia Signed Message", message))
+            puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
             return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
         else:
             raise ValueError("Invalid inner DID puzzle.")

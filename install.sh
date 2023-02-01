@@ -146,7 +146,7 @@ OPENSSL_VERSION_INT=
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
+  for V in 311 3.11 310 3.10 39 3.9 38 3.8 37 3.7 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
@@ -284,8 +284,8 @@ if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
   exit 1
 fi
 
-if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "11" ]; then
-  echo "Chia requires Python version >= 3.7 and  < 3.11.0" >&2
+if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "12" ]; then
+  echo "Chia requires Python version >= 3.7 and  < 3.12.0" >&2
   echo "Current Python version = $INSTALL_PYTHON_VERSION" >&2
   # If Arch, direct to Arch Wiki
   if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
