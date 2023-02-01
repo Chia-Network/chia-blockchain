@@ -1045,7 +1045,6 @@ class DAOWallet:
         new_state: CoinSpend,
         block_height: uint32,
     ):
-        # TODO: get and save parent_info
         new_dao_info = self.dao_info.copy()
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
         solution = new_state.solution.rest().rest().first()  # get proposal solution from full singleton solution
@@ -1100,6 +1099,12 @@ class DAOWallet:
         )
         new_dao_info.proposals_list.append(new_proposal_info)
         await self.save_info(new_dao_info)
+        future_parent = LineageProof(
+            new_state.coin.parent_coin_info,
+            puzzle.get_tree_hash(),
+            uint64(new_state.coin.amount),
+        )
+        await self.add_parent(new_state.coin.name(), future_parent)
         return
 
     async def update_treasury_info(
@@ -1107,7 +1112,6 @@ class DAOWallet:
         new_state: CoinSpend,
         block_height: uint32,
     ):
-        # TODO: get and save parent_info
         if self.dao_info.singleton_block_height <= block_height:
             # TODO: what do we do here?
             return
@@ -1127,6 +1131,12 @@ class DAOWallet:
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
+        future_parent = LineageProof(
+            new_state.coin.parent_coin_info,
+            puzzle.get_tree_hash(),
+            uint64(new_state.coin.amount),
+        )
+        await self.add_parent(new_state.coin.name(), future_parent)
         return
 
     # TODO: Find a nice way to express interest in more than one singleton.
