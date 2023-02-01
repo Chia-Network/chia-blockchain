@@ -1858,10 +1858,22 @@ class WalletRpcApi:
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
+            # Check if we have the DID wallet
+            did_wallet: Optional[DIDWallet] = None
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if isinstance(wallet, DIDWallet):
+                    assert wallet.did_info.origin_coin is not None
+                    if wallet.did_info.origin_coin.name() == launcher_id:
+                        did_wallet = wallet
+                        break
+
             full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
+                elif did_wallet is not None and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash() == coin_state.coin.puzzle_hash:
+                    # Check if the old wallet has the inner puzzle
+                    did_puzzle = did_wallet.did_info.current_inner
                 else:
                     # Try override
                     if "recovery_list_hash" in request:
@@ -1879,14 +1891,6 @@ class WalletRpcApi:
                             "error": f"Cannot recover DID {launcher_id.hex()}"
                                      f" because the last spend updated recovery_list_hash/num_verification/metadata.",
                         }
-            # Check if we have the DID wallet
-            did_wallet: Optional[DIDWallet] = None
-            for wallet in self.service.wallet_state_manager.wallets.values():
-                if isinstance(wallet, DIDWallet):
-                    assert wallet.did_info.origin_coin is not None
-                    if wallet.did_info.origin_coin.name() == launcher_id:
-                        did_wallet = wallet
-                        break
 
             if did_wallet is None:
                 # Create DID wallet
