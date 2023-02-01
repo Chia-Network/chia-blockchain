@@ -829,7 +829,7 @@ class WalletNode:
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
 
-        async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
+        async def validate_and_add(inner_states: List[CoinState], inner_idx_start: int):
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -897,7 +897,7 @@ class WalletNode:
                         self.log.info("Terminating receipt and validation due to shut down request")
                         await asyncio.gather(*all_tasks)
                         return False
-                all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
+                all_tasks.append(asyncio.create_task(validate_and_add(states, idx)))
             idx += len(states)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
