@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -80,7 +80,7 @@ class TestSingleton:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("version", [0, 1])
     async def test_singleton_top_layer(self, version):
-        try:
+        async with sim_and_client() as (sim, sim_client):
             # START TESTS
             # Generate starting info
             key_lookup = KeyTool()
@@ -99,8 +99,6 @@ class TestSingleton:
 
             # Get our starting standard coin created
             START_AMOUNT: uint64 = 1023
-            sim = await SpendSim.create()
-            sim_client = SimClient(sim)
             await sim.farm_block(starting_puzzle.get_tree_hash())
             starting_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())
             starting_coin = starting_coin[0].coin
@@ -519,5 +517,3 @@ class TestSingleton:
 
             melted_coin: Coin = (await sim.all_non_reward_coins())[0]
             assert melted_coin.puzzle_hash == adapted_puzzle_hash
-        finally:
-            await sim.close()
