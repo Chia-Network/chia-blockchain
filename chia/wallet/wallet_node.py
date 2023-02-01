@@ -1102,7 +1102,7 @@ class WalletNode:
 
     async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection):
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        if self.check_for_synced_trusted_peer(new_peak_hb.height):
+        if await self.check_for_synced_trusted_peer(new_peak_hb.height):
             self.log.info("abort untrusted, connected to trusted node")
             return
         weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, new_peak_hb)
