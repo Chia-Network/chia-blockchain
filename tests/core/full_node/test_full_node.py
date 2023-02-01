@@ -917,7 +917,7 @@ class TestFullNodeProtocol:
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
         # Idempotence in resubmission
-        status, err = await full_node_1.full_node.respond_transaction(
+        status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
         assert status == MempoolInclusionStatus.SUCCESS
@@ -935,7 +935,7 @@ class TestFullNodeProtocol:
         await full_node_1.new_transaction(new_transaction, fake_peer)
 
         # Cannot resubmit transaction, but not because of ALREADY_INCLUDING
-        status, err = await full_node_1.full_node.respond_transaction(
+        status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
         assert status == MempoolInclusionStatus.FAILED
@@ -954,7 +954,7 @@ class TestFullNodeProtocol:
             await full_node_1.full_node.add_block(block, peer)
 
         # Can now resubmit a transaction after the reorg
-        status, err = await full_node_1.full_node.respond_transaction(
+        status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
         assert err is None

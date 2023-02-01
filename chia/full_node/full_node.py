@@ -442,7 +442,7 @@ class FullNode:
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer
         try:
-            inc_status, err = await self.respond_transaction(entry.transaction, entry.spend_name, peer, entry.test)
+            inc_status, err = await self.add_transaction(entry.transaction, entry.spend_name, peer, entry.test)
             self.transaction_responses.append((entry.spend_name, inc_status, err))
             if len(self.transaction_responses) > 50:
                 self.transaction_responses = self.transaction_responses[1:]
@@ -2190,7 +2190,7 @@ class FullNode:
                 )
         return None, False
 
-    async def respond_transaction(
+    async def add_transaction(
         self,
         transaction: SpendBundle,
         spend_name: bytes32,

@@ -319,7 +319,7 @@ async def respond_transaction(
         self.full_node.full_node_store.pending_tx_request.pop(spend_name)
     if spend_name in self.full_node.full_node_store.peers_with_tx:
         self.full_node.full_node_store.peers_with_tx.pop(spend_name)
-    return await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
+    return await self.full_node.add_transaction(tx.transaction, spend_name, peer, test)
 
 
 async def next_block(full_node_1, wallet_a, bt) -> Coin:
@@ -1719,7 +1719,7 @@ class TestMempoolManager:
         # assert spend_bundle is not None
         #
         # tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        # await full_node_1.respond_transaction(tx, peer, test=True)
+        # await full_node_1.add_transaction(tx, peer, test=True)
         #
         # sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
         # assert sb is spend_bundle
@@ -2545,7 +2545,7 @@ class TestMaliciousGenerators:
         coin_spend_0 = CoinSpend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
         assert spend_bundle is not None
-        res = await full_node_1.full_node.respond_transaction(new_bundle, new_bundle.name(), test=True)
+        res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
 
 
