@@ -115,7 +115,7 @@ class FullNode:
     _transaction_queue: Optional[TransactionQueue]
     _compact_vdf_sem: Optional[LimitedSemaphore]
     _new_peak_sem: Optional[LimitedSemaphore]
-    _respond_transaction_semaphore: Optional[asyncio.Semaphore]
+    _add_transaction_semaphore: Optional[asyncio.Semaphore]
     _db_wrapper: Optional[DBWrapper2]
     _hint_store: Optional[HintStore]
     transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]]
@@ -180,7 +180,7 @@ class FullNode:
         self._transaction_queue = None
         self._compact_vdf_sem = None
         self._new_peak_sem = None
-        self._respond_transaction_semaphore = None
+        self._add_transaction_semaphore = None
         self._db_wrapper = None
         self._hint_store = None
         self.transaction_responses = []
@@ -231,9 +231,9 @@ class FullNode:
         return self._coin_store
 
     @property
-    def respond_transaction_semaphore(self) -> asyncio.Semaphore:
-        assert self._respond_transaction_semaphore is not None
-        return self._respond_transaction_semaphore
+    def add_transaction_semaphore(self) -> asyncio.Semaphore:
+        assert self._add_transaction_semaphore is not None
+        return self._add_transaction_semaphore
 
     @property
     def transaction_queue(self) -> TransactionQueue:
@@ -308,7 +308,7 @@ class FullNode:
         self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
 
         # These many respond_transaction tasks can be active at any point in time
-        self._respond_transaction_semaphore = asyncio.Semaphore(200)
+        self._add_transaction_semaphore = asyncio.Semaphore(200)
 
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
@@ -455,14 +455,14 @@ class FullNode:
             if peer is not None:
                 await peer.close()
         finally:
-            self.respond_transaction_semaphore.release()
+            self.add_transaction_semaphore.release()
 
     async def _handle_transactions(self) -> None:
         try:
             while not self._shut_down:
                 # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
                 # However, doing them one at a time would be slow, because they get sent to other processes.
-                await self.respond_transaction_semaphore.acquire()
+                await self.add_transaction_semaphore.acquire()
                 item: TransactionQueueEntry = await self.transaction_queue.pop()
                 asyncio.create_task(self._handle_one_transaction(item))
         except asyncio.CancelledError:
