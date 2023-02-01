@@ -142,7 +142,7 @@ def metadata_to_program(metadata: Dict[bytes, Any]) -> Program:
     return program
 
 
-def program_to_metadata(program: Program) -> Dict[bytes, Any]:
+def nft_program_to_metadata(program: Program) -> Dict[bytes, Any]:
     """
     Convert a program to a metadata dict
     :param program: Chialisp program contains the metadata
@@ -177,7 +177,7 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     :param update_condition: Update metadata conditions
     :return: Updated metadata
     """
-    new_metadata: Dict[bytes, Any] = program_to_metadata(metadata)
+    new_metadata: Dict[bytes, Any] = nft_program_to_metadata(metadata)
     uri: Program = update_condition.rest().rest().first()
     prepend_value(uri.first().as_python(), uri.rest(), new_metadata)
     return metadata_to_program(new_metadata)

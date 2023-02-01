@@ -224,7 +224,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(chia.wallet.singleton.program_to_metadata(metadata)),
+            json.dumps(chia.wallet.did_wallet.did_wallet_puzzles.did_program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
