@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, ClassVar, Optional
 
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, make_msg
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import ApiNodeMetadata
 from chia.util.ints import uint64
 
 
 class IntroducerAPI:
+    metadata: ClassVar[ApiNodeMetadata] = ApiNodeMetadata(type=NodeType.INTRODUCER)
     introducer: Introducer
 
     def __init__(self, introducer) -> None:
@@ -21,7 +22,7 @@ class IntroducerAPI:
     def _set_state_changed_callback(self, callback: Callable):
         pass
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def request_peers_introducer(
         self,
         request: RequestPeersIntroducer,
