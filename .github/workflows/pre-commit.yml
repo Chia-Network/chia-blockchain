@@ -53,6 +53,12 @@ jobs:
             python:
               major_dot_minor: '3.7'
           - os:
+              matrix: macos
+            arch:
+              matrix: arm
+            python:
+              major_dot_minor: '3.8'
+          - os:
               matrix: windows
             arch:
               matrix: arm
