@@ -150,7 +150,7 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         ACTIVE_VOTES,
         INNERPUZ,
     ) = curried_args
-    return ACTIVE_VOTES
+    return Program(ACTIVE_VOTES)
 
 
 def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
@@ -165,7 +165,7 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         ACTIVE_VOTES,
         INNERPUZ,
     ) = curried_args
-    return INNERPUZ
+    return Program(INNERPUZ)
 
 
 def get_proposal_puzzle(
