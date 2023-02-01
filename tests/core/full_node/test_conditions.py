@@ -63,7 +63,7 @@ async def check_spend_bundle_validity(
 ) -> Tuple[List[CoinRecord], List[CoinRecord]]:
     """
     This test helper create an extra block after the given blocks that contains the given
-    `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
+    `SpendBundle`, and then invokes `add_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
     if softfork2:

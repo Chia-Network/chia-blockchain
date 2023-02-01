@@ -1256,7 +1256,7 @@ class FullNode:
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             advanced_peak = agg_state_change_summary is not None
-            result, error, state_change_summary = await self.blockchain.receive_block(
+            result, error, state_change_summary = await self.blockchain.add_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
 
@@ -1685,7 +1685,7 @@ class FullNode:
                         pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
-                    (added, error_code, state_change_summary) = await self.blockchain.receive_block(
+                    (added, error_code, state_change_summary) = await self.blockchain.add_block(
                         block, result_to_validate, None
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
@@ -1710,7 +1710,7 @@ class FullNode:
                     )
                 else:
                     # Should never reach here, all the cases are covered
-                    raise RuntimeError(f"Invalid result from receive_block {added}")
+                    raise RuntimeError(f"Invalid result from add_block {added}")
             except asyncio.CancelledError:
                 # We need to make sure to always call this method even when we get a cancel exception, to make sure
                 # the node stays in sync

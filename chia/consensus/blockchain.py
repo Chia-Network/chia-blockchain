@@ -56,7 +56,7 @@ log = logging.getLogger(__name__)
 
 class AddBlockResult(Enum):
     """
-    When Blockchain.receive_block(b) is called, one of these results is returned,
+    When Blockchain.add_block(b) is called, one of these results is returned,
     showing whether the block was added to the chain (extending the peak),
     and if not, why it was not added.
     """
@@ -193,7 +193,7 @@ class Blockchain(BlockchainInterface):
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
-    async def receive_block(
+    async def add_block(
         self,
         block: FullBlock,
         pre_validation_result: PreValidationResult,

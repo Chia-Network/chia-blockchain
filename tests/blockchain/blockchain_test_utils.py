@@ -48,7 +48,7 @@ async def _validate_and_add_block(
     # block is added to the peak.
     # If expected_result is not None, that result will be enforced.
     # If expected_error is not None, that error will be enforced. If expected_error is not None,
-    # receive_block must return Err.INVALID_BLOCK.
+    # add_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
     await check_block_store_invariant(blockchain)
@@ -79,7 +79,7 @@ async def _validate_and_add_block(
         result,
         err,
         _,
-    ) = await blockchain.receive_block(block, results, fork_point_with_peak=fork_point_with_peak)
+    ) = await blockchain.add_block(block, results, fork_point_with_peak=fork_point_with_peak)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
