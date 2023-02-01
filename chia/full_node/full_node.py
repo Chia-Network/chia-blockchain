@@ -578,7 +578,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self._blockchain_lock_high_priority:
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary = await self.receive_block_batch(response.blocks, peer, None)
+                    success, state_change_summary = await self.add_block_batch(response.blocks, peer, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1110,7 +1110,7 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                success, state_change_summary = await self.receive_block_batch(
+                success, state_change_summary = await self.add_block_batch(
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
@@ -1211,7 +1211,7 @@ class FullNode:
             msg = make_msg(ProtocolMessageTypes.coin_state_update, state)
             await ws_peer.send_message(msg)
 
-    async def receive_block_batch(
+    async def add_block_batch(
         self,
         all_blocks: List[FullBlock],
         peer: WSChiaConnection,
