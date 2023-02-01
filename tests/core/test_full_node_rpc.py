@@ -75,9 +75,7 @@ class TestRpc:
                     block.transactions_generator,
                     [],
                 )
-                await full_node_api_1.full_node.respond_unfinished_block(
-                    full_node_protocol.RespondUnfinishedBlock(unf), None
-                )
+                await full_node_api_1.full_node.add_unfinished_block(unf, None)
                 await full_node_api_1.full_node.add_block(block, None)
 
             assert len(await client.get_unfinished_block_headers()) > 0

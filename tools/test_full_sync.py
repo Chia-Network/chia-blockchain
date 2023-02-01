@@ -20,7 +20,6 @@ import zstd
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
-from chia.protocols import full_node_protocol
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
@@ -192,9 +191,7 @@ async def run_sync_test(
 
                         if keep_up:
                             for b in block_batch:
-                                await full_node.respond_unfinished_block(
-                                    full_node_protocol.RespondUnfinishedBlock(make_unfinished_block(b, constants)), peer
-                                )
+                                await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
                                 await full_node.add_block(b)
                         else:
                             success, summary = await full_node.add_block_batch(block_batch, peer, None)

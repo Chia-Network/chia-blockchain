@@ -614,7 +614,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # Do the same thing but with non-genesis
@@ -643,7 +643,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # Do the same thing one more time, with overflow
@@ -668,7 +668,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # This next section tests making unfinished block with transactions, and then submitting the finished block
@@ -709,7 +709,7 @@ class TestFullNodeProtocol:
             [],
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.add_unfinished_block(unf, None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
         result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
         assert result is not None
@@ -1183,7 +1183,7 @@ class TestFullNodeProtocol:
         # Don't have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
+        await full_node_1.full_node.add_unfinished_block(unf, peer)
 
         # Have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
@@ -1334,7 +1334,7 @@ class TestFullNodeProtocol:
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
         with pytest.raises(ConsensusError, match=f"{str(expected).split('.')[1]}"):
-            await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
+            await full_node_1.full_node.add_unfinished_block(unf, peer)
 
     @pytest.mark.asyncio
     async def test_double_blocks_same_pospace(self, wallet_nodes, self_hostname):
@@ -1370,7 +1370,7 @@ class TestFullNodeProtocol:
             block.transactions_generator,
             [],
         )
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), dummy_peer)
+        await full_node_1.full_node.add_unfinished_block(unf, dummy_peer)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash)
 
         block_2 = recursive_replace(
@@ -1411,7 +1411,7 @@ class TestFullNodeProtocol:
         # Don't have
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is None
-        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
+        await full_node_1.full_node.add_unfinished_block(unf, peer)
         # Have
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is not None

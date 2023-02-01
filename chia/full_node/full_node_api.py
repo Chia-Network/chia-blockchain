@@ -465,8 +465,8 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_unfinished_block(
-            respond_unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
+        await self.full_node.add_unfinished_block(
+            respond_unfinished_block.unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
         )
         return None
 
@@ -1008,12 +1008,11 @@ class FullNodeAPI:
             return None
 
         # Propagate to ourselves (which validates and does further propagations)
-        request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
         try:
-            await self.full_node.respond_unfinished_block(request, None, True)
+            await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
             # If we have an error with this block, try making an empty block
-            self.full_node.log.error(f"Error farming block {e} {request}")
+            self.full_node.log.error(f"Error farming block {e} {new_candidate}")
             candidate_tuple = self.full_node.full_node_store.get_candidate_block(
                 farmer_request.quality_string, backup=True
             )

@@ -1785,19 +1785,18 @@ class FullNode:
                 self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
-    async def respond_unfinished_block(
+    async def add_unfinished_block(
         self,
-        respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
+        block: UnfinishedBlock,
         peer: Optional[WSChiaConnection],
         farmed_block: bool = False,
         block_bytes: Optional[bytes] = None,
     ) -> None:
         """
         We have received an unfinished block, either created by us, or from another peer.
-        We can validate it and if it's a good block, propagate it to other peers and
+        We can validate and add it and if it's a good block, propagate it to other peers and
         timelords.
         """
-        block = respond_unfinished_block.unfinished_block
         receive_time = time.time()
 
         if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_block(
