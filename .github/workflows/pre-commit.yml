@@ -42,8 +42,16 @@ jobs:
           - name: Intel
             matrix: intel
         python:
+          - major_dot_minor: '3.7'
+          - major_dot_minor: '3.8'
           - major_dot_minor: '3.9'
+          - major_dot_minor: '3.10'
+          - major_dot_minor: '3.11'
         exclude:
+          - os:
+              matrix: macos
+            python:
+              major_dot_minor: '3.7'
           - os:
               matrix: windows
             arch:
