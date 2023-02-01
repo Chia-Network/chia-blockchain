@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   pre-commit:
-    name: ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} Python ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
