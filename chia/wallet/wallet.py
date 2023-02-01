@@ -141,7 +141,10 @@ class Wallet:
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
                 if record.spend_bundle is not None:
-                    self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
+                    self.log.warning(
+                        f"TransactionRecord SpendBundle ID: {record.spend_bundle.name()} not in mempool. "
+                        f"(peer, included, error) list: {record.sent_to}"
+                    )
                 continue
             our_spend = False
             for coin in record.removals:
