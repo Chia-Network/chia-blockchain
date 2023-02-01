@@ -411,6 +411,9 @@ full_node:
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
     - "dns-introducer.chia.net"
+    - "chia.hoffmang.com"
+    - "seeder.xchpool.org"
+    - "chia.ctrlaltdel.ch"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -495,6 +498,9 @@ wallet:
 
   dns_servers:
     - "dns-introducer.chia.net"
+    - "chia.hoffmang.com"
+    - "seeder.xchpool.org"
+    - "chia.ctrlaltdel.ch"
 
   full_node_peer:
     host: *self_hostname
