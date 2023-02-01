@@ -43,6 +43,7 @@ from chia.protocols import farmer_protocol, full_node_protocol, timelord_protoco
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
+from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -96,7 +97,7 @@ class FullNode:
     _shut_down: bool
     constants: ConsensusConstants
     pow_creation: Dict[bytes32, asyncio.Event]
-    state_changed_callback: Optional[Callable[[str, Optional[Dict[str, Any]]], None]]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     full_node_peers: Optional[FullNodePeers]
     sync_store: Any
     signage_point_times: List[float]
@@ -295,7 +296,7 @@ class FullNode:
 
         return con_info
 
-    def _set_state_changed_callback(self, callback: Callable[..., Any]) -> None:
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     async def _start(self) -> None:
