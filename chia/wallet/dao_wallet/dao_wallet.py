@@ -1045,6 +1045,7 @@ class DAOWallet:
         new_state: CoinSpend,
         block_height: uint32,
     ):
+        # TODO: get and save parent_info
         new_dao_info = self.dao_info.copy()
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
         solution = new_state.solution.rest().rest().first()  # get proposal solution from full singleton solution
@@ -1054,8 +1055,8 @@ class DAOWallet:
             return  # ignore all proposals below the filter amount
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
-            get_new_puzzle_from_proposal_solution(puzzle, solution)
-            # TODO: update current_innerpuz and find timer coin
+            current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
+            # TODO: find timer coin
         else:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
@@ -1106,7 +1107,26 @@ class DAOWallet:
         new_state: CoinSpend,
         block_height: uint32,
     ):
-
+        # TODO: get and save parent_info
+        if self.dao_info.singleton_block_height <= block_height:
+            # TODO: what do we do here?
+            return
+        puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        solution = new_state.solution.rest().rest().first()  # get proposal solution from full singleton solution
+        new_innerpuz = get_new_puzzle_from_treasury_solution(puzzle, solution)
+        child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,  # treasury_id: bytes32
+            self.dao_info.cat_wallet_id,  # cat_wallet_id: int
+            self.dao_info.dao_wallet_id,  # dao_wallet_id: int
+            self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
+            self.dao_info.parent_info,  # treasury_id: bytes32
+            child_coin,  # current_coin
+            new_innerpuz,  # current innerpuz
+            block_height,
+            self.dao_info.filter_below_vote_amount,
+        )
+        await self.save_info(dao_info)
         return
 
     # TODO: Find a nice way to express interest in more than one singleton.

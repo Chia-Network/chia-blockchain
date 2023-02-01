@@ -268,8 +268,27 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
             proposal_pass_percentage,
             proposal_timelock,
         ) = curried_args
-        # TODO: finish this
-        breakpoint()
+        args_list = [
+            singleton_struct,
+            DAO_TREASURY_MOD_HASH,
+            DAO_PROPOSAL_MOD_HASH,
+            DAO_PROPOSAL_TIMER_MOD_HASH,
+            DAO_LOCKUP_MOD_HASH,
+            CAT_MOD_HASH,
+            cat_tail_hash,
+            current_cat_issuance,
+            attendance_required_percentage,
+            proposal_pass_percentage,
+            proposal_timelock,
+        ]
+        replace_list = solution.rest().rest().rest().rest().first()
+        while replace_list != Program.to(0):
+            pair = replace_list.fist()
+            args_list[pair.first().as_atom()] = pair.rest().first().as_atom()
+            replace_list = replace_list.rest()
+        puzzle = DAO_TREASURY_MOD.curry(Program.to(args_list))
+        return puzzle
+
     return None
 
 
