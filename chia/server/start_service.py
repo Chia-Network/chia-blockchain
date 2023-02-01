@@ -229,7 +229,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
     def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
-            self._log.warning("Stopping service {self._service_name} at port {self._advertised_port} ...")
+            self._log.warning(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
 
             # start with UPnP, since this can take a while, we want it to happen
             # in the background while shutting down everything else
