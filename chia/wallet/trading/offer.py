@@ -376,6 +376,7 @@ class Offer:
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
         total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        old: bool = False
         for offer in offers:
             # First check for any overlap in inputs
             total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
@@ -396,8 +397,9 @@ class Offer:
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
             total_driver_dict.update(offer.driver_dict)
+            old = old | offer.old
 
-        return cls(total_requested_payments, total_bundle, total_driver_dict)
+        return cls(total_requested_payments, total_bundle, total_driver_dict, old)
 
     # Validity is defined by having enough funds within the offer to satisfy both sides
     def is_valid(self) -> bool:
