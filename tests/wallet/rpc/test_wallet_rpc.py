@@ -1573,6 +1573,7 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     await generate_funds(full_node_api, env.wallet_1)
     wallet_node: WalletNode = env.wallet_1.node
     fingerprint = wallet_node.logged_in_fingerprint
+    assert fingerprint
     db_path = wallet_node.wallet_state_manager.db_path
     assert await wallet_node.reset_sync_db(
         db_path, fingerprint

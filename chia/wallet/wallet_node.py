@@ -9,7 +9,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -232,7 +232,7 @@ class WalletNode:
 
         return key
 
-    def set_resync_on_startup(self, fingerprint, enabled: bool = True):
+    def set_resync_on_startup(self, fingerprint: int, enabled: bool = True) -> None:
         with lock_and_load_config(self.root_path, "config.yaml") as config:
             if enabled is True:
                 config["wallet"]["reset_sync_for_fingerprint"] = fingerprint
@@ -246,10 +246,10 @@ class WalletNode:
                     self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
             save_config(self.root_path, "config.yaml", config)
 
-    async def reset_sync_db(self, db_path, fingerprint):
+    async def reset_sync_db(self, db_path: Union[Path, str], fingerprint: int) -> bool:
         conn: aiosqlite.Connection
         # are not part of core wallet tables, but might appear later
-        ignore_tables = set(["lineage_proofs_", "sqlite_"])
+        ignore_tables = {"lineage_proofs_", "sqlite_"}
         required_tables = [
             "coin_record",
             "transaction_record",
