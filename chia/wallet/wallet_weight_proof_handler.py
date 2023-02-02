@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import tempfile
+import time
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
 from typing import IO, List, Optional, Tuple
@@ -49,6 +50,7 @@ class WalletWeightProofHandler:
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
     ) -> List[BlockRecord]:
+        start_time = time.time()
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
         if summaries is None or sub_epoch_weight_list is None:
@@ -72,6 +74,7 @@ class WalletWeightProofHandler:
         self._weight_proof_tasks.remove(task)
         if not valid:
             raise ValueError("weight proof validation failed")
+        log.info(f"It took {time.time() - start_time} time to validate the weight proof {weight_proof.get_hash()}")
         return block_records
 
 

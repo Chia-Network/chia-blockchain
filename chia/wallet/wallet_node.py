@@ -1267,11 +1267,8 @@ class WalletNode:
             raise Exception("weight proof peak hash does not match peak")
 
         old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-        start_validation = time.time()
         block_records = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
 
-        end_validation = time.time()
-        self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
         return weight_proof, block_records
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
