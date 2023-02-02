@@ -257,6 +257,7 @@ class WalletNode:
             "users_wallets",
             "users_nfts",
             "action_queue",
+            "all_notification_ids",
             "key_val_store",
             "trade_records",
             "pool_state_transitions",
