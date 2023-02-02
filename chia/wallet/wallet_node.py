@@ -1291,7 +1291,7 @@ class WalletNode:
         """
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
-        if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
+        if can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
             return True
 
         spent_height: Optional[uint32] = None if coin_state.spent_height is None else uint32(coin_state.spent_height)
