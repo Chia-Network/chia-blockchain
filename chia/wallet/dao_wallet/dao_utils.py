@@ -205,18 +205,14 @@ def get_proposal_puzzle(
 
 
 def get_proposal_timer_puzzle(
-    cat_tail: bytes32,
-    proposal_timelock: uint64,
-    proposal_pass_percentage: uint64,
+    cat_tail_hash: bytes32,
     proposal_id: bytes32,
     treasury_id: bytes32,
 ) -> Program:
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
     # CAT_MOD_HASH
-    # CAT_TAIL
-    # PROPOSAL_TIMELOCK
-    # PROPOSAL_PASS_PERCENTAGE
+    # CAT_TAIL_HASH
     # MY_PARENT_SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (PROPOSAL_SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
     # TREASURY_ID
     parent_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
@@ -224,9 +220,7 @@ def get_proposal_timer_puzzle(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
-        cat_tail,
-        proposal_timelock,
-        proposal_pass_percentage,
+        cat_tail_hash,
         parent_singleton_struct,
         treasury_id,
     )

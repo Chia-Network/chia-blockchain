@@ -40,6 +40,8 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     get_finished_state_puzzle,
     get_new_puzzle_from_proposal_solution,
+    get_proposal_timer_puzzle,
+    uncurry_treasury
 )
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
@@ -1053,6 +1055,8 @@ class DAOWallet:
         if TOTAL_VOTES < self.dao_info.filter_below_vote_amount:
             return  # ignore all proposals below the filter amount
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        ended = False
+        timer_coin = None
         if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
             current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
             # TODO: find timer coin
@@ -1060,7 +1064,7 @@ class DAOWallet:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
             current_innerpuz = get_finished_state_puzzle(singleton_id)
-            timer_coin = None
+            ended = True
 
         index = 0
         for current_info in new_dao_info.proposals_list:
@@ -1085,6 +1089,53 @@ class DAOWallet:
                     await self.save_info(new_dao_info)
                     return
             index = index + 1
+
+            # Search for the timer coin
+            if not ended:
+                wallet_node: Any = self.wallet_state_manager.wallet_node
+                peer: WSChiaConnection = wallet_node.get_full_node_peer()
+                if peer is None:
+                    raise ValueError("Could not find any peers to request puzzle and solution from")
+                children = await wallet_node.fetch_children(singleton_id, peer)
+                assert len(children) > 0
+                found = False
+                parent_coin_id = singleton_id
+
+                treasury_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
+                (
+                    singleton_struct,
+                    DAO_TREASURY_MOD_HASH,
+                    DAO_PROPOSAL_MOD_HASH,
+                    DAO_PROPOSAL_TIMER_MOD_HASH,
+                    DAO_LOCKUP_MOD_HASH,
+                    CAT_MOD_HASH,
+                    cat_tail_hash,
+                    current_cat_issuance,
+                    attendance_required_percentage,
+                    proposal_pass_percentage,
+                    proposal_timelock,
+                ) = treasury_args
+
+                timer_coin_puzhash = get_proposal_timer_puzzle(
+                    cat_tail_hash.as_atom(),
+                    singleton_id,
+                    singleton_struct.rest().first().as_atom(),
+                ).get_tree_hash()
+
+                while not found and len(children) > 0:
+                    children = await wallet_node.fetch_children(parent_coin_id, peer)
+                    if len(children) == 0:
+                        break
+                    children_state = None
+                    children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
+                    assert children_state is not None
+                    for child in children:
+                        if children.coin.puzzle_hash == timer_coin_puzhash:
+                            found = True
+                            timer_coin = children.coin
+                            break
+                    child_coin = children_state.coin
+                    parent_coin_id = child_coin.name()
 
         # If we reach here then we don't currently know about this coin
         new_proposal_info = ProposalInfo(
