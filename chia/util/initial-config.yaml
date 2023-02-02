@@ -563,8 +563,8 @@ wallet:
   # coins with very small value. Any standard TX under xch_spam_amount is filtered
   spam_filter_after_n_txs: 200
   xch_spam_amount: 1000000
-  # Accept notifications from parties on chain
-  accept_notifications: False
+  # Enable notifications from parties on chain
+  enable_notifications: True
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 

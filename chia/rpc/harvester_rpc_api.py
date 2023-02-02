@@ -36,6 +36,12 @@ class HarvesterRpcApi:
         if change == "farming_info":
             payloads.append(create_payload_dict("farming_info", change_data, self.service_name, "metrics"))
 
+        if change == "add_connection":
+            payloads.append(create_payload_dict("add_connection", change_data, self.service_name, "metrics"))
+
+        if change == "close_connection":
+            payloads.append(create_payload_dict("close_connection", change_data, self.service_name, "metrics"))
+
         return payloads
 
     async def get_plots(self, request: Dict) -> EndpointResult:

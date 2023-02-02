@@ -22,6 +22,7 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_st
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -29,7 +30,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
@@ -54,7 +55,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
@@ -65,6 +66,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -111,7 +113,7 @@ class WalletStateManager:
     sync_target: uint32
     genesis: FullBlock
 
-    state_changed_callback: Optional[Callable]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     pending_tx_callback: Optional[Callable]
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
@@ -1343,7 +1345,7 @@ class WalletStateManager:
                                 uint32(child.spent_height),
                                 name="pool_wallet",
                             )
-                            launcher_spend_additions = launcher_spend.additions()
+                            launcher_spend_additions = compute_additions(launcher_spend)
                             assert len(launcher_spend_additions) == 1
                             coin_added = launcher_spend_additions[0]
                             coin_name = coin_added.name()
