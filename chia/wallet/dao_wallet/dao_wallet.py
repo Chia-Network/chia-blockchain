@@ -23,6 +23,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+
 # from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
@@ -41,8 +42,9 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_finished_state_puzzle,
     get_new_puzzle_from_proposal_solution,
     get_proposal_timer_puzzle,
-    uncurry_treasury
+    uncurry_treasury,
 )
+
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -88,6 +90,8 @@ class DAOWallet:
     dao_info: DAOInfo
     standard_wallet: Wallet
     wallet_id: int
+    apply_state_transition_call_count: int = 0
+    new_peak_call_count: int = 0
 
     @staticmethod
     async def create_new_dao_and_wallet(
@@ -173,7 +177,7 @@ class DAOWallet:
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount
+            self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
 
@@ -242,7 +246,7 @@ class DAOWallet:
             self.dao_info.current_treasury_coin,
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount
+            self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
 
@@ -650,7 +654,7 @@ class DAOWallet:
             None,
             None,
             0,
-            self.dao_info.filter_below_vote_amount
+            self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
 
@@ -926,7 +930,7 @@ class DAOWallet:
         voting_coin_id_list: List[bytes32],
         previous_votes_list: List[Program],
         lockup_innerpuz_list: List[Program],
-        is_yes_vote: bool
+        is_yes_vote: bool,
     ):
         proposal_info = None
         for prop in self.dao_info.proposals_list:
@@ -950,14 +954,16 @@ class DAOWallet:
         if is_yes_vote:
             voting_info = 1
 
-        inner_sol = Program.to([
-            vote_amounts_list,
-            voting_info,
-            voting_coin_id_list,
-            previous_votes_list,
-            lockup_innerpuz_list,
-            0,
-        ])
+        inner_sol = Program.to(
+            [
+                vote_amounts_list,
+                voting_info,
+                voting_coin_id_list,
+                previous_votes_list,
+                lockup_innerpuz_list,
+                0,
+            ]
+        )
 
         return
 
@@ -1146,7 +1152,7 @@ class DAOWallet:
             current_coin,
             current_innerpuz,
             timer_coin,  # if this is None then the proposal has finished
-            block_height  # block height that current proposal singleton coin was created in
+            block_height,  # block height that current proposal singleton coin was created in
         )
         new_dao_info.proposals_list.append(new_proposal_info)
         await self.save_info(new_dao_info)
@@ -1197,6 +1203,7 @@ class DAOWallet:
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
+        self.apply_state_transition_call_count += 1
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
 
@@ -1236,6 +1243,7 @@ class DAOWallet:
         new_peak is called from the WalletStateManager whenever there is a new peak
         # This is where we can attempt to push spends, check on time locks, etc.
         """
+        self.new_peak_call_count += 1
 
         # Check to see if a proposal timer has expired
 
