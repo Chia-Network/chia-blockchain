@@ -48,12 +48,11 @@ class WalletWeightProofHandler:
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
-    ) -> Tuple[bool, List[BlockRecord]]:
+    ) -> List[BlockRecord]:
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
         if summaries is None or sub_epoch_weight_list is None:
-            log.error("weight proof failed sub epoch data validation")
-            return False, []
+            raise ValueError("weight proof failed sub epoch data validation")
         validate_from = get_fork_ses_idx(old_proof, weight_proof)
         task = asyncio.create_task(
             validate_weight_proof_inner(
@@ -71,7 +70,9 @@ class WalletWeightProofHandler:
         self._weight_proof_tasks.append(task)
         valid, block_records = await task
         self._weight_proof_tasks.remove(task)
-        return valid, block_records
+        if not valid:
+            raise ValueError("weight proof validation failed")
+        return block_records
 
 
 def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:

@@ -1268,12 +1268,7 @@ class WalletNode:
 
         old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
         start_validation = time.time()
-        (
-            valid,
-            block_records,
-        ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
-        if not valid:
-            raise Exception("weight proof failed validation")
+        block_records = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
 
         end_validation = time.time()
         self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
