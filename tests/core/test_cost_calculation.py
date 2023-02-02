@@ -94,15 +94,11 @@ class TestCostCalculation:
         assert puzzle == coin_spend.puzzle_reveal
         assert solution == coin_spend.solution
 
-        assert npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + 404560
-
-        # Create condition + agg_sig_condition + length + cpu_cost
+        clvm_cost = 404560
+        byte_cost = len(bytes(program.program)) * test_constants.COST_PER_BYTE
         assert (
-            npc_result.cost
-            == 404560
-            + ConditionCost.CREATE_COIN.value
-            + ConditionCost.AGG_SIG.value
-            + len(bytes(program.program)) * test_constants.COST_PER_BYTE
+            npc_result.conds.cost
+            == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + clvm_cost + byte_cost
         )
 
         # Create condition + agg_sig_condition + length + cpu_cost
@@ -111,7 +107,7 @@ class TestCostCalculation:
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE
-            + 404560  # clvm cost
+            + clvm_cost
         )
 
     @pytest.mark.asyncio
