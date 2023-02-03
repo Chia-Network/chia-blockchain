@@ -11,7 +11,7 @@ import traceback
 from asyncio import Event
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
@@ -25,7 +25,7 @@ from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -91,7 +91,7 @@ class WalletNode:
 
     log: logging.Logger = logging.getLogger(__name__)
 
-    state_changed_callback: Optional[Callable[..., Any]] = None
+    state_changed_callback: Optional[StateChangedProtocol] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
     _weight_proof_handler: Optional[WalletWeightProofHandler] = None
     _server: Optional[ChiaServer] = None
@@ -325,7 +325,7 @@ class WalletNode:
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
 
-    def _set_state_changed_callback(self, callback: Callable[..., Any]) -> None:
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
         if self._wallet_state_manager is not None:
@@ -558,7 +558,7 @@ class WalletNode:
 
         self.wallet_state_manager.state_changed("close_connection")
 
-    async def on_connect(self, peer: WSChiaConnection):
+    async def on_connect(self, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:
             return None
 
