@@ -760,8 +760,8 @@ class DAOWallet:
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
         current_coin = Coin(eve_coin.name(), full_treasury_puzzle.get_tree_hash(), eve_coin.amount)
-        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()])
-        await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()])
+        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()], [self.wallet_id])
+        await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
@@ -1034,7 +1034,7 @@ class DAOWallet:
 
         # Update dao_info with the new coin
         current_coin = Coin(self.dao_info.current_treasury_coin.name(), full_treasury_puzzle.get_tree_hash(), new_amount_total)
-        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()])
+        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()], [self.wallet_id])
 
         # MH: We should do this on receiving the coin instead of sending the spend incase our spend doesn't go through
         # dao_info = DAOInfo(

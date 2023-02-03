@@ -93,6 +93,8 @@ TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
 
 
 class WalletStateManager:
+    interested_ph_cache: Dict[bytes32, List[int]]
+    interested_coin_cache: Dict[bytes32, List[int]]
     constants: ConsensusConstants
     config: Dict
     tx_store: WalletTransactionStore
@@ -153,6 +155,8 @@ class WalletStateManager:
         name: str = None,
     ):
         self = WalletStateManager()
+        self.interested_ph_cache: Dict[int, List[bytes32]] = defaultdict(list)
+        self.interested_coin_cache: Dict[int, List[bytes32]] = defaultdict(list)
         self.new_wallet = False
         self.config = config
         self.constants = constants
@@ -1229,6 +1233,9 @@ class WalletStateManager:
                                         unconfirmed_record.name, uint32(coin_state.spent_height)
                                     )
 
+                        # This debug stmt may have to move
+                        print(self.interested_coin_cache[coin_name])
+                        print(self.interested_ph_cache[coin.puzzle_hash])
                         if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
                             wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
@@ -1735,12 +1742,16 @@ class WalletStateManager:
             self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(self, puzzle_hashes: List[bytes32], wallet_ids: List[int]) -> None:
+        for puzzle_hash in puzzle_hashes:
+            self.interested_coin_cache[puzzle_hash].extend(wallet_ids)
         for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
             await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id)
         if len(puzzle_hashes) > 0:
             await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(puzzle_hashes)
 
-    async def add_interested_coin_ids(self, coin_ids: List[bytes32]) -> None:
+    async def add_interested_coin_ids(self, coin_ids: List[bytes32], wallet_ids: List[int] = []) -> None:
+        for coin_id in coin_ids:
+            self.interested_coin_cache[coin_id].extend(wallet_ids)
         for coin_id in coin_ids:
             await self.interested_store.add_interested_coin_id(coin_id)
         if len(coin_ids) > 0:
