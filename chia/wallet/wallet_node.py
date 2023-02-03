@@ -48,6 +48,7 @@ from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
+from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.wallet.transaction_record import TransactionRecord
@@ -106,7 +107,7 @@ class WalletNode:
     # Peers that we have long synced to
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
-    valid_wp_cache: Dict[bytes32, Any] = dataclasses.field(default_factory=dict)
+    valid_wp_cache: LRUCache[bytes32, Any] = dataclasses.field(default_factory=lambda: LRUCache(2))
     peer_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
     # in Untrusted mode wallet might get the state update before receiving the block
     race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
@@ -1253,8 +1254,9 @@ class WalletNode:
         if weight_proof.recent_chain_data[-1].header_hash != peak.header_hash:
             raise Exception("weight proof peak hash does not match peak")
 
-        if weight_proof.get_hash() in self.valid_wp_cache:
-            valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
+        cache = self.valid_wp_cache.get(weight_proof.get_hash())
+        if cache is not None:
+            valid, fork_point, summaries, block_records = cache
         else:
             old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
             fork_point = get_wp_fork_point(self.constants, old_proof, weight_proof)
@@ -1266,7 +1268,7 @@ class WalletNode:
             ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
             if not valid:
                 raise Exception("weight proof failed validation")
-            self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
+            self.valid_wp_cache.put(weight_proof.get_hash(), (valid, fork_point, summaries, block_records))
 
         end_validation = time.time()
         self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
