@@ -968,24 +968,19 @@ class DAOWallet:
 
         return
 
-    async def create_add_money_to_treasury_spend(self, amount: uint64, fee: uint64 = uint64(0)) -> SpendBundle:
+    async def create_add_money_to_treasury_spend(self, amount: uint64, fee: uint64 = uint64(0)) -> Optional[TransactionRecord]:
         # make sure we're generating an odd output amount
-        if amount % 2 == 0:
+        if amount + self.dao_info.current_treasury_coin.amount % 2 == 0:
             amount -= 1
+        new_amount_change = amount
+        new_amount_total = amount + self.dao_info.current_treasury_coin.amount
 
-        coins = await self.standard_wallet.select_coins(uint64(amount + fee))
-        if coins is None:
-            return None
-
+        # get the treasury puzzle and check that it matches out current coin
         full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
         assert full_treasury_puzzle_hash == self.dao_info.current_treasury_coin.puzzle_hash
 
-        new_amount_change = amount - self.dao_info.current_treasury_coin.amount
-        announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([new_amount_change, 0]).get_tree_hash()
-        announcement_set.add(Announcement(self.dao_info.current_treasury_coin.puzzle_hash, announcement_message).name())
-
+        # Create the treasury solution for our new amount
         inner_sol = Program.to(
             [
                 self.dao_info.current_treasury_coin.amount,
@@ -996,19 +991,64 @@ class DAOWallet:
                 0,
             ]
         )
-        # full solution is (lineage_proof my_amount inner_solution)
-        lp = [info[1] for info in self.dao_info.parent_info if info[0] == self.dao_info.current_treasury_coin.parent_coin_info][0]
+        lineage_proof = [info[1] for info in self.dao_info.parent_info if info[0] == self.dao_info.current_treasury_coin.parent_coin_info][0]
         fullsol = Program.to(
             [
-                lp.to_program(),
+                lineage_proof.to_program(),
                 self.dao_info.current_treasury_coin.amount,
                 inner_sol,
             ]
         )
         treasury_coin_spend = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puzzle, fullsol)
         treasury_sb = SpendBundle([treasury_coin_spend], G2Element())
-        xch_sb = await self.standard_wallet.create_spend_bundle_relative_chia(-amount, fee=fee, puzzle_announcements_to_assert=announcement_set)
-        return SpendBundle.aggregate([treasury_sb, xch_sb])
+
+        # Create the puzzle announcement and xch spend
+        announcement_set: Set[Announcement] = set()
+        announcement_message = Program.to([new_amount_change, 0]).get_tree_hash()
+        announcement_set.add(Announcement(self.dao_info.current_treasury_coin.puzzle_hash, announcement_message).name())
+
+        xch_sb = await self.standard_wallet.create_spend_bundle_relative_chia(-new_amount_change, fee=fee, puzzle_announcements_to_assert=announcement_set)
+
+        full_spend = SpendBundle.aggregate([treasury_sb, xch_sb])
+
+        treasury_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=self.dao_info.current_treasury_innerpuz.get_tree_hash(),
+            amount=uint64(new_amount_change),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=bytes32(token_bytes()),
+            memos=[],
+        )
+        await self.wallet_state_manager.add_pending_transaction(treasury_record)
+
+        # Update dao_info with the new coin
+        current_coin = Coin(self.dao_info.current_treasury_coin.name(), full_treasury_puzzle.get_tree_hash(), new_amount_total)
+        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()])
+
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,
+            self.dao_info.cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            current_coin,
+            self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
+        )
+        await self.save_info(dao_info)
+
+        return treasury_record
 
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)
