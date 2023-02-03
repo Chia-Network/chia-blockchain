@@ -739,7 +739,8 @@ class DAOWallet:
         treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(), # Should this be full_treasury_puzzle_hash?
+            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),  # Should this be full_treasury_puzzle_hash?
+            # MH: I don't think so, the CAT Wallet doesn't include the CAT Layer
             amount=uint64(1),
             fee_amount=fee,
             confirmed=False,
@@ -1035,18 +1036,19 @@ class DAOWallet:
         current_coin = Coin(self.dao_info.current_treasury_coin.name(), full_treasury_puzzle.get_tree_hash(), new_amount_total)
         await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()])
 
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            current_coin,
-            self.dao_info.current_treasury_innerpuz,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-        )
-        await self.save_info(dao_info)
+        # MH: We should do this on receiving the coin instead of sending the spend incase our spend doesn't go through
+        # dao_info = DAOInfo(
+        #     self.dao_info.treasury_id,
+        #     self.dao_info.cat_wallet_id,
+        #     self.dao_info.dao_cat_wallet_id,
+        #     self.dao_info.proposals_list,
+        #     self.dao_info.parent_info,
+        #     current_coin,
+        #     self.dao_info.current_treasury_innerpuz,
+        #     self.dao_info.singleton_block_height,
+        #     self.dao_info.filter_below_vote_amount,
+        # )
+        # await self.save_info(dao_info)
 
         return treasury_record
 
@@ -1283,6 +1285,7 @@ class DAOWallet:
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
+        breakpoint()
         self.apply_state_transition_call_count += 1
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
