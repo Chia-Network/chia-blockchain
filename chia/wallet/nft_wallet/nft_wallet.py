@@ -39,8 +39,8 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.trading.offer import (
     OFFER_MOD,
-    OFFER_MOD_OLD,
     OFFER_MOD_HASH,
+    OFFER_MOD_OLD,
     OFFER_MOD_OLD_HASH,
     NotarizedPayment,
     Offer,
