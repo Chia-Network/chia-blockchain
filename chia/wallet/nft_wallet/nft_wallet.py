@@ -37,7 +37,14 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_secret_key,
     puzzle_for_pk,
 )
-from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_OLD, OFFER_MOD_HASH, OFFER_MOD_OLD_HASH, NotarizedPayment, Offer
+from chia.wallet.trading.offer import (
+    OFFER_MOD,
+    OFFER_MOD_OLD,
+    OFFER_MOD_HASH,
+    OFFER_MOD_OLD_HASH,
+    NotarizedPayment,
+    Offer,
+)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
@@ -818,7 +825,9 @@ class NFTWallet:
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
             if amount > 0 and offer_side_royalty_split > 0:
                 settlement_ph: bytes32 = (
-                    DESIRED_OFFER_MOD_HASH if asset is None else construct_puzzle(driver_dict[asset], DESIRED_OFFER_MOD).get_tree_hash()
+                    DESIRED_OFFER_MOD_HASH
+                    if asset is None
+                    else construct_puzzle(driver_dict[asset], DESIRED_OFFER_MOD).get_tree_hash()
                 )
                 trade_prices.append([uint64(math.floor(amount / offer_side_royalty_split)), settlement_ph])
 
@@ -983,7 +992,9 @@ class NFTWallet:
                                     None,
                                     [
                                         Payment(
-                                            DESIRED_OFFER_MOD_HASH, uint64(sum(p.amount for _, p in duplicate_payments)), []
+                                            DESIRED_OFFER_MOD_HASH,
+                                            uint64(sum(p.amount for _, p in duplicate_payments)),
+                                            [],
                                         ).as_condition_args()
                                     ],
                                 )

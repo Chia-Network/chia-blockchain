@@ -25,7 +25,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import OFFER_MOD_OLD, OFFER_MOD_OLD_HASH, NotarizedPayment, Offer
+from chia.wallet.trading.offer import OFFER_MOD_OLD_HASH, NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord

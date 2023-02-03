@@ -100,14 +100,18 @@ class Offer:
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]], driver_dict: Dict[bytes32, PuzzleInfo], old: bool = False
+        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        old: bool = False,
     ) -> List[Announcement]:
         announcements: List[Announcement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
                 if asset_id not in driver_dict:
                     raise ValueError("Cannot calculate announcements without driver of requested item")
-                settlement_ph: bytes32 = construct_puzzle(driver_dict[asset_id], OFFER_MOD_OLD if old else OFFER_MOD).get_tree_hash()
+                settlement_ph: bytes32 = construct_puzzle(
+                    driver_dict[asset_id], OFFER_MOD_OLD if old else OFFER_MOD
+                ).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD_OLD_HASH if old else OFFER_MOD_HASH
 
