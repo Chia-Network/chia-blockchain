@@ -283,10 +283,10 @@ async def setup_simulators_and_wallets_inner(
             )
         )  # block tools modifies constants
         sim = setup_full_node(
-            bt_tools[index].constants,
-            bt_tools[index].config["self_hostname"],
-            db_name,
-            bt_tools[index],
+            consensus_constants=bt_tools[index].constants,
+            db_name=db_name,
+            self_hostname=bt_tools[index].config["self_hostname"],
+            local_bt=bt_tools[index],
             simulator=True,
             db_version=db_version,
             disable_capabilities=disable_capabilities,
