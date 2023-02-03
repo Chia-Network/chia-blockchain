@@ -984,7 +984,7 @@ class DAOWallet:
         new_amount_change = amount - self.dao_info.current_treasury_coin.amount
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([new_amount_change, 0]).get_tree_hash()
-        announcement_set.add(Announcement(self.dao_info.current_treasury_coin.puzzle_hash, announcement_message))
+        announcement_set.add(Announcement(self.dao_info.current_treasury_coin.puzzle_hash, announcement_message).name())
 
         inner_sol = Program.to(
             [
@@ -1006,8 +1006,9 @@ class DAOWallet:
             ]
         )
         treasury_coin_spend = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puzzle, fullsol)
-
-        return SpendBundle([], G2Element.generator())
+        treasury_sb = SpendBundle([treasury_coin_spend], G2Element())
+        xch_sb = await self.standard_wallet.create_spend_bundle_relative_chia(-amount, fee=fee, puzzle_announcements_to_assert=announcement_set)
+        return SpendBundle.aggregate([treasury_sb, xch_sb])
 
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)

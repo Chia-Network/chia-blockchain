@@ -552,7 +552,16 @@ class Wallet:
         await self.wallet_state_manager.wallet_node.update_ui()
 
     # This is to be aggregated together with a CAT offer to ensure that the trade happens
-    async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin] = []) -> SpendBundle:
+    async def create_spend_bundle_relative_chia(
+        self,
+        chia_amount: int,
+        exclude: List[Coin] = [],
+        fee: uint64 = uint64(0),
+        coin_announcements: Optional[Set[bytes]] = None,
+        coin_announcements_to_assert: Optional[Set[bytes32]] = None,
+        puzzle_announcements: Optional[Set[bytes]] = None,
+        puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
+    ) -> SpendBundle:
         list_of_solutions = []
         utxos = None
 
@@ -578,7 +587,16 @@ class Wallet:
                 primaries: List[AmountWithPuzzlehash] = [
                     {"puzzlehash": newpuzhash, "amount": uint64(chia_amount), "memos": []}
                 ]
-                solution = self.make_solution(primaries=primaries)
+                solution = self.make_solution(
+                    primaries=primaries,
+                    min_time=0,
+                    me=None,
+                    coin_announcements=coin_announcements,
+                    coin_announcements_to_assert=coin_announcements_to_assert,
+                    puzzle_announcements=puzzle_announcements,
+                    puzzle_announcements_to_assert=puzzle_announcements_to_assert,
+                    fee=fee
+                )
                 output_created = coin
             list_of_solutions.append(CoinSpend(coin, puzzle, solution))
 
