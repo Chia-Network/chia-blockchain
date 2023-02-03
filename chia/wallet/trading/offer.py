@@ -35,7 +35,6 @@ from chia.wallet.util.puzzle_compression import (
 OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
 OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
-OFFER_MOD_OLD_BYTES = bytes(OFFER_MOD_OLD)
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
 
@@ -549,7 +548,7 @@ class Offer:
         leftover_coin_spends: List[CoinSpend] = []
         old: bool = False
         for coin_spend in bundle.coin_spends:
-            if not old and OFFER_MOD_OLD_BYTES in bytes(coin_spend):
+            if not old and bytes(OFFER_MOD_OLD) in bytes(coin_spend):
                 old = True
 
             driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
