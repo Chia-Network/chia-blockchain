@@ -144,7 +144,7 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
     assert node.logged_in_fingerprint == fingerprint
     assert node.get_last_used_fingerprint() == fingerprint
 
-    node.log_out()  # type: ignore
+    node.log_out()
 
     assert node.logged_in is False
     assert node.logged_in_fingerprint is None

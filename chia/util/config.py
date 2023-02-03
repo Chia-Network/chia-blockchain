@@ -251,9 +251,9 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
         raise KeyError(f"value not found for key: {key}")
 
 
-method_strings = Literal["default", "python_default", "fork", "forkserver", "spawn"]
-method_values = Optional[Literal["fork", "forkserver", "spawn"]]
-start_methods: Dict[method_strings, method_values] = {
+start_method_strings = Literal["default", "python_default", "fork", "forkserver", "spawn"]
+start_method_values = Optional[Literal["fork", "forkserver", "spawn"]]
+start_methods: Dict[start_method_strings, start_method_values] = {
     "default": None,
     "python_default": None,
     "fork": "fork",
@@ -265,10 +265,10 @@ start_methods: Dict[method_strings, method_values] = {
 def process_config_start_method(
     config: Dict[str, Any],
     log=logging.Logger,
-) -> method_values:
+) -> start_method_values:
     from_config: object = config.get("multiprocessing_start_method")
 
-    choice: method_strings
+    choice: start_method_strings
     if from_config is None:
         # handle not only the key being missing, but also set to None
         choice = "default"

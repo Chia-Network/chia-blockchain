@@ -39,7 +39,7 @@ class WalletWeightProofHandler:
         )
         self._weight_proof_tasks: List[asyncio.Task] = []
 
-    def cancel_weight_proof_tasks(self):
+    def cancel_weight_proof_tasks(self) -> None:
         for task in self._weight_proof_tasks:
             if not task.done():
                 task.cancel()

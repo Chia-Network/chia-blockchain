@@ -206,7 +206,7 @@ class WalletBlockchain(BlockchainInterface):
     def add_block_record(self, block_record: BlockRecord):
         self._block_records[block_record.header_hash] = block_record
 
-    async def clean_block_records(self):
+    async def clean_block_records(self) -> None:
         """
         Cleans the cache so that we only maintain relevant blocks. This removes
         block records that have height < peak - CACHE_SIZE.

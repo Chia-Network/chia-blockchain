@@ -8,6 +8,8 @@ import random
 import sys
 import time
 import traceback
+from asyncio import Event
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -36,9 +38,10 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
 from chia.util.chunks import chunks
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method, start_method_values
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
@@ -81,27 +84,21 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
 
 @dataclasses.dataclass
 class WalletNode:
-    config: Dict
+    config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
     local_keychain: Optional[Keychain] = None
 
     log: logging.Logger = logging.getLogger(__name__)
 
-    # Normal operation data
-    cached_blocks: Dict = dataclasses.field(default_factory=dict)
-    future_block_hashes: Dict = dataclasses.field(default_factory=dict)
-
-    # Sync data
-    proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[StateChangedProtocol] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
     _weight_proof_handler: Optional[WalletWeightProofHandler] = None
     _server: Optional[ChiaServer] = None
-    wsm_close_task: Optional[asyncio.Task] = None
-    sync_task: Optional[asyncio.Task] = None
+    wsm_close_task: Optional[asyncio.Task[None]] = None
+    sync_task: Optional[asyncio.Task[None]] = None
     logged_in_fingerprint: Optional[int] = None
-    peer_task: Optional[asyncio.Task] = None
+    peer_task: Optional[asyncio.Task[None]] = None
     logged_in: bool = False
     _keychain_proxy: Optional[KeychainProxy] = None
     height_to_time: Dict[uint32, uint64] = dataclasses.field(default_factory=dict)
@@ -118,17 +115,17 @@ class WalletNode:
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 300
-    last_wallet_tx_resend_time: int = 0
+    last_wallet_tx_resend_time: float = 0.0
     # Duration in seconds
     wallet_tx_resend_timeout_secs: int = 1800
     _new_peak_queue: Optional[NewPeakQueue] = None
     full_node_peer: Optional[PeerInfo] = None
 
     _shut_down: bool = False
-    _process_new_subscriptions_task: Optional[asyncio.Task] = None
-    _retry_failed_states_task: Optional[asyncio.Task] = None
-    _primary_peer_sync_task: Optional[asyncio.Task] = None
-    _secondary_peer_sync_task: Optional[asyncio.Task] = None
+    _process_new_subscriptions_task: Optional[asyncio.Task[None]] = None
+    _retry_failed_states_task: Optional[asyncio.Task[None]] = None
+    _primary_peer_sync_task: Optional[asyncio.Task[None]] = None
+    _secondary_peer_sync_task: Optional[asyncio.Task[None]] = None
 
     @property
     def keychain_proxy(self) -> KeychainProxy:
@@ -179,12 +176,12 @@ class WalletNode:
                     raise KeychainProxyConnectionFailure()
         return self._keychain_proxy
 
-    def get_cache_for_peer(self, peer) -> PeerRequestCache:
+    def get_cache_for_peer(self, peer: WSChiaConnection) -> PeerRequestCache:
         if peer.peer_node_id not in self.untrusted_caches:
             self.untrusted_caches[peer.peer_node_id] = PeerRequestCache()
         return self.untrusted_caches[peer.peer_node_id]
 
-    def rollback_request_caches(self, reorg_height: int):
+    def rollback_request_caches(self, reorg_height: int) -> None:
         # Everything after reorg_height should be removed from the cache
         for cache in self.untrusted_caches.values():
             cache.clear_after_height(reorg_height)
@@ -237,10 +234,12 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
 
-        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
-        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        multiprocessing_start_method: start_method_values = process_config_start_method(
+            config=self.config, log=self.log
+        )
+        multiprocessing_context: BaseContext = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
-        self.synced_peers = set()
+        self.synced_peers: Set[bytes32] = set()
         private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint())
         if private_key is None:
             self.log_out()
@@ -274,15 +273,17 @@ class WalletNode:
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
-        self.last_wallet_tx_resend_time = int(time.time())
-        self.last_state_retry_time = int(time.time())
-        self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
+        self.last_wallet_tx_resend_time: float = time.time()
+        self.last_state_retry_time: float = time.time()
+        self.wallet_tx_resend_timeout_secs: float = self.config.get("tx_resend_timeout_secs", 60 * 60.0)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
-        self._shut_down = False
-        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
-        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
+        self._shut_down: bool = False
+        self._process_new_subscriptions_task: asyncio.Task[None] = asyncio.create_task(
+            self._process_new_subscriptions()
+        )
+        self._retry_failed_states_task: asyncio.Task[None] = asyncio.create_task(self._retry_failed_states())
 
-        self.sync_event = asyncio.Event()
+        self.sync_event: Event = asyncio.Event()
         self.log_in(private_key)
         self.wallet_state_manager.set_sync_mode(False)
 
@@ -293,7 +294,7 @@ class WalletNode:
                 self.wsm_close_task = None
         return True
 
-    def _close(self):
+    def _close(self) -> None:
         self.log.info("self._close")
         self.log_out()
         self._shut_down = True
@@ -308,7 +309,7 @@ class WalletNode:
         if self._secondary_peer_sync_task is not None:
             self._secondary_peer_sync_task.cancel()
 
-    async def _await_closed(self, shutting_down: bool = True):
+    async def _await_closed(self, shutting_down: bool = True) -> None:
         self.log.info("self._await_closed")
         if self._server is not None:
             await self.server.close_all_connections()
@@ -331,12 +332,12 @@ class WalletNode:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
             self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
-    def _pending_tx_handler(self):
+    def _pending_tx_handler(self) -> None:
         if self._wallet_state_manager is None:
             return None
         asyncio.create_task(self._resend_queue())
 
-    async def _resend_queue(self):
+    async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
             return None
 
@@ -355,7 +356,7 @@ class WalletNode:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
-        current_time = int(time.time())
+        current_time = time.time()
         retry_accepted_txs = False
         if self.last_wallet_tx_resend_time < current_time - self.wallet_tx_resend_timeout_secs:
             self.last_wallet_tx_resend_time = current_time
@@ -379,7 +380,7 @@ class WalletNode:
 
         return messages
 
-    async def _retry_failed_states(self):
+    async def _retry_failed_states(self) -> None:
         while not self._shut_down:
             try:
                 await asyncio.sleep(5)
@@ -418,7 +419,7 @@ class WalletNode:
                 self.log.info("Retry task cancelled, exiting.")
                 raise
 
-    async def _process_new_subscriptions(self):
+    async def _process_new_subscriptions(self) -> None:
         while not self._shut_down:
             # Here we process four types of messages in the queue, where the first one has higher priority (lower
             # number in the queue), and priority decreases for each type.
@@ -444,27 +445,27 @@ class WalletNode:
                     puzzle_hashes: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         # Puzzle hash subscription
-                        coin_states: List[CoinState] = await subscribe_to_phs(puzzle_hashes, peer, uint32(0))
-                        if len(coin_states) > 0:
+                        ph_coin_states: List[CoinState] = await subscribe_to_phs(puzzle_hashes, peer, uint32(0))
+                        if len(ph_coin_states) > 0:
                             async with self.wallet_state_manager.lock:
-                                await self.receive_state_from_peer(coin_states, peer)
+                                await self.receive_state_from_peer(ph_coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.FULL_NODE_STATE_UPDATED:
                     # Note: this can take a while when we have a lot of transactions. We want to process these
                     # before new_peaks, since new_peak_wallet requires that we first obtain the state for that peak.
                     self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
-                    request: wallet_protocol.CoinStateUpdate = item.data[0]
+                    state_update_request: wallet_protocol.CoinStateUpdate = item.data[0]
                     peer = item.data[1]
                     assert peer is not None
-                    await self.state_update_received(request, peer)
+                    await self.state_update_received(state_update_request, peer)
                 elif item.item_type == NewPeakQueueTypes.NEW_PEAK_WALLET:
                     self.log.debug("Pulled from queue: %s %s", item.item_type, item.data[0])
                     # This can take a VERY long time, because it might trigger a long sync. It is OK if we miss some
                     # subscriptions or state updates, since all subscriptions and state updates will be handled by
                     # long_sync (up to the target height).
-                    request: wallet_protocol.NewPeakWallet = item.data[0]
+                    peak_request: wallet_protocol.NewPeakWallet = item.data[0]
                     peer = item.data[1]
                     assert peer is not None
-                    await self.new_peak_wallet(request, peer)
+                    await self.new_peak_wallet(peak_request, peer)
                 else:
                     self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)
                     assert False
@@ -476,7 +477,7 @@ class WalletNode:
                 if peer is not None:
                     await peer.close(9999)
 
-    def log_in(self, sk: PrivateKey):
+    def log_in(self, sk: PrivateKey) -> None:
         self.logged_in_fingerprint = sk.get_g1().get_fingerprint()
         self.logged_in = True
         self.log.info(f"Wallet is logged in using key with fingerprint: {self.logged_in_fingerprint}")
@@ -485,7 +486,7 @@ class WalletNode:
         except Exception:
             self.log.exception("Non-fatal: Unable to update last used fingerprint.")
 
-    def log_out(self):
+    def log_out(self) -> None:
         self.logged_in_fingerprint = None
         self.logged_in = False
 
@@ -512,11 +513,11 @@ class WalletNode:
         fingerprint_path = db_path.parent / "last_used_fingerprint"
         return fingerprint_path
 
-    def set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer) -> None:
         self._server = server
         self.initialize_wallet_peers()
 
-    def initialize_wallet_peers(self):
+    def initialize_wallet_peers(self) -> None:
         self.server.on_connect = self.on_connect
         network_name = self.config["selected_network"]
 
@@ -543,7 +544,7 @@ class WalletNode:
             )
             asyncio.create_task(self.wallet_peers.start())
 
-    def on_disconnect(self, peer: WSChiaConnection):
+    def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
             self.local_node_synced = False
             self.initialize_wallet_peers()
@@ -557,7 +558,7 @@ class WalletNode:
 
         self.wallet_state_manager.state_changed("close_connection")
 
-    async def on_connect(self, peer: WSChiaConnection):
+    async def on_connect(self, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:
             return None
 
@@ -583,7 +584,7 @@ class WalletNode:
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
 
-    async def perform_atomic_rollback(self, fork_height: int, cache: Optional[PeerRequestCache] = None):
+    async def perform_atomic_rollback(self, fork_height: int, cache: Optional[PeerRequestCache] = None) -> None:
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         # this is to start a write transaction
         async with self.wallet_state_manager.db_wrapper.writer():
@@ -616,7 +617,7 @@ class WalletNode:
         fork_height: int,
         *,
         rollback: bool,
-    ):
+    ) -> None:
         """
         Sync algorithm:
         - Download and verify weight proof (if not trusted)
@@ -735,7 +736,7 @@ class WalletNode:
                 cache.clear_after_height(fork_height)
                 self.log.info(f"clear_after_height {fork_height} for peer {peer}")
 
-        all_tasks: List[asyncio.Task] = []
+        all_tasks: List[asyncio.Task[None]] = []
         target_concurrent_tasks: int = 30
         concurrent_tasks_cs_heights: List[uint32] = []
 
@@ -747,7 +748,9 @@ class WalletNode:
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
 
-        async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
+        async def receive_and_validate(
+            inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]
+        ) -> None:
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -857,7 +860,7 @@ class WalletNode:
             return None
         return latest_timestamp
 
-    def is_trusted(self, peer) -> bool:
+    def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
@@ -976,7 +979,7 @@ class WalletNode:
 
         raise PeerRequestException("Error fetching timestamp from all peers")
 
-    async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
+    async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:
             # When logging out of wallet
             self.log.debug("state manager is None (shutdown)")
@@ -1031,7 +1034,9 @@ class WalletNode:
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.new_peak(new_peak)
 
-    async def new_peak_from_trusted(self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection):
+    async def new_peak_from_trusted(
+        self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection
+    ) -> None:
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
@@ -1094,7 +1099,7 @@ class WalletNode:
             return False
         return True
 
-    async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection):
+    async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> None:
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, new_peak_hb)
         old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
@@ -1130,7 +1135,7 @@ class WalletNode:
             self.long_sync(new_peak_hb.height, peer, fork_point, rollback=False)
         )
 
-    async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer) -> bool:
+    async def sync_from_untrusted_close_to_peak(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
         async with self.wallet_state_manager.lock:
             peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
             if peak_hb is None or new_peak_hb.weight > peak_hb.weight:
@@ -1214,7 +1219,7 @@ class WalletNode:
 
         return fork_height
 
-    async def update_ui(self):
+    async def update_ui(self) -> None:
         for wallet_id, wallet in self.wallet_state_manager.wallets.items():
             self.wallet_state_manager.state_changed("coin_removed", wallet_id)
             self.wallet_state_manager.state_changed("coin_added", wallet_id)
@@ -1630,7 +1635,7 @@ class WalletNode:
         return response.coin_states
 
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
-    async def push_tx(self, spend_bundle):
+    async def push_tx(self, spend_bundle: SpendBundle) -> None:
         msg = make_msg(
             ProtocolMessageTypes.send_transaction,
             wallet_protocol.SendTransaction(spend_bundle),
