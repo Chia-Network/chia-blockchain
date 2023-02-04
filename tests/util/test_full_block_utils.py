@@ -9,9 +9,9 @@ from blspy import G1Element, G2Element
 from benchmarks.utils import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,

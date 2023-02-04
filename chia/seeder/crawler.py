@@ -7,7 +7,7 @@ import time
 import traceback
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiosqlite
 
@@ -15,7 +15,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import NodeType
@@ -65,7 +65,7 @@ class Crawler:
         self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
-        self.state_changed_callback: Optional[Callable] = None
+        self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.crawl_store = None
         self.log = log
         self.peer_count = 0
@@ -89,7 +89,7 @@ class Crawler:
                 f"{self.minimum_version_count!r}"
             )
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:

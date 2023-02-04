@@ -17,6 +17,7 @@ from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
@@ -381,8 +382,6 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
 
-        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
-        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
         tx_amount = 3200000000000
         tx_fee = 10
         tx = await wallet.generate_signed_transaction(
@@ -409,6 +408,74 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, expected_confirmed_balance)
         await time_out_assert(5, wallet.get_unconfirmed_balance, expected_confirmed_balance)
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_wallet_make_transaction_with_memo(
+        self,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+        self_hostname: str,
+    ) -> None:
+        num_blocks = 2
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_1 = full_nodes[0]
+
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
+        api_1 = WalletRpcApi(wallet_node_2)
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+
+        expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+
+        tx_amount = 3200000000000
+        tx_fee = 10
+        ph_2 = await wallet_1.get_new_puzzlehash()
+        tx = await wallet.generate_signed_transaction(uint64(tx_amount), ph_2, uint64(tx_fee), memos=[ph_2])
+        tx_id = tx.name.hex()
+        assert tx.spend_bundle is not None
+
+        fees = tx.spend_bundle.fees()
+        assert fees == tx_fee
+
+        await wallet.push_transaction(tx)
+        await full_node_1.wait_transaction_records_entered_mempool(records=[tx])
+        memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
+        assert len(memos[tx_id]) == 1
+        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount - tx_fee
+
+        await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+
+        await time_out_assert(15, wallet_1.get_confirmed_balance, tx_amount)
+        for coin in tx.additions:
+            if coin.amount == tx_amount:
+                tx_id = coin.name().hex()
+        memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
+        assert len(memos[tx_id]) == 1
+        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
 
     @pytest.mark.parametrize(
         "trusted",
@@ -534,7 +601,7 @@ class TestWalletSimulator:
 
         # extract coin_spend from generated spend_bundle
         for cs in tx.spend_bundle.coin_spends:
-            if cs.additions() == []:
+            if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
         stolen_sb = await wallet.sign_transaction([stolen_cs])

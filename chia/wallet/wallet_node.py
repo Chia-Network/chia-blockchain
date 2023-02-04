@@ -9,7 +9,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
@@ -23,7 +23,7 @@ from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -94,7 +94,7 @@ class WalletNode:
 
     # Sync data
     proof_hashes: List = dataclasses.field(default_factory=list)
-    state_changed_callback: Optional[Callable] = None
+    state_changed_callback: Optional[StateChangedProtocol] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
     _weight_proof_handler: Optional[WalletWeightProofHandler] = None
     _server: Optional[ChiaServer] = None
@@ -324,7 +324,7 @@ class WalletNode:
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
         if self._wallet_state_manager is not None:
@@ -554,6 +554,8 @@ class WalletNode:
             self.synced_peers.remove(peer.peer_node_id)
         if peer.peer_node_id in self.node_peaks:
             self.node_peaks.pop(peer.peer_node_id)
+
+        self.wallet_state_manager.state_changed("close_connection")
 
     async def on_connect(self, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
@@ -1261,13 +1263,13 @@ class WalletNode:
         return weight_proof, summaries, block_records
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
-        all_puzzle_hashes = list(await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes())
+        all_puzzle_hashes = await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes()
         # Get all phs from interested store
         interested_puzzle_hashes = [
             t[0] for t in await self.wallet_state_manager.interested_store.get_interested_puzzle_hashes()
         ]
-        all_puzzle_hashes.extend(interested_puzzle_hashes)
-        return all_puzzle_hashes
+        all_puzzle_hashes.update(interested_puzzle_hashes)
+        return list(all_puzzle_hashes)
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
         all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
