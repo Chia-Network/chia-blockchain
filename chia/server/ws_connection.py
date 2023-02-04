@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -14,11 +15,11 @@ from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
 from typing_extensions import Protocol, final
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia.cmds.init_funcs import chia_full_version_str, get_version_numbers
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.shared_protocol import Capability, Handshake, limitedcapabilties
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -172,23 +173,23 @@ class WSChiaConnection:
         server_port: int,
         local_type: NodeType,
     ) -> None:
-        outbound_handshake = make_msg(
-            ProtocolMessageTypes.handshake,
-            Handshake(
-                network_id,
-                protocol_version,
-                chia_full_version_str(),
-                uint16(server_port),
-                uint8(local_type.value),
-                self.local_capabilities_for_handshake,
-            ),
-        )
         if self.is_outbound:
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version,
+                    chia_full_version_str(),
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
+            inbound_handshake: Handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
             # Handle case of invalid ProtocolMessageType
             try:
@@ -229,7 +230,22 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version,
+                    chia_full_version_str(),
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.get_capabilties_for_version(inbound_handshake.software_version),
+                ),
+            )
+
             await self._send_message(outbound_handshake)
+            self.version = inbound_handshake.software_version
+            self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -677,3 +693,19 @@ class WSChiaConnection:
 
     def has_capability(self, capability: Capability) -> bool:
         return capability in self.peer_capabilities
+
+    # only send limitedcapabilties to peers before 1.6.2
+    # see https://github.com/Chia-Network/chia-blockchain/commit/618f93b4c42b176659cc74c02a4dd711adc62052
+    # for why that version was selected
+    def get_capabilties_for_version(self, software_version: str) -> list[tuple[uint16, str]]:
+        major, minor, patch, _ = get_version_numbers(software_version)
+        patch_number = 0
+        try:
+            path_split = re.findall("[0-9]+", patch)  # extract number from patch string
+            if len(path_split) > 1:
+                patch_number = path_split[0]
+            if (int(major), int(minor), int(patch_number)) < (1, 6, 2):
+                return limitedcapabilties
+        except Exception:
+            self.log.error(f"could not parse incoming version {software_version}, returning limited capabilities")
+        return self.local_capabilities_for_handshake
