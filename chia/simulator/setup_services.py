@@ -147,6 +147,22 @@ async def setup_full_node(
     service.stop()
     await service.wait_closed()
     if db_path.exists():
+        import psutil
+
+        processes = []
+        for process in psutil.process_iter():
+            try:
+                if any(db_path.samefile(file.path) for file in process.open_files()):
+                    processes.append((process.pid, process.name()))
+            except psutil.Error:
+                pass
+        current_process = psutil.Process()
+        print(f" ==== current process: {current_process.pid:9} {current_process.name()}")
+        for pid, name in processes:
+            try:
+                print(f" ====         process: {pid:9} {name}")
+            except psutil.Error:
+                pass
         db_path.unlink()
 
 
