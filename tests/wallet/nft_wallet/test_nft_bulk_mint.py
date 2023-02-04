@@ -25,7 +25,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -752,11 +752,6 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
         assert not nft.minter_did
 
 
-async def await_sync(wallet_state_manager: WalletStateManager) -> None:
-    while await wallet_state_manager.synced() is False:
-        await asyncio.sleep(1)
-
-
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -893,7 +888,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
 
         for i in range(0, n, chunk):
-            await await_sync(wallet_node_maker.wallet_state_manager)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_maker, full_node_api)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
