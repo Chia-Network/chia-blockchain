@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
 from blspy import G1Element, G2Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
@@ -90,6 +91,116 @@ async def instantiate_mempool_manager(
     test_block_record = create_test_block_record()
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
+
+
+def make_test_conds(
+    *,
+    height_relative: Optional[uint32] = None,
+    height_absolute: uint32 = uint32(0),
+    seconds_relative: uint64 = uint64(0),
+    seconds_absolute: uint64 = uint64(0),
+) -> SpendBundleConditions:
+    return SpendBundleConditions(
+        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, [], [], 0)],
+        0,
+        height_absolute,
+        seconds_absolute,
+        [],
+        0,
+    )
+
+
+class TestCheckTimeLocks:
+
+    COIN_CONFIRMED_HEIGHT = uint32(10)
+    COIN_TIMESTAMP = uint64(10000)
+    PREV_BLOCK_HEIGHT = uint32(15)
+    PREV_BLOCK_TIMESTAMP = uint64(10150)
+
+    COIN_RECORD = CoinRecord(
+        TEST_COIN,
+        confirmed_block_index=uint32(COIN_CONFIRMED_HEIGHT),
+        spent_block_index=uint32(0),
+        coinbase=False,
+        timestamp=COIN_TIMESTAMP,
+    )
+    REMOVALS: Dict[bytes32, CoinRecord] = {TEST_COIN.name(): COIN_RECORD}
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # the coin is 5 blocks old in this test
+            (5, None),
+            (6, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        ],
+    )
+    def test_height_relative(
+        self,
+        value: uint32,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(height_relative=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # The block height is 15
+            (15, None),
+            (16, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        ],
+    )
+    def test_height_absolute(
+        self,
+        value: uint32,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(height_absolute=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # the coin is 150 seconds old in this test
+            (150, None),
+            (151, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        ],
+    )
+    def test_seconds_relative(
+        self,
+        value: uint64,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(seconds_relative=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # The block timestamp is 10150
+            (10150, None),
+            (10151, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        ],
+    )
+    def test_seconds_absolute(
+        self,
+        value: uint64,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(seconds_absolute=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
 
 
 def test_compute_assert_height() -> None:
