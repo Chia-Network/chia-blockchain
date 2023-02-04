@@ -148,6 +148,8 @@ async def setup_full_node(
     service.stop()
     await service.wait_closed()
     if db_path.exists():
+        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+        gc.collect()
         db_path.unlink()
 
 
@@ -219,8 +221,6 @@ async def setup_wallet_node(
         service.stop()
         await service.wait_closed()
         if db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-            gc.collect()
             db_path.unlink()
         keychain.delete_all_keys()
 
