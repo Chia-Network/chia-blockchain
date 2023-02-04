@@ -508,7 +508,7 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
-    async def synced(self):
+    async def synced(self) -> bool:
         if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
@@ -516,7 +516,7 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if "simulator" in self.config.get("selected_network"):
+        if "simulator" in self.config.get("selected_network", ""):
             return True  # sim is always synced if we have a genesis block.
 
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
