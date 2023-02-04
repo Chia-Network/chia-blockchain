@@ -147,6 +147,7 @@ async def setup_full_node(
     service.stop()
     await service.wait_closed()
     if db_path.exists():
+        import gc
         import psutil
 
         processes = []
@@ -163,6 +164,8 @@ async def setup_full_node(
                 print(f" ====         process: {pid:9} {name}")
             except psutil.Error:
                 pass
+
+        gc.collect()
         db_path.unlink()
 
 
