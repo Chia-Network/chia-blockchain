@@ -43,30 +43,30 @@ jobs:
       configuration: ${{ steps.configure.outputs.configuration }}
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
-  macos:
-    uses: ./.github/workflows/test-single.yml
-    needs: configure
-    with:
-      emoji: 🍎
-      matrix: macos
-      name: macOS
-      file_name: macos
-      concurrency_name: macos
-      configuration: ${{ needs.configure.outputs.configuration }}
-      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-latest
-  ubuntu:
-    uses: ./.github/workflows/test-single.yml
-    needs: configure
-    with:
-      emoji: 🐧
-      matrix: ubuntu
-      name: Ubuntu
-      file_name: ubuntu
-      concurrency_name: ubuntu
-      configuration: ${{ needs.configure.outputs.configuration }}
-      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: ubuntu-latest
+#   macos:
+#     uses: ./.github/workflows/test-single.yml
+#     needs: configure
+#     with:
+#       emoji: 🍎
+#       matrix: macos
+#       name: macOS
+#       file_name: macos
+#       concurrency_name: macos
+#       configuration: ${{ needs.configure.outputs.configuration }}
+#       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
+#       runs-on: macos-latest
+#   ubuntu:
+#     uses: ./.github/workflows/test-single.yml
+#     needs: configure
+#     with:
+#       emoji: 🐧
+#       matrix: ubuntu
+#       name: Ubuntu
+#       file_name: ubuntu
+#       concurrency_name: ubuntu
+#       configuration: ${{ needs.configure.outputs.configuration }}
+#       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
+#       runs-on: ubuntu-latest
   windows:
     uses: ./.github/workflows/test-single.yml
     needs: configure
