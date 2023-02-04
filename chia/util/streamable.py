@@ -328,6 +328,8 @@ def recurse_jsonify(d: Any) -> Any:
         return d
     elif isinstance(d, int):
         return int(d)
+    elif isinstance(d, float):
+        return float(d)
     elif d is None or type(d) == str:
         return d
     elif hasattr(d, "to_json_dict"):
