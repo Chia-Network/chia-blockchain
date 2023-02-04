@@ -556,6 +556,9 @@ wallet:
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
 
+  # Reset wallet sync data on start for given fingerprint
+  reset_sync_for_fingerprint: null
+
   # After n received unspent transactions, the spam filter will be enabled, which will filter out received
   # coins with very small value. Any standard TX under xch_spam_amount is filtered
   spam_filter_after_n_txs: 200

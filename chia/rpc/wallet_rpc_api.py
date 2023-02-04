@@ -101,6 +101,7 @@ class WalletRpcApi:
             "/check_delete_key": self.check_delete_key,
             "/delete_all_keys": self.delete_all_keys,
             # Wallet node
+            "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
@@ -493,6 +494,23 @@ class WalletRpcApi:
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
+    async def set_wallet_resync_on_startup(self, request) -> Dict[str, Any]:
+        """
+        Resync the current logged in wallet. The transaction and offer records will be kept.
+        :param request: optionally pass in `enable` as bool to enable/disable resync
+        :return:
+        """
+        assert self.service.wallet_state_manager is not None
+        try:
+            enable = bool(request.get("enable", True))
+        except ValueError:
+            raise ValueError("Please provide a boolean value for `enable` parameter in request")
+        fingerprint = self.service.logged_in_fingerprint
+        if fingerprint is not None:
+            self.service.set_resync_on_startup(fingerprint, enable)
+        else:
+            raise ValueError("You need to login into wallet to use this RPC call")
+        return {"success": True}
 
     async def get_sync_status(self, request: Dict) -> EndpointResult:
         sync_mode = self.service.wallet_state_manager.sync_mode

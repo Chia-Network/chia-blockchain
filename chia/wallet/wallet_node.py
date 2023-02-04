@@ -9,8 +9,9 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+import aiosqlite
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
@@ -38,7 +39,13 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof
 from chia.util.chunks import chunks
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.config import (
+    WALLET_PEERS_PATH_KEY_DEPRECATED,
+    lock_and_load_config,
+    process_config_start_method,
+    save_config,
+)
+from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
@@ -225,6 +232,93 @@ class WalletNode:
 
         return key
 
+    def set_resync_on_startup(self, fingerprint: int, enabled: bool = True) -> None:
+        with lock_and_load_config(self.root_path, "config.yaml") as config:
+            if enabled is True:
+                config["wallet"]["reset_sync_for_fingerprint"] = fingerprint
+                self.log.info("Enabled resync for wallet fingerprint: %s", fingerprint)
+            else:
+                self.log.debug(
+                    "Trying to disable resync: %s [%s]", fingerprint, config["wallet"].get("reset_sync_for_fingerprint")
+                )
+                if config["wallet"].get("reset_sync_for_fingerprint") == fingerprint:
+                    del config["wallet"]["reset_sync_for_fingerprint"]
+                    self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
+            save_config(self.root_path, "config.yaml", config)
+
+    async def reset_sync_db(self, db_path: Union[Path, str], fingerprint: int) -> bool:
+        conn: aiosqlite.Connection
+        # are not part of core wallet tables, but might appear later
+        ignore_tables = {"lineage_proofs_", "sqlite_"}
+        required_tables = [
+            "coin_record",
+            "transaction_record",
+            "derivation_paths",
+            "users_wallets",
+            "users_nfts",
+            "action_queue",
+            "all_notification_ids",
+            "key_val_store",
+            "trade_records",
+            "pool_state_transitions",
+            "singleton_records",
+            "mirrors",
+            "launchers",
+            "interested_coins",
+            "interested_puzzle_hashes",
+            "unacknowledged_asset_tokens",
+            "coin_of_interest_to_trade_record",
+            "notifications",
+            "retry_store",
+        ]
+
+        async with manage_connection(db_path) as conn:
+            self.log.info("Resetting wallet sync data...")
+            rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
+            names = set([x[0] for x in rows])
+            names = names - set(required_tables)
+            for name in names:
+                for ignore_name in ignore_tables:
+                    if name.startswith(ignore_name):
+                        break
+                else:
+                    self.log.error(
+                        f"Mismatch in expected schema to reset, found unexpected table: {name}. "
+                        "Please check if you've run all migration scripts."
+                    )
+                    return False
+
+            await conn.execute("BEGIN")
+            commit = True
+            tables = [row[0] for row in rows]
+            try:
+                if "coin_record" in tables:
+                    await conn.execute("DELETE FROM coin_record")
+                if "interested_coins" in tables:
+                    await conn.execute("DELETE FROM interested_coins")
+                if "interested_puzzle_hashes" in tables:
+                    await conn.execute("DELETE FROM interested_puzzle_hashes")
+                if "key_val_store" in tables:
+                    await conn.execute("DELETE FROM key_val_store")
+                if "users_nfts" in tables:
+                    await conn.execute("DELETE FROM users_nfts")
+            except aiosqlite.Error:
+                self.log.exception("Error resetting sync tables")
+                commit = False
+            finally:
+                try:
+                    if commit:
+                        self.log.info("Reset wallet sync data completed.")
+                        await conn.execute("COMMIT")
+                    else:
+                        self.log.info("Reverting reset resync changes")
+                        await conn.execute("ROLLBACK")
+                except aiosqlite.Error:
+                    self.log.exception("Error finishing reset resync db")
+                # disable the resync in any case
+                self.set_resync_on_startup(fingerprint, False)
+            return commit
+
     async def _start(self) -> None:
         await self._start_with_fingerprint()
 
@@ -236,16 +330,19 @@ class WalletNode:
         # Delayed instantiation until here to avoid errors.
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
-
+        if not fingerprint:
+            fingerprint = self.get_last_used_fingerprint()
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint())
+        private_key = await self.get_private_key(fingerprint)
         if private_key is None:
             self.log_out()
             return False
-
+        # override with private key fetched in case it's different from what was passed
+        if fingerprint is None:
+            fingerprint = private_key.get_g1().get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -255,8 +352,10 @@ class WalletNode:
         if self.config.get("enable_memory_profiler", False):
             asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
 
-        path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
+        path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
+        if self.config.get("reset_sync_for_fingerprint") == fingerprint:
+            await self.reset_sync_db(path, fingerprint)
 
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
