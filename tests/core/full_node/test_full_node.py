@@ -902,8 +902,11 @@ class TestFullNodeProtocol:
                 not_included_tx += 1
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
 
-        assert included_tx > 0
-        assert not_included_tx == 3
+        # these numbers reflect the capacity of the mempool. In these
+        # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
+        # and MAX_BLOCK_COST_CLVM
+        assert included_tx == 23
+        assert not_included_tx == 10
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
