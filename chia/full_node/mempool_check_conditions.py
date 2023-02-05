@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia_rs import LIMIT_STACK, MEMPOOL_MODE, NO_NEG_DIV
+from chia_rs import LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_chia_program
 from clvm.casts import int_from_bytes
@@ -49,12 +49,9 @@ def get_name_puzzle_conditions(
     if mempool_mode:
         flags = MEMPOOL_MODE
     elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
-        flags = NO_NEG_DIV | LIMIT_STACK
+        flags = LIMIT_STACK
     else:
-        # conditions must use integers in canonical encoding (i.e. no redundant
-        # leading zeros)
-        # the division operator may not be used with negative operands
-        flags = NO_NEG_DIV
+        flags = 0
 
     try:
         err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
