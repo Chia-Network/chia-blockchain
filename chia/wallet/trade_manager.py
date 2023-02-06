@@ -576,7 +576,7 @@ class TradeManager:
                 [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
             )
 
-            offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
+            offer = Offer(notarized_payments, total_spend_bundle, driver_dict, old)
             return True, offer, None
 
         except Exception as e:
@@ -822,7 +822,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee, old
                 )
         return None
 

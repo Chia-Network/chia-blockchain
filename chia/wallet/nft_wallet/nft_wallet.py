@@ -1061,7 +1061,7 @@ class NFTWallet:
         # Finally, assemble the tx records properly
         txs_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None])
         aggregate_bundle = SpendBundle.aggregate([txs_bundle, *additional_bundles])
-        offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
+        offer = Offer(notarized_payments, aggregate_bundle, driver_dict, old)
         return offer
 
     async def set_bulk_nft_did(
