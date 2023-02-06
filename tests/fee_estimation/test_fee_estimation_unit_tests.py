@@ -150,12 +150,12 @@ def test_get_bucket_index() -> None:
 
 
 def test_monotonically_decrease() -> None:
-    inputs: List[List[int]]
-    output: List[List[int]]
+    inputs: List[List[float]]
+    output: List[List[float]]
     inputs = [[], [-1], [0], [1], [0, 0], [0, 1], [1, 0], [1, 2, 3], [1, 1, 1], [3, 2, 1], [3, 3, 1], [1, 3, 3]]
     output = [[], [-1], [0], [1], [0, 0], [0, 0], [1, 0], [1, 1, 1], [1, 1, 1], [3, 2, 1], [3, 3, 1], [1, 1, 1]]
-    i: List[int]
-    o: List[int]
+    i: List[float]
+    o: List[float]
     for i, o in zip(inputs, output):
         print(o, i)
         assert o == make_monotonically_decreasing(i)
