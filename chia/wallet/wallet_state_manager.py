@@ -43,6 +43,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
+from chia.wallet.dao_wallet.dao_utils import match_treasury_puzzle, match_proposal_puzzle
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -665,6 +666,18 @@ class WalletStateManager:
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
+        # Check if the coin is a Treasury
+        breakpoint()
+        dao_curried_args = match_treasury_puzzle(uncurried)
+        if dao_curried_args is not None:
+            breakpoint()
+            return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
+        # Check if the coin is a Proposal
+        dao_curried_args = match_proposal_puzzle(uncurried)
+        if dao_curried_args is not None:
+            return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None, None
@@ -892,6 +905,62 @@ class WalletStateManager:
                 p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
                 minter_did = bytes32(bytes(singleton_struct.rest().first())[1:])
         return minter_did
+
+    async def handle_dao_treasury(
+        self,
+        uncurried_args: Iterator[Program],
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend
+    ):
+        self.log.info("Entering dao_treasury handling in WalletStateManager")
+        breakpoint()
+        (
+            singleton_struct,
+            DAO_TREASURY_MOD_HASH,
+            DAO_PROPOSAL_MOD_HASH,
+            DAO_PROPOSAL_TIMER_MOD_HASH,
+            DAO_LOCKUP_MOD_HASH,
+            CAT_MOD_HASH,
+            cat_tail_hash,
+            current_cat_issuance,
+            attendance_required_percentage,
+            proposal_pass_percentage,
+            proposal_timelock,
+        ) = uncurried_args
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.DAO:
+                assert isinstance(wallet, DAOWallet)
+                if wallet.dao_info.treasury_id == singleton_struct.rest().first().as_atom():
+                    return wallet.id(), WalletType(wallet.type())
+        return None, None
+
+    async def handle_dao_proposal(
+        self,
+        uncurried_args: Iterator[Program],
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend
+    ):
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            TREASURY_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+            TOTAL_VOTES,  # how many people responded
+            INNERPUZ,
+        ) = uncurried_args
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.DAO:
+                assert isinstance(wallet, DAOWallet)
+                if wallet.dao_info.treasury_id == TREASURY_ID.as_atom():
+                    return wallet.id(), WalletType(wallet.type())
+        return None, None
 
     async def handle_nft(
         self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState, coin_state: CoinState
@@ -1234,9 +1303,11 @@ class WalletStateManager:
                                     )
 
                         # This debug stmt may have to move
-                        print(self.interested_coin_cache[coin_name])
-                        print(self.interested_ph_cache[coin.puzzle_hash])
+                        # print(self.interested_coin_cache[coin_name])
+                        # print(self.interested_ph_cache[coin.puzzle_hash])
+                        # breakpoint()
                         if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
+                            breakpoint()
                             wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
                                 singleton_wallet = self.get_wallet(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Iterator
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -9,6 +9,7 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_fullpuz
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
@@ -429,3 +430,31 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
 def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_PUZHASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
+
+
+# This is for use in the WalletStateManager to determine the type of coin received
+def match_treasury_puzzle(puzzle: UncurriedPuzzle) -> Program:
+    """
+    Given the curried puzzle and args, test if it's a CAT and,
+    if it is, return the curried arguments
+    """
+    if puzzle.mod == DAO_TREASURY_MOD:
+        ret: Iterator[Program] = puzzle.args.first().as_iter()
+        breakpoint()
+        return ret
+    else:
+        breakpoint()
+        return None
+
+
+# This is for use in the WalletStateManager to determine the type of coin received
+def match_proposal_puzzle(puzzle: UncurriedPuzzle) -> Program:
+    """
+    Given the curried puzzle and args, test if it's a CAT and,
+    if it is, return the curried arguments
+    """
+    if puzzle.mod == DAO_PROPOSAL_MOD:
+        ret: Iterator[Program] = puzzle.args.as_iter()
+        return ret
+    else:
+        return None
