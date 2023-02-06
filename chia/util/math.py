@@ -7,7 +7,7 @@ def clamp(n: int, smallest: int, largest: int) -> int:
     return max(smallest, min(n, largest))
 
 
-def monotonically_decrease(seq: List[int]) -> List[int]:
+def make_monotonically_decreasing(seq: List[int]) -> List[int]:
     out: List[int] = []
     if len(seq) > 0:
         min = seq[0]

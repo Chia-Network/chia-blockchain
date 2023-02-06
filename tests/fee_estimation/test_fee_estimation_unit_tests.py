@@ -17,7 +17,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.fee_rate import FeeRateV2
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32, uint64
-from chia.util.math import monotonically_decrease
+from chia.util.math import make_monotonically_decreasing
 
 log = logging.getLogger(__name__)
 
@@ -158,4 +158,4 @@ def test_monotonically_decrease() -> None:
     o: List[int]
     for i, o in zip(inputs, output):
         print(o, i)
-        assert o == monotonically_decrease(i)
+        assert o == make_monotonically_decreasing(i)
