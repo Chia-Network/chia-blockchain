@@ -57,7 +57,8 @@ dev_dependencies = [
     "twine",
     "isort",
     "flake8",
-    "mypy",
+    # TODO: remove this pin after fixing the new complaints
+    "mypy<1",
     "black==22.10.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
