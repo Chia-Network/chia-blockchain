@@ -380,7 +380,7 @@ class Offer:
         total_bundle = SpendBundle([], G2Element())
         total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
         old: bool = False
-        for offer in offers:
+        for i, offer in enumerate(offers):
             # First check for any overlap in inputs
             total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
             offer_inputs: Set[Coin] = {cs.coin for cs in offer.bundle.coin_spends}
@@ -400,7 +400,11 @@ class Offer:
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
             total_driver_dict.update(offer.driver_dict)
-            old = old | offer.old
+            if i == 0:
+                old = offer.old
+            else:
+                if offer.old != old:
+                    raise ValueError("Attempting to aggregate two offers with different mods")
 
         return cls(total_requested_payments, total_bundle, total_driver_dict, old)
 
