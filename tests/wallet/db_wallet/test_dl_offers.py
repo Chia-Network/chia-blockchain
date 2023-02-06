@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import sys
 from typing import Any, List, Tuple
 
 import pytest
-import sys
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.simulator.time_out_assert import time_out_assert

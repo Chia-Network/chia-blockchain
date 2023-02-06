@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import sys
 from secrets import token_bytes
 from typing import Any, Dict, Optional
 
 import pytest
-import sys
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.full_node_simulator import FullNodeSimulator
