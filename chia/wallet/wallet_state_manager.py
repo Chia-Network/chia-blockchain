@@ -666,15 +666,13 @@ class WalletStateManager:
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
-        # Check if the coin is a Treasury
-        breakpoint()
-        dao_curried_args = match_treasury_puzzle(uncurried)
+        dao_curried_args = match_treasury_puzzle(uncurried.mod, uncurried.args)
         if dao_curried_args is not None:
             breakpoint()
             return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
         # Check if the coin is a Proposal
-        dao_curried_args = match_proposal_puzzle(uncurried)
+        dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
         if dao_curried_args is not None:
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 

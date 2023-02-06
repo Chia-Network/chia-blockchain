@@ -433,28 +433,38 @@ def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
-def match_treasury_puzzle(puzzle: UncurriedPuzzle) -> Program:
+def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
     """
-    Given the curried puzzle and args, test if it's a CAT and,
-    if it is, return the curried arguments
+        Given a puzzle test if it's a Treasury, if it is, return the curried arguments
+    :param puzzle: Puzzle
+    :return: Curried parameters
     """
-    if puzzle.mod == DAO_TREASURY_MOD:
-        ret: Iterator[Program] = puzzle.args.first().as_iter()
-        breakpoint()
-        return ret
-    else:
-        breakpoint()
-        return None
+    try:
+        if mod == SINGLETON_MOD:
+            mod, curried_args = curried_args.rest().first().uncurry()
+            if mod == DAO_TREASURY_MOD:
+                return curried_args.first().as_iter()
+    except Exception:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+    return None
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
-def match_proposal_puzzle(puzzle: UncurriedPuzzle) -> Program:
+def match_proposal_puzzle(mod: Program, curried_args: Program) -> Program:
     """
-    Given the curried puzzle and args, test if it's a CAT and,
-    if it is, return the curried arguments
+        Given a puzzle test if it's a Proposal, if it is, return the curried arguments
+    :param puzzle: Puzzle
+    :return: Curried parameters
     """
-    if puzzle.mod == DAO_PROPOSAL_MOD:
-        ret: Iterator[Program] = puzzle.args.as_iter()
-        return ret
-    else:
-        return None
+    try:
+        if mod == SINGLETON_MOD:
+            mod, curried_args = curried_args.rest().first().uncurry()
+            if mod == DAO_PROPOSAL_MOD:
+                return curried_args.as_iter()
+    except Exception:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+    return None
