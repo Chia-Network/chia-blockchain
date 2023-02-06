@@ -33,6 +33,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.data_layer.downloader import DLDownloader
 from chia.rpc.rpc_server import default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -58,6 +59,7 @@ class DataLayer:
     none_bytes: bytes32
     lock: asyncio.Lock
     _server: Optional[ChiaServer]
+    downloaders: List[DLDownloader]
 
     @property
     def server(self) -> ChiaServer:
@@ -73,6 +75,7 @@ class DataLayer:
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
+        downloaders: List[DLDownloader],
         name: Optional[str] = None,
     ):
         if name == "":
@@ -96,6 +99,7 @@ class DataLayer:
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()
         self._server = None
+        self.downloaders = downloaders
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
@@ -352,6 +356,7 @@ class DataLayer:
         random.shuffle(servers_info)
         for server_info in servers_info:
             url = server_info.url
+
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
@@ -375,7 +380,6 @@ class DataLayer:
                 min_generation=uint32(root.generation + 1),
                 max_generation=singleton_record.generation,
             )
-
             try:
                 timeout = self.config.get("client_timeout", 15)
                 proxy_url = self.config.get("proxy_url", None)
@@ -389,6 +393,7 @@ class DataLayer:
                     timeout,
                     self.log,
                     proxy_url,
+                    self.get_downloader(url),
                 )
                 if success:
                     self.log.info(
@@ -403,6 +408,16 @@ class DataLayer:
                 self.log.warning(f"Server {url} unavailable for {tree_id}.")
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
+
+    def get_downloader(self, url):
+        # todo go through all downloaders and find one that handles the url
+        downloader: Optional[DLDownloader] = None
+        for d in self.downloaders:
+            if d.check_url(url, self.log):
+                downloader = d
+        # todo throw good exception
+        assert downloader is not None
+        return downloader
 
     async def upload_files(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)

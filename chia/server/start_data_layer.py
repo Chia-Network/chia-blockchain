@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
+from chia.data_layer.downloader import HttpDownloader
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -42,7 +43,9 @@ def create_data_layer_service(
         wallet_root_path = wallet_service.root_path
         wallet_config = wallet_service.config
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
-    data_layer = DataLayer(config=service_config, root_path=root_path, wallet_rpc_init=wallet_rpc_init)
+    data_layer = DataLayer(
+        config=service_config, root_path=root_path, wallet_rpc_init=wallet_rpc_init, downloaders=[HttpDownloader()]
+    )
     api = DataLayerAPI(data_layer)
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
