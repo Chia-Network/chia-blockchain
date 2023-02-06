@@ -3,18 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from clvm.casts import int_from_bytes
-
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
-from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin, get_spends_for_block
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -27,7 +23,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
-from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 
 
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
@@ -432,16 +427,7 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
-        block_program, block_program_args = setup_generator_args(block_generator)
-        _, coin_spends = DECOMPRESS_BLOCK_SPENDS.run_with_cost(
-            self.service.constants.MAX_BLOCK_COST_CLVM, block_program, block_program_args
-        )
-
-        for spend in coin_spends.as_iter():
-            parent, puzzle, amount, solution = spend.as_iter()
-            puzzle_hash = puzzle.get_tree_hash()
-            coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-            spends.append(CoinSpend(coin, puzzle, solution))
+        spends = get_spends_for_block(block_generator)
 
         return {"block_spends": spends}
 
