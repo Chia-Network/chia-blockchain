@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -462,8 +463,10 @@ class TestWalletSimulator:
         await wallet.push_transaction(tx)
         await full_node_1.wait_transaction_records_entered_mempool(records=[tx])
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
+        # test json serialization
+        json.dumps(memos)
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
+        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount - tx_fee
 
@@ -475,7 +478,7 @@ class TestWalletSimulator:
                 tx_id = coin.name().hex()
         memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
+        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
 
     @pytest.mark.parametrize(
         "trusted",

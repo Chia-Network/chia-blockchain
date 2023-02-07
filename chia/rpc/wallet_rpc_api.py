@@ -878,7 +878,12 @@ class WalletRpcApi:
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
         assert tr.spend_bundle is not None
-        return {transaction_id.hex(): compute_memos(tr.spend_bundle)}
+        memos: Dict[bytes32, List[bytes]] = compute_memos(tr.spend_bundle)
+        response = {}
+        # Convert to hex string
+        for coin_id, memo_list in memos.items():
+            response[coin_id.hex()] = [memo.hex() for memo in memo_list]
+        return {transaction_id.hex(): response}
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
