@@ -1,19 +1,14 @@
 # General puzzle wrapper
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from typing_extensions import Protocol
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.clawback.clawback_puzzle_decorator import ClawbackPuzzleDecorator
-
-
-class PuzzleDecoratorType(Enum):
-    # Puzzle Decorator Types
-    CLAWBACK = 1
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 
 
 class PuzzleDecoratorProtocol(Protocol):
@@ -40,28 +35,26 @@ class PuzzleDecoratorProtocol(Protocol):
 
 
 class PuzzleDecoratorManager:
-    # Clawback
+
     decorator_list: List[PuzzleDecoratorProtocol]
 
     @staticmethod
-    def create(config: Dict[str, Any], fingerprint: Optional[int]) -> PuzzleDecoratorManager:
+    def create(config: List[Dict[str, Any]]) -> PuzzleDecoratorManager:
         """
         Create a new puzzle decorator manager
         :param config: Config
-        :param fingerprint: Fingerprint
         :return:
         """
         self = PuzzleDecoratorManager()
         self.decorator_list = []
-        assert fingerprint is not None
-        decorator_config: Dict[int, List[str]] = config.get("puzzle_decorators", {})
-        print(f"Initial puzzle decorator: {decorator_config}")
-        if fingerprint in decorator_config:
-            for decorator in decorator_config.get(fingerprint, []):
-                if decorator == PuzzleDecoratorType.CLAWBACK.name:
-                    self.decorator_list.append(ClawbackPuzzleDecorator.create(config))
-                else:
-                    raise ValueError(f"Unknown puzzle decorator type: {decorator}")
+        for decorator in config:
+            if "decorator" not in decorator:
+                raise ValueError(f"Undefined decorator: {decorator}")
+            decorator_name = decorator["decorator"]
+            if decorator_name == PuzzleDecoratorType.CLAWBACK.name:
+                self.decorator_list.append(ClawbackPuzzleDecorator.create(decorator))
+            else:
+                raise ValueError(f"Unknown puzzle decorator type: {decorator}")
         return self
 
     def decorate(self, inner_puzzle: Program) -> Program:

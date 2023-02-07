@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sqlite3
 from typing import Dict, List, Optional, Set
 
@@ -92,7 +91,7 @@ class WalletMerkleCoinStore:
                     int(record.spent),
                     int(record.coin_type),
                     str(record.coin.puzzle_hash.hex()),
-                    json.dumps(record.metadata),
+                    record.metadata,
                     str(record.coin.parent_coin_info.hex()),
                     bytes(uint64(record.coin.amount)),
                     record.wallet_type,
@@ -119,16 +118,16 @@ class WalletMerkleCoinStore:
             )
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletMerkleCoinRecord:
-        coin = Coin(bytes32.fromhex(row[6]), bytes32.fromhex(row[5]), uint64.from_bytes(row[7]))
+        coin = Coin(bytes32.fromhex(row[7]), bytes32.fromhex(row[5]), uint64.from_bytes(row[8]))
         return WalletMerkleCoinRecord(
             coin,
             uint32(row[1]),
             uint32(row[2]),
             bool(row[3]),
             row[4],
-            json.loads(row[6]),
-            WalletType(row[8]),
-            row[9],
+            row[6],
+            WalletType(row[9]),
+            row[10],
         )
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletMerkleCoinRecord]:

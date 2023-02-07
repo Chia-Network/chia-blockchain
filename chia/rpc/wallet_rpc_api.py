@@ -4,6 +4,7 @@ import asyncio
 import dataclasses
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
@@ -60,6 +61,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.clawback.cb_puzzles import generate_clawback_spend_bundle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -68,11 +70,13 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.merkle_utils import MerkleCoinType
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_merkle_coin_record import WalletMerkleCoinRecord
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -124,6 +128,7 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
+            "/clawback_transaction": self.clawback_transaction,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -950,6 +955,7 @@ class WalletRpcApi:
                 max_coin_amount=max_coin_amount,
                 exclude_coin_amounts=exclude_coin_amounts,
                 exclude_coins=exclude_coins,
+                puzzle_decorator_override=request.get("puzzle_decorator", None),
             )
             await wallet.push_transaction(tx)
 
@@ -979,6 +985,69 @@ class WalletRpcApi:
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
+
+    async def clawback_transaction(self, request) -> EndpointResult:
+        if "merkle_coin_id" not in request:
+            raise ValueError("Merkle coin ID is required.")
+        coin_id = bytes32.from_hexstr(request["merkle_coin_id"])
+        # Get inner puzzle
+        merkle_record: Optional[
+            WalletMerkleCoinRecord
+        ] = await self.service.wallet_state_manager.merkle_coin_store.get_coin_record(coin_id)
+        if merkle_record is None:
+            raise ValueError(f"Cannot find merkle coin f{coin_id.hex()}")
+        metadata = json.loads(merkle_record.metadata)
+        if merkle_record.coin_type != MerkleCoinType.CLAWBACK.value:
+            raise ValueError(f"Coin {coin_id.hex()} is not a Clawback coin.")
+        if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
+            raise ValueError("Only support standard XCH wallet.")
+        sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
+        recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
+        derivation_record = await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            sender_puzhash
+        )
+        if derivation_record is None or metadata["is_recipient"]:
+            raise ValueError(f"You are not the sender of coin {coin_id.hex()}")
+        inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+        inner_solution: Program = self.service.wallet_state_manager.main_wallet.make_solution(
+            primaries=[
+                {
+                    "puzzlehash": sender_puzhash,
+                    "amount": uint64(merkle_record.coin.amount),
+                    "memos": [recipient_puzhash],
+                }
+            ]
+        )
+        coin_spend = generate_clawback_spend_bundle(merkle_record.coin, metadata, inner_puzzle, inner_solution)
+        spend_bundle = await self.service.wallet_state_manager.main_wallet.sign_transaction([coin_spend])
+        # TODO Add tx fee
+        now = uint64(int(time.time()))
+        add_list: List[Coin] = list(spend_bundle.additions())
+        rem_list: List[Coin] = list(spend_bundle.removals())
+        # TODO Not sure if we should show this tx in the XCH wallet since it will receive another one
+        tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=sender_puzhash,
+            amount=uint64(merkle_record.coin.amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=add_list,
+            removals=rem_list,
+            wallet_id=uint32(0),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+            memos=list(compute_memos(spend_bundle).items()),
+        )
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {
+            "transaction": tx.to_json_dict_convenience(self.service.config),
+            "transaction_id": tx.name.hex(),
+        }
 
     async def delete_unconfirmed_transactions(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

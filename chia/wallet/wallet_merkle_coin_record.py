@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -22,7 +21,7 @@ class WalletMerkleCoinRecord:
     spent_block_height: uint32
     spent: bool
     coin_type: int
-    metadata: Dict[str, Any]
+    metadata: str
     wallet_type: WalletType
     wallet_id: int
 

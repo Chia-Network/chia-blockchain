@@ -40,6 +40,7 @@ from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -316,12 +317,15 @@ class Wallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
     ) -> List[CoinSpend]:
         """
         Generates an unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
-
+        decorator_manager: PuzzleDecoratorManager = self.wallet_state_manager.decorator_manager
+        if puzzle_decorator_override is not None:
+            decorator_manager = PuzzleDecoratorManager.create(puzzle_decorator_override)
         if primaries_input is None:
             primaries: Optional[List[AmountWithPuzzlehash]] = None
             total_amount = amount + fee
@@ -389,15 +393,18 @@ class Wallet:
                 origin_id = coin.name()
                 public_key = await self.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
                 inner_puzzle = puzzle_for_pk(public_key)
-                decorated_target_puzhash = self.wallet_state_manager.decorator_manager.decorate_target_puzhash(
-                    inner_puzzle, newpuzzlehash
-                )
-                print(f" prev {newpuzzlehash.hex()} new {decorated_target_puzhash.hex()}")
-                memos = self.wallet_state_manager.decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
+                decorated_target_puzhash = decorator_manager.decorate_target_puzhash(inner_puzzle, newpuzzlehash)
+                target_primary = {}
+                memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
                 assert memos is not None
                 if primaries is None:
                     if amount > 0:
                         primaries = [{"puzzlehash": decorated_target_puzhash, "amount": uint64(amount), "memos": memos}]
+                        target_primary = {
+                            "puzzlehash": newpuzzlehash,
+                            "amount": uint64(amount),
+                            "memos": memos,
+                        }
                     else:
                         primaries = []
                 else:
@@ -410,7 +417,6 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                print(f"Coin puzhash {coin.puzzle_hash.hex()}, Puzhash: {puzzle.get_tree_hash().hex()}")
                 assert puzzle.get_tree_hash() == coin.puzzle_hash
                 solution: Program = self.make_solution(
                     primaries=primaries,
@@ -419,7 +425,7 @@ class Wallet:
                     coin_announcements_to_assert=coin_announcements_bytes,
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
-                solution = self.wallet_state_manager.decorator_manager.solve(inner_puzzle, primaries, solution)
+                solution = decorator_manager.solve(inner_puzzle, [target_primary], solution)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
                 spends.append(
                     CoinSpend(
@@ -438,7 +444,7 @@ class Wallet:
             inner_puzzle = puzzle_for_pk(public_key)
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
-            solution = self.wallet_state_manager.decorator_manager.solve(inner_puzzle, [], solution)
+            solution = decorator_manager.solve(inner_puzzle, [], solution)
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
@@ -480,6 +486,7 @@ class Wallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -508,6 +515,7 @@ class Wallet:
             max_coin_amount=max_coin_amount,
             exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_coins,
+            puzzle_decorator_override=puzzle_decorator_override,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
