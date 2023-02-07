@@ -134,7 +134,6 @@ class WalletNode:
     _shut_down: bool = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None
     _retry_failed_states_task: Optional[asyncio.Task] = None
-    _primary_peer_sync_task: Optional[asyncio.Task] = None
     _secondary_peer_sync_task: Optional[asyncio.Task] = None
 
     @property
@@ -402,8 +401,6 @@ class WalletNode:
             self._process_new_subscriptions_task.cancel()
         if self._retry_failed_states_task is not None:
             self._retry_failed_states_task.cancel()
-        if self._primary_peer_sync_task is not None:
-            self._primary_peer_sync_task.cancel()
         if self._secondary_peer_sync_task is not None:
             self._secondary_peer_sync_task.cancel()
 
@@ -1142,11 +1139,7 @@ class WalletNode:
             if peer.peer_node_id not in self.synced_peers:
                 if new_peak_hb.height - current_height > self.LONG_SYNC_THRESHOLD:
                     self.wallet_state_manager.set_sync_mode(True)
-                self._primary_peer_sync_task = asyncio.create_task(
-                    self.long_sync(new_peak_hb.height, peer, uint32(max(0, current_height - 256)), rollback=True)
-                )
-                await self._primary_peer_sync_task
-                self._primary_peer_sync_task = None
+                await self.long_sync(new_peak_hb.height, peer, uint32(max(0, current_height - 256)), rollback=True)
                 self.wallet_state_manager.set_sync_mode(False)
 
     async def new_peak_from_untrusted(
@@ -1214,11 +1207,7 @@ class WalletNode:
         if syncing:
             async with self.wallet_state_manager.lock:
                 self.log.info("Primary peer syncing")
-                self._primary_peer_sync_task = asyncio.create_task(
-                    self.long_sync(new_peak_hb.height, peer, fork_point, rollback=True)
-                )
-                await self._primary_peer_sync_task
-                self._primary_peer_sync_task = None
+                await self.long_sync(new_peak_hb.height, peer, fork_point, rollback=True)
             self.log.info(f"New peak wallet.. {new_peak_hb.height} {peer.get_peer_info()} 12")
             return
 
