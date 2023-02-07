@@ -171,6 +171,9 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
         == notifications
     )
 
+    sent_notifications = await notification_manager_1.notification_store.get_all_notifications()
+    assert len(sent_notifications) == 0
+
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
