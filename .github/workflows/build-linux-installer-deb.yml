@@ -132,6 +132,8 @@ jobs:
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         PRERELEASE_URL=$(gh api /repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("ubuntu-x86-64.tar.gz")).browser_download_url')
         mkdir "$GITHUB_WORKSPACE/bladebit"
