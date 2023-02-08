@@ -42,6 +42,7 @@ from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.dao_wallet.dao_utils import match_treasury_puzzle, match_proposal_puzzle
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
@@ -251,6 +252,18 @@ class WalletStateManager:
                 )
             elif wallet_info.type == WalletType.DATA_LAYER:
                 wallet = await DataLayerWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            elif wallet_info.type == WalletType.DAO:
+                wallet = await DAOWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            elif wallet_info.type == WalletType.DAO_CAT:
+                wallet = await DAOCATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -668,7 +681,6 @@ class WalletStateManager:
 
         dao_curried_args = match_treasury_puzzle(uncurried.mod, uncurried.args)
         if dao_curried_args is not None:
-            breakpoint()
             return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
         # Check if the coin is a Proposal
@@ -805,6 +817,7 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
+            # If the puzzle inside is no longer recognised then delete the wallet associated
             removed_wallet_ids = []
             for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DECENTRALIZED_ID):
                 did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
@@ -837,7 +850,7 @@ class WalletStateManager:
                 else:
                     self.log.error("DID puzzle hash doesn't match, please check curried parameters.")
                     return None, None
-            # Create DID wallet
+            # Fetch origin coin
             response: List[CoinState] = await self.wallet_node.get_coin_state([launch_id], peer=peer)
             if len(response) == 0:
                 self.log.warning(f"Could not find the launch coin with ID: {launch_id}")
@@ -851,6 +864,7 @@ class WalletStateManager:
                     assert wallet.did_info.origin_coin is not None
                     if origin_coin.name() == wallet.did_info.origin_coin.name():
                         return wallet.id(), WalletType(wallet.type())
+            # If we did not find the DID Wallet, then create a new one
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
                 self.main_wallet,
@@ -912,7 +926,6 @@ class WalletStateManager:
         coin_spend: CoinSpend
     ):
         self.log.info("Entering dao_treasury handling in WalletStateManager")
-        breakpoint()
         (
             singleton_struct,
             DAO_TREASURY_MOD_HASH,
@@ -1008,7 +1021,7 @@ class WalletStateManager:
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
                 uncurried_nft.singleton_launcher_id.hex(),
             )
-            return wallet_id, wallet_type
+            return None, None
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
             if nft_wallet_info.did_id == old_did_id and old_derivation_record is not None:
@@ -1117,6 +1130,8 @@ class WalletStateManager:
                         wallet_id = uint32(local_record.wallet_id)
                         wallet_type = local_record.wallet_type
                     elif coin_state.created_height is not None:
+
+                        # This is where we find out which wallet_id the coin belongs to
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
@@ -1300,12 +1315,7 @@ class WalletStateManager:
                                         unconfirmed_record.name, uint32(coin_state.spent_height)
                                     )
 
-                        # This debug stmt may have to move
-                        # print(self.interested_coin_cache[coin_name])
-                        # print(self.interested_ph_cache[coin.puzzle_hash])
-                        # breakpoint()
                         if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
-                            breakpoint()
                             wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
                                 singleton_wallet = self.get_wallet(
@@ -1609,7 +1619,8 @@ class WalletStateManager:
         )
 
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
-
+        if wallet_type == WalletType.DAO:
+            return
         await self.wallets[wallet_id].coin_added(coin, height, peer)
 
         await self.create_more_puzzle_hashes()
@@ -1801,9 +1812,11 @@ class WalletStateManager:
         return filtered
 
     async def new_peak(self, peak: wallet_protocol.NewPeakWallet):
+        valid_list = [uint8(WalletType.POOLING_WALLET), uint8(WalletType.DAO)]
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == uint8(WalletType.POOLING_WALLET):
-                assert isinstance(wallet, PoolWallet)
+            if wallet.type() in valid_list:
+                valid = isinstance(wallet, PoolWallet) or isinstance(wallet, DAOWallet)
+                assert valid
                 await wallet.new_peak(uint64(peak.height))
         current_time = int(time.time())
 

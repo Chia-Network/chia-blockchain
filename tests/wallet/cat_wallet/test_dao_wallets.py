@@ -160,6 +160,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
+    await asyncio.sleep(10)
     # Verify apply_state_transition is called after a spend to the Treasury Singleton
     assert dao_wallet_0.apply_state_transition_call_count == 1
 

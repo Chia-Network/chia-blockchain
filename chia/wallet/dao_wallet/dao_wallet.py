@@ -340,14 +340,12 @@ class DAOWallet:
         assert sum(c.amount for c in coins) >= amount
         return coins
 
-    # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
-        breakpoint()  # TODO: we should be hitting this actually
         self.log.info(f"DAO wallet has been notified that coin was added: {coin.name()}:{coin}")
-        inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
+        return
         # TODO: this is wrong and needs changing
-
+        # await self.apply_state_transition(self, new_state: CoinSpend, block_height: uint32)
         # new_info = DAOInfo(
         #     self.dao_info.origin_coin,
         #     self.dao_info.backup_ids,
@@ -362,33 +360,33 @@ class DAOWallet:
         # )
         # await self.save_info(new_info)
 
-        future_parent = LineageProof(
-            coin.parent_coin_info,
-            inner_puzzle.get_tree_hash(),
-            uint64(coin.amount),
-        )
+        # future_parent = LineageProof(
+        #     coin.parent_coin_info,
+        #     inner_puzzle.get_tree_hash(),
+        #     uint64(coin.amount),
+        # )
 
-        await self.add_parent(coin.name(), future_parent)
-        parent = self.get_parent_for_coin(coin)
-        if parent is None:
-            parent_state: CoinState = (
-                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
-            )[0]
-            assert parent_state.spent_height is not None
-            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                coin.parent_coin_info, uint32(parent_state.spent_height)
-            )
-            response = await peer.request_puzzle_solution(puzzle_solution_request)
-            req_puz_sol = response.response
-            assert req_puz_sol.puzzle is not None
-            parent_innerpuz = singleton.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
-            assert parent_innerpuz is not None
-            parent_info = LineageProof(
-                parent_state.coin.parent_coin_info,
-                parent_innerpuz.get_tree_hash(),
-                uint64(parent_state.coin.amount),
-            )
-            await self.add_parent(coin.parent_coin_info, parent_info)
+        # await self.add_parent(coin.name(), future_parent)
+        # parent = self.get_parent_for_coin(coin)
+        # if parent is None:
+        #     parent_state: CoinState = (
+        #         await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
+        #     )[0]
+        #     assert parent_state.spent_height is not None
+        #     puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
+        #         coin.parent_coin_info, uint32(parent_state.spent_height)
+        #     )
+        #     response = await peer.request_puzzle_solution(puzzle_solution_request)
+        #     req_puz_sol = response.response
+        #     assert req_puz_sol.puzzle is not None
+        #     parent_innerpuz = singleton.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
+        #     assert parent_innerpuz is not None
+        #     parent_info = LineageProof(
+        #         parent_state.coin.parent_coin_info,
+        #         parent_innerpuz.get_tree_hash(),
+        #         uint64(parent_state.coin.amount),
+        #     )
+        #     await self.add_parent(coin.parent_coin_info, parent_info)
 
     async def is_spend_retrievable(self, coin_id):
         wallet_node: Any = self.wallet_state_manager.wallet_node
@@ -560,37 +558,6 @@ class DAOWallet:
     async def get_new_did_inner_hash(self) -> bytes32:
         innerpuz = await self.get_new_did_innerpuz()
         return innerpuz.get_tree_hash()
-
-    async def get_innerpuz_for_new_innerhash(self, pubkey: G1Element):
-        """
-        Get the inner puzzle for a new owner
-        :param pubkey: Pubkey
-        :return: Inner puzzle
-        """
-        # Note: the recovery list will be kept.
-        # In a selling case, the seller should clean the recovery list then transfer to the new owner.
-        assert self.dao_info.origin_coin is not None
-        return singleton.create_innerpuz(
-            puzzle_for_pk(pubkey),
-            self.dao_info.backup_ids,
-            uint64(self.dao_info.num_of_backup_ids_needed),
-            self.dao_info.origin_coin.name(),
-            singleton.metadata_to_program(json.loads(self.dao_info.metadata)),
-        )
-
-    async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
-        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            did_hash
-        )
-        assert self.dao_info.origin_coin is not None
-        inner_puzzle: Program = singleton.create_innerpuz(
-            puzzle_for_pk(record.pubkey),
-            self.dao_info.backup_ids,
-            self.dao_info.num_of_backup_ids_needed,
-            self.dao_info.origin_coin.name(),
-            singleton.metadata_to_program(json.loads(self.dao_info.metadata)),
-        )
-        return inner_puzzle
 
     def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
         parent_info = None
@@ -1128,7 +1095,9 @@ class DAOWallet:
         return get_most_recent_singleton_coin_from_coin_spend(spend)
 
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
-        return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
+        ret = await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
+        breakpoint()
+        return ret[-1]
 
     async def add_or_update_proposal_info(
         self,
@@ -1285,8 +1254,6 @@ class DAOWallet:
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
-        breakpoint()
-        self.apply_state_transition_call_count += 1
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
 
@@ -1303,6 +1270,7 @@ class DAOWallet:
                     f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
                 )
             return False
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
 
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend
@@ -1318,6 +1286,7 @@ class DAOWallet:
             await self.add_or_update_proposal_info(new_state, block_height)
         else:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
+        self.apply_state_transition_call_count += 1
 
         return True
 
