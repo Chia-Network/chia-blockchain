@@ -41,9 +41,11 @@
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
         (if (= (f (r (f conditions))) vote_added_puzhash)
+          ; COMMENT: do we care? We're enforcing the amount is correct so what do we care if they make 0 CAT or use some value from a non voted CAT to make this?
           (if seen_vote  ; assert we haven't already made a coin with the new vote included
             (x)
             (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
+              ; COMMENT: If I'm not mistaken this should be called "seen_any_vote", yeah?
               (if seen_no_vote  ; assert that we haven't already recreated ourself in some fashion
                 (x)
                 (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
@@ -59,6 +61,7 @@
           (x)
          )
         )
+        ; COMMENT: Should we do this within a namespace like CATs so that other announcements not in that namespace are allowed through?
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote))

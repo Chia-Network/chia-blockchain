@@ -7,6 +7,7 @@
   PROPOSAL_TIMER_MOD_HASH
   CAT_MOD_HASH
   CAT_TAIL_HASH
+  ; COMMENT: When using the modern compiler, you can destructure this like so (@ MY_PARENT_SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
   MY_PARENT_SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (PROPOSAL_SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
   TREASURY_ID
   proposal_yes_votes
@@ -51,6 +52,7 @@
     )
   )
 
+  ; COMMENT: this function is unused
   ; saves the calculated proposal puzzlehash to use in two conditions rather than calculating it twice
   (defun generate_proposal_conditions (TREASURY_ID proposal_puzzlehash proposal_parent_id proposal_amount)
     (list
@@ -84,6 +86,7 @@
     )
     (list
         ASSERT_MY_PARENT_ID
+        ; COMMENT: this is ASSERT_MY_PARENT_ID but we're passing it a puzzle hash
         (calculate_singleton_puzzle_hash
           MY_PARENT_SINGLETON_STRUCT
           (calculate_proposal_puzzlehash

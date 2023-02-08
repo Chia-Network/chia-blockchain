@@ -14,6 +14,7 @@
 
 
 (mod (
+  ; COMMENT: When using the modern compiler, you can destructure this like so (@ SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
   SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
@@ -45,6 +46,7 @@
   (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
 
   (defun-inline calculate_win_percentage (CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)
+    ; COMMENT: this code would be clearer if the divmod was performed on the proposal_pass_percente/ten_thousand first, then multiplied to current_cat_issuance (maybe more optimal too not sure)
     (f (divmod (* CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE) TEN_THOUSAND))
   )
 
@@ -262,6 +264,7 @@
     (c
       (list CREATE_COIN dao_finished_state ONE (c (f (r SINGLETON_STRUCT)) 0))  ; move to announce finished mode. See previous comment about proposal amounts
       (c
+        ; COMMENT: should this number 5 be configurable?
         (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
@@ -307,10 +310,12 @@
               )
               (if
                 (all
+                  ; COMMENT: If this is used for both things, the function could use a different name probably
                   (> TOTAL_VOTES (calculate_win_percentage vote_coin_id_or_current_cat_issuance lockup_innerpuzhash_or_attendance_required))
                   (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin))
                 )
                 (a INNERPUZ vote_amount_or_solution)  ; run_chialisp: run proposed chialisp ; XXX Matt, Geoff: should we also re-create ourself with previous_votes=0 in this case?
+                ; COMMENT: Is there even a reason to ping the treasury in this case? Nothing happens on it, it can just stay the same right?
                 (list (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list "u" 0))))  ; dont_run_chialisp: we dont run the chialisp, but we still move to the finished state
                                                                                     ;    and let the treasury know to remain the same
               )

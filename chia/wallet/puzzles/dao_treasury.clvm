@@ -3,6 +3,7 @@
 
 (mod (
   (
+    ; COMMENT: When using the modern compiler, you can destructure this like so (@ SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
     SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
     TREASURY_MOD_HASH
     PROPOSAL_MOD_HASH
@@ -100,6 +101,7 @@
     announcement_messages_list
     type
   )
+    ; COMMENT: The two ASSERT_PUZZLE_ANNOUNCEMENTs here should probably just be combined into one yeah?
     (c
       (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (list my_singleton_id PROPOSAL_TIMELOCK))))  ; the proposal format will make this
       (c
@@ -112,6 +114,7 @@
 
   (defun-inline recurry_self (TREASURY_MOD_HASH index_value_pairs_list CURRENT_PARAMS)
     (puzzle-hash-of-curried-function
+      ; COMMENT: We could change the treasury mod hash, but it would take two spends right? I think this should check index_value_pairs_list for a TREASURY_MOD change and use it if it exists.
       TREASURY_MOD_HASH
       (sha256tree
         (recurry_by_index_ordered
@@ -134,9 +137,11 @@
     my_amount
     my_singleton_id
   )
+    ; COMMENT: this whole if tree can be on just the CREATE_COIN's puzhash since the amount and hint are the same in every case
     (if (= type 'u')  ; unchanged
       (list
         (list CREATE_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0))
+        ; COMMENT: this ends up double wrapping the singleton right? You need to recreate with the current inner puzzle not full puzzle.
         (list ASSERT_MY_PUZZLEHASH new_puzhash)
       )
       (if (= type 'r')  ; recurry by index
@@ -208,14 +213,19 @@
         )
       )
       ; this is the add money spend case
+      ; COMMENT: This should probably be 0 or something configurable to prevent spaming the add money case a DOS
       (if (> new_amount_change -1)
         (merge_list
+          ; COMMENT: maybe this should be a loop so you can do more than one p2_singleton at once
           (if proposal_innerpuz_or_optional_p2_singleton_coin_id
+            ; COMMENT: An attacker here could give you a p2_singleton to this DAO, then specify an amount increase of 0 or 1 and melt the p2_singleton's value without actually giving it to the DAO
             (list
               (list CREATE_PUZZLE_ANNOUNCEMENT proposal_innerpuz_or_optional_p2_singleton_coin_id)
+              ; COMMENT: Using the existing p2_singleton here pretty much eliminates support for CATs or NFTs being sent to the DAO
               (list ASSERT_COIN_ANNOUNCEMENT (sha256 proposal_innerpuz_or_optional_p2_singleton_coin_id '$'))
             )
             (list
+              ; COMMENT: should this be a coin announcement? Is it possible that you might not want to do this spend if someone else increases the amount before you?
               (list
                 CREATE_PUZZLE_ANNOUNCEMENT  ; by creating this announcement the payer can assert and make sure its their payment that's being taken
                 (sha256tree (list new_amount_change announcement_messages_list_or_payment_nonce))
