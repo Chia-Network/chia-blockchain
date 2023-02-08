@@ -67,7 +67,9 @@ class WalletCoinStore:
             )
             return int(0 if row is None else row[0])
 
-    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
+    async def get_multiple_coin_records(
+        self, coin_names: List[bytes32], maximum_query_size: int = SQLITE_MAX_VARIABLE_NUMBER
+    ) -> List[WalletCoinRecord]:
         """Return WalletCoinRecord(s) that have a coin name in the specified list"""
         if len(coin_names) == 0:
             return []
@@ -76,7 +78,7 @@ class WalletCoinStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursors: List[Cursor] = []
-            for names_chunk in chunks(coin_names, SQLITE_MAX_VARIABLE_NUMBER):
+            for names_chunk in chunks(coin_names, maximum_query_size):
                 as_hexes = tuple(cn.hex() for cn in names_chunk)
                 cursors.append(
                     await conn.execute(
