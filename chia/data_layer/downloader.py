@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 import aiohttp
+import boto3
+from typing_extensions import Protocol
 
 from chia.data_layer.data_layer_util import ServerInfo
-from typing_extensions import Protocol
 
 
 class DLDownloader(Protocol):
@@ -22,8 +26,8 @@ class DLDownloader(Protocol):
         """Return the mapping of endpoints to handler callables."""
         ...
 
-    @staticmethod
     async def download(
+        self,
         client_folder: Path,
         filename: str,
         proxy_url: str,
@@ -40,11 +44,13 @@ class HttpDownloader(DLDownloader):
 
     @staticmethod
     def check_url(url: str, log: logging.Logger) -> bool:
-        # todo only return true for http download urls
-        return True
+        parse_result = urlparse(url)
+        if parse_result.scheme == "http" or parse_result.scheme == "https":
+            return True
+        return False
 
-    @staticmethod
     async def download(
+        self,
         client_folder: Path,
         filename: str,
         proxy_url: str,
@@ -59,7 +65,7 @@ class HttpDownloader(DLDownloader):
             ) as resp:
                 resp.raise_for_status()
                 size = int(resp.headers.get("content-length", 0))
-                # log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
+                log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
                 progress_byte = 0
                 progress_percentage = "{:.0%}".format(0)
                 target_filename = client_folder.joinpath(filename)
@@ -72,4 +78,36 @@ class HttpDownloader(DLDownloader):
                             progress_percentage = new_percentage
                             log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
 
+        return True
+
+
+class S3Downloader(DLDownloader):
+    def __init__(self, pub_key: str, secret_key: str, region: str) -> None:
+        self.name = "s3 downloader"
+        self.boto_resource = boto3.resource(
+            "s3", aws_access_key_id=pub_key, aws_secret_access_key=secret_key, region_name=region
+        )
+
+    @staticmethod
+    def check_url(url: str, log: logging.Logger) -> bool:
+        parse_result = urlparse(url)
+        if parse_result.scheme == "s3":
+            return True
+        return False
+
+    async def download(
+        self,
+        client_folder: Path,
+        filename: str,
+        proxy_url: str,
+        server_info: ServerInfo,
+        timeout: int,
+        log: logging.Logger,
+    ) -> bool:
+        bucket = self.boto_resource.Bucket(server_info.url)
+        target_filename = client_folder.joinpath(filename)
+        size = self.boto_resource.head_object(key_name=filename)["ContentLength"]
+        log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
+        with target_filename.open(mode="wb") as f:
+            bucket.download_file(filename, f)
         return True

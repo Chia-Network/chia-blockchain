@@ -409,7 +409,7 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
-    def get_downloader(self, url):
+    def get_downloader(self, url: str) -> DLDownloader:
         # todo go through all downloaders and find one that handles the url
         downloader: Optional[DLDownloader] = None
         for d in self.downloaders:
