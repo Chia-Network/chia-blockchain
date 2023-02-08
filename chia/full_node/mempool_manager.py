@@ -621,17 +621,19 @@ class MempoolManager:
         if use_optimization and last_npc_result is not None:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
+                spendbundle_ids_to_remove = []
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
                         spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
                             bytes32(spend.coin_id)
-                        ].copy()
+                        ]
+                        spendbundle_ids_to_remove.extend(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
                             item = self.mempool.spends.get(spendbundle_id)
                             if item:
                                 included_items.append(item)
                             self.remove_seen(spendbundle_id)
-                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
+                self.mempool.remove_from_pool(spendbundle_ids_to_remove, MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
