@@ -206,7 +206,7 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == cat_2_hash.hex()
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
@@ -224,7 +224,7 @@ class TestCATWallet:
         tx_id = coin.name().hex()
         memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == cat_2_hash.hex()
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
         for tx_record in tx_records:
