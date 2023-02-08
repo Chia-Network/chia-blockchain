@@ -2012,9 +2012,7 @@ class TestGeneratorConditions:
         [
             (True, -1, Err.GENERATOR_RUNTIME_ERROR.value),
             (False, -1, Err.GENERATOR_RUNTIME_ERROR.value),
-            (False, -1, Err.GENERATOR_RUNTIME_ERROR.value),
             (True, 1, None),
-            (False, 1, None),
             (False, 1, None),
         ],
     )
