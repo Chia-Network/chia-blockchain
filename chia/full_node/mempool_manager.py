@@ -625,7 +625,7 @@ class MempoolManager:
                     if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
                         spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
                             bytes32(spend.coin_id)
-                        ]
+                        ].copy()
                         for spendbundle_id in spendbundle_ids:
                             item = self.mempool.spends.get(spendbundle_id)
                             if item:
