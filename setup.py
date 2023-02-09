@@ -59,7 +59,7 @@ dev_dependencies = [
     "flake8",
     # TODO: remove this pin after fixing the new complaints
     "mypy<1",
-    "black==22.10.0",
+    "black",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "pyinstaller==5.6.2",
