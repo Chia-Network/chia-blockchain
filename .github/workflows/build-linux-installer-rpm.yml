@@ -131,8 +131,10 @@ jobs:
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("centos-x86-64.tar.gz")).browser_download_url')
+        PRERELEASE_URL=$(gh api /repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("centos-x86-64.tar.gz")).browser_download_url')
         mkdir "$GITHUB_WORKSPACE/bladebit"
         wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
@@ -184,7 +186,7 @@ jobs:
 
     - name: Configure AWS Credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      uses: aws-actions/configure-aws-credentials@v1-node16
+      uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}

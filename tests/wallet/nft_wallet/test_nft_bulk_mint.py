@@ -23,7 +23,9 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.address_type import AddressType
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -46,7 +48,6 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
-    ph_taker = await wallet_1.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
 
     if trusted:
@@ -94,23 +95,23 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
 
-    # construct sample metadata
-    metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
-    )
     royalty_pc = uint16(300)
     royalty_addr = ph_maker
 
-    mint_total = 1
+    mint_total = 10
     fee = uint64(100)
     metadata_list = [
-        {"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(mint_total)
+        {
+            "program": Program.to(
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", token_bytes(32).hex())]
+            ),
+            "royalty_pc": royalty_pc,
+            "royalty_ph": royalty_addr,
+        }
+        for x in range(mint_total)
     ]
 
-    target_list = [ph_taker for x in range(mint_total)]
+    target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_did(
         metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
@@ -126,7 +127,22 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
 
     expected_xch_bal = funds - fee - mint_total - 1
     await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch_bal)
-    assert (await nft_wallet_taker.get_current_nfts())[0].minter_did == did_id
+
+    nfts = await nft_wallet_taker.get_current_nfts()
+    matched_data = dict(zip(target_list, metadata_list))
+
+    # Check targets and metadata entries match in the final nfts
+    for nft in nfts:
+        mod, args = nft.full_puzzle.uncurry()
+        unft = UncurriedNFT.uncurry(mod, args)
+        assert isinstance(unft, UncurriedNFT)
+        inner_args = unft.inner_puzzle.uncurry()[1]
+        inner_ph = inner_args.at("rrrf").get_tree_hash()
+        meta = unft.metadata.at("rfr").as_atom()
+        # check that the target puzzle hashes of transferred nfts matches the metadata entry
+        assert matched_data[inner_ph]["program"].at("rfr").as_atom() == meta
+        # Check the did is set for each nft
+        assert nft.minter_did == did_id
 
 
 @pytest.mark.parametrize(
@@ -640,7 +656,6 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
-    ph_taker = await wallet_1.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
 
     if trusted:
@@ -688,23 +703,23 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
 
-    # construct sample metadata
-    metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
-    )
     royalty_pc = uint16(300)
     royalty_addr = ph_maker
 
     mint_total = 1
     fee = uint64(100)
     metadata_list = [
-        {"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(mint_total)
+        {
+            "program": Program.to(
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", token_bytes(32).hex())]
+            ),
+            "royalty_pc": royalty_pc,
+            "royalty_ph": royalty_addr,
+        }
+        for x in range(mint_total)
     ]
 
-    target_list = [ph_taker for x in range(mint_total)]
+    target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_xch(
         metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
@@ -720,6 +735,21 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
 
     expected_xch_bal = funds - fee - mint_total - 1
     await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch_bal)
+
+    nfts = await nft_wallet_taker.get_current_nfts()
+    matched_data = dict(zip(target_list, metadata_list))
+
+    # Check targets and metadata entries match in the final nfts
+    for nft in nfts:
+        mod, args = nft.full_puzzle.uncurry()
+        unft = UncurriedNFT.uncurry(mod, args)
+        assert isinstance(unft, UncurriedNFT)
+        inner_args = unft.inner_puzzle.uncurry()[1]
+        inner_ph = inner_args.at("rrrf").get_tree_hash()
+        meta = unft.metadata.at("rfr").as_atom()
+        # check that the target puzzle hashes of transferred nfts matches the metadata entry
+        assert matched_data[inner_ph]["program"].at("rfr").as_atom() == meta
+        assert not nft.minter_did
 
 
 @pytest.mark.parametrize(
@@ -858,6 +888,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
 
         for i in range(0, n, chunk):
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_maker, full_node_api)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -20,7 +21,7 @@ dependencies = [
     "colorama==0.4.5",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
-    "cryptography==38.0.3",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==39.0.1",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.8.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.9.3",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
@@ -43,7 +44,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "anyio",
     "build",
-    "coverage==7.0.1",
+    "coverage",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
@@ -56,7 +57,8 @@ dev_dependencies = [
     "twine",
     "isort",
     "flake8",
-    "mypy",
+    # TODO: remove this pin after fixing the new complaints
+    "mypy<1",
     "black==22.10.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
@@ -158,6 +160,9 @@ kwargs = dict(
     },
 )
 
+if "setup_file" in sys.modules:
+    # include dev deps in regular deps when run in snyk
+    dependencies.extend(dev_dependencies)
 
 if len(os.environ.get("CHIA_SKIP_SETUP", "")) < 1:
     setup(**kwargs)  # type: ignore

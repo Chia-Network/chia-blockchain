@@ -672,6 +672,8 @@ class MempoolManager:
         counter = 0
         broke_from_inner_loop = False
 
+        assert limit > 0
+
         # Send 100 with the highest fee per cost
         for dic in reversed(self.mempool.sorted_spends.values()):
             if broke_from_inner_loop:

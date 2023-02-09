@@ -373,6 +373,7 @@ class TestFullSync:
         assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
     @pytest.mark.asyncio
+    @pytest.mark.skip("skipping until we re-enable the capability in chia.protocols.shared_protocol")
     async def test_sync_none_wp_response_backward_comp(self, three_nodes, default_1000_blocks, self_hostname):
         num_blocks_initial = len(default_1000_blocks) - 50
         blocks_950 = default_1000_blocks[:num_blocks_initial]

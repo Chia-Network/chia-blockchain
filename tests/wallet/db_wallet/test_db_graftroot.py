@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.clvm.spend_sim import sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -39,9 +39,8 @@ NIL_PH = Program.to(None).get_tree_hash()
 
 
 @pytest.mark.asyncio
-async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
-    sim, sim_client = setup_sim
-    try:
+async def test_graftroot() -> None:
+    async with sim_and_client() as (sim, sim_client):
         # Create the coin we're testing
         all_values: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
         root, proofs = build_merkle_tree(all_values)
@@ -138,5 +137,3 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
                 with pytest.raises(ValueError, match="clvm raise"):
                     graftroot_puzzle.run(graftroot_spend.solution.to_program())
-    finally:
-        await sim.close()

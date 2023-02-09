@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from chia_rs import LIMIT_STACK, MEMPOOL_MODE, NO_NEG_DIV
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
+from chia_rs import run_chia_program
+from clvm.casts import int_from_bytes
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.generator import setup_generator_args
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
@@ -87,6 +91,31 @@ def get_puzzle_and_solution_for_coin(
         return None, SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution)
     except Exception as e:
         return e, None, None
+
+
+def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
+    args = bytearray(b"\xff")
+    args += bytes(DESERIALIZE_MOD)
+    args += b"\xff"
+    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += b"\x80\x80"
+
+    _, ret = run_chia_program(
+        bytes(generator.program),
+        bytes(args),
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        0,
+    )
+
+    spends: List[CoinSpend] = []
+
+    for spend in Program.to(ret).first().as_iter():
+        parent, puzzle, amount, solution = spend.as_iter()
+        puzzle_hash = puzzle.get_tree_hash()
+        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+        spends.append(CoinSpend(coin, puzzle, solution))
+
+    return spends
 
 
 def mempool_check_time_locks(

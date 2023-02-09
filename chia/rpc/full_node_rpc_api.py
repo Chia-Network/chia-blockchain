@@ -3,18 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from clvm.casts import int_from_bytes
-
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
-from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin, get_spends_for_block
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -26,8 +22,8 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
+from chia.util.math import make_monotonically_decreasing
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
-from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 
 
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
@@ -432,16 +428,7 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
-        block_program, block_program_args = setup_generator_args(block_generator)
-        _, coin_spends = DECOMPRESS_BLOCK_SPENDS.run_with_cost(
-            self.service.constants.MAX_BLOCK_COST_CLVM, block_program, block_program_args
-        )
-
-        for spend in coin_spends.as_iter():
-            parent, puzzle, amount, solution = spend.as_iter()
-            puzzle_hash = puzzle.get_tree_hash()
-            coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-            spends.append(CoinSpend(coin, puzzle, solution))
+        spends = get_spends_for_block(block_generator)
 
         return {"block_spends": spends}
 
@@ -759,19 +746,36 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item}
 
-    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
-        if "spend_bundle" in request and "cost" in request:
-            raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
-        if "spend_bundle" not in request and "cost" not in request:
-            raise ValueError("Request must contain 'spend_bundle' or 'cost'")
-        if "target_times" not in request:
-            raise ValueError("Request must contain 'target_times' array")
-        if any(t < 0 for t in request["target_times"]):
-            raise ValueError("'target_times' array members must be non-negative")
+    def _get_spendbundle_type_cost(self, name: str) -> uint64:
+        """
+        This is a stopgap until we modify the wallet RPCs to get exact costs for created SpendBundles
+        before we send them to the Mempool.
+        """
 
-        cost = 0
+        tx_cost_estimates = {
+            "send_xch_transaction": 9_401_710,
+            "cat_spend": 36_382_111,
+            "take_offer": 721_393_265,
+            "cancel_offer": 212_443_993,
+            "nft_set_nft_did": 115_540_006,
+            "nft_transfer_nft": 74_385_541,  # burn or transfer
+            "create_new_pool_wallet": 18_055_407,
+            "pw_absorb_rewards": 82_668_466,
+            "create_new_did_wallet": 57_360_396,
+        }
+        return uint64(tx_cost_estimates[name])
+
+    async def _validate_fee_estimate_cost(self, request: Dict) -> uint64:
+        c = 0
+        ns = ["spend_bundle", "cost", "spend_type"]
+        for n in ns:
+            if n in request:
+                c += 1
+        if c != 1:
+            raise ValueError(f"Request must contain exactly one of {ns}")
+
         if "spend_bundle" in request:
-            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
             spend_name = spend_bundle.name()
             npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_name
@@ -779,14 +783,34 @@ class FullNodeRpcApi:
             if npc_result.error is not None:
                 raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
             cost = npc_result.cost
-        if "cost" in request:
-            cost = uint64(request["cost"])
+        elif "cost" in request:
+            cost = request["cost"]
+        else:
+            cost = self._get_spendbundle_type_cost(request["spend_type"])
+            cost *= request.get("spend_count", 1)
+        return uint64(cost)
 
-        target_times = request["target_times"]
+    def _validate_target_times(self, request: Dict) -> None:
+        if "target_times" not in request:
+            raise ValueError("Request must contain 'target_times' array")
+        if any(t < 0 for t in request["target_times"]):
+            raise ValueError("'target_times' array members must be non-negative")
+
+    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
+        self._validate_target_times(request)
+        spend_cost = await self._validate_fee_estimate_cost(request)
+
+        target_times: List[int] = request["target_times"]
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
+        target_times.sort()
         estimates = [
-            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * cost for time in target_times
+            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * spend_cost
+            for time in target_times
         ]
+        # The Bitcoin Fee Estimator works by observing the most common fee rates that appear
+        # at set times into the future. This can lead to situations that users do not expect,
+        # such as estimating a higher fee for a longer transaction time.
+        estimates = make_monotonically_decreasing(estimates)
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
         mempool_size = self.service.mempool_manager.mempool.total_mempool_cost
         mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees

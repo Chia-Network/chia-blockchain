@@ -16,6 +16,7 @@ from chia.simulator.block_tools import get_signage_point, test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
@@ -185,11 +186,8 @@ class TestRpc:
 
             coin_record = await client.get_coin_record_by_name(coin.name())
             assert coin_record.coin == coin
-            assert (
-                coin
-                in (
-                    await client.get_puzzle_and_solution(coin.parent_coin_info, coin_record.confirmed_block_index)
-                ).additions()
+            assert coin in compute_additions(
+                await client.get_puzzle_and_solution(coin.parent_coin_info, coin_record.confirmed_block_index)
             )
 
             assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1

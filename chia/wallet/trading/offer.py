@@ -10,7 +10,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.ints import uint64
@@ -130,7 +130,7 @@ class Offer:
         final_list: List[Coin] = []
         for cs in self.bundle.coin_spends:
             try:
-                final_list.extend(cs.additions())
+                final_list.extend(compute_additions(cs))
             except Exception:
                 pass
         return final_list
@@ -142,7 +142,7 @@ class Offer:
         final_list: List[CoinSpend] = []
         for cs in self.bundle.coin_spends:
             try:
-                cs.additions()
+                compute_additions(cs)
             except Exception:
                 final_list.append(cs)
         return final_list
@@ -157,7 +157,7 @@ class Offer:
 
             parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
             parent_solution: Program = parent_spend.solution.to_program()
-            additions: List[Coin] = parent_spend.additions()
+            additions: List[Coin] = compute_additions(parent_spend)
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:

@@ -18,7 +18,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
@@ -1560,7 +1560,8 @@ class FullNodeAPI:
             utc_now = int(utc_time.timestamp())
             deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
             fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]
-            return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, fee_rates)]
+            v1_fee_rates = [fee_rate_v2_to_v1(est) for est in fee_rates]
+            return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, v1_fee_rates)]
 
         fee_estimates: List[FeeEstimate] = get_fee_estimates(
             self.full_node.mempool_manager.mempool.fee_estimator, request.time_targets
