@@ -99,7 +99,7 @@ class FullNode:
     pow_creation: Dict[bytes32, asyncio.Event]
     state_changed_callback: Optional[StateChangedProtocol] = None
     full_node_peers: Optional[FullNodePeers]
-    sync_store: Any
+    sync_store: SyncStore
     signage_point_times: List[float]
     full_node_store: FullNodeStore
     uncompact_task: Optional[asyncio.Task[None]]
@@ -156,7 +156,7 @@ class FullNode:
         self.pow_creation = {}
         self.state_changed_callback = None
         self.full_node_peers = None
-        self.sync_store = None
+        self.sync_store = SyncStore()
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
         self.uncompact_task = None
@@ -350,7 +350,6 @@ class FullNode:
                             pass
 
         self._block_store = await BlockStore.create(self.db_wrapper)
-        self.sync_store = SyncStore()
         self._hint_store = await HintStore.create(self.db_wrapper)
         self._coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
