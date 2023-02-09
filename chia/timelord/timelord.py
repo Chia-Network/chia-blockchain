@@ -10,7 +10,7 @@ import random
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chiavdf import create_discriminant, prove
 
@@ -18,7 +18,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -127,7 +127,7 @@ class Timelord:
         self.vdf_failure_time: float = 0
         self.total_unfinished: int = 0
         self.total_infused: int = 0
-        self.state_changed_callback: Optional[Callable] = None
+        self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.bluebox_mode = self.config.get("bluebox_mode", False)
         # Support backwards compatibility for the old `config.yaml` that has field `sanitizer_mode`.
         if not self.bluebox_mode:
@@ -187,7 +187,7 @@ class Timelord:
     async def _await_closed(self):
         pass
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):

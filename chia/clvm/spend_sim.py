@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import random
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -37,6 +38,20 @@ BlockRecord objects for trimmed down versions.
 There is also a provided NodeClient object which implements many of the methods from chia.rpc.full_node_rpc_client
 and is designed so that you could test with it and then swap in a real rpc client that uses the same code you tested.
 """
+
+
+@asynccontextmanager
+async def sim_and_client(
+    db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
+) -> AsyncIterator[Tuple[SpendSim, SimClient]]:
+    sim: SpendSim = await SpendSim.create(db_path, defaults)
+    try:
+        client: SimClient = SimClient(sim)
+        if pass_prefarm:
+            await sim.farm_block()
+        yield sim, client
+    finally:
+        await sim.close()
 
 
 @streamable

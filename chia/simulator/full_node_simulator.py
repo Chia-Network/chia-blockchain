@@ -29,6 +29,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class _Default:
@@ -547,6 +548,28 @@ class FullNodeSimulator(FullNodeAPI):
 
                 if len(coin_set) == 0:
                     return
+
+    async def process_all_wallet_transactions(self, wallet: Wallet, timeout: Optional[float] = 5) -> None:
+        # TODO: Maybe something could be done around waiting for the tx to enter the
+        #       mempool.  Maybe not, might be too many races or such.
+        wallet_state_manager: Optional[WalletStateManager] = wallet.wallet_state_manager
+        assert wallet_state_manager is not None
+
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff in backoff_times():
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
+
+                wallet_ids = wallet_state_manager.wallets.keys()
+                for wallet_id in wallet_ids:
+                    unconfirmed = await wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_id=wallet_id)
+                    if len(unconfirmed) > 0:
+                        break
+                else:
+                    # all wallets have zero unconfirmed transactions
+                    break
+
+                # at least one wallet has unconfirmed transactions
+                await asyncio.sleep(backoff)
 
     async def create_coins_with_amounts(
         self,

@@ -6,6 +6,7 @@ import logging
 from operator import attrgetter
 from typing import Any, Dict, List, Optional, Tuple, cast
 
+import aiosqlite
 import pytest
 import pytest_asyncio
 from blspy import G2Element
@@ -31,7 +32,8 @@ from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.config import lock_and_load_config, save_config
+from chia.util.config import load_config, lock_and_load_config, save_config
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -1292,7 +1294,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     await generate_funds(full_node_api, env.wallet_1)
 
-    env.wallet_2.node.config["accept_notifications"] = True
+    env.wallet_2.node.config["enable_notifications"] = True
     env.wallet_2.node.config["required_notification_amount"] = 100000000000
     tx = await client.send_notification(
         await wallet_2.get_new_puzzlehash(),
@@ -1464,3 +1466,134 @@ async def test_verify_signature(
     req = update_verify_signature_request(rpc_request, prefix_hex_strings)
     res = await api.verify_signature(req)
     assert res == rpc_response
+
+
+@pytest.mark.asyncio
+async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    await generate_funds(full_node_api, env.wallet_1)
+    wc = env.wallet_1.rpc_client
+    await wc.create_new_did_wallet(1, 0)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, env.wallet_1.node)
+    await time_out_assert(20, wc.get_synced)
+
+    nft_wallet = await wc.create_new_nft_wallet(None)
+    nft_wallet_id = nft_wallet["wallet_id"]
+    address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
+    await wc.mint_nft(
+        nft_wallet_id, royalty_address=address, target_address=address, hash="deadbeef", uris=["http://test.nft"]
+    )
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, env.wallet_1.node)
+    await time_out_assert(20, wc.get_synced)
+
+    wallet_node: WalletNode = env.wallet_1.node
+    wallet_node_2: WalletNode = env.wallet_2.node
+    wallet_node_2._close()
+    await wallet_node_2._await_closed()
+    # set flag to reset wallet sync data on start
+    await client.set_wallet_resync_on_startup()
+    fingerprint = wallet_node.logged_in_fingerprint
+    assert wallet_node._wallet_state_manager
+    # 2 reward coins, 1 DID, 1 NFT
+    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 4
+    assert await wallet_node._wallet_state_manager.nft_store.count() == 1
+    # standard wallet, did wallet, nft wallet, did nft wallet
+    assert len(await wallet_node.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
+    before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
+    wallet_node._close()
+    await wallet_node._await_closed()
+    config = load_config(wallet_node.root_path, "config.yaml")
+    # check that flag was set in config file
+    assert config["wallet"]["reset_sync_for_fingerprint"] == fingerprint
+    new_config = wallet_node.config.copy()
+    new_config["reset_sync_for_fingerprint"] = config["wallet"]["reset_sync_for_fingerprint"]
+    wallet_node_2.config = new_config
+    wallet_node_2.root_path = wallet_node.root_path
+    wallet_node_2.local_keychain = wallet_node.local_keychain
+    # use second node to start the same wallet, reusing config and db
+    await wallet_node_2._start_with_fingerprint(fingerprint)
+    assert wallet_node_2._wallet_state_manager
+    after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
+    # transactions should be the same
+    assert after_txs == before_txs
+    # only coin_store was populated in this case, but now should be empty
+    assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
+    assert await wallet_node_2._wallet_state_manager.nft_store.count() == 0
+    # we don't delete wallets
+    assert len(await wallet_node_2.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
+    updated_config = load_config(wallet_node.root_path, "config.yaml")
+    # check that it's disabled after reset
+    assert updated_config["wallet"].get("reset_sync_for_fingerprint") is None
+    wallet_node_2._close()
+    await wallet_node_2._await_closed()
+
+
+@pytest.mark.asyncio
+async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    await generate_funds(full_node_api, env.wallet_1)
+    wallet_node: WalletNode = env.wallet_1.node
+    wallet_node_2: WalletNode = env.wallet_2.node
+    wallet_node_2._close()
+    await wallet_node_2._await_closed()
+    # set flag to reset wallet sync data on start
+    await client.set_wallet_resync_on_startup()
+    fingerprint = wallet_node.logged_in_fingerprint
+    assert wallet_node._wallet_state_manager
+    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+    before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
+    await client.set_wallet_resync_on_startup(False)
+    wallet_node._close()
+    await wallet_node._await_closed()
+    config = load_config(wallet_node.root_path, "config.yaml")
+    # check that flag was set in config file
+    assert config["wallet"].get("reset_sync_for_fingerprint") is None
+    new_config = wallet_node.config.copy()
+    new_config["reset_sync_for_fingerprint"] = config["wallet"].get("reset_sync_for_fingerprint")
+    wallet_node_2.config = new_config
+    wallet_node_2.root_path = wallet_node.root_path
+    wallet_node_2.local_keychain = wallet_node.local_keychain
+    # use second node to start the same wallet, reusing config and db
+    await wallet_node_2._start_with_fingerprint(fingerprint)
+    assert wallet_node_2._wallet_state_manager
+    after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
+    # transactions should be the same
+    assert after_txs == before_txs
+    # only coin_store was populated in this case, but now should be empty
+    assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+    wallet_node_2._close()
+    await wallet_node_2._await_closed()
+
+
+@pytest.mark.asyncio
+async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    await generate_funds(full_node_api, env.wallet_1)
+    wallet_node: WalletNode = env.wallet_1.node
+    fingerprint = wallet_node.logged_in_fingerprint
+    assert fingerprint
+    db_path = wallet_node.wallet_state_manager.db_path
+    assert await wallet_node.reset_sync_db(
+        db_path, fingerprint
+    ), "Schema has been changed, reset sync db won't work, please update WalletNode.reset_sync_db function"
+    dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
+    conn: aiosqlite.Connection
+    async with dbw.writer() as conn:
+        await conn.execute("ALTER TABLE coin_record RENAME TO coin_record_temp")
+    assert not await wallet_node.reset_sync_db(db_path, fingerprint)
+    async with dbw.writer() as conn:
+        await conn.execute("ALTER TABLE coin_record_temp RENAME TO coin_record")
+    assert await wallet_node.reset_sync_db(db_path, fingerprint)
+    async with dbw.writer() as conn:
+        await conn.execute("CREATE TABLE testing_schema (a int, b bool)")
+    assert not await wallet_node.reset_sync_db(db_path, fingerprint)
+    async with dbw.writer() as conn:
+        await conn.execute("DROP TABLE testing_schema")
+    assert await wallet_node.reset_sync_db(db_path, fingerprint)

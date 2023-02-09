@@ -59,18 +59,18 @@ class WSChiaConnection:
     set after the handshake is performed in this connection.
     """
 
-    ws: WebSocket
-    api: Any
+    ws: WebSocket = field(repr=False)
+    api: Any = field(repr=False)
     local_type: NodeType
     local_port: int
-    local_capabilities_for_handshake: List[Tuple[uint16, str]]
+    local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
     local_capabilities: List[Capability]
     peer_host: str
     peer_port: uint16
     peer_node_id: bytes32
-    log: logging.Logger
+    log: logging.Logger = field(repr=False)
 
-    close_callback: Optional[ConnectionClosedCallbackProtocol]
+    close_callback: Optional[ConnectionClosedCallbackProtocol] = field(repr=False)
     outbound_rate_limiter: RateLimiter
     inbound_rate_limiter: RateLimiter
 
@@ -78,12 +78,12 @@ class WSChiaConnection:
     is_outbound: bool
 
     # Messaging
-    received_message_callback: Optional[ConnectionCallback]
-    incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue)
-    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue)
-    api_tasks: Dict[bytes32, asyncio.Task[None]] = field(default_factory=dict)
+    received_message_callback: Optional[ConnectionCallback] = field(repr=False)
+    incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
+    outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
+    api_tasks: Dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
-    execute_tasks: Set[bytes32] = field(default_factory=set)
+    execute_tasks: Set[bytes32] = field(default_factory=set, repr=False)
 
     # ChiaConnection metrics
     creation_time: float = field(default_factory=time.time)
@@ -92,15 +92,15 @@ class WSChiaConnection:
     last_message_time: float = 0
 
     peer_server_port: Optional[uint16] = None
-    inbound_task: Optional[asyncio.Task[None]] = None
-    incoming_message_task: Optional[asyncio.Task[None]] = None
-    outbound_task: Optional[asyncio.Task[None]] = None
+    inbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
+    incoming_message_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
+    outbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     active: bool = False  # once handshake is successful this will be changed to True
-    _close_event: asyncio.Event = field(default_factory=asyncio.Event)
-    session: Optional[ClientSession] = None
+    _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
+    session: Optional[ClientSession] = field(default=None, repr=False)
 
-    pending_requests: Dict[uint16, asyncio.Event] = field(default_factory=dict)
-    request_results: Dict[uint16, Message] = field(default_factory=dict)
+    pending_requests: Dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
+    request_results: Dict[uint16, Message] = field(default_factory=dict, repr=False)
     closed: bool = False
     connection_type: Optional[NodeType] = None
     request_nonce: uint16 = uint16(0)
