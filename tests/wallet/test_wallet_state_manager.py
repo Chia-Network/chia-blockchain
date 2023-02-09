@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Tuple
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from typing import AsyncIterator
 
 import pytest
 
-from chia.server.start_service import Service
-from chia.simulator.block_tools import BlockTools
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.util.ints import uint32
-from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -18,7 +15,10 @@ async def assert_sync_mode(wallet_state_manager: WalletStateManager, target_heig
     assert not wallet_state_manager.lock.locked()
     assert not wallet_state_manager.sync_mode
     assert wallet_state_manager.sync_target is None
-    async with wallet_state_manager.set_sync_mode(target_height):
+    new_current_height = max(0, target_height - 1)
+    await wallet_state_manager.blockchain.set_finished_sync_up_to(new_current_height)
+    async with wallet_state_manager.set_sync_mode(target_height) as current_height:
+        assert current_height == new_current_height
         assert wallet_state_manager.sync_mode
         assert wallet_state_manager.lock.locked()
         assert wallet_state_manager.sync_target == target_height

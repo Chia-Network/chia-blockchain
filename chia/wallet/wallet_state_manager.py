@@ -537,7 +537,7 @@ class WalletStateManager:
         return self._sync_target
 
     @asynccontextmanager
-    async def set_sync_mode(self, target_height: uint32) -> AsyncIterator[None]:
+    async def set_sync_mode(self, target_height: uint32) -> AsyncIterator[uint32]:
         if self.log.level == logging.DEBUG:
             self.log.debug(f"set_sync_mode enter {await self.blockchain.get_finished_sync_up_to()}-{target_height}")
         async with self.lock:
@@ -547,7 +547,7 @@ class WalletStateManager:
             self.log.info(f"set_sync_mode syncing - range: {start_height}-{target_height}")
             self.state_changed("sync_changed")
             try:
-                yield
+                yield start_height
             except Exception:
                 self.log.exception(
                     f"set_sync_mode failed - range: {start_height}-{target_height}, seconds: {time.time() - start_time}"

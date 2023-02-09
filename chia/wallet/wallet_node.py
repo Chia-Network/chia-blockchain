@@ -1111,8 +1111,7 @@ class WalletNode:
             await self.wallet_state_manager.new_peak(new_peak)
 
     async def new_peak_from_trusted(self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection):
-        current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height):
+        async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height) as current_height:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
             # Disconnect from all untrusted peers if our local node is trusted and synced
             await self.disconnect_and_stop_wpeers()
