@@ -1313,8 +1313,11 @@ class WalletRpcApi:
         :return:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        is_hex = request.get("is_hex", False)
+        if isinstance(is_hex, str):
+            is_hex = bool(is_hex)
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request["message"], puzzle_hash, request.get("is_hex", False)
+            request["message"], puzzle_hash, request.get("is_hex", is_hex)
         )
         return {
             "success": True,
@@ -1343,7 +1346,10 @@ class WalletRpcApi:
             if selected_wallet is None:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], request.get("is_hex", False))
+            is_hex = request.get("is_hex", False)
+            if isinstance(is_hex, str):
+                is_hex = bool(is_hex)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], is_hex)
             latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1))
             latest_coin_id = None
             if len(latest_coin) > 0:
