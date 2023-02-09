@@ -584,7 +584,7 @@ class Offer:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
             mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
-            version = max(lowest_best_version(mods), 5)  # 5 is the version where OFFER_MOD lives
+            version = max(lowest_best_version(mods), 6)  # Clients lower than version 6 should not be able to parse
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 
     @classmethod
