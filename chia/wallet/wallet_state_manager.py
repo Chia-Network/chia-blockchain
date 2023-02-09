@@ -803,6 +803,7 @@ class WalletStateManager:
             for remove_id in removed_wallet_ids:
                 self.wallets.pop(remove_id)
                 self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
+                self.state_changed("wallet_removed", remove_id)
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
@@ -1640,6 +1641,7 @@ class WalletStateManager:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
+            self.state_changed("wallet_removed", wallet_id)
 
         return remove_ids
 
