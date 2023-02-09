@@ -25,6 +25,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.address_type import AddressType
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -887,6 +888,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
 
         for i in range(0, n, chunk):
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_maker, full_node_api)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
