@@ -33,7 +33,7 @@ from chia.wallet.util.puzzle_compression import (
 )
 
 OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
 OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
@@ -71,6 +71,7 @@ class Offer:
     ]  # The key is the asset id of the asset being requested
     bundle: SpendBundle
     driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
+    old: bool = False
 
     @staticmethod
     def ph() -> bytes32:
@@ -98,16 +99,20 @@ class Offer:
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]], driver_dict: Dict[bytes32, PuzzleInfo]
+        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        old: bool = False,
     ) -> List[Announcement]:
         announcements: List[Announcement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
                 if asset_id not in driver_dict:
                     raise ValueError("Cannot calculate announcements without driver of requested item")
-                settlement_ph: bytes32 = construct_puzzle(driver_dict[asset_id], OFFER_MOD).get_tree_hash()
+                settlement_ph: bytes32 = construct_puzzle(
+                    driver_dict[asset_id], OFFER_MOD_OLD if old else OFFER_MOD
+                ).get_tree_hash()
             else:
-                settlement_ph = OFFER_MOD_HASH
+                settlement_ph = OFFER_MOD_OLD_HASH if old else OFFER_MOD_HASH
 
             msg: bytes32 = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
             announcements.append(Announcement(settlement_ph, msg))
@@ -374,7 +379,8 @@ class Offer:
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
         total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
-        for offer in offers:
+        old: bool = False
+        for i, offer in enumerate(offers):
             # First check for any overlap in inputs
             total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
             offer_inputs: Set[Coin] = {cs.coin for cs in offer.bundle.coin_spends}
@@ -394,8 +400,13 @@ class Offer:
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
             total_driver_dict.update(offer.driver_dict)
+            if i == 0:
+                old = offer.old
+            else:
+                if offer.old != old:
+                    raise ValueError("Attempting to aggregate two offers with different mods")
 
-        return cls(total_requested_payments, total_bundle, total_driver_dict)
+        return cls(total_requested_payments, total_bundle, total_driver_dict, old)
 
     # Validity is defined by having enough funds within the offer to satisfy both sides
     def is_valid(self) -> bool:
@@ -539,7 +550,11 @@ class Offer:
         requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: List[CoinSpend] = []
+        old: bool = False
         for coin_spend in bundle.coin_spends:
+            if not old and bytes(OFFER_MOD_OLD) in bytes(coin_spend):
+                old = True
+
             driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
             if driver is not None:
                 asset_id = create_asset_id(driver)
@@ -560,7 +575,7 @@ class Offer:
             else:
                 leftover_coin_spends.append(coin_spend)
 
-        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), driver_dict)
+        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), driver_dict, old)
 
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()

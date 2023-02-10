@@ -13,7 +13,7 @@ from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
-from chia.wallet.trading.offer import OFFER_MOD
+from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_OLD
 from chia.wallet.util.puzzle_compression import (
     LATEST_VERSION,
     compress_object_with_puzzles,
@@ -88,7 +88,8 @@ class TestPuzzleCompression:
 
     def test_lowest_best_version(self):
         assert lowest_best_version([bytes(CAT_MOD)]) == 4
-        assert lowest_best_version([bytes(OFFER_MOD)]) == 2
+        assert lowest_best_version([bytes(OFFER_MOD_OLD)]) == 2
+        assert lowest_best_version([bytes(OFFER_MOD)]) == 5
 
     def test_version_override(self):
         coin_spend = CoinSpend(
