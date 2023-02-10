@@ -12,6 +12,17 @@ outbound_rate_limit_percent: 30
 
 network_overrides: &network_overrides
   constants:
+    ips-2023-02-10:
+      AGG_SIG_ME_ADDITIONAL_DATA: 60a18b5c1f1e860b2ff5f6fb4465b0a3a946f7a0ca61835dbe14cb2dfc27f9f2
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      DIFFICULTY_STARTING: 30
+      EPOCH_BLOCKS: 768
+      GENESIS_CHALLENGE: 60a18b5c1f1e860b2ff5f6fb4465b0a3a946f7a0ca61835dbe14cb2dfc27f9f2
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
+      MEMPOOL_BLOCK_BUFFER: 10
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
     mainnet:
       GENESIS_CHALLENGE: ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
@@ -72,6 +83,9 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
   config:
+    ips-2023-02-10:
+      address_prefix: "txch"
+      default_full_node_port: 58445
     mainnet:
       address_prefix: "xch"
       default_full_node_port: 8444
@@ -93,7 +107,7 @@ network_overrides: &network_overrides
       address_prefix: "txch"
       default_full_node_port: 58444
 
-selected_network: &selected_network "mainnet"
+selected_network: &selected_network "ips-2023-02-10"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
@@ -127,16 +141,16 @@ logging: &logging
 
 seeder:
   # The fake full node used for crawling will run on this port.
-  port: 8444
+  port: 58445
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
-  other_peers_port: 8444
+  other_peers_port: 58445
   # This will override the default full_node.peer_connect_timeout for the crawler full node
   peer_connect_timeout: 2
   # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
   crawler_db_path: "crawler.db"
   # Peers used for the initial run.
   bootstrap_peers:
-    - "node.chia.net"
+    - "ips-2023-02-10-ips-2023-02-10-node-a.chia.net"
   # Only consider nodes synced at least to this height.
   minimum_height: 240000
   # How many of a particular version we need to see before reporting it in the logs
@@ -217,7 +231,7 @@ farmer:
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 58445
   harvester_peer:
     host: *self_hostname
     port: 8448
@@ -267,7 +281,7 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 8444
+      port: 58445
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -313,7 +327,7 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 8444
+  port: 58445
 
   # controls the sync-to-disk behavior of the database connection. Can be one of:
   # "on"    enables syncing to disk, minimizes risk of corrupting the DB in
@@ -418,7 +432,7 @@ full_node:
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer-ips-2023-02-10-ips-2023-02-10.chia.net"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -426,8 +440,8 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
-      port: 8444
+      host: ips-2023-02-10-ips-2023-02-10-introducer-0.chia.net  # Chia AWS introducer IPv4/IPv6
+      port: 58445
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -503,11 +517,11 @@ wallet:
   initial_num_public_keys: 425
 
   dns_servers:
-    - "dns-introducer.chia.net"
+    - "dns-introducer-ips-2023-02-10-ips-2023-02-10.chia.net"
 
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 58445
   # The path of NFT off-chain metadata cache
   nft_metadata_cache_path: "nft_cache"
   # The length of NFT ID prefix will be used as hash index
@@ -536,8 +550,8 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    host: ips-2023-02-10-ips-2023-02-10-introducer-0.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 58445
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"
