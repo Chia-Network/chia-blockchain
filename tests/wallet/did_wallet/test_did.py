@@ -24,7 +24,6 @@ from chia.wallet.singleton import create_fullpuz
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def get_wallet_num(wallet_manager):
@@ -915,7 +914,8 @@ class TestDIDWallet:
             did_wallet_1.id()
         )
         await full_node_api.process_transaction_records(records=transaction_records)
-        await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=15)
+
         assert await did_wallet_1.get_confirmed_balance() == did_amount
         assert await did_wallet_1.get_unconfirmed_balance() == did_amount
         response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
@@ -948,7 +948,8 @@ class TestDIDWallet:
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
-        await time_out_assert(15, wallet_is_synced, True, wallet_node_2, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=15)
+
         assert await wallet1.get_confirmed_balance() == odd_amount
         try:
             await api_0.did_get_info({"coin_id": coin_1.name().hex()})
@@ -1066,7 +1067,8 @@ class TestDIDWallet:
             did_wallet_1.id()
         )
         await full_node_api.process_transaction_records(records=transaction_records)
-        await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=15)
+
         expected_confirmed_balance -= did_amount + fee
         assert await did_wallet_1.get_confirmed_balance() == did_amount
         assert await did_wallet_1.get_unconfirmed_balance() == did_amount
@@ -1086,7 +1088,8 @@ class TestDIDWallet:
 
         expected_confirmed_balance -= fee
 
-        await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=15)
+
         assert await did_wallet_1.get_confirmed_balance() == did_amount
         assert await did_wallet_1.get_unconfirmed_balance() == did_amount
 
