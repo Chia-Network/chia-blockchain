@@ -1615,7 +1615,7 @@ class WalletRpcApi:
 
         if request.get("advanced", False):
             return {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos},
+                "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
                 "id": offer.name(),
             }
         else:

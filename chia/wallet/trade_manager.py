@@ -138,13 +138,13 @@ class TradeManager:
 
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
-        primary_coin_ids = [c.name() for c in offer.bundle.removals()]
+        primary_coin_ids = [c.name() for c in offer.removals()]
         our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
             primary_coin_ids
         )
         our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records]
         our_additions: List[Coin] = list(
-            filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.bundle.additions())
+            filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
         )
         our_addition_ids: List[bytes32] = [c.name() for c in our_additions]
 
@@ -596,7 +596,7 @@ class TradeManager:
                 await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
     async def check_offer_validity(self, offer: Offer, peer: WSChiaConnection) -> bool:
-        all_removals: List[Coin] = offer.bundle.removals()
+        all_removals: List[Coin] = offer.removals()
         all_removal_names: List[bytes32] = [c.name() for c in all_removals]
         non_ephemeral_removals: List[Coin] = list(
             filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
@@ -610,7 +610,7 @@ class TradeManager:
         if validate:
             final_spend_bundle: SpendBundle = offer.to_valid_spend()
         else:
-            final_spend_bundle = offer.bundle
+            final_spend_bundle = offer._bundle
 
         settlement_coins: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
@@ -860,7 +860,7 @@ class TradeManager:
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()
-        return {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+        return {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos}
 
     async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Offer:
         for puzzle_info in offer.driver_dict.values():
