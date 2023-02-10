@@ -127,8 +127,6 @@ jobs:
 
       - name: Coverage Processing
         run: |
-          # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
-          rm coverage-data/*.tests_windows_* coverage-data/.*.tests_windows_*
           coverage combine --rcfile=.coveragerc --data-file coverage-reports/.coverage coverage-data/
           coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
@@ -141,10 +139,12 @@ jobs:
         run: |
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
-# needs some debugging since it just reports no changes
-#      - name: Coverage report (diff)
-#        run: |
-#          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
+      - name: Coverage report (diff)
+        env:
+          compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
+        run: |
+          diff-cover --compare-branch=${{ env.compare-branch }} --html-report coverage-reports/diff-cover.html --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports
         if: always()

@@ -80,16 +80,21 @@ class DataLayerStore:
                 )
             )
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS singleton_records_launcher_id_index ON singleton_records(launcher_id)"
+            )
+            await conn.execute("CREATE INDEX IF NOT EXISTS singleton_records_root_index ON singleton_records(root)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS singleton_records_confirmed_at_height_index "
+                "ON singleton_records(confirmed_at_height)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS singleton_records_generation_index ON singleton_records(generation)"
+            )
 
-            await conn.execute(("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)"))
+            await conn.execute("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)")
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS id on launchers(id)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS mirrors_launcher_id_index ON mirrors(launcher_id)")
 
         return self
 

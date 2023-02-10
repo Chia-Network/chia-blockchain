@@ -161,19 +161,20 @@ class Err(Enum):
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):
+        super().__init__(f"Error code: {code.name} {error_msg}")
         self.code = code
         self.error_msg = error_msg
 
 
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
-        super(ConsensusError, self).__init__(f"Error code: {code.name}")
+        super().__init__(f"Error code: {code.name} {errors}")
         self.errors = errors
 
 
 class ProtocolError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
-        super(ProtocolError, self).__init__(f"Error code: {code.name}")
+        super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 

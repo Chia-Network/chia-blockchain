@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import os
 import pathlib
 import sys
@@ -13,6 +15,7 @@ import typing_extensions
 
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
+cache_path = root.joinpath(".chia_cache", "manage_clvm.json")
 
 # This is a work-around for fixing imports so they get the appropriate top level
 # packages instead of those of the same name in the same directory as this program.
@@ -24,7 +27,7 @@ sys.path = [path for path in sys.path if path != os.fspath(here)]
 
 from clvm_tools_rs import compile_clvm  # noqa: E402
 
-from chia.types.blockchain_format.program import SerializedProgram  # noqa: E402
+from chia.types.blockchain_format.serialized_program import SerializedProgram  # noqa: E402
 
 clvm_suffix = ".clvm"
 hex_suffix = ".clvm.hex"
@@ -32,6 +35,66 @@ hash_suffix = ".clvm.hex.sha256tree"
 all_suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
 # TODO: could be cli options
 top_levels = {"chia"}
+
+
+class ManageClvmError(Exception):
+    pass
+
+
+class CacheEntry(typing.TypedDict):
+    clvm: str
+    hex: str
+    hash: str
+
+
+CacheEntries = typing.Dict[str, CacheEntry]
+CacheVersion = typing.List[int]
+current_cache_version: CacheVersion = [1]
+
+
+class CacheVersionError(ManageClvmError):
+    pass
+
+
+class NoCacheVersionError(CacheVersionError):
+    def __init__(self) -> None:
+        super().__init__("Cache must specify a version, none found")
+
+
+class WrongCacheVersionError(CacheVersionError):
+    def __init__(self, found_version: object, expected_version: CacheVersion) -> None:
+        self.found_version = found_version
+        self.expected_version = expected_version
+        super().__init__(f"Cache has wrong version, expected {expected_version!r} got: {found_version!r}")
+
+
+class Cache(typing.TypedDict):
+    entries: CacheEntries
+    version: CacheVersion
+
+
+def create_empty_cache() -> Cache:
+    return {
+        "entries": {},
+        "version": current_cache_version,
+    }
+
+
+def load_cache(file: typing.IO[str]) -> Cache:
+    loaded_cache = typing.cast(Cache, json.load(file))
+    try:
+        loaded_version = loaded_cache["version"]
+    except KeyError as e:
+        raise NoCacheVersionError() from e
+
+    if loaded_version != current_cache_version:
+        raise WrongCacheVersionError(found_version=loaded_version, expected_version=current_cache_version)
+
+    return loaded_cache
+
+
+def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
+    json.dump(cache, file, indent=4)
 
 
 def generate_hash_bytes(hex_bytes: bytes) -> bytes:
@@ -97,15 +160,56 @@ def find_stems(
     return found_stems
 
 
+def create_cache_entry(reference_paths: ClvmPaths, reference_bytes: ClvmBytes) -> CacheEntry:
+    source_bytes = reference_paths.clvm.read_bytes()
+
+    clvm_hasher = hashlib.sha256()
+    clvm_hasher.update(source_bytes)
+
+    hex_hasher = hashlib.sha256()
+    hex_hasher.update(reference_bytes.hex)
+
+    hash_hasher = hashlib.sha256()
+    hash_hasher.update(reference_bytes.hash)
+
+    return {
+        "clvm": clvm_hasher.hexdigest(),
+        "hex": hex_hasher.hexdigest(),
+        "hash": hash_hasher.hexdigest(),
+    }
+
+
 @click.group()
 def main() -> None:
     pass
 
 
 @main.command()
-def check() -> int:
+@click.option("--use-cache/--no-cache", default=True, show_default=True, envvar="USE_CACHE")
+def check(use_cache: bool) -> int:
     used_excludes = set()
     overall_fail = False
+
+    cache: Cache
+    if not use_cache:
+        cache = create_empty_cache()
+    else:
+        try:
+            print(f"Attempting to load cache from: {cache_path}")
+            with cache_path.open(mode="r") as file:
+                cache = load_cache(file=file)
+        except FileNotFoundError:
+            print("Cache not found, starting fresh")
+            cache = create_empty_cache()
+        except NoCacheVersionError:
+            print("Ignoring cache due to lack of version")
+            cache = create_empty_cache()
+        except WrongCacheVersionError as e:
+            print(f"Ignoring cache due to incorrect version, expected {e.expected_version!r} got: {e.found_version!r}")
+            cache = create_empty_cache()
+
+    cache_entries = cache["entries"]
+    cache_modified = False
 
     found_stems = find_stems(top_levels)
     for name in ["hex", "hash"]:
@@ -134,27 +238,36 @@ def check() -> int:
         file_fail = False
         error = None
 
+        cache_key = str(stem_path)
         try:
             reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
             reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths)
 
-            with tempfile.TemporaryDirectory() as temporary_directory:
-                generated_paths = ClvmPaths.from_clvm(
-                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
-                )
+            new_cache_entry = create_cache_entry(reference_paths=reference_paths, reference_bytes=reference_bytes)
+            existing_cache_entry = cache_entries.get(cache_key)
+            cache_hit = new_cache_entry == existing_cache_entry
 
-                compile_clvm(
-                    input_path=os.fspath(reference_paths.clvm),
-                    output_path=os.fspath(generated_paths.hex),
-                    search_paths=[os.fspath(reference_paths.clvm.parent)],
-                )
+            if not cache_hit:
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    generated_paths = ClvmPaths.from_clvm(
+                        clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
+                    )
 
-                generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
+                    compile_clvm(
+                        input_path=os.fspath(reference_paths.clvm),
+                        output_path=os.fspath(generated_paths.hex),
+                        search_paths=[os.fspath(reference_paths.clvm.parent)],
+                    )
 
-            if generated_bytes != reference_bytes:
-                file_fail = True
-                error = f"        reference: {reference_bytes!r}\n"
-                error += f"        generated: {generated_bytes!r}"
+                    generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
+
+                if generated_bytes != reference_bytes:
+                    file_fail = True
+                    error = f"        reference: {reference_bytes!r}\n"
+                    error += f"        generated: {generated_bytes!r}"
+                else:
+                    cache_modified = True
+                    cache_entries[cache_key] = new_cache_entry
         except Exception:
             file_fail = True
             error = traceback.format_exc()
@@ -177,6 +290,11 @@ def check() -> int:
 
         for exclude in unused_excludes:
             print(f"    {exclude}")
+
+    if use_cache and cache_modified:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with cache_path.open(mode="w") as file:
+            dump_cache(cache=cache, file=file)
 
     return 1 if overall_fail else 0
 
@@ -229,4 +347,4 @@ def build() -> int:
     return 1 if overall_fail else 0
 
 
-sys.exit(main())
+sys.exit(main(auto_envvar_prefix="CHIA_MANAGE_CLVM"))

@@ -47,6 +47,7 @@ def create_wallet_service(
         service_config["trusted_peers"]["local_node"] = trusted_peer
     if "short_sync_blocks_behind_threshold" not in service_config:
         service_config["short_sync_blocks_behind_threshold"] = 20
+
     node = WalletNode(
         service_config,
         root_path,
@@ -94,7 +95,7 @@ async def async_main() -> int:
     config[SERVICE_NAME] = service_config
 
     # This is simulator
-    local_test = service_config["testing"]
+    local_test = service_config.get("testing", False)
     if local_test is True:
         from chia.simulator.block_tools import test_constants
 

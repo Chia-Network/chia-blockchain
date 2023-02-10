@@ -30,9 +30,10 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_plot_id_pk, calculate_pos_challenge
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -901,8 +902,11 @@ class TestFullNodeProtocol:
                 not_included_tx += 1
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
 
-        assert included_tx > 0
-        assert not_included_tx == 3
+        # these numbers reflect the capacity of the mempool. In these
+        # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
+        # and MAX_BLOCK_COST_CLVM
+        assert included_tx == 23
+        assert not_included_tx == 10
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
@@ -1549,65 +1553,6 @@ class TestFullNodeProtocol:
             return len(full_node_2.full_node.full_node_store.finished_sub_slots) >= num_slots
 
         await time_out_assert(20, caught_up_slots)
-
-    @pytest.mark.skip("a timebomb causes mainnet to stop after transactions start, so this test doesn't work yet")
-    @pytest.mark.asyncio
-    async def test_mainnet_softfork(self, wallet_nodes_mainnet):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes_mainnet
-        blocks = await full_node_1.get_all_full_blocks()
-
-        wallet_ph = wallet_a.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
-            3,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            farmer_reward_puzzle_hash=wallet_ph,
-            pool_reward_puzzle_hash=wallet_ph,
-        )
-        for block in blocks[-3:]:
-            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-
-        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
-
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-        output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
-        conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
-
-        spend_bundle: SpendBundle = wallet_a.generate_signed_transaction(
-            100,
-            32 * b"0",
-            get_future_reward_coins(blocks[1])[0],
-            condition_dic=conditions_dict,
-        )
-        assert spend_bundle is not None
-        max_size = test_constants.MAX_GENERATOR_SIZE
-        large_puzzle_reveal = (max_size + 1) * b"0"
-        under_sized = max_size * b"0"
-        blocks_new = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=spend_bundle,
-        )
-
-        invalid_block: FullBlock = blocks_new[-1]
-        invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
-        invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
-
-        await _validate_and_add_block(
-            full_node_1.full_node.blockchain, invalid_block, expected_error=Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
-        )
-
-        blocks_new = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=spend_bundle,
-        )
-        valid_block = blocks_new[-1]
-        valid_program = SerializedProgram.from_bytes(under_sized)
-        valid_block = dataclasses.replace(valid_block, transactions_generator=valid_program)
-        await _validate_and_add_block(full_node_1.full_node.blockchain, valid_block)
 
     @pytest.mark.asyncio
     async def test_compact_protocol(self, setup_two_nodes_fixture):

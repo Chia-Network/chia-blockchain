@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
 import pytest
 from blspy import G2Element
 
+from chia.clvm.spend_sim import sim_and_client
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -22,7 +24,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
-from chia.wallet.trading.offer import NotarizedPayment, Offer
+from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
@@ -168,10 +170,8 @@ class TestOfferLifecycle:
     cost: Dict[str, int] = {}
 
     @pytest.mark.asyncio()
-    async def test_complex_offer(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_complex_offer(self):
+        async with sim_and_client() as (sim, sim_client):
             coins_needed: Dict[Optional[str], List[int]] = {
                 None: [500, 400, 300],
                 "red": [250, 100],
@@ -299,6 +299,30 @@ class TestOfferLifecycle:
             }
             assert new_offer.is_valid()
 
+            # Test preventing TAIL from running during exchange
+            blue_cat_puz: Program = construct_cat_puzzle(CAT_MOD, str_to_tail_hash("blue"), OFFER_MOD)
+            blue_spend: CoinSpend = CoinSpend(
+                Coin(bytes32(32), blue_cat_puz.get_tree_hash(), uint64(0)),
+                blue_cat_puz,
+                Program.to([[bytes32(32), [bytes32(32), 200, ["hey there"]]]]),
+            )
+            new_spends_list: List[CoinSpend] = [blue_spend, *new_offer.to_spend_bundle().coin_spends]
+            tail_offer: Offer = Offer.from_spend_bundle(SpendBundle(new_spends_list, G2Element()))
+            valid_spend = tail_offer.to_valid_spend(bytes32(32))
+            real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
+            real_blue_spend_replaced = replace(
+                real_blue_spend,
+                solution=real_blue_spend.solution.to_program().replace(
+                    ffrfrf=Program.to(-113), ffrfrr=Program.to([str_to_tail("blue"), []])
+                ),
+            )
+            valid_spend = SpendBundle(
+                [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],
+                G2Element(),
+            )
+            with pytest.raises(ValueError, match="clvm raise"):
+                valid_spend.additions()
+
             # Test (de)serialization
             assert Offer.from_bytes(bytes(new_offer)) == new_offer
 
@@ -308,12 +332,11 @@ class TestOfferLifecycle:
             # Make sure we can actually spend the offer once it's valid
             arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
             offer_bundle: SpendBundle = new_offer.to_valid_spend(arbitrage_ph)
+
             result = await sim_client.push_tx(offer_bundle)
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             self.cost["complex offer"] = cost_of_spend_bundle(offer_bundle)
             await sim.farm_block()
-        finally:
-            await sim.close()
 
     def test_cost(self):
         import json

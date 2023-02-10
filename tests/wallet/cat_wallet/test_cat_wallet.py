@@ -6,6 +6,7 @@ from typing import List
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.coin import Coin
@@ -146,7 +147,8 @@ class TestCATWallet:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
-
+        api_0 = WalletRpcApi(wallet_node)
+        api_1 = WalletRpcApi(wallet_node_2)
         ph = await wallet.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -192,14 +194,19 @@ class TestCATWallet:
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
         tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
+        tx_id = None
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
             if tx_record.wallet_id is cat_wallet.id():
+                tx_id = tx_record.name.hex()
                 assert tx_record.to_puzzle_hash == cat_2_hash
 
         await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
         await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
+        memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
+        assert len(memos[tx_id]) == 1
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
@@ -211,7 +218,13 @@ class TestCATWallet:
 
         await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 60)
         await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 60)
-
+        coins = await cat_wallet_2.select_coins(uint64(60))
+        assert len(coins) == 1
+        coin = coins.pop()
+        tx_id = coin.name().hex()
+        memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
+        assert len(memos[tx_id]) == 1
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
         for tx_record in tx_records:

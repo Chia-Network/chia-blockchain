@@ -6,6 +6,7 @@ self_hostname: &self_hostname "localhost"
 prefer_ipv6: False
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
+daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
 
@@ -403,10 +404,17 @@ full_node:
   # Number of coin_ids | puzzle hashes that node will let wallets subscribe to
   max_subscribe_items: 200000
 
+  # Number of coin_ids | puzzle hashes that node will let local wallets subscribe to
+  trusted_max_subscribe_items: 2000000
+
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
-  dns_servers:
+  dns_servers: &dns_servers
     - "dns-introducer.chia.net"
+    - "chia.ctrlaltdel.ch"
+    - "chia-seeder.h9.com"
+    - "chia.hoffmang.com"
+    - "seeder.xchpool.org"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -422,6 +430,10 @@ full_node:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
+
+  # Node IDs of trusted wallet peers, allows using more permissive limits on sync
+  trusted_peers:
+    0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb7: Does_not_matter
 
   ssl:
     private_crt:  "config/ssl/full_node/private_full_node.crt"
@@ -485,8 +497,7 @@ wallet:
 
   initial_num_public_keys: 425
 
-  dns_servers:
-    - "dns-introducer.chia.net"
+  dns_servers: *dns_servers
 
   full_node_peer:
     host: *self_hostname
@@ -548,12 +559,15 @@ wallet:
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
 
+  # Reset wallet sync data on start for given fingerprint
+  reset_sync_for_fingerprint: null
+
   # After n received unspent transactions, the spam filter will be enabled, which will filter out received
   # coins with very small value. Any standard TX under xch_spam_amount is filtered
   spam_filter_after_n_txs: 200
   xch_spam_amount: 1000000
-  # Accept notifications from parties on chain
-  accept_notifications: False
+  # Enable notifications from parties on chain
+  enable_notifications: True
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 
@@ -572,6 +586,9 @@ data_layer:
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # The timeout for the client to download a file from a server
   client_timeout: 15
+  # If you need use a proxy for download data you can use this setting sample
+  # proxy_url: http://localhost:8888
+
   # Data for running a data layer server.
   host_ip: 0.0.0.0
   host_port: 8575

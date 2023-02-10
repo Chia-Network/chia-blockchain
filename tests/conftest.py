@@ -16,7 +16,7 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 
 # Set spawn after stdlib imports, but before other imports
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
@@ -129,6 +129,11 @@ def latest_db_version():
 
 @pytest.fixture(scope="function", params=[1, 2])
 def db_version(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[1000000, 3630000])
+def softfork_height(request):
     return request.param
 
 
@@ -367,7 +372,9 @@ async def two_wallet_nodes(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_services() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+async def two_wallet_nodes_services() -> AsyncIterator[
+    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
 
@@ -626,7 +633,6 @@ async def daemon_connection_and_temp_keychain(get_b_tools):
                 f"wss://127.0.0.1:{get_b_tools._config['daemon_port']}",
                 autoclose=True,
                 autoping=True,
-                heartbeat=60,
                 ssl=get_b_tools.get_daemon_ssl_context(),
                 max_msg_size=52428800,
             ) as ws:
@@ -698,14 +704,6 @@ async def timelord(bt):
 async def timelord_service(bt):
     async for _ in setup_timelord(uint16(0), False, test_constants, bt):
         yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_sim():
-    sim = await SpendSim.create()
-    sim_client = SimClient(sim)
-    await sim.farm_block()
-    return sim, sim_client
 
 
 @pytest.fixture(scope="function")

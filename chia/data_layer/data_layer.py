@@ -6,7 +6,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Dict, List, Optional, Set, Tuple, Union
 
 import aiohttp
 
@@ -33,7 +33,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -52,7 +52,7 @@ class DataLayer:
     config: Dict[str, Any]
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    state_changed_callback: Optional[Callable[..., object]]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     wallet_id: uint64
     initialized: bool
     none_bytes: bytes32
@@ -97,7 +97,7 @@ class DataLayer:
         self.lock = asyncio.Lock()
         self._server = None
 
-    def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
@@ -119,6 +119,7 @@ class DataLayer:
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
+        self.wallet_rpc.close()
 
     async def _await_closed(self) -> None:
         if self.connection is not None:
@@ -128,6 +129,7 @@ class DataLayer:
         except asyncio.CancelledError:
             pass
         await self.data_store.close()
+        await self.wallet_rpc.await_closed()
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
@@ -376,6 +378,7 @@ class DataLayer:
 
             try:
                 timeout = self.config.get("client_timeout", 15)
+                proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
                     tree_id,
@@ -385,6 +388,7 @@ class DataLayer:
                     self.server_files_location,
                     timeout,
                     self.log,
+                    proxy_url,
                 )
                 if success:
                     self.log.info(
