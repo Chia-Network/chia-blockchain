@@ -234,6 +234,7 @@ class TestWalletSimulator:
         # Check merkle coins
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 1, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 1, 1000)
+        assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         resp = await api_0.clawback_transaction(dict({"merkle_coin_id": merkle_coin.name().hex()}))

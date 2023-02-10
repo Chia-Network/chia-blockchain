@@ -280,8 +280,8 @@ class NFTWallet:
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
-            num = await self.get_current_nfts()
-            if len(num) == 0 and self.did_id is not None:
+            num = await self.get_nft_count()
+            if num == 0 and self.did_id is not None:
                 # Check if the wallet owns the DID
                 for did_wallet in await self.wallet_state_manager.get_all_wallet_info_entries(
                     wallet_type=WalletType.DECENTRALIZED_ID
