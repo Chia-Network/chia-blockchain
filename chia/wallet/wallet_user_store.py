@@ -51,13 +51,12 @@ class WalletUserStore:
         name: str,
         wallet_type: int,
         data: str,
-        id: Optional[int] = None,
     ) -> WalletInfo:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-                (id, name, wallet_type, data),
+                "INSERT INTO users_wallets (name, wallet_type, data) VALUES(?, ?, ?)",
+                (name, wallet_type, data),
             )
             await cursor.close()
             wallet = await self.get_last_wallet()
