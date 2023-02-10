@@ -1983,8 +1983,9 @@ def generator_condition_tester(
     quote: bool = True,
     max_cost: int = MAX_BLOCK_COST_CLVM,
     height: uint32,
+    coin_amount: int = 123,
 ) -> NPCResult:
-    prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
+    prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} {coin_amount} (() (q . ())))))"  # noqa
     print(f"program: {prg}")
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
     generator = BlockGenerator(program, [], [])
@@ -2011,9 +2012,7 @@ class TestGeneratorConditions:
         [
             (True, -1, Err.GENERATOR_RUNTIME_ERROR.value),
             (False, -1, Err.GENERATOR_RUNTIME_ERROR.value),
-            (False, -1, Err.GENERATOR_RUNTIME_ERROR.value),
             (True, 1, None),
-            (False, 1, None),
             (False, 1, None),
         ],
     )
@@ -2104,9 +2103,9 @@ class TestGeneratorConditions:
         cond = 52
         # even though the generator outputs 3 conditions, we only need to return one copy
         # with all the fees accumulated
-        npc_result = generator_condition_tester(f"({cond} 100) " * 3, height=softfork_height)
+        npc_result = generator_condition_tester(f"({cond} 10) " * 3, height=softfork_height)
         assert npc_result.error is None
-        assert npc_result.conds.reserve_fee == 300
+        assert npc_result.conds.reserve_fee == 30
         assert len(npc_result.conds.spends) == 1
 
     def test_duplicate_outputs(self, softfork_height):
@@ -2508,7 +2507,9 @@ class TestMaliciousGenerators:
         condition = CREATE_UNIQUE_COINS.format(num=6094)
 
         with assert_runtime(seconds=0.3, label=request.node.name):
-            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+            npc_result = generator_condition_tester(
+                condition, quote=False, height=softfork_height, coin_amount=123000000
+            )
 
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1
@@ -2558,37 +2559,51 @@ class TestPkmPairs:
     ASU = ConditionOpcode.AGG_SIG_UNSAFE
 
     def test_empty_list(self):
-        conds = SpendBundleConditions([], 0, 0, 0, [], 0)
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
     def test_no_agg_sigs(self):
         # one create coin: h1 amount: 1 and not hint
-        spends = [Spend(self.h3, self.h4, None, 0, [(self.h1, 1, b"")], [], 0)]
-        conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
+        spends = [Spend(self.h3, self.h4, None, 0, None, None, [(self.h1, 1, b"")], [], 0)]
+        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
     def test_agg_sig_me(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)]
-        conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
+        spends = [
+            Spend(
+                self.h1,
+                self.h2,
+                None,
+                0,
+                None,
+                None,
+                [],
+                [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")],
+                0,
+            )
+        ]
+        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe(self):
-        conds = SpendBundleConditions([], 0, 0, 0, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)
+        conds = SpendBundleConditions(
+            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0
+        )
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self):
 
-        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")], 0)]
-        conds = SpendBundleConditions(spends, 0, 0, 0, [(bytes48(self.pk2), b"msg2")], 0)
+        spends = [Spend(self.h1, self.h2, None, 0, None, None, [], [(bytes48(self.pk1), b"msg1")], 0)]
+        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [(bytes48(self.pk2), b"msg2")], 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
         assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]
