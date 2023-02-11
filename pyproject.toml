@@ -75,7 +75,7 @@ anyio = { version = "^3.6", optional = true }
 # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
 black = { version = "22.10.0", optional = true }
 build = { version = "^0.9", optional = true }
-coverage = { version = "^6.5.0", optional = true }
+coverage = { version = "^7.1.0", optional = true }
 diff-cover = { version = "^7.0.1", optional = true }
 flake8 = { version = "^5.0.4", optional = true }
 ipython = { version = "^8.6.0", python = ">=3.8", optional = true }
