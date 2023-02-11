@@ -210,21 +210,70 @@ def generate_and_print_cmd():
     show_default=True,
     is_flag=True,
 )
-def sign_cmd(message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool):
+@click.option(
+    "--json",
+    "-j",
+    help=("Write the signature output in JSON format"),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+def sign_cmd(
+    message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
+):
     from .keys_funcs import resolve_derivation_master_key, sign
 
     private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-    sign(message, private_key, hd_path, as_bytes)
+    sign(message, private_key, hd_path, as_bytes, json)
+
+
+def parse_signature_json(json_str: str):
+    import json
+
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        raise click.BadParameter("Invalid JSON string")
+    if "message" not in data:
+        raise click.BadParameter("Missing 'message' field")
+    if "pubkey" not in data:
+        raise click.BadParameter("Missing 'pubkey' field")
+    if "signature" not in data:
+        raise click.BadParameter("Missing 'signature' field")
+    if "signing_mode" not in data:
+        raise click.BadParameter("Missing 'signing_mode' field")
+
+    return data["message"], data["pubkey"], data["signature"], data["signing_mode"]
 
 
 @keys_cmd.command("verify", short_help="Verify a signature with a pk")
-@click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
-@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
-@click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str, required=True)
-def verify_cmd(message: str, public_key: str, signature: str):
-    from .keys_funcs import verify
+@click.option("--message", "-d", default=None, help="Enter the signed message in UTF-8", type=str)
+@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str)
+@click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str)
+@click.option(
+    "--as-bytes",
+    "-b",
+    help="Verify the signed message as sequence of bytes rather than UTF-8 string. Ignored if --json is used.",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+@click.option(
+    "--json",
+    "-j",
+    help=("Read the signature data from a JSON string. Overrides --message, --public_key, and --signature."),
+    show_default=True,
+    type=str,
+)
+def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, json: str):
+    from .keys_funcs import as_bytes_from_signing_mode, verify
 
-    verify(message, public_key, signature)
+    if json is not None:
+        parsed_message, parsed_pubkey, parsed_sig, parsed_signing_mode_str = parse_signature_json(json)
+
+        verify(parsed_message, parsed_pubkey, parsed_sig, as_bytes_from_signing_mode(parsed_signing_mode_str))
+    else:
+        verify(message, public_key, signature, as_bytes)
 
 
 @keys_cmd.group("derive", short_help="Derive child keys or wallet addresses")

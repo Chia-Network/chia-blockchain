@@ -39,10 +39,11 @@ from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
@@ -550,7 +551,7 @@ class PoolWallet:
 
         tip = (await self.get_tip())[1]
         tip_coin = tip.coin
-        singleton = tip.additions()[0]
+        singleton = compute_additions(tip)[0]
         singleton_id = singleton.name()
         assert outgoing_coin_spend.coin.parent_coin_info == tip_coin.name()
         assert outgoing_coin_spend.coin.name() == singleton_id

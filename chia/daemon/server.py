@@ -142,6 +142,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
+        self.heartbeat = self.net_config.get("daemon_heartbeat", 300)
         self.webserver: Optional[WebServer] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
@@ -217,7 +218,9 @@ class WebSocketServer:
         return {"success": True, "services_stopped": service_names}
 
     async def incoming_connection(self, request):
-        ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=30)
+        ws: WebSocketResponse = web.WebSocketResponse(
+            max_msg_size=self.daemon_max_message_size, heartbeat=self.heartbeat
+        )
         await ws.prepare(request)
 
         while True:

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import logging
 import signal
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Tuple
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
@@ -30,13 +32,24 @@ from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import lock_and_load_config, save_config
+from chia.util.config import config_path_for_filename, lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
 from chia.wallet.wallet_node import WalletNode
 
 log = logging.getLogger(__name__)
+
+
+@contextmanager
+def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[Dict[str, Any]]:
+    init(None, root_path)
+    init(certs_path, root_path)
+    path = config_path_for_filename(root_path=root_path, filename="config.yaml")
+    # Using localhost leads to flakiness on CI
+    path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        yield config
 
 
 def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) -> List[Tuple[uint16, str]]:
@@ -105,6 +118,7 @@ async def setup_full_node(
     config = local_bt.config
     service_config = config["full_node"]
     service_config["database_path"] = db_name
+    service_config["testing"] = True
     service_config["send_uncompact_interval"] = send_uncompact_interval
     service_config["target_uncompact_proofs"] = 30
     service_config["peer_connect_interval"] = 50
@@ -146,6 +160,8 @@ async def setup_full_node(
     service.stop()
     await service.wait_closed()
     if db_path.exists():
+        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+        gc.collect()
         db_path.unlink()
 
 
@@ -165,6 +181,7 @@ async def setup_wallet_node(
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
         service_config = config["wallet"]
+        service_config["testing"] = True
         service_config["port"] = 0
         service_config["rpc_port"] = 0
         service_config["initial_num_public_keys"] = initial_num_public_keys
@@ -227,9 +244,7 @@ async def setup_harvester(
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ) -> AsyncGenerator[Service[Harvester], None]:
-    init(None, root_path)
-    init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
-    with lock_and_load_config(root_path, "config.yaml") as config:
+    with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
         config["selected_network"] = "testnet0"
         config["harvester"]["selected_network"] = "testnet0"
@@ -263,9 +278,7 @@ async def setup_farmer(
     start_service: bool = True,
     port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Farmer], None]:
-    init(None, root_path)
-    init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
-    with lock_and_load_config(root_path, "config.yaml") as root_config:
+    with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
         root_config["selected_network"] = "testnet0"
         root_config["farmer"]["selected_network"] = "testnet0"

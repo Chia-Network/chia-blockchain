@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -29,7 +29,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -43,6 +43,7 @@ from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
+from chia.util.logging import TimedDuplicateFilter
 from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
@@ -102,8 +103,11 @@ class Farmer:
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
-        self.state_changed_callback: Optional[Callable] = None
+        self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.log = log
+        self.log.addFilter(TimedDuplicateFilter("No pool specific authentication_token_timeout.*", 60 * 10))
+        self.log.addFilter(TimedDuplicateFilter("No pool specific difficulty has been set.*", 60 * 10))
+
         self.started = False
         self.harvester_handshake_task: Optional[asyncio.Task] = None
 
@@ -208,7 +212,7 @@ class Farmer:
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.started = False
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     async def on_connect(self, peer: WSChiaConnection):
@@ -629,6 +633,13 @@ class Farmer:
                     self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
                     continue
                 authentication_token_timeout = pool_state["authentication_token_timeout"]
+                if authentication_token_timeout is None:
+                    self.log.error(
+                        f"No pool specific authentication_token_timeout has been set for"
+                        f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
+                    )
+                    return None
+
                 authentication_token = get_current_authentication_token(authentication_token_timeout)
                 message: bytes32 = std_hash(
                     AuthenticationPayload(

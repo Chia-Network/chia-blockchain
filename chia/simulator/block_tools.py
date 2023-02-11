@@ -136,7 +136,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MAX_FUTURE_TIME": 3600
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
-        "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
     }
 )
@@ -424,7 +423,7 @@ class BlockTools:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
 
-    async def refresh_plots(self):
+    async def refresh_plots(self) -> None:
         self.plot_manager.refresh_parameter = replace(
             self.plot_manager.refresh_parameter, batch_size=uint32(4 if len(self.expected_plots) % 3 == 0 else 3)
         )  # Make sure we have at least some batches + a remainder

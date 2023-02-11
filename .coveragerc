@@ -1,7 +1,7 @@
 [run]
 branch=True
 relative_files=True
-source=
+source_pkgs=
   chia
   tests
 concurrency=multiprocessing

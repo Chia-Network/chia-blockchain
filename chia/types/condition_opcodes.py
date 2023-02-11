@@ -24,6 +24,8 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_COIN_ANNOUNCEMENT = bytes([61])
     CREATE_PUZZLE_ANNOUNCEMENT = bytes([62])
     ASSERT_PUZZLE_ANNOUNCEMENT = bytes([63])
+    ASSERT_CONCURRENT_SPEND = bytes([64])
+    ASSERT_CONCURRENT_PUZZLE = bytes([65])
 
     # the conditions below let coins inquire about themselves
 
@@ -41,6 +43,14 @@ class ConditionOpcode(bytes, enum.Enum):
     # block index
     ASSERT_HEIGHT_RELATIVE = bytes([82])
     ASSERT_HEIGHT_ABSOLUTE = bytes([83])
+
+    # wall-clock time
+    ASSERT_BEFORE_SECONDS_RELATIVE = bytes([84])
+    ASSERT_BEFORE_SECONDS_ABSOLUTE = bytes([85])
+
+    # block index
+    ASSERT_BEFORE_HEIGHT_RELATIVE = bytes([86])
+    ASSERT_BEFORE_HEIGHT_ABSOLUTE = bytes([87])
 
     # A condition that is always true and always ignore all arguments
     REMARK = bytes([1])

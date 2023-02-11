@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import sqlite3
 from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,6 +15,7 @@ class Notification:
     coin_id: bytes32
     message: bytes
     amount: uint64
+    height: uint32
 
 
 class NotificationStore:
@@ -44,6 +46,16 @@ class NotificationStore:
                 "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
             )
 
+            await conn.execute("CREATE TABLE IF NOT EXISTS all_notification_ids(coin_id blob PRIMARY KEY)")
+
+            try:
+                await conn.execute("ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0")
+            except sqlite3.OperationalError as e:
+                if "duplicate column" in e.args[0]:
+                    pass  # ignore what is likely Duplicate column error
+                else:
+                    raise e
+
             # This used to be an accidentally created redundant index on coin_id which is already a primary key
             # We can remove this at some point in the future when it's unlikely this index still exists
             await conn.execute("DROP INDEX IF EXISTS coin_id_index")
@@ -56,12 +68,17 @@ class NotificationStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount) " "VALUES(?, ?, ?)",
+                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount, height) " "VALUES(?, ?, ?, ?)",
                 (
                     notification.coin_id,
                     notification.message,
                     bytes(notification.amount),
+                    notification.height,
                 ),
+            )
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)",
+                (notification.coin_id,),
             )
             await cursor.close()
 
@@ -86,6 +103,7 @@ class NotificationStore:
                 bytes32(row[0]),
                 bytes(row[1]),
                 uint64.from_bytes(row[2]),
+                uint32(row[3]),
             )
             for row in rows
         ]
@@ -116,6 +134,7 @@ class NotificationStore:
                 bytes32(row[0]),
                 bytes(row[1]),
                 uint64.from_bytes(row[2]),
+                uint32(row[3]),
             )
             for row in rows
         ]
@@ -139,3 +158,13 @@ class NotificationStore:
             # Delete from storage
             cursor = await conn.execute("DELETE FROM notifications")
             await cursor.close()
+
+    async def notification_exists(self, id: bytes32) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                assert row is not None
+                exists: bool = row[0] > 0
+                return exists

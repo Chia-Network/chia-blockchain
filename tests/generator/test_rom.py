@@ -6,7 +6,8 @@ from clvm_tools.clvmc import compile_clvm_text
 from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.generator import run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
@@ -94,14 +95,16 @@ class TestROM:
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 
-    def test_get_name_puzzle_conditions(self):
+    def test_get_name_puzzle_conditions(self, softfork_height):
         # this tests that extra block or coin data doesn't confuse `get_name_puzzle_conditions`
 
         gen = block_generator()
         cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False)
+        npc_result = get_name_puzzle_conditions(
+            gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
+        )
         assert npc_result.error is None
         assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
             len(bytes(gen.program)) * COST_PER_BYTE
@@ -112,6 +115,8 @@ class TestROM:
             puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
             height_relative=None,
             seconds_relative=0,
+            before_height_relative=None,
+            before_seconds_relative=None,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
             flags=ELIGIBLE_FOR_DEDUP,

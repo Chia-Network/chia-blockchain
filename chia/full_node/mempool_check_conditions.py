@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from chia_rs import MEMPOOL_MODE, NO_NEG_DIV
+from chia_rs import LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
+from chia_rs import run_chia_program
+from clvm.casts import int_from_bytes
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.generator import setup_generator_args
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
@@ -30,7 +34,7 @@ log = logging.getLogger(__name__)
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool
+    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool, height: Optional[uint32] = None
 ) -> NPCResult:
     block_program, block_program_args = setup_generator_args(generator)
     size_cost = len(bytes(generator.program)) * cost_per_byte
@@ -38,16 +42,16 @@ def get_name_puzzle_conditions(
     if max_cost < 0:
         return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), None, uint64(0))
 
-    # mempool mode also has these rules apply
-    assert (MEMPOOL_MODE & NO_NEG_DIV) != 0
+    # in mempool mode, the height doesn't matter, because it's always strict.
+    # But otherwise, height must be specified to know which rules to apply
+    assert mempool_mode or height is not None
 
     if mempool_mode:
         flags = MEMPOOL_MODE
+    elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
+        flags = LIMIT_STACK
     else:
-        # conditions must use integers in canonical encoding (i.e. no redundant
-        # leading zeros)
-        # the division operator may not be used with negative operands
-        flags = NO_NEG_DIV
+        flags = 0
 
     try:
         err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
@@ -84,6 +88,31 @@ def get_puzzle_and_solution_for_coin(
         return None, SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution)
     except Exception as e:
         return e, None, None
+
+
+def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
+    args = bytearray(b"\xff")
+    args += bytes(DESERIALIZE_MOD)
+    args += b"\xff"
+    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += b"\x80\x80"
+
+    _, ret = run_chia_program(
+        bytes(generator.program),
+        bytes(args),
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        0,
+    )
+
+    spends: List[CoinSpend] = []
+
+    for spend in Program.to(ret).first().as_iter():
+        parent, puzzle, amount, solution = spend.as_iter()
+        puzzle_hash = puzzle.get_tree_hash()
+        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+        spends.append(CoinSpend(coin, puzzle, solution))
+
+    return spends
 
 
 def mempool_check_time_locks(

@@ -27,7 +27,6 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -181,7 +180,8 @@ class TestSimpleSyncProtocol:
         data_response_1: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response_1.data)
         assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
         assert len(tx_record.spend_bundle.removals()) == 1
         spent_coin = tx_record.spend_bundle.removals()[0]
@@ -194,13 +194,14 @@ class TestSimpleSyncProtocol:
         # Let's make sure the wallet can handle a non ephemeral launcher
         from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
         await wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         # Send a transaction to make sure the wallet is still running
         tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
@@ -281,7 +282,8 @@ class TestSimpleSyncProtocol:
         assert notified_coins == coins
 
         # Test getting notification for coin that is about to be created
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
 
         tx_record.spend_bundle.additions()
@@ -498,7 +500,8 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -578,7 +581,8 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -617,3 +621,85 @@ class TestSimpleSyncProtocol:
 
         check_messages_for_hint(all_messages)
         check_messages_for_hint(all_messages_1)
+
+    @pytest.mark.asyncio
+    async def test_ph_subscribe_limits(self, wallet_node_simulator, self_hostname):
+        full_nodes, wallets, _ = wallet_node_simulator
+        full_node_api = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        con = list(fn_server.all_connections.values())[0]
+        phs = []
+        phs.append(32 * b"\0")
+        phs.append(32 * b"\1")
+        phs.append(32 * b"\2")
+        phs.append(32 * b"\3")
+        phs.append(32 * b"\4")
+        phs.append(32 * b"\5")
+        phs.append(32 * b"\6")
+        full_node_api.full_node.config["max_subscribe_items"] = 2
+        assert full_node_api.is_trusted(con) is False
+        msg = wallet_protocol.RegisterForPhUpdates(phs, 0)
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        s = full_node_api.full_node.subscriptions
+        assert len(s._ph_subscriptions) == 2
+        assert s.has_ph_subscription(phs[0])
+        assert s.has_ph_subscription(phs[1])
+        assert not s.has_ph_subscription(phs[2])
+        assert not s.has_ph_subscription(phs[3])
+        full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
+        full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
+        assert full_node_api.is_trusted(con) is True
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        assert len(s._ph_subscriptions) == 4
+        assert s.has_ph_subscription(phs[0])
+        assert s.has_ph_subscription(phs[1])
+        assert s.has_ph_subscription(phs[2])
+        assert s.has_ph_subscription(phs[3])
+        assert not s.has_ph_subscription(phs[4])
+        assert not s.has_ph_subscription(phs[5])
+
+    @pytest.mark.asyncio
+    async def test_coin_subscribe_limits(self, wallet_node_simulator, self_hostname):
+        full_nodes, wallets, _ = wallet_node_simulator
+        full_node_api = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        fn_server = full_node_api.full_node.server
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        con = list(fn_server.all_connections.values())[0]
+        coins = []
+        coins.append(32 * b"\0")
+        coins.append(32 * b"\1")
+        coins.append(32 * b"\2")
+        coins.append(32 * b"\3")
+        coins.append(32 * b"\4")
+        coins.append(32 * b"\5")
+        coins.append(32 * b"\6")
+        full_node_api.full_node.config["max_subscribe_items"] = 2
+        assert full_node_api.is_trusted(con) is False
+        msg = wallet_protocol.RegisterForCoinUpdates(coins, 0)
+        msg_response = await full_node_api.register_interest_in_coin(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+        s = full_node_api.full_node.subscriptions
+        assert len(s._coin_subscriptions) == 2
+        assert s.has_coin_subscription(coins[0])
+        assert s.has_coin_subscription(coins[1])
+        assert not s.has_coin_subscription(coins[2])
+        assert not s.has_coin_subscription(coins[3])
+        full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
+        full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
+        assert full_node_api.is_trusted(con) is True
+        msg_response = await full_node_api.register_interest_in_coin(msg, con)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value
+        assert len(s._coin_subscriptions) == 4
+        assert s.has_coin_subscription(coins[0])
+        assert s.has_coin_subscription(coins[1])
+        assert s.has_coin_subscription(coins[2])
+        assert s.has_coin_subscription(coins[3])
+        assert not s.has_coin_subscription(coins[4])
+        assert not s.has_coin_subscription(coins[5])

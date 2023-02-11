@@ -35,6 +35,7 @@ from chia.full_node.hint_store import HintStore
 from chia.full_node.lock_queue import LockClient, LockQueue
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.subscriptions import PeerSubscriptions
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue
 from chia.full_node.weight_proof import WeightProofHandler
@@ -42,6 +43,7 @@ from chia.protocols import farmer_protocol, full_node_protocol, timelord_protoco
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
+from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -95,9 +97,9 @@ class FullNode:
     _shut_down: bool
     constants: ConsensusConstants
     pow_creation: Dict[bytes32, asyncio.Event]
-    state_changed_callback: Optional[Callable[[str, Optional[Dict[str, Any]]], None]]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     full_node_peers: Optional[FullNodePeers]
-    sync_store: Any
+    sync_store: SyncStore
     signage_point_times: List[float]
     full_node_store: FullNodeStore
     uncompact_task: Optional[asyncio.Task[None]]
@@ -106,17 +108,7 @@ class FullNode:
     multiprocessing_context: Optional[BaseContext]
     _ui_tasks: Set[asyncio.Task[None]]
     db_path: Path
-    # TODO: use NewType all over to describe these various uses of the same types
-    # Puzzle Hash : Set[Peer ID]
-    coin_subscriptions: Dict[bytes32, Set[bytes32]]
-    # Puzzle Hash : Set[Peer ID]
-    ph_subscriptions: Dict[bytes32, Set[bytes32]]
-    # Peer ID: Set[Coin ids]
-    peer_coin_ids: Dict[bytes32, Set[bytes32]]
-    # Peer ID: Set[puzzle_hash]
-    peer_puzzle_hash: Dict[bytes32, Set[bytes32]]
-    # Peer ID: subscription count
-    peer_sub_counter: Dict[bytes32, int]
+    subscriptions: PeerSubscriptions
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
@@ -164,7 +156,7 @@ class FullNode:
         self.pow_creation = {}
         self.state_changed_callback = None
         self.full_node_peers = None
-        self.sync_store = None
+        self.sync_store = SyncStore()
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
         self.uncompact_task = None
@@ -179,11 +171,7 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions = {}
-        self.ph_subscriptions = {}
-        self.peer_coin_ids = {}
-        self.peer_puzzle_hash = {}
-        self.peer_sub_counter = {}
+        self.subscriptions = PeerSubscriptions()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
@@ -308,7 +296,7 @@ class FullNode:
 
         return con_info
 
-    def _set_state_changed_callback(self, callback: Callable[..., Any]) -> None:
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     async def _start(self) -> None:
@@ -362,7 +350,6 @@ class FullNode:
                             pass
 
         self._block_store = await BlockStore.create(self.db_wrapper)
-        self.sync_store = SyncStore()
         self._hint_store = await HintStore.create(self.db_wrapper)
         self._coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
@@ -502,8 +489,8 @@ class FullNode:
             default_port = None
         if "dns_servers" in self.config:
             dns_servers = self.config["dns_servers"]
-        elif self.config["port"] == 8444:
-            # If `dns_servers` misses from the `config`, hardcode it if we're running mainnet.
+        elif network_name == "mainnet":
+            # If `dns_servers` is missing from the `config`, hardcode it if we're running mainnet.
             dns_servers.append("dns-introducer.chia.net")
         try:
             self.full_node_peers = FullNodePeers(
@@ -887,32 +874,8 @@ class FullNode:
         self._state_changed("sync_mode")
         if self.sync_store is not None:
             self.sync_store.peer_disconnected(connection.peer_node_id)
-        self.remove_subscriptions(connection)
-
-    def remove_subscriptions(self, peer: WSChiaConnection) -> None:
         # Remove all ph | coin id subscription for this peer
-        node_id = peer.peer_node_id
-        if node_id in self.peer_puzzle_hash:
-            puzzle_hashes = self.peer_puzzle_hash[node_id]
-            for ph in puzzle_hashes:
-                if ph in self.ph_subscriptions:
-                    if node_id in self.ph_subscriptions[ph]:
-                        self.ph_subscriptions[ph].remove(node_id)
-
-        if node_id in self.peer_coin_ids:
-            coin_ids = self.peer_coin_ids[node_id]
-            for coin_id in coin_ids:
-                if coin_id in self.coin_subscriptions:
-                    if node_id in self.coin_subscriptions[coin_id]:
-                        self.coin_subscriptions[coin_id].remove(node_id)
-
-        if peer.peer_node_id in self.peer_sub_counter:
-            self.peer_sub_counter.pop(peer.peer_node_id)
-
-    def _num_needed_peers(self) -> int:
-        assert self.server.all_connections is not None
-        diff: int = int(self.config["target_peer_count"]) - len(self.server.all_connections)
-        return diff if diff >= 0 else 0
+        self.subscriptions.remove_peer(connection.peer_node_id)
 
     def _close(self) -> None:
         self._shut_down = True
@@ -999,22 +962,20 @@ class FullNode:
             self.log.info(f"Selected peak {target_peak}")
             # Check which peers are updated to this height
 
-            peers: List[bytes32] = []
+            peers = self.server.get_connections(NodeType.FULL_NODE)
             coroutines = []
-            for peer in self.server.all_connections.values():
-                if peer.connection_type == NodeType.FULL_NODE:
-                    peers.append(peer.peer_node_id)
-                    coroutines.append(
-                        peer.call_api(
-                            FullNodeAPI.request_block,
-                            full_node_protocol.RequestBlock(target_peak.height, True),
-                            timeout=10,
-                        )
+            for peer in peers:
+                coroutines.append(
+                    peer.call_api(
+                        FullNodeAPI.request_block,
+                        full_node_protocol.RequestBlock(target_peak.height, True),
+                        timeout=10,
                     )
+                )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
                 if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
                     self.sync_store.peer_has_block(
-                        target_peak.header_hash, peers[i], target_peak.weight, target_peak.height, False
+                        target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
 
@@ -1164,7 +1125,9 @@ class FullNode:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
-                        state_change_summary, self.coin_subscriptions, self.ph_subscriptions
+                        state_change_summary,
+                        self.subscriptions.has_coin_subscription,
+                        self.subscriptions.has_ph_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
                     await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
@@ -1218,18 +1181,19 @@ class FullNode:
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
             cr_name: bytes32 = coin_record.name
-            for peer in self.coin_subscriptions.get(cr_name, []):
+
+            for peer in self.subscriptions.peers_for_coin_id(cr_name):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
 
-            for peer in self.ph_subscriptions.get(coin_record.coin.puzzle_hash, []):
+            for peer in self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
 
             if cr_name in coin_id_to_ph_hint:
-                for peer in self.ph_subscriptions.get(coin_id_to_ph_hint[cr_name], []):
+                for peer in self.subscriptions.peers_for_puzzle_hash(coin_id_to_ph_hint[cr_name]):
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
@@ -1399,7 +1363,7 @@ class FullNode:
             request.reward_chain_vdf.challenge,
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
-        await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+        await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
         peak = self.blockchain.get_peak()
         if peak is not None and peak.height > self.constants.MAX_SUB_SLOT_BLOCKS:
@@ -1467,7 +1431,9 @@ class FullNode:
             self.full_node_store.previous_generator = None
 
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
-            state_change_summary, self.coin_subscriptions, self.ph_subscriptions
+            state_change_summary,
+            self.subscriptions.has_coin_subscription,
+            self.subscriptions.has_ph_subscription,
         )
         await self.hint_store.add_hints(hints_to_add)
 
@@ -1597,7 +1563,7 @@ class FullNode:
                 ),
             )
             if peer is not None:
-                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
             else:
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
@@ -1910,7 +1876,8 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
+            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
             pre_validation_time = time.time() - pre_validation_start
 
             # blockchain.run_generator throws on errors, so npc_result is
@@ -2022,7 +1989,7 @@ class FullNode:
         full_node_request = full_node_protocol.NewUnfinishedBlock(block.reward_chain_block.get_hash())
         msg = make_msg(ProtocolMessageTypes.new_unfinished_block, full_node_request)
         if peer is not None:
-            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
@@ -2197,7 +2164,7 @@ class FullNode:
                     request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
-                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
@@ -2259,7 +2226,8 @@ class FullNode:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
-                assert self.mempool_manager.peak
+                if self.mempool_manager.peak is None:
+                    return MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
                 cost, status, error = await self.mempool_manager.add_spend_bundle(
                     transaction, cost_result, spend_name, self.mempool_manager.peak.height
                 )
@@ -2286,7 +2254,7 @@ class FullNode:
                 if peer is None:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
-                    await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                    await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
@@ -2534,7 +2502,7 @@ class FullNode:
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
         )
         if self._server is not None:
-            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
