@@ -23,7 +23,12 @@ dependencies = [
     "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
     "cryptography==39.0.1",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.8.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-    "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
+    # required to hold back until we drop Python 3.7 support.
+    # keyring >= 23.10.0 requires importlib_metadata >= 4.11.4 https://github.com/jaraco/keyring/commit/19374c65876c14ea69dcc4a29fb9858fcbc3c749#diff-fa602a8a75dc9dcc92261bac5f533c2a85e34fcceaff63b3a3a81d9acde2fc52
+    # flake8 6 requires python 3.8.1 https://github.com/PyCQA/flake8/commit/aa002ee4ed7fcb4c6ffdec29b4dc122244638c64
+    # since we support 3.7 we we have to keep flake8 at <6 (5.0.4)
+    # flake8 5.0.4 requires importlib-metadata <4.3 https://github.com/PyCQA/flake8/blob/5.0.4/setup.cfg#L45
+    "keyring==23.9.3",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.2.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
