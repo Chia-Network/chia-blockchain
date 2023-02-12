@@ -531,7 +531,8 @@ class Offer:
         # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
-            puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD
+            offer_mod = OFFER_MOD_OLD if self.old else OFFER_MOD
+            puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], offer_mod) if asset_id else offer_mod
             inner_solutions = []
             nonces: List[bytes32] = [p.nonce for p in payments]
             for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
