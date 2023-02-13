@@ -24,6 +24,7 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
+    SimulatorsAndWallets,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_node_and_wallet,
@@ -433,6 +434,13 @@ async def wallet_two_node_simulator():
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
     async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAndWallets]:
+    key_seed = bt.farmer_master_sk_entropy
+    async for _ in setup_simulators_and_wallets(2, 2, {}, key_seed=key_seed):
         yield _
 
 
