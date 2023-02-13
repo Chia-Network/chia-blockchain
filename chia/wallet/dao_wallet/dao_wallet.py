@@ -5,6 +5,7 @@ import json
 import logging
 import re
 import time
+import copy
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -417,7 +418,6 @@ class DAOWallet:
             children_state = None
             children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
             assert children_state is not None
-            # breakpoint()
             child_coin = children_state.coin
 
             #  I don't remember why the below code was originally included in the DID Wallet
@@ -741,7 +741,6 @@ class DAOWallet:
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
-        # breakpoint()
         return full_spend
 
     async def generate_treasury_eve_spend(
@@ -830,7 +829,7 @@ class DAOWallet:
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         return full_spend
 
-    async def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
+    def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
         # The proposal_curry_vals used by the dao_lockup puzzle are the following.
         # We only need to return the bottom 3, I believe
         # (
@@ -1096,7 +1095,8 @@ class DAOWallet:
 
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         ret = await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
-        breakpoint()
+        if len(ret) == 0 :
+            return None
         return ret[-1]
 
     async def add_or_update_proposal_info(
@@ -1104,11 +1104,24 @@ class DAOWallet:
         new_state: CoinSpend,
         block_height: uint32,
     ):
-        new_dao_info = self.dao_info.copy()
+        new_dao_info = copy.copy(self.dao_info)
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
-        solution = new_state.solution.rest().rest().first()  # get proposal solution from full singleton solution
+        solution = Program.from_bytes(bytes(new_state.solution)).rest().rest().first()  # get proposal solution from full singleton solution
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
-        YES_VOTES, TOTAL_VOTES, INNERPUZ = self.get_proposal_curry_values(puzzle)  # not sure if we're going to use this
+        curried_args = uncurry_proposal(puzzle)  # not sure if we're going to use this
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            TREASURY_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+            TOTAL_VOTES,  # how many people responded
+            INNERPUZ,
+        ) = curried_args
         if TOTAL_VOTES < self.dao_info.filter_below_vote_amount:
             return  # ignore all proposals below the filter amount
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
@@ -1224,7 +1237,7 @@ class DAOWallet:
             # TODO: what do we do here?
             return
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
-        solution = new_state.solution.rest().rest().first()  # get proposal solution from full singleton solution
+        solution = Program.from_bytes(bytes(new_state.solution)).rest().rest().first()  # get proposal solution from full singleton solution
         new_innerpuz = get_new_puzzle_from_treasury_solution(puzzle, solution)
         child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         dao_info = DAOInfo(
@@ -1255,22 +1268,26 @@ class DAOWallet:
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
-        tip_spend = tip[1]
+        if tip is None:
+            # this is our first time, just store it
+            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+        else:
+            tip_spend = tip[1]
 
-        tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
-        assert tip_coin is not None
-        spent_coin_name: bytes32 = tip_coin.name()
+            tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
+            assert tip_coin is not None
+            spent_coin_name: bytes32 = tip_coin.name()
 
-        if spent_coin_name != new_state.coin.name():
-            history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
-            if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
-                self.log.info(f"Already have state transition: {new_state.coin.name().hex()}")
-            else:
-                self.log.warning(
-                    f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
-                )
-            return False
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+            if spent_coin_name != new_state.coin.name():
+                history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
+                if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
+                    self.log.info(f"Already have state transition: {new_state.coin.name().hex()}")
+                else:
+                    self.log.warning(
+                        f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+                    )
+                return False
+            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
 
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend
@@ -1280,9 +1297,9 @@ class DAOWallet:
         except ValueError as e:
             self.log.warning("Cannot uncurry puzzle in DAO Wallet: error: %s", e)
             raise e
-        if mod == DAO_PROPOSAL_MOD:
+        if mod == DAO_TREASURY_MOD:
             await self.update_treasury_info(new_state, block_height)
-        elif mod == DAO_TREASURY_MOD:
+        elif mod == DAO_PROPOSAL_MOD:
             await self.add_or_update_proposal_info(new_state, block_height)
         else:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
