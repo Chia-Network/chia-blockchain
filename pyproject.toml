@@ -68,7 +68,7 @@ setproctitle = "1.2.3"  # Gives the chia processes readable names
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
 typing-extensions = "4.4.0"  # typing backports like Protocol and TypedDict
 watchdog = "2.2.0"  # Filesystem event watching - watches keyring.yaml
-zstd = "1.5.2.6"
+zstd = "1.5.4.0"
 
 aiohttp_cors = { version = "^0.7.0", optional = true }
 anyio = { version = "^3.6", optional = true }
