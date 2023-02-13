@@ -190,7 +190,7 @@ class CoinStore:
                 if self.db_wrapper.db_version == 2:
                     names_db = tuple(names_chunk)
                 else:
-                    names_db = tuple([n.hex() for n in names_chunk])
+                    names_db = tuple(n.hex() for n in names_chunk)
                 cursors.append(
                     await conn.execute(
                         f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "

@@ -35,7 +35,6 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
-from tests.util.wallet_is_synced import wallet_is_synced
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
 
@@ -425,7 +424,7 @@ class TestWalletSync:
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
-            await time_out_assert(30, wallet_is_synced, True, wallet_node, full_node_api)
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
 
         num_blocks_reorg_1 = 40
         all_blocks_reorg_2 = blocks_reorg[:-30]
@@ -450,7 +449,8 @@ class TestWalletSync:
 
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
-            await time_out_assert(60, wallet_is_synced, True, wallet_node, full_node_api)
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=60)
+
             await time_out_assert(20, get_tx_count, 2, wallet_node.wallet_state_manager, 1)
             await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
@@ -467,7 +467,7 @@ class TestWalletSync:
         for i in range(2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
@@ -508,7 +508,7 @@ class TestWalletSync:
         for i in range(2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         payees: List[AmountWithPuzzlehash] = []
         for i in range(10):
@@ -523,7 +523,8 @@ class TestWalletSync:
 
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         res2: Optional[Message] = await full_node_api.request_additions(
             RequestAdditions(
                 last_block.height,
@@ -716,8 +717,7 @@ class TestWalletSync:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         # sync both nodes
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Part 1: create a single dust coin
         payees: List[AmountWithPuzzlehash] = []
@@ -732,8 +732,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # The dust is only filtered at this point if spam_filter_after_n_txs is 0 and xch_spam_amount is > dust_value.
         if spam_filter_after_n_txs > 0:
@@ -806,8 +805,7 @@ class TestWalletSync:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
             assert last_block is not None
-            await time_out_assert(60, wallet_is_synced, True, farm_wallet_node, full_node_api)
-            await time_out_assert(60, wallet_is_synced, True, dust_wallet_node, full_node_api)
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=60)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -854,8 +852,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -894,8 +891,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -954,8 +950,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -991,8 +986,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -1046,8 +1040,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(60, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(60, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -1076,8 +1069,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
         assert last_block is not None
-        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
-        await time_out_assert(20, wallet_is_synced, True, dust_wallet_node, full_node_api)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[

@@ -105,10 +105,12 @@ def make_test_conds(
     seconds_absolute: uint64 = uint64(0),
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
-        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, [], [], 0)],
+        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, None, None, [], [], 0)],
         0,
         height_absolute,
         seconds_absolute,
+        None,
+        None,
         [],
         0,
     )
@@ -213,21 +215,29 @@ def test_compute_assert_height() -> None:
     coin_records = {coin_id: CoinRecord(c1, confirmed_height, uint32(0), False, uint64(10000))}
 
     # 42 is the absolute height condition
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), None, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 1 is a relative height, but that only amounts to 13, so the absolute
     # height is more restrictive
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 1, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 100 is a relative height, and sinec the coin was confirmed at height 12,
     # that's 112
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 112
 
     # Same thing but without the absolute height
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 0, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 112
 
 
@@ -277,7 +287,8 @@ async def test_valid_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount]]
-    sb = spend_bundle_from_conditions(conditions)
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, max_amount)
+    sb = spend_bundle_from_conditions(conditions, coin)
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
     assert npc_result.error is None
 
@@ -326,53 +337,29 @@ async def test_double_spend_prevalidation() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "amount,expected_status,expected_error",
-    [
-        (TEST_COIN_AMOUNT, MempoolInclusionStatus.SUCCESS, None),
-        (TEST_COIN_AMOUNT + 1, MempoolInclusionStatus.FAILED, Err.MINTING_COIN),
-    ],
-)
-async def test_minting_coin(
-    amount: uint64,
-    expected_status: MempoolInclusionStatus,
-    expected_error: Optional[Err],
-) -> None:
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        test_coin_records = {TEST_COIN_ID: TEST_COIN_RECORD}
-        return test_coin_records.get(coin_id)
-
-    mempool_manager = await instantiate_mempool_manager(get_coin_record)
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    _, status, error = result[2]
-    assert status == expected_status
-    assert error == expected_error
+async def test_minting_coin() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
+    sb = spend_bundle_from_conditions(conditions)
+    npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    assert npc_result.error is None
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT + 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    with pytest.raises(ValidationError, match="MINTING_COIN"):
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "amount,expected_status,expected_error",
-    [
-        (TEST_COIN_AMOUNT, MempoolInclusionStatus.SUCCESS, None),
-        (TEST_COIN_AMOUNT + 1, MempoolInclusionStatus.FAILED, Err.RESERVE_FEE_CONDITION_FAILED),
-    ],
-)
-async def test_reserve_fee_condition(
-    amount: uint64,
-    expected_status: MempoolInclusionStatus,
-    expected_error: Optional[Err],
-) -> None:
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        test_coin_records = {TEST_COIN_ID: TEST_COIN_RECORD}
-        return test_coin_records.get(coin_id)
-
-    mempool_manager = await instantiate_mempool_manager(get_coin_record)
-    conditions = [[ConditionOpcode.RESERVE_FEE, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    _, status, error = result[2]
-    assert status == expected_status
-    assert error == expected_error
+async def test_reserve_fee_condition() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT]]
+    sb = spend_bundle_from_conditions(conditions)
+    npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    assert npc_result.error is None
+    conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT + 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
 
 @pytest.mark.asyncio

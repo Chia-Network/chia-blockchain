@@ -6,7 +6,7 @@ from typing import List
 import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import sim_and_client
+from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -28,7 +28,7 @@ ACS_PH = ACS.get_tree_hash()
 
 @pytest.mark.asyncio()
 @pytest.mark.parametrize("metadata_updater", ["default"])
-async def test_state_layer(metadata_updater: str) -> None:
+async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> None:
     async with sim_and_client() as (sim, sim_client):
         if metadata_updater == "default":
             METADATA: Program = metadata_to_program(
@@ -59,7 +59,9 @@ async def test_state_layer(metadata_updater: str) -> None:
             state_layer_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
         )
-        generic_bundle = SpendBundle([generic_spend], G2Element())
+        generic_bundle = cost_logger.add_cost(
+            "State layer only coin - one child created", SpendBundle([generic_spend], G2Element())
+        )
 
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -125,7 +127,9 @@ async def test_state_layer(metadata_updater: str) -> None:
                     ]
                 ),
             )
-            update_bundle = SpendBundle([update_spend], G2Element())
+            update_bundle = cost_logger.add_cost(
+                "State layer only coin (metadata update) - one child created", SpendBundle([update_spend], G2Element())
+            )
             result = await sim_client.push_tx(update_bundle)
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
@@ -133,7 +137,7 @@ async def test_state_layer(metadata_updater: str) -> None:
 
 
 @pytest.mark.asyncio()
-async def test_ownership_layer() -> None:
+async def test_ownership_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         TARGET_OWNER = bytes32([0] * 32)
         TARGET_TP = Program.to([8])  # (x)
@@ -157,7 +161,9 @@ async def test_ownership_layer() -> None:
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
         )
-        generic_bundle = SpendBundle([generic_spend], G2Element())
+        generic_bundle = cost_logger.add_cost(
+            "Ownership only coin - one child created", SpendBundle([generic_spend], G2Element())
+        )
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -222,7 +228,10 @@ async def test_ownership_layer() -> None:
                 ]
             ),
         )
-        update_everything_bundle = SpendBundle([update_everything_spend], G2Element())
+        update_everything_bundle = cost_logger.add_cost(
+            "Ownership only coin (update owner and TP) - one child + 3 announcements created",
+            SpendBundle([update_everything_spend], G2Element()),
+        )
         result = await sim_client.push_tx(update_everything_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -236,7 +245,7 @@ async def test_ownership_layer() -> None:
 
 
 @pytest.mark.asyncio()
-async def test_default_transfer_program() -> None:
+async def test_default_transfer_program(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
@@ -273,7 +282,9 @@ async def test_default_transfer_program() -> None:
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
         )
-        generic_bundle = SpendBundle([generic_spend], G2Element())
+        generic_bundle = cost_logger.add_cost(
+            "Ownership only coin (default NFT1 TP) - one child created", SpendBundle([generic_spend], G2Element())
+        )
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -317,7 +328,7 @@ async def test_default_transfer_program() -> None:
 
         cat_announcement_spend = CoinSpend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
 
-        # Make sure every combo except all of them work
+        # Make sure every combo except all of them fail
         for i in range(1, 3):
             for announcement_combo in itertools.combinations(
                 [did_announcement_spend, xch_announcement_spend, cat_announcement_spend], i
@@ -326,8 +337,11 @@ async def test_default_transfer_program() -> None:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
         # Make sure all of them together pass
-        full_bundle = SpendBundle(
-            [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend], G2Element()
+        full_bundle = cost_logger.add_cost(
+            "Ownership only coin (default NFT1 TP) - one child created + update DID + offer CATs + offer XCH",
+            SpendBundle(
+                [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend], G2Element()
+            ),
         )
         result = await sim_client.push_tx(full_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -349,7 +363,10 @@ async def test_default_transfer_program() -> None:
             new_ownership_puzzle,
             Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
         )
-        empty_bundle = SpendBundle([empty_spend], G2Element())
+        empty_bundle = cost_logger.add_cost(
+            "Ownership only coin (default NFT1 TP) - one child created + clear DID",
+            SpendBundle([empty_spend], G2Element()),
+        )
         result = await sim_client.push_tx(empty_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()

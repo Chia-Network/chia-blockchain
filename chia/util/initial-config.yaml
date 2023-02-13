@@ -412,6 +412,7 @@ full_node:
   dns_servers: &dns_servers
     - "dns-introducer.chia.net"
     - "chia.ctrlaltdel.ch"
+    - "seeder.dexie.space"
     - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
