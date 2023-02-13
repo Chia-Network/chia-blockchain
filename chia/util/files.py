@@ -73,8 +73,10 @@ async def write_file_async(
     mode: Literal["w+", "w+b"] = "w+" if type(data) == str else "w+b"
     temp_file_path: Path
     async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
-        temp_file_path = f.name
-        await f.write(data)
+        # Ignoring type error since it is not obvious how to tie the type of the data
+        # being passed in to the type of the file object, etc.
+        temp_file_path = f.name  # type: ignore[assignment]
+        await f.write(data)  # type: ignore[arg-type]
         await f.flush()
         os.fsync(f.fileno())
 
