@@ -1683,7 +1683,6 @@ class WalletNode:
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
-
         response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
             FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
         )

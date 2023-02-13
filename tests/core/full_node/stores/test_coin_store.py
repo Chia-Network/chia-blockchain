@@ -318,7 +318,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     async def test_basic_reorg(self, tmp_dir, db_version, bt):
-
         async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
@@ -327,7 +326,6 @@ class TestCoinStoreWithBlocks:
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
             try:
-
                 records: List[Optional[CoinRecord]] = []
 
                 for block in blocks:

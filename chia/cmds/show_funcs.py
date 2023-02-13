@@ -181,7 +181,7 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
 
     print("\nFee Rate Estimates:")
     max_name_len = max(len(name) for name in target_times_names)
-    for (n, e) in zip(target_times_names, res["estimates"]):
+    for n, e in zip(target_times_names, res["estimates"]):
         print(f"    {n:>{max_name_len}}: {e:.3f} mojo per CLVM cost")
     print("")
 

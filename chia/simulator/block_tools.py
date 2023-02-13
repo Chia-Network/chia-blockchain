@@ -162,7 +162,6 @@ class BlockTools:
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
     ):
-
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -1261,7 +1260,6 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
@@ -2065,7 +2063,11 @@ def create_test_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info,) = create_test_foliage(
+    (
+        foliage,
+        foliage_transaction_block,
+        transactions_info,
+    ) = create_test_foliage(
         constants,
         rc_block,
         block_generator,

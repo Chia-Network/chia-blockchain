@@ -76,7 +76,6 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BlockRecord:
 
 
 async def run_mempool_benchmark(single_threaded: bool) -> None:
-
     suffix = "st" if single_threaded else "mt"
     db_wrapper: DBWrapper2 = await setup_db(f"mempool-benchmark-coins-{suffix}.db", 2)
 
@@ -94,7 +93,6 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
 
         print("Building SpendBundles")
         for peer in range(NUM_PEERS):
-
             print(f"  peer {peer}")
             print("     reward coins")
             unspent: List[Coin] = []

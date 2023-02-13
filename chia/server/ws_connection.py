@@ -128,7 +128,6 @@ class WSChiaConnection:
         local_capabilities_for_handshake: List[Tuple[uint16, str]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
-
         assert ws._writer is not None
         peername = ws._writer.transport.get_extra_info("peername")
 

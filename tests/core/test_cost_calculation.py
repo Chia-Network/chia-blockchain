@@ -222,7 +222,6 @@ class TestCostCalculation:
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
-
         block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
         disassembly = binutils.disassemble(block)
         # this is a valid generator program except the first clvm
@@ -284,7 +283,6 @@ class TestCostCalculation:
 @pytest.mark.asyncio
 @pytest.mark.benchmark
 async def test_get_puzzle_and_solution_for_coin_performance():
-
     from clvm.casts import int_from_bytes
 
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD

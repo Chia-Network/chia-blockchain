@@ -49,7 +49,6 @@ async def validate_client_connection(
     fingerprint: Optional[int],
     login_to_wallet: bool,
 ) -> Optional[int]:
-
     try:
         await rpc_client.healthz()
         if type(rpc_client) == WalletRpcClient and login_to_wallet:

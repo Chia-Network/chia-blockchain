@@ -584,7 +584,6 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_get_wp_fork_point(self, default_10000_blocks):
-
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
@@ -675,7 +674,6 @@ class TestWalletSync:
         xch_spam_amount,
         dust_value,
     ):
-
         full_nodes, wallets, _ = two_wallet_nodes_custom_spam_filtering
 
         farm_wallet_node, farm_wallet_server = wallets[0]

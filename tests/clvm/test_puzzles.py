@@ -96,7 +96,6 @@ def do_test_spend(
 def default_payments_and_conditions(
     initial_index: int, key_lookup: KeyTool
 ) -> Tuple[List[Tuple[bytes32, int]], Program]:
-
     payments = [
         (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 1000),
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 1000),

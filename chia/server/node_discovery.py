@@ -600,7 +600,6 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def request_peers(self, peer_info: PeerInfo) -> Optional[Message]:
         try:
-
             # Prevent a fingerprint attack: do not send peers to inbound connections.
             # This asymmetric behavior for inbound and outbound connections was introduced
             # to prevent a fingerprinting attack: an attacker can send specific fake addresses

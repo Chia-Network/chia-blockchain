@@ -41,7 +41,6 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
 
     print(f"opening file for reading: {in_path}")
     with closing(sqlite3.connect(in_path)) as in_db:
-
         # read the database version
         try:
             with closing(in_db.execute("SELECT * FROM database_version")) as cursor:
@@ -91,9 +90,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                 "FROM full_blocks ORDER BY height DESC"
             )
         ) as cursor:
-
             for row in cursor:
-
                 hh = row[0]
                 prev = row[1]
                 height = row[2]
