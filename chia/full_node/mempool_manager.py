@@ -470,14 +470,7 @@ class MempoolManager:
             removal_amount = removal_amount + removal_record.coin.amount
             removal_record_dict[name] = removal_record
 
-        if addition_amount > removal_amount:
-            return Err.MINTING_COIN, None, []
-
         fees = uint64(removal_amount - addition_amount)
-        assert_fee_sum: uint64 = uint64(npc_result.conds.reserve_fee)
-
-        if fees < assert_fee_sum:
-            return Err.RESERVE_FEE_CONDITION_FAILED, None, []
 
         if cost == 0:
             return Err.UNKNOWN, None, []
