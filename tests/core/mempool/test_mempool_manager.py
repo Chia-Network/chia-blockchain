@@ -341,6 +341,10 @@ async def test_double_spend_prevalidation() -> None:
 @pytest.mark.asyncio
 async def test_minting_coin() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
+    sb = spend_bundle_from_conditions(conditions)
+    npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    assert npc_result.error is None
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT + 1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="MINTING_COIN"):
@@ -350,6 +354,10 @@ async def test_minting_coin() -> None:
 @pytest.mark.asyncio
 async def test_reserve_fee_condition() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT]]
+    sb = spend_bundle_from_conditions(conditions)
+    npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    assert npc_result.error is None
     conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT + 1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
