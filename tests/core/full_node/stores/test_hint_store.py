@@ -163,3 +163,22 @@ class TestHintStore:
 
             count = await hint_store.count_hints()
             assert count == 2
+
+    @pytest.mark.asyncio
+    async def test_limits(self, db_version):
+        async with DBConnection(db_version) as db_wrapper:
+            hint_store = await HintStore.create(db_wrapper)
+
+            # Add 200 coins, all with the same hint
+            hint = 32 * b"\0"
+            for i in range(200):
+                coin_id = (28 * b"\4") + i.to_bytes(4, "big")
+                await hint_store.add_hints([(coin_id, hint)])
+
+            count = await hint_store.count_hints()
+            assert count == 200
+
+            for limit in [0, 1, 42, 200]:
+                assert len(await hint_store.get_coin_ids(hint, max_items=limit)) == limit
+
+            assert len(await hint_store.get_coin_ids(hint, max_items=10000)) == 200
