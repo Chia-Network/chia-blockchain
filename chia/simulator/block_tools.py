@@ -47,7 +47,6 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
 )
 from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import GENERATOR_MOD
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
@@ -115,6 +114,9 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+
+GENERATOR_MOD = get_generator()
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
