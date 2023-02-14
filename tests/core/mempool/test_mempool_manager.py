@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import dataclasses
+
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -41,7 +42,7 @@ TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIM
 TEST_HEIGHT = uint32(5)
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class TestBlockRecord:
     """
     This is a subset of BlockRecord that the mempool manager uses for peak.
@@ -534,3 +535,131 @@ async def test_get_items_not_in_filter() -> None:
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
     assert result == [sb1]
+
+
+@pytest.mark.asyncio
+async def test_process_mempool_items_never_filter() -> None:
+    def never(_: bytes32) -> bool:
+        return False
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    expected_cost = uint64(2897056)
+    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=never)
+    assert spend_bundles == []
+    assert cost_sum == 0
+    assert additions == []
+    assert removals == []
+
+
+def always(_: bytes32) -> bool:
+    return True
+
+
+@pytest.mark.asyncio
+async def test_process_mempool_items_always_filter() -> None:
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    sb, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    expected_cost = uint64(2897056)
+    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    assert spend_bundles == [sb]
+    assert cost_sum == expected_cost
+    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
+    assert removals == [TEST_COIN]
+
+
+@pytest.mark.asyncio
+async def test_process_mempool_items_max_cost() -> None:
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    conditions = []
+    g1 = G1Element()
+    for _ in range(2436):
+        conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
+    conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1])
+    sb, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    expected_cost = uint64(5498561056)
+    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    assert spend_bundles == [sb]
+    assert cost_sum == expected_cost
+    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1)]
+    assert removals == [TEST_COIN]
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1]]
+    sb2, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, TEST_COIN2)
+    expected_cost2 = uint64(2945056)
+    assert result == (expected_cost2, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    # The second spend bundle has a higher FPC so it should get picked first
+    assert spend_bundles == [sb2]
+    # The first spend bundle hits the maximum block clvm cost and gets skipped
+    assert cost_sum == expected_cost2
+    assert additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1)]
+    assert removals == [TEST_COIN2]
+
+
+@pytest.mark.asyncio
+async def test_process_mempool_items_max_fee() -> None:
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    MAX_FEES_AMOUNT = 5
+    # Maximum fee is checked using MAX_COIN_AMOUNT
+    mempool_manager.constants = dataclasses.replace(mempool_manager.constants, MAX_COIN_AMOUNT=MAX_FEES_AMOUNT)
+
+    CREATED_COIN_AMOUNT = TEST_COIN_AMOUNT - MAX_FEES_AMOUNT
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT]]
+    sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    expected_cost = uint64(2945056)
+    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    assert spend_bundles == [sb1]
+    assert cost_sum == expected_cost
+    expected_additions = [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT)]
+    assert additions == expected_additions
+    expected_removals = [TEST_COIN]
+    assert removals == expected_removals
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1],
+        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+    ]
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, TEST_COIN2)
+    expected_cost2 = uint64(5201056)
+    assert result == (expected_cost2, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    # The first spend bundle has a higher FPC so it gets picked first
+    assert spend_bundles == [sb1]
+    # The second spend bundle hits the maximum fee and gets skipped
+    assert cost_sum == expected_cost
+    assert additions == expected_additions
+    assert removals == expected_removals
+
+
+@pytest.mark.asyncio
+async def test_process_mempool_items() -> None:
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    expected_cost = uint64(2897056)
+    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    assert spend_bundles == [sb1]
+    assert cost_sum == expected_cost
+    expected_additions = [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
+    assert additions == expected_additions
+    assert removals == [TEST_COIN]
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+    ]
+    sb2, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, TEST_COIN2)
+    expected_cost2 = uint64(5153056)
+    assert result == (expected_cost2, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    # The second spend bundle has a higher FPC so it gets picked first
+    assert spend_bundles == [sb2, sb1]
+    assert cost_sum == expected_cost2 + expected_cost
+    expected_additions2 = [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 2)]
+    assert additions == expected_additions2 + expected_additions
+    assert removals == [TEST_COIN2, TEST_COIN]
