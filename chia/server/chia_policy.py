@@ -161,7 +161,6 @@ class PausableServer(BaseEventsServer):
         """Pause future calls to accept()."""
         self._paused = True
         if sys.platform == "win32" and sys.version_info >= (3, 8):
-            assert isinstance(self._loop, ChiaProactorEventLoop)
             # proactor
             self._loop.disable_connections()
         else:
