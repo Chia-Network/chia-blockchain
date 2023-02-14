@@ -46,8 +46,9 @@ class Client:
     @classmethod
     async def open(cls, ip: str, port: int) -> Client:
         try:
-            reader, writer = await asyncio.open_connection(ip, port)
-            return cls(reader=reader, writer=writer)
+            with anyio.fail_after(delay=1):
+                reader, writer = await asyncio.open_connection(ip, port)
+                return cls(reader=reader, writer=writer)
         except (TimeoutError, ConnectionResetError, ConnectionRefusedError):
             return cls(reader=None, writer=None)
 
