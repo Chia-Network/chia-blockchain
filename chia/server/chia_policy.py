@@ -261,7 +261,7 @@ if sys.platform == "win32":
         def disable_connections(self) -> None:
             self.allow_connections = False
 
-        async def _chia_accept_loop(self, listener: socket.socket) -> Any:
+        async def _chia_accept_loop(self, listener: socket.socket) -> Tuple[socket.socket, Tuple[object, ...]]:
             while True:
                 # TODO: switch to Event code.
                 while not self.allow_connections:
@@ -273,7 +273,7 @@ if sys.platform == "win32":
                     if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
                         raise
 
-        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Any]:
+        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
             self._register_with_iocp(listener)
             conn = self._get_accept_socket(listener.family)
             ov = _overlapped.Overlapped(_winapi.NULL)
@@ -307,10 +307,7 @@ if sys.platform == "win32":
             asyncio.ensure_future(coro, loop=self._loop)
             return future
 
-        # TODO: figure out tuple element hinting from
-        #       https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/proactor_events.py#L821
-        #       follow up with the other functions saying Any too
-        def accept(self, listener: socket.socket) -> asyncio.Future[Tuple[Any, Any]]:
+        def accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
             coro = self._chia_accept_loop(listener)
             return asyncio.ensure_future(coro)
 
