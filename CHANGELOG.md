@@ -9,40 +9,39 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.7.0 Chia blockchain 2023-02-15
 
 ### Added
-- chia keys show --json (display all keys as json) by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/13637
+- `chia keys show --json` (display all keys as json) by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/13637
 - Coin Selection CLI / RPC Expansion by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13325
-- Add atari get sync status RPC. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/13440
-- add task_instrumentation fixture by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13176
-- Add download progress log and stream in aiohttp by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/13828
-- Add LimitedSemaphore by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13642
-- Add verify signature API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13732
-- Added total balance check, updated error messages by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/13866
-- add target_coin amount to coin selection cli (chia wallet coins)  by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13716
-- Add did_message_spend API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13890
-- server: Add optional `outbound` parameter to `get_connections` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13879
+- Add Datalayer `get_sync_status` RPC and CLI. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/13440
+- Add Datalayer download progress log and stream by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/13828
+- Add `verify_signature` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13732
+- Add `did_message_spend` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13890
+- Add `nft_set_did_bulk` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13720
+- Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
+- Add total balance check, updated error messages by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/13866
+- Add target_coin amount to coin selection cli (chia wallet coins)  by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13716
+- Add optional `outbound` parameter to `get_connections` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13879
 - Add a workflow for scanning python deps by @pmaslana in https://github.com/Chia-Network/chia-blockchain/pull/13227
 - full_node: Introduce `sync_store.Peak` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13615
-- add --fingerprint option to chia keys show by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13909
-- Add bulk set NFT DID API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13720
+- Add `--fingerprint` option to `chia keys show` by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13909
 - tools: Implement and test `tools/legacy_keyring.py` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13947
 - add new, optimized tx queue by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13887
 - Add Arch Linux to install-gui.sh script by @DaOneLuna in https://github.com/Chia-Network/chia-blockchain/pull/14059
 - Add a height timestamp for wallet notifications by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14163
-- Add a daemon heartbeat setting to config.yaml by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13886
-- Add a wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
+- Add a `daemon_heartbeat` setting to config.yaml by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13886
 - Nft bulk transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14329
 - Add the expected offer ID to some RPCs that take offer blobs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14366
+- Add LimitedSemaphore by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13642
 
 ### Changed
 - process_transaction_records() -> process_transactions() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13629
-- debug_spend_bundle -- print coin id as hex string by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/13605
+- `debug_spend_bundle` -- print coin id as hex string by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/13605
 - only open SQLite log file once per db wrapper by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13754
 - switch to context manager for task timing instrumentation by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13473
 - Revert rate limiting messages from `warning` back to `debug` by @hugepants in https://github.com/Chia-Network/chia-blockchain/pull/13758
-- add_private_key now returns the fingerprint of the added key by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/13814
+- `add_private_key` now returns the fingerprint of the added key by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/13814
 - SQLite log the full node db version check by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13755
 - Delete DID wallet after transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13389
-- dont validate wp on log_in by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/13775
+- dont validate wp on `log_in` by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/13775
 - server: Drop broken message types logging by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13914
 - Make `WSChiaConnection` a `dataclass` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13906
 - Simplify `ChiaServer.close_all_connections` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13916
@@ -64,35 +63,36 @@ for setuptools_scm/PEP 440 reasons.
 - add local max subscription config by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14188
 - Remove redundant check for duplicate inputs by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14272
 - Add new_block_height to FeeEstimatorInterface by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14277
-- bump chia_rs dependency to the latest version by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14289
+- bump `chia_rs` dependency to `0.2.0` @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14289
+- Update version of `clvm_tools_rs` to `0.1.30` by @prozacchiwawa in https://github.com/Chia-Network/chia-blockchain/pull/14327
 - Use better check that we are on mainnet when deciding to use default Chia DNS server by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14254
 - Tune Fee Estimator parameter so that lowest suggested fee rate is 5 Mojo per CLVM cost by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14286
 - Remove conflicting TXs before adding SpendBundle to Mempool in add_spend_bundle by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14292
-- Add proxy support to Data Layer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
+- Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Reduce lower limit of tx per block seen at a certain fee rate, so estimates are produced sooner by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14291
 - Try each Chia DNS Server in list before trying introducers by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14253
 - optimize mempool's potential cache by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14297
 - infrastructure for upcoming soft-fork by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14302
 - Improve command line info display for fee estimation by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14336
-- Add gzip support to Data Layer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
+- Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Display complete exception info in log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14319
 - Enable setting time between blocks in full node sim by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14310
 - Move table of SpendBundle costs to backend by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14367
-- Change names used to look up estimated spendbundle sizes in get_fee_estimate RPC by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14369
+- Change names used to look up estimated spendbundle sizes in `get_fee_estimate` RPC by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14369
 - Limit rate of log messages when farmer is disconnected from pool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14344
-- Add SigningMode and update verify_signature RPC to work with sign_message_by_* RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14213
+- Add SigningMode and update `verify_signature` RPC to work with `sign_message_by_*` RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14213
 - dont announce none response capability to peers by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14386
 - Rename notification config by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14397
 - Ensure fee estimates monotonically decrease with time by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14368
 
 ### Fixed
 - Add a state_changed for frontend on notification by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/13713
-- Rework wallet new peak  by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/12586
+- Rework wallet new peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/12586
 - upped the number of file handles for madmax by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/13856
 - plotting: Catch exceptions raised when resolving plot directories by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13786
 - Call close callback for already closed connections by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13727
-- Set GUI binary name to chia-blockchain in the Fedora rpm by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13915
-- Set GUI binary name to chia-blockchain in the Ubuntu DEB by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13910
+- Set GUI binary name to `chia-blockchain` in the Fedora rpm by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13915
+- Set GUI binary name to `chia-blockchain` in the Ubuntu DEB by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13910
 - Ensure `chia-blockchain` still opens UI on Linux by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/13826
 - server: Enable and fix `mypy` in `server.py` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13579
 - add simple fix to set farmer response timer for `SP: 0` by @neurosis69 in https://github.com/Chia-Network/chia-blockchain/pull/13655
@@ -124,7 +124,6 @@ for setuptools_scm/PEP 440 reasons.
 - Check if a SpendBundle was included in a block BEFORE removing it from the Mempool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14293
 - Fix fee and unit amounts when coin splitting or viewing coins by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14172
 - Call method to process transactions added to mempool in Fee Estimator by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14290
-- Update version of clvm_tools_rs to 0.1.30 by @prozacchiwawa in https://github.com/Chia-Network/chia-blockchain/pull/14327
 - disallow empty SpendBundles in the mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14305
 - Check for valid timeout and log error  by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14304
 - add rate limits numbers to none response type by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14184
@@ -144,6 +143,9 @@ for setuptools_scm/PEP 440 reasons.
 - Correct fee estimate calculation to be in mojos, not millimojos by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14474
 - Quex.offer mod tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14478
 - Purposefully break offer compression for older versions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14535
+
+### Deprecated
+- Python 3.7 support is deprecated and will be removed in a future version
 
 ## 1.6.2 Chia blockchain 2023-01-03
 
