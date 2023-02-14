@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import threading
 
 import pytest
 
-from chia.server.chia_policy import ChiaSelectorEventLoop, PausableServer, _chia_create_server
+from chia.server.chia_policy import ChiaSelectorEventLoop, PausableServer, _chia_create_server, set_chia_policy
 
 
 @pytest.mark.asyncio
@@ -66,9 +67,23 @@ async def test_base_event_loop_has_methods() -> None:
         def data_received(self, data):  # type: ignore
             self.transport.write(data)
 
-    pausable_server = await selector_event_loop.create_server(
-        EchoProtocol, host="127.0.0.1", port=8000, ssl_handshake_timeout=None, start_serving=False
-    )
+    pausable_server = None
+
+    def in_thread() -> None:
+        async def main() -> None:
+            loop = asyncio.get_event_loop()
+            nonlocal pausable_server
+            pausable_server = await loop.create_server(
+                EchoProtocol, host="127.0.0.1", port=8000, ssl_handshake_timeout=None, start_serving=False
+            )
+
+        set_chia_policy(connection_limit=0)
+        asyncio.run(main())
+
+    thread = threading.Thread(target=in_thread)
+    thread.start()
+    thread.join()
+
     base_server = super(PausableServer, pausable_server)
 
     method = getattr(base_server, "__init__")
