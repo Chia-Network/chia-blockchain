@@ -2609,7 +2609,7 @@ class TestPkmPairs:
         assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe_restriction(self) -> None:
-        conds = SpendBundleConditions([], 0, 0, 0, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)
         pks, msgs = pkm_pairs(conds, b"msg1", soft_fork=False)
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
