@@ -174,6 +174,7 @@ class WalletRpcApi:
             "/did_find_lost_did": self.did_find_lost_did,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
+            "/nft_count_nfts": self.nft_count_nfts,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
             "/nft_set_nft_did": self.nft_set_nft_did,
@@ -2247,6 +2248,20 @@ class WalletRpcApi:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
                 nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle, "nft_id": nft_id}
+
+    async def nft_count_nfts(self, request) -> EndpointResult:
+        wallet_id = request.get("wallet_id", None)
+        count = 0
+        if wallet_id is not None:
+            try:
+                nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+            except KeyError:
+                # wallet not found
+                return {"success": False, "error": f"Wallet {wallet_id} not found."}
+            count = await nft_wallet.get_nft_count()
+        else:
+            count = await self.service.wallet_state_manager.nft_store.count()
+        return {"wallet_id": wallet_id, "success": True, "count": count}
 
     async def nft_get_nfts(self, request) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)

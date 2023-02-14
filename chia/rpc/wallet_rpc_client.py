@@ -848,6 +848,11 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_transfer_nft", request)
         return response
 
+    async def count_nfts(self, wallet_id: Optional[int]):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_count_nfts", request)
+        return response
+
     async def list_nfts(self, wallet_id):
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_nfts", request)
