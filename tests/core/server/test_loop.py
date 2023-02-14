@@ -124,7 +124,6 @@ class ServeInThread:
                 thread_end_event=self.thread_end_event,
                 port_holder=self.port_holder,
             ),
-            name="server in thread",
         )
         try:
             await self.server_task
