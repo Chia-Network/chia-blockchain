@@ -84,7 +84,9 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
-        assert len(data_response.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
+        # we have already subscribed to this puzzle hash, it will be ignored
+        # we still receive the updates (see below)
+        assert data_response.coin_states == []
 
         # Farm more rewards to check the incoming queue for the updates
         for i in range(0, num_blocks):
@@ -526,12 +528,9 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
-        assert len(data_response.coin_states) == 1
-        coin_records: List[CoinRecord] = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
-            True, hint_puzzle_hash
-        )
-        assert len(coin_records) == 1
-        assert data_response.coin_states[0] == coin_records[0].coin_state
+        # we have already subscribed to this puzzle hash. The full node will
+        # ignore the duplicate
+        assert data_response.coin_states == []
 
     @pytest.mark.asyncio
     async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
