@@ -27,7 +27,6 @@ for setuptools_scm/PEP 440 reasons.
 - Add `--fingerprint` option to `chia keys show` by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13909
 - Add `tools/legacy_keyring.py` to allow migration from the removed old key storage format.  Available only from source installations. by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13947
 - Add Arch Linux to install-gui.sh script by @DaOneLuna in https://github.com/Chia-Network/chia-blockchain/pull/14059
-- Add a height timestamp for wallet notifications by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14163
 - Add a `daemon_heartbeat` setting to config.yaml by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13886
 - add `trusted_max_subscribe_items` and `wallet:trusted_peers` to config.yaml by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14188
 - Nft bulk transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14329
