@@ -14,11 +14,11 @@ for setuptools_scm/PEP 440 reasons.
 - New on-chain notification for offers, specifically designed for NFT offers
 - New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate` full node RPC)
 - Implementation of soft fork at block 3630000 - see the 1.7.0 blog post for more details
-- Add gzip support to DataLayer download client
-- Add proxy support to DataLayer download client
+- Add gzip support to DataLayer download client (Thanks, @Chida82!)
+- Add proxy support to DataLayer download client (Thanks again, @Chida82!)
 - Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps
 - Add `tools/legacy_keyring.py` to allow migration from the removed old key storage format.  Available only from source installations.
-- Add Arch Linux to install-gui.sh script
+- Add Arch Linux to install-gui.sh script (Thanks, @DaOneLuna!)
 - Add a `daemon_heartbeat` setting to config.yaml
 - add `trusted_max_subscribe_items` and `wallet:trusted_peers` to config.yaml
 - NFT bulk transfer and DID assignment wallet RPCs
@@ -29,7 +29,7 @@ for setuptools_scm/PEP 440 reasons.
 - bump `chia_rs` dependency to `0.2.0`
 - Update version of `clvm_tools_rs` to `0.1.30`
 - Use better check that we are on mainnet when deciding to use default Chia DNS server
-- Remove conflicting TXs before adding SpendBundle to Mempool in add_spend_bundle
+- Remove conflicting TXs before adding SpendBundle to Mempool in `add_spend_bundle`
 - Try each Chia DNS Server in list before trying introducers
 - optimize mempool's potential cache
 - Display complete exception info in log file for validation, consensus, and protocol errors
@@ -46,10 +46,10 @@ for setuptools_scm/PEP 440 reasons.
 - don't throw unnecessary exception on peer connect
 - Return existing CAT wallet instead of raising
 - Resolve peers in harvester and timelord startup (fixes #14158)
-- bump default bladebit version to 2.0.1 in install-plotter.sh
+- bump default bladebit version to `2.0.1` in `install-plotter.sh`
 - disallow empty SpendBundles in the mempool
-- avoid an exception in some rare cases when requesting the pool login link 
-- provide a clear error when the `wallet_id` value is missing in a call to the `nft_set_bulk_nft_did` wallet rpc
+- avoid an exception in some rare cases when requesting the pool login link
+- provide a clear error when the `wallet_id` value is missing in a call to the `nft_set_bulk_nft_did` wallet rpc (Thanks, @steppsr!)
 - allow cancellation of offers when there is no spendable balance
 - track all transactions of an NFT bulk mint instead of just the first
 - Make the `--id` flag on cancel_offer required
