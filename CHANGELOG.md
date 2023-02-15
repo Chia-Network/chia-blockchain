@@ -24,7 +24,6 @@ for setuptools_scm/PEP 440 reasons.
 - Add the expected offer ID to some RPCs that take offer blobs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14366
 
 ### Changed
-- server: Resolve config peers earlier by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14069
 - bump `chia_rs` dependency to `0.2.0` @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14289
 - Update version of `clvm_tools_rs` to `0.1.30` by @prozacchiwawa in https://github.com/Chia-Network/chia-blockchain/pull/14327
 - Use better check that we are on mainnet when deciding to use default Chia DNS server by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14254
