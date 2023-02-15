@@ -18,7 +18,6 @@ for setuptools_scm/PEP 440 reasons.
 - add `trusted_max_subscribe_items` and `wallet:trusted_peers` to config.yaml by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14188
 - Nft bulk transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14329
 - Add the expected offer ID to some RPCs that take offer blobs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14366
-- Add LimitedSemaphore by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13642
 
 ### Changed
 - process_transaction_records() -> process_transactions() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13629
