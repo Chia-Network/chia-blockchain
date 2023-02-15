@@ -42,8 +42,6 @@ for setuptools_scm/PEP 440 reasons.
 - fix coin selection cli decimal handling & splitting issue by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13908
 - Make `--number-of-coins` required for the `chia coins split` CLI by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14072
 - fix warning log in header validation by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/13944
-- revert delayed pool config handling (#12795, #13154) by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14090
-- handle incoming unknown capabilities by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14093
 - replacing transactions in the mempool is normal behavior, not a warning by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14089
 - don't throw unnecessary exception on peer connect by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14108
 - Return existing CAT wallet instead of raising by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14101
