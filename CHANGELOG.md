@@ -38,8 +38,6 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 - Numerous fixes and improvements to the full node fee estimator
 - server: Fix invalid attribute accesses in `WSChiaConnection` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14051
-- fix coin selection cli decimal handling & splitting issue by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13908
-- Make `--number-of-coins` required for the `chia coins split` CLI by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14072
 - fix warning log in header validation by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/13944
 - replacing transactions in the mempool is normal behavior, not a warning by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14089
 - don't throw unnecessary exception on peer connect by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14108
