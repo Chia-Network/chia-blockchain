@@ -11,9 +11,6 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 - Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
-- Add `verify_signature` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13732
-- Add `did_message_spend` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13890
-- Add `nft_set_did_bulk` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13720
 - Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
 - Add total balance check, updated error messages by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/13866
 - Add target_coin amount to coin selection cli (chia wallet coins)  by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13716
