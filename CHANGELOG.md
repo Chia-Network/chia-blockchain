@@ -49,7 +49,6 @@ for setuptools_scm/PEP 440 reasons.
 - bump default bladebit version to 2.0.1 in install-plotter.sh by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14181
 - Add MempoolRemoveReason, which represents why we are removing a MempoolItem by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14263
 - wallet: Drop duplicate puzzle hashes assert by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14287
-- Check if a SpendBundle was included in a block BEFORE removing it from the Mempool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14293
 - Fix fee and unit amounts when coin splitting or viewing coins by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14172
 - disallow empty SpendBundles in the mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14305
 - avoid an exception in some rare cases when requesting the pool login link  by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14304
