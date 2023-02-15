@@ -30,7 +30,7 @@ for setuptools_scm/PEP 440 reasons.
 - Try each Chia DNS Server in list before trying introducers by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14253
 - optimize mempool's potential cache by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14297
 - infrastructure for upcoming soft-fork by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14302
-- Display complete exception info in log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14319
+- Display complete exception info in log file for validation, consensus, and protocol errors by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14319
 - Enable setting time between blocks in full node sim by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14310
 - Limit rate of log messages when farmer is disconnected from pool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14344
 - Add SigningMode and update `verify_signature` RPC to work with `sign_message_by_*` RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14213
