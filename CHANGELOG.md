@@ -55,7 +55,6 @@ for setuptools_scm/PEP 440 reasons.
 - Made it able to RAM plot with bladebit2 by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13833
 - Renamed chia packages to use the @Chia-Network scope Updates build scripts to account for the scope rename by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14050
 - server: Resolve config peers earlier by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14069
-- check_removals() doesn't need to be async by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14199
 - Remove redundant check for maximum block CLVM cost by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14212
 - Remove redundant check for duplicate inputs by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14272
 - bump `chia_rs` dependency to `0.2.0` @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14289
