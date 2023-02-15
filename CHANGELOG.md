@@ -117,7 +117,6 @@ for setuptools_scm/PEP 440 reasons.
 - Fix chia wallet coins cli bugs by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14388
 - Fixed wallet state if db is rolled back by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/14384
 - Add some extra checks for size and existence to notification backend by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14398
-- Check incoming notification hints by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14450
 - Quex.offer mod tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14478
 - Purposefully break offer compression for older versions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14535
 
