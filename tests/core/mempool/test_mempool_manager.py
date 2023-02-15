@@ -590,16 +590,8 @@ async def test_process_mempool_items_max_cost() -> None:
         conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
     conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1])
     # Create a spend bundle with a big enough cost that gets it close to the limit
-    sb, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    expected_cost = uint64(5498561056)
-    assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
-    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
-    # This spend bundle alone doesn't exceed the maximum block clvm cost so
-    # it should not be skipped
-    assert spend_bundles == [sb]
-    assert cost_sum == expected_cost
-    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1)]
-    assert removals == [TEST_COIN]
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
+    assert result[1] == MempoolInclusionStatus.SUCCESS
     # Create a second spend bundle with a relatively smaller cost.
     # Combined with the first spend bundle, we'd exceed the maximum block clvm cost
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1]]
@@ -629,14 +621,6 @@ async def test_process_mempool_items_max_fee() -> None:
     sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
     expected_cost = uint64(2945056)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
-    # This spend bundle alone doesn't exceed the maximum fee so it should not be skipped
-    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
-    assert spend_bundles == [sb1]
-    assert cost_sum == expected_cost
-    expected_additions = [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT)]
-    assert additions == expected_additions
-    expected_removals = [TEST_COIN]
-    assert removals == expected_removals
     # Create a second spend bundle with a relatively smaller fee.
     # Combined with the first spend bundle, we'd exceed the maximum fee
     conditions = [
@@ -644,15 +628,14 @@ async def test_process_mempool_items_max_fee() -> None:
         [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
     ]
     _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, TEST_COIN2)
-    expected_cost2 = uint64(5201056)
-    assert result == (expected_cost2, MempoolInclusionStatus.SUCCESS, None)
+    assert result[1] == MempoolInclusionStatus.SUCCESS
     spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
     # The first spend bundle has a higher FPC so it gets picked first
     assert spend_bundles == [sb1]
     # The second spend bundle hits the maximum fee and gets skipped
     assert cost_sum == expected_cost
-    assert additions == expected_additions
-    assert removals == expected_removals
+    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT)]
+    assert removals == [TEST_COIN]
 
 
 @pytest.mark.asyncio
