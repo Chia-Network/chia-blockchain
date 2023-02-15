@@ -14,6 +14,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add Datalayer `get_sync_status` RPC and CLI. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/13440
 - Add Datalayer download progress log and stream by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/13828
 - Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
+- Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Add `verify_signature` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13732
 - Add `did_message_spend` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13890
 - Add `nft_set_did_bulk` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13720
@@ -67,7 +68,6 @@ for setuptools_scm/PEP 440 reasons.
 - Update version of `clvm_tools_rs` to `0.1.30` by @prozacchiwawa in https://github.com/Chia-Network/chia-blockchain/pull/14327
 - Use better check that we are on mainnet when deciding to use default Chia DNS server by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14254
 - Remove conflicting TXs before adding SpendBundle to Mempool in add_spend_bundle by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14292
-- Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Try each Chia DNS Server in list before trying introducers by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14253
 - optimize mempool's potential cache by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14297
 - infrastructure for upcoming soft-fork by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14302
