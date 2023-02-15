@@ -20,26 +20,6 @@ for setuptools_scm/PEP 440 reasons.
 - Add the expected offer ID to some RPCs that take offer blobs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14366
 
 ### Changed
-- process_transaction_records() -> process_transactions() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13629
-- `debug_spend_bundle` -- print coin id as hex string by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/13605
-- only open SQLite log file once per db wrapper by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13754
-- switch to context manager for task timing instrumentation by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13473
-- Revert rate limiting messages from `warning` back to `debug` by @hugepants in https://github.com/Chia-Network/chia-blockchain/pull/13758
-- `add_private_key` now returns the fingerprint of the added key by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/13814
-- SQLite log the full node db version check by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13755
-- Delete DID wallet after transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13389
-- dont validate wp on `log_in` by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/13775
-- server: Drop broken message types logging by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13914
-- Make `WSChiaConnection` a `dataclass` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13906
-- Simplify `ChiaServer.close_all_connections` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13916
-- Return minted NFT ID & Allow transfer NFT with NFT ID by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13928
-- util: Remove legacy keyring support by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13398
-- simplify TradeManager.respond_to_offer() return by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13927
-- Display key labels when making a wallet key selection by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/13936
-- Add support for pending transactions to `get_mempool_item_by_tx_id()` #9443 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/13976
-- Simplify the mempool manager instantiation by not making it depend on a coin store by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14015
-- Made it able to RAM plot with bladebit2 by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13833
-- Renamed chia packages to use the @Chia-Network scope Updates build scripts to account for the scope rename by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14050
 - server: Resolve config peers earlier by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14069
 - Remove redundant check for maximum block CLVM cost by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14212
 - Remove redundant check for duplicate inputs by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14272
