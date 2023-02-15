@@ -63,7 +63,6 @@ for setuptools_scm/PEP 440 reasons.
 - Fix target puz hash index for bulk mint nfts with airdrop by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14370
 - Fix chia wallet coins cli bugs by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14388
 - Fixed wallet state if db is rolled back by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/14384
-- Add some extra checks for size and existence to notification backend by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14398
 - Quex.offer mod tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14478
 - Purposefully break offer compression for older versions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14535
 
