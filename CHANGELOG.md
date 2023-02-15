@@ -48,7 +48,6 @@ for setuptools_scm/PEP 440 reasons.
 - server: Resolve peers in harvester and timelord startup also by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14161
 - bump default bladebit version to 2.0.1 in install-plotter.sh by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14181
 - Add MempoolRemoveReason, which represents why we are removing a MempoolItem by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14263
-- Fix fee and unit amounts when coin splitting or viewing coins by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14172
 - disallow empty SpendBundles in the mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14305
 - avoid an exception in some rare cases when requesting the pool login link  by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14304
 - provide a clear error when the `wallet_id` value is missing in a call to the `nft_set_bulk_nft_did` wallet rpc by @steppsr in https://github.com/Chia-Network/chia-blockchain/pull/14306
