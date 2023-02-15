@@ -34,7 +34,6 @@ for setuptools_scm/PEP 440 reasons.
 - Enable setting time between blocks in full node sim by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14310
 - Limit rate of log messages when farmer is disconnected from pool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14344
 - Add SigningMode and update `verify_signature` RPC to work with `sign_message_by_*` RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14213
-- dont announce none response capability to peers by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14386
 - Rename notification config by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14397
 
 ### Fixed
