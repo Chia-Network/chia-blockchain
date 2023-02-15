@@ -9,10 +9,6 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.7.0 Chia blockchain 2023-02-15
 
 ### Added
-- `chia keys show --json` (display all keys as json) by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/13637
-- Coin Selection CLI / RPC Expansion by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13325
-- Add Datalayer `get_sync_status` RPC and CLI. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/13440
-- Add Datalayer download progress log and stream by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/13828
 - Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Add `verify_signature` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13732
