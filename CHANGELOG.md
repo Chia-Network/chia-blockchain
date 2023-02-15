@@ -56,7 +56,7 @@ for setuptools_scm/PEP 440 reasons.
 - add rate limits numbers to none response type by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14184
 - Fixed condition to check for wallet_id by @steppsr in https://github.com/Chia-Network/chia-blockchain/pull/14306
 - fix offer cancel balance by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14342
-- Fix bulk tx by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14372
+- track all transactions of an NFT bulk mint instead of just the first by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14372
 - Make the `--id` flag on cancel_offer required by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14376
 - Fix target puz hash index for bulk mint nfts with airdrop by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14370
 - Fix chia wallet coins cli bugs by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14388
