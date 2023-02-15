@@ -60,7 +60,7 @@ for setuptools_scm/PEP 440 reasons.
 - Make the `--id` flag on cancel_offer required by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14376
 - corrected a target address vs. metadata mismatch when bulk minting and airdropping NFTs by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14370
 - Fix chia wallet coins cli bugs by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14388
-- Fixed wallet state if db is rolled back by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/14384
+- Fixed wallet DB issues resulting when there are unexpected failures during syncing @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/14384
 - Quex.offer mod tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14478
 - Purposefully break offer compression for older versions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14535
 
