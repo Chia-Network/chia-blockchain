@@ -9,6 +9,9 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.7.0 Chia blockchain 2023-02-15
 
 ### Added
+- New `chia wallet coins` CLI and RPCs for listing, splitting, and combining coins
+- New on-chain notification for offers, specifically designed for NFT offers
+- New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate`)
 - Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
@@ -36,7 +39,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add SigningMode and update `verify_signature` RPC to work with `sign_message_by_*` RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14213
 
 ### Fixed
-- Numerous fixes and improvements to the full node fee estimator
+- Offer security updates: Offers that are generated with this version cannot be accepted with older versions of Chia
 - server: Fix invalid attribute accesses in `WSChiaConnection` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14051
 - header validation time logging severity reduced from warning to info when time is less than two seconds by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/13944
 - replacing transactions in the mempool is normal behavior, not a warning by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14089
@@ -55,10 +58,7 @@ for setuptools_scm/PEP 440 reasons.
 - track all transactions of an NFT bulk mint instead of just the first by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14372
 - Make the `--id` flag on cancel_offer required by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14376
 - corrected a target address vs. metadata mismatch when bulk minting and airdropping NFTs by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14370
-- Fix chia wallet coins cli bugs by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14388
 - Fixed wallet DB issues resulting when there are unexpected failures during syncing @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/14384
-- Quex.offer mod tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14478
-- Purposefully break offer compression for older versions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14535
 
 ### Deprecated
 - Python 3.7 support is deprecated and will be removed in a future version
