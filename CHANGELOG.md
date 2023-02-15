@@ -13,6 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 - Coin Selection CLI / RPC Expansion by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13325
 - Add Datalayer `get_sync_status` RPC and CLI. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/13440
 - Add Datalayer download progress log and stream by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/13828
+- Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Add `verify_signature` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13732
 - Add `did_message_spend` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13890
 - Add `nft_set_did_bulk` Wallet RPC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13720
@@ -28,6 +29,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add Arch Linux to install-gui.sh script by @DaOneLuna in https://github.com/Chia-Network/chia-blockchain/pull/14059
 - Add a height timestamp for wallet notifications by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14163
 - Add a `daemon_heartbeat` setting to config.yaml by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13886
+- add `trusted_max_subscribe_items` and `wallet:trusted_peers` to config.yaml by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14188
 - Nft bulk transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14329
 - Add the expected offer ID to some RPCs that take offer blobs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14366
 - Add LimitedSemaphore by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/13642
@@ -60,7 +62,6 @@ for setuptools_scm/PEP 440 reasons.
 - Remove redundant check for duplicate outputs by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14195
 - check_removals() doesn't need to be async by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14199
 - Remove redundant check for maximum block CLVM cost by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14212
-- add local max subscription config by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14188
 - Remove redundant check for duplicate inputs by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14272
 - Add new_block_height to FeeEstimatorInterface by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14277
 - bump `chia_rs` dependency to `0.2.0` @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14289
@@ -74,7 +75,6 @@ for setuptools_scm/PEP 440 reasons.
 - optimize mempool's potential cache by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14297
 - infrastructure for upcoming soft-fork by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14302
 - Improve command line info display for fee estimation by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14336
-- Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Display complete exception info in log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14319
 - Enable setting time between blocks in full node sim by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/14310
 - Move table of SpendBundle costs to backend by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14367
@@ -86,7 +86,7 @@ for setuptools_scm/PEP 440 reasons.
 - Ensure fee estimates monotonically decrease with time by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14368
 
 ### Fixed
-- Add a state_changed for frontend on notification by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/13713
+- Add a `state_changed` for frontend on notification by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/13713
 - Rework wallet new peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/12586
 - upped the number of file handles for madmax by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/13856
 - plotting: Catch exceptions raised when resolving plot directories by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13786
@@ -94,7 +94,6 @@ for setuptools_scm/PEP 440 reasons.
 - Set GUI binary name to `chia-blockchain` in the Fedora rpm by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13915
 - Set GUI binary name to `chia-blockchain` in the Ubuntu DEB by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13910
 - Ensure `chia-blockchain` still opens UI on Linux by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/13826
-- server: Enable and fix `mypy` in `server.py` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13579
 - add simple fix to set farmer response timer for `SP: 0` by @neurosis69 in https://github.com/Chia-Network/chia-blockchain/pull/13655
 - Preserve correct `MempoolItem` block height when rebuilding mempool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/13951
 - Windows: start daemon without a window and detached from current console by @jcteng in https://github.com/Chia-Network/chia-blockchain/pull/9697
