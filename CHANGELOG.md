@@ -11,16 +11,16 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 - New `chia wallet coins` CLI and RPCs for listing, splitting, and combining coins
 - New on-chain notification for offers, specifically designed for NFT offers
-- New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate`)
+- New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate` full node RPC)
 - Add infrastructure for soft fork at block 3630000
-- Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
-- Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
+- Add gzip support to DataLayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
+- Add proxy support to DataLayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
 - Add `tools/legacy_keyring.py` to allow migration from the removed old key storage format.  Available only from source installations. by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13947
 - Add Arch Linux to install-gui.sh script by @DaOneLuna in https://github.com/Chia-Network/chia-blockchain/pull/14059
 - Add a `daemon_heartbeat` setting to config.yaml by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13886
 - add `trusted_max_subscribe_items` and `wallet:trusted_peers` to config.yaml by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14188
-- Nft bulk transfer by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14329
+- NFT bulk transfer and DID assignment wallet RPCs by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14329
 - Add the expected offer ID to some RPCs that take offer blobs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14366
 
 ### Changed
