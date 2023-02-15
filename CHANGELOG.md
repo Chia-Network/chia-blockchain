@@ -12,6 +12,7 @@ for setuptools_scm/PEP 440 reasons.
 - New `chia wallet coins` CLI and RPCs for listing, splitting, and combining coins
 - New on-chain notification for offers, specifically designed for NFT offers
 - New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate`)
+- Add infrastructure for soft fork at block 3630000
 - Add gzip support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Add proxy support to Datalayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
