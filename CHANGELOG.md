@@ -38,22 +38,6 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 - Numerous fixes and improvements to the full node fee estimator
-- Add a `state_changed` for frontend on notification by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/13713
-- Rework wallet new peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/12586
-- upped the number of file handles for madmax by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/13856
-- plotting: Catch exceptions raised when resolving plot directories by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13786
-- Call close callback for already closed connections by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13727
-- Set GUI binary name to `chia-blockchain` in the Fedora rpm by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13915
-- Set GUI binary name to `chia-blockchain` in the Ubuntu DEB by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/13910
-- Ensure `chia-blockchain` still opens UI on Linux by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/13826
-- add simple fix to set farmer response timer for `SP: 0` by @neurosis69 in https://github.com/Chia-Network/chia-blockchain/pull/13655
-- Preserve correct `MempoolItem` block height when rebuilding mempool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/13951
-- Windows: start daemon without a window and detached from current console by @jcteng in https://github.com/Chia-Network/chia-blockchain/pull/9697
-- Fix pool singleton sync height in DB by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/13986
-- Remove duplicate nft wallet deletion in reorg by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13892
-- Fix DID unnecessary wallet deletion by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/13925
-- Improve performance of wallets with many NFTs  by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14023
-- Stop creating unecessary index in notification store by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14042
 - server: Fix invalid attribute accesses in `WSChiaConnection` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14051
 - fix coin selection cli decimal handling & splitting issue by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13908
 - Make `--number-of-coins` required for the `chia coins split` CLI by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14072
