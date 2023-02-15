@@ -54,7 +54,6 @@ for setuptools_scm/PEP 440 reasons.
 - Simplify the mempool manager instantiation by not making it depend on a coin store by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14015
 - Made it able to RAM plot with bladebit2 by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/13833
 - Renamed chia packages to use the @Chia-Network scope Updates build scripts to account for the scope rename by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14050
-- Remove redundant checks in validate_spend_bundle() by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14035
 - Type check mempool_item.py by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14088
 - server: Resolve config peers earlier by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14069
 - Remove redundant check for duplicate outputs by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14195
