@@ -12,7 +12,7 @@ for setuptools_scm/PEP 440 reasons.
 - New `chia wallet coins` CLI and RPCs for listing, splitting, and combining coins
 - New on-chain notification for offers, specifically designed for NFT offers
 - New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate` full node RPC)
-- Add infrastructure for soft fork at block 3630000
+- Implementation of soft fork at block 3630000 - see the 1.7.0 blog post for more details
 - Add gzip support to DataLayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14320
 - Add proxy support to DataLayer download client by @Chida82 in https://github.com/Chia-Network/chia-blockchain/pull/14281
 - Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14357
@@ -36,7 +36,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add SigningMode and update `verify_signature` RPC to work with `sign_message_by_*` RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14213
 
 ### Fixed
-- Offer security updates: Offers that are generated with this version cannot be accepted with older versions of Chia
+- Offer security updates: Offers that are generated with this version cannot be accepted with older versions of Chia - see blog post for details
 - server: Fix invalid attribute accesses in `WSChiaConnection` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14051
 - header validation time logging severity reduced from warning to info when time is less than two seconds by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/13944
 - replacing transactions in the mempool is normal behavior, not a warning by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14089
