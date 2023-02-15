@@ -25,7 +25,7 @@ for setuptools_scm/PEP 440 reasons.
 - Add a workflow for scanning python deps by @pmaslana in https://github.com/Chia-Network/chia-blockchain/pull/13227
 - full_node: Introduce `sync_store.Peak` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13615
 - Add `--fingerprint` option to `chia keys show` by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13909
-- tools: Implement and test `tools/legacy_keyring.py` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13947
+- Add `tools/legacy_keyring.py` to allow migration from the removed old key storage format.  Available only from source installations. by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/13947
 - add new, optimized tx queue by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/13887
 - Add Arch Linux to install-gui.sh script by @DaOneLuna in https://github.com/Chia-Network/chia-blockchain/pull/14059
 - Add a height timestamp for wallet notifications by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14163
