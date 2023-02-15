@@ -37,7 +37,7 @@ class FeeMempoolInfo:
     Attributes:
         mempool_info (MempoolInfo): A `MempoolInfo`, defined above. Parameters of our mempool.
         current_mempool_cost (uint64):This is the current capacity of the mempool, measured in XCH per CLVM Cost
-        current_mempool_fees (Mojos): Sum of fees for all spends waiting in the Mempool
+        current_mempool_fees (int): Sum of fees for all spends waiting in the Mempool
         time (datetime): Local time this sample was taken
 
         Note that we use the node's local time, not "Blockchain time" for the timestamp above
@@ -45,7 +45,7 @@ class FeeMempoolInfo:
 
     mempool_info: MempoolInfo
     current_mempool_cost: CLVMCost  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
-    current_mempool_fees: Mojos  # Sum of fees for all spends waiting in the Mempool
+    current_mempool_fees: int  # Sum of fees for all spends waiting in the Mempool
     time: datetime  # Local time this sample was taken
 
 
@@ -57,7 +57,7 @@ EmptyMempoolInfo = MempoolInfo(
 EmptyFeeMempoolInfo = FeeMempoolInfo(
     EmptyMempoolInfo,
     CLVMCost(uint64(0)),
-    Mojos(uint64(0)),
+    0,
     datetime.min,
 )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from random import Random
+from typing import Optional
 
 import pytest
 
@@ -13,9 +14,18 @@ from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
+from tests.core.mempool.test_mempool_manager import (
+    IDENTITY_PUZZLE_HASH,
+    generate_and_add_spendbundle,
+    instantiate_mempool_manager,
+)
 from tests.util.db_connection import DBConnection
 
 
@@ -130,3 +140,23 @@ async def test_fee_increase() -> None:
         assert short_estimate.mojos_per_clvm_cost == uint64(fee_tracker.buckets[3] / 1000)
         assert med_estimate.mojos_per_clvm_cost == uint64(fee_tracker.buckets[3] / 1000)
         assert long_estimate.mojos_per_clvm_cost == uint64(0)
+
+
+@pytest.mark.asyncio
+async def test_total_mempool_fees() -> None:
+    coin1 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(0xFFFFFFFFFFFFFFFF))
+    coin2 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(3))
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        test_coin_records = {
+            coin1.name(): CoinRecord(coin1, uint32(0), uint32(0), False, uint64(0)),
+            coin2.name(): CoinRecord(coin2, uint32(0), uint32(0), False, uint64(0)),
+        }
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin1)
+    assert result[1] == MempoolInclusionStatus.SUCCESS
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin2)
+    assert result[1] == MempoolInclusionStatus.SUCCESS
