@@ -196,9 +196,9 @@ class WalletNftStore:
         if wallet_id is not None or did_id is not None:
             sql += " and"
         sql += " removed_height is NULL"
-        sql += " LIMIT %s OFFSET %s " % (count, start_index)
+        sql += " LIMIT ? OFFSET ?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(sql)
+            rows = await conn.execute_fetchall(sql, (count, start_index))
 
         return [
             NFTCoinInfo(
