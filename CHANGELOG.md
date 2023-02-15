@@ -54,7 +54,7 @@ for setuptools_scm/PEP 440 reasons.
 - Check if a SpendBundle was included in a block BEFORE removing it from the Mempool by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14293
 - Fix fee and unit amounts when coin splitting or viewing coins by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14172
 - disallow empty SpendBundles in the mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14305
-- Check for valid timeout and log error  by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14304
+- avoid an exception in some rare cases when requesting the pool login link  by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14304
 - add rate limits numbers to none response type by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14184
 - Fixed condition to check for wallet_id by @steppsr in https://github.com/Chia-Network/chia-blockchain/pull/14306
 - fix offer cancel balance by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14342
