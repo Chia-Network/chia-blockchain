@@ -45,7 +45,7 @@ for setuptools_scm/PEP 440 reasons.
 - replacing transactions in the mempool is normal behavior, not a warning by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14089
 - don't throw unnecessary exception on peer connect by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14108
 - Return existing CAT wallet instead of raising by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14101
-- server: Resolve peers in harvester and timelord startup also by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14161
+- Resolve peers in harvester and timelord startup (fixes #14158) by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14161
 - bump default bladebit version to 2.0.1 in install-plotter.sh by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14181
 - Add MempoolRemoveReason, which represents why we are removing a MempoolItem by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14263
 - disallow empty SpendBundles in the mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14305
