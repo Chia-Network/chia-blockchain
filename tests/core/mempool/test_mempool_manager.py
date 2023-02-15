@@ -539,6 +539,8 @@ async def test_get_items_not_in_filter() -> None:
 
 @pytest.mark.asyncio
 async def test_process_mempool_items_never_filter() -> None:
+    # item_inclusion_filter determines whether a mempool item gets skipped or not
+    # This test exercises the path of not including any item
     def never(_: bytes32) -> bool:
         return False
 
@@ -548,6 +550,8 @@ async def test_process_mempool_items_never_filter() -> None:
     expected_cost = uint64(2897056)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=never)
+    # Make sure we skipped this item because the inclusion filter doesn't allow
+    # any items to be included
     assert spend_bundles == []
     assert cost_sum == 0
     assert additions == []
@@ -560,12 +564,15 @@ def always(_: bytes32) -> bool:
 
 @pytest.mark.asyncio
 async def test_process_mempool_items_always_filter() -> None:
+    # This test exercises the inverse path of test_process_mempool_items_never_filter
     mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     sb, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
     expected_cost = uint64(2897056)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    # Make sure this mempool item was included by item_inclusion_filter
+    # and not skipped
     assert spend_bundles == [sb]
     assert cost_sum == expected_cost
     assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
@@ -574,20 +581,27 @@ async def test_process_mempool_items_always_filter() -> None:
 
 @pytest.mark.asyncio
 async def test_process_mempool_items_max_cost() -> None:
+    # This test exercises the path where an item's inclusion would exceed the
+    # maximum cumulative cost, so it gets skipped as a result
     mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
     conditions = []
     g1 = G1Element()
     for _ in range(2436):
         conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
     conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1])
+    # Create a spend bundle with a big enough cost that gets it close to the limit
     sb, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
     expected_cost = uint64(5498561056)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
+    # This spend bundle alone doesn't exceed the maximum block clvm cost so
+    # it should not be skipped
     assert spend_bundles == [sb]
     assert cost_sum == expected_cost
     assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT - 1)]
     assert removals == [TEST_COIN]
+    # Create a second spend bundle with a relatively smaller cost.
+    # Combined with the first spend bundle, we'd exceed the maximum block clvm cost
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1]]
     sb2, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, TEST_COIN2)
     expected_cost2 = uint64(2945056)
@@ -603,16 +617,19 @@ async def test_process_mempool_items_max_cost() -> None:
 
 @pytest.mark.asyncio
 async def test_process_mempool_items_max_fee() -> None:
+    # This test exercises the path where an item's inclusion would exceed the
+    # maximum fee, so it gets skipped as a result
     mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
     MAX_FEES_AMOUNT = 5
     # Maximum fee is checked using MAX_COIN_AMOUNT
     mempool_manager.constants = dataclasses.replace(mempool_manager.constants, MAX_COIN_AMOUNT=MAX_FEES_AMOUNT)
-
+    # Create a spend bundle with a big enough fee that gets it close to the limit
     CREATED_COIN_AMOUNT = TEST_COIN_AMOUNT - MAX_FEES_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT]]
     sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
     expected_cost = uint64(2945056)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
+    # This spend bundle alone doesn't exceed the maximum fee so it should not be skipped
     spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
     assert spend_bundles == [sb1]
     assert cost_sum == expected_cost
@@ -620,6 +637,8 @@ async def test_process_mempool_items_max_fee() -> None:
     assert additions == expected_additions
     expected_removals = [TEST_COIN]
     assert removals == expected_removals
+    # Create a second spend bundle with a relatively smaller fee.
+    # Combined with the first spend bundle, we'd exceed the maximum fee
     conditions = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1],
         [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
