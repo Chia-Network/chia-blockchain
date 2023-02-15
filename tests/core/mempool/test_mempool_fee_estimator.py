@@ -160,3 +160,6 @@ async def test_total_mempool_fees() -> None:
     assert result[1] == MempoolInclusionStatus.SUCCESS
     _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin2)
     assert result[1] == MempoolInclusionStatus.SUCCESS
+    # Total fees should be coin1's amount plus coin2's amount minus two mojos
+    # for the created coins
+    assert mempool_manager.mempool.total_mempool_fees == 0xFFFFFFFFFFFFFFFF + 3 - 2
