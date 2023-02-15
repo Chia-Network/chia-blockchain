@@ -50,7 +50,6 @@ for setuptools_scm/PEP 440 reasons.
 - Fix fee and unit amounts when coin splitting or viewing coins by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14172
 - disallow empty SpendBundles in the mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14305
 - avoid an exception in some rare cases when requesting the pool login link  by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14304
-- add rate limits numbers to none response type by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14184
 - Fixed condition to check for wallet_id by @steppsr in https://github.com/Chia-Network/chia-blockchain/pull/14306
 - allow cancellation of offers when there is no spendable balance by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14342
 - track all transactions of an NFT bulk mint instead of just the first by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14372
