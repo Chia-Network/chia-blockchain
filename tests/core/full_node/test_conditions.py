@@ -6,7 +6,6 @@ or that they're failing for the right reason when they're invalid.
 from __future__ import annotations
 
 import logging
-import time
 from typing import List, Optional, Tuple
 
 import pytest
@@ -49,6 +48,8 @@ async def initial_blocks(bt, block_count: int = 4) -> List[FullBlock]:
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=EASY_PUZZLE_HASH,
         pool_reward_puzzle_hash=EASY_PUZZLE_HASH,
+        genesis_timestamp=10000,
+        time_per_block=10,
     )
     return blocks
 
@@ -113,24 +114,40 @@ async def check_conditions(
 
 class TestConditions:
     @pytest.mark.asyncio
-    async def test_invalid_block_age(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_RELATIVE[0]} 2))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_HEIGHT_RELATIVE_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_block_age(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_RELATIVE[0]} 1))"))
-        await check_conditions(bt, conditions)
-
-    @pytest.mark.asyncio
-    async def test_invalid_block_height(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE[0]} 4))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_HEIGHT_ABSOLUTE_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_block_height(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE[0]} 3))"))
-        await check_conditions(bt, conditions)
+    @pytest.mark.parametrize(
+        "opcode,value,expected",
+        [
+            # the chain has 4 blocks, the spend is happening in the 5th block
+            # the coin being spent was created in the 3rd block
+            # ensure invalid heights fail and pass correctly, depending on
+            # which end of the range they exceed
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, None),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, None),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, -1, None),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 0, None),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, None),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, None),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, -1, None),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 0, None),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            # test boundary values
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, None),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, None),
+            # genesis timestamp is 10000 and each block is 10 seconds
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10000, None),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, None),
+        ],
+    )
+    async def test_condition(self, opcode, value, expected, bt):
+        conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
+        await check_conditions(bt, conditions, expected_err=expected)
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, bt):
@@ -146,20 +163,6 @@ class TestConditions:
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"))
-        await check_conditions(bt, conditions)
-
-    @pytest.mark.asyncio
-    async def test_invalid_seconds_absolute(self, bt):
-        # TODO: make the test suite not use `time.time` so we can more accurately
-        # set `time_now` to make it minimal while still failing
-        time_now = int(time.time()) + 3000
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]} {time_now}))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_seconds_absolute(self, bt):
-        time_now = int(time.time())
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]} {time_now}))"))
         await check_conditions(bt, conditions)
 
     @pytest.mark.asyncio
