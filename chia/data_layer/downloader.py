@@ -5,7 +5,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import aiohttp
-import boto3
 from typing_extensions import Protocol
 
 from chia.data_layer.data_layer_util import ServerInfo
@@ -82,11 +81,9 @@ class HttpDownloader(DLDownloader):
 
 
 class S3Downloader(DLDownloader):
-    def __init__(self, pub_key: str, secret_key: str, region: str) -> None:
+    def __init__(self, resource) -> None:  # type:ignore
         self.name = "s3 downloader"
-        self.boto_resource = boto3.resource(
-            "s3", aws_access_key_id=pub_key, aws_secret_access_key=secret_key, region_name=region
-        )
+        self.boto_resource = resource
 
     @staticmethod
     def check_url(url: str, log: logging.Logger) -> bool:
@@ -104,10 +101,13 @@ class S3Downloader(DLDownloader):
         timeout: int,
         log: logging.Logger,
     ) -> bool:
-        bucket = self.boto_resource.Bucket(server_info.url)
+        parse_result = urlparse(server_info.url)
+        bucket = parse_result.netloc
         target_filename = client_folder.joinpath(filename)
-        size = self.boto_resource.head_object(key_name=filename)["ContentLength"]
-        log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
-        with target_filename.open(mode="wb") as f:
-            bucket.download_file(filename, f)
+        log.debug(f"target file name {target_filename} bucket {bucket}")
+        my_bucket = self.boto_resource.Bucket(bucket)
+        # Create folder for parent directory
+        # todo do we expect the folder to exist ?
+        target_filename.parent.mkdir(parents=True, exist_ok=True)
+        my_bucket.download_file(filename, str(target_filename))
         return True
