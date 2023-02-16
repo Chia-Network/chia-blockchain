@@ -65,7 +65,7 @@ def validate_clvm_and_signature(
         pks: List[bytes48] = []
         msgs: List[bytes] = []
         assert result.conds is not None
-        pks, msgs = pkm_pairs(result.conds, additional_data)
+        pks, msgs = pkm_pairs(result.conds, additional_data, soft_fork=True)
 
         # Verify aggregated signature
         cache: LRUCache[bytes32, GTElement] = LRUCache(10000)
@@ -470,14 +470,7 @@ class MempoolManager:
             removal_amount = removal_amount + removal_record.coin.amount
             removal_record_dict[name] = removal_record
 
-        if addition_amount > removal_amount:
-            return Err.MINTING_COIN, None, []
-
         fees = uint64(removal_amount - addition_amount)
-        assert_fee_sum: uint64 = uint64(npc_result.conds.reserve_fee)
-
-        if fees < assert_fee_sum:
-            return Err.RESERVE_FEE_CONDITION_FAILED, None, []
 
         if cost == 0:
             return Err.UNKNOWN, None, []
@@ -621,17 +614,19 @@ class MempoolManager:
         if use_optimization and last_npc_result is not None:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
+                spendbundle_ids_to_remove = []
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
                         spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
                             bytes32(spend.coin_id)
                         ]
+                        spendbundle_ids_to_remove.extend(spendbundle_ids)
                         for spendbundle_id in spendbundle_ids:
                             item = self.mempool.spends.get(spendbundle_id)
                             if item:
                                 included_items.append(item)
                             self.remove_seen(spendbundle_id)
-                        self.mempool.remove_from_pool(spendbundle_ids, MempoolRemoveReason.BLOCK_INCLUSION)
+                self.mempool.remove_from_pool(spendbundle_ids_to_remove, MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
@@ -667,24 +662,17 @@ class MempoolManager:
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         return txs_added
 
-    async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:
-        items: List[MempoolItem] = []
-        counter = 0
-        broke_from_inner_loop = False
+    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:
+        items: List[SpendBundle] = []
 
         assert limit > 0
 
         # Send 100 with the highest fee per cost
         for dic in reversed(self.mempool.sorted_spends.values()):
-            if broke_from_inner_loop:
-                break
             for item in dic.values():
-                if counter == limit:
-                    broke_from_inner_loop = True
-                    break
+                if len(items) == limit:
+                    return items
                 if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                     continue
-                items.append(item)
-                counter += 1
-
+                items.append(item.spend_bundle)
         return items

@@ -495,45 +495,42 @@ async def test_ephemeral_timelock(
 async def test_get_items_not_in_filter() -> None:
     mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    _, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
-    mempool_item1 = mempool_manager.get_mempool_item(sb1_name)
+    sb1, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
     conditions2 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
-    _, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
-    mempool_item2 = mempool_manager.get_mempool_item(sb2_name)
+    sb2, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
     conditions3 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
-    _, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
-    mempool_item3 = mempool_manager.get_mempool_item(sb3_name)
+    sb3, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
 
     # Don't filter anything
     empty_filter = PyBIP158([])
-    result = await mempool_manager.get_items_not_in_filter(empty_filter)
-    assert result == [mempool_item3, mempool_item2, mempool_item1]
+    result = mempool_manager.get_items_not_in_filter(empty_filter)
+    assert result == [sb3, sb2, sb1]
 
     # Filter everything
     full_filter = PyBIP158([bytearray(sb1_name), bytearray(sb2_name), bytearray(sb3_name)])
-    result = await mempool_manager.get_items_not_in_filter(full_filter)
+    result = mempool_manager.get_items_not_in_filter(full_filter)
     assert result == []
 
     # Negative limit
     with pytest.raises(AssertionError):
-        await mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
+        mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
 
     # Zero limit
     with pytest.raises(AssertionError):
-        await mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
+        mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
 
     # Filter only one of the spend bundles
     sb3_filter = PyBIP158([bytearray(sb3_name)])
 
     # With a limit of one, sb2 has the highest FPC
-    result = await mempool_manager.get_items_not_in_filter(sb3_filter, limit=1)
-    assert result == [mempool_item2]
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=1)
+    assert result == [sb2]
 
     # With a higher limit, all bundles aside from sb3 get included
-    result = await mempool_manager.get_items_not_in_filter(sb3_filter, limit=5)
-    assert result == [mempool_item2, mempool_item1]
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=5)
+    assert result == [sb2, sb1]
 
     # Filter two of the spend bundles
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
-    result = await mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
-    assert result == [mempool_item1]
+    result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
+    assert result == [sb1]

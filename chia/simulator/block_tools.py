@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
+from clvm.casts import int_from_bytes
 
 from chia.cmds.init_funcs import create_default_chia_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
@@ -73,7 +74,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
@@ -141,6 +142,22 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MEMPOOL_BLOCK_BUFFER": 6,
     }
 )
+
+
+def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
+    ret: List[Coin] = []
+    for cs in sb.coin_spends:
+        parent_id = cs.coin.name()
+        _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+        for cond in Program.to(r).as_iter():
+            atoms = cond.as_iter()
+            op = next(atoms).atom
+            if op != ConditionOpcode.CREATE_COIN.value:
+                continue
+            puzzle_hash = next(atoms).atom
+            amount = int_from_bytes(next(atoms).atom)
+            ret.append(Coin(parent_id, puzzle_hash, amount))
+    return ret
 
 
 class BlockTools:
@@ -663,7 +680,7 @@ class BlockTools:
                             transaction_data = None
                             previous_generator = None
                         if transaction_data is not None:
-                            additions = transaction_data.additions()
+                            additions = compute_additions_unchecked(transaction_data)
                             removals = transaction_data.removals()
                         assert last_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
@@ -901,7 +918,7 @@ class BlockTools:
             if transaction_data_included:
                 transaction_data = None
             if transaction_data is not None:
-                additions = transaction_data.additions()
+                additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
             sub_slots_finished += 1
             self.log.info(

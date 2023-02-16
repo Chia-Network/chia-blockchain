@@ -436,6 +436,19 @@ async def test_nft_wallet_rpc_creation_and_list(self_hostname: str, two_wallet_n
     assert len(coins) == 1
     assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
 
+    # test counts
+
+    resp = await wait_rpc_state_condition(
+        10, api_0.nft_count_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: x["success"]
+    )
+    assert resp["count"] == 2
+    resp = await wait_rpc_state_condition(10, api_0.nft_count_nfts, [{}], lambda x: x["success"])
+    assert resp["count"] == 2
+    resp = await wait_rpc_state_condition(
+        10, api_0.nft_count_nfts, [{"wallet_id": 50}], lambda x: x["success"] is False
+    )
+    assert resp.get("count") is None
+
 
 @pytest.mark.parametrize(
     "trusted",
