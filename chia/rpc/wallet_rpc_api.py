@@ -886,6 +886,14 @@ class WalletRpcApi:
 
     async def get_used_addresses(self, request: Dict) -> EndpointResult:
         """Returns addresses that have actually been used, as determined by looking at the puzzle hash of coins"""
+        syncing = self.service.wallet_state_manager.sync_mode
+        if syncing:
+            return {
+                "success": False,
+                "syncing": syncing,
+                "addresses": [],
+            }
+
         wallet_id = int(request.get("wallet_id", 1))
 
         async with self.service.wallet_state_manager.db_wrapper.reader_no_transaction() as conn:
@@ -898,6 +906,7 @@ class WalletRpcApi:
             )
 
         return {
+            "syncing": syncing,
             "addresses": [
                 {
                     "puzzle_hash": row[0],
