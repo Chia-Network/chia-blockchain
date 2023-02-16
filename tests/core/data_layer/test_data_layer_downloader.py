@@ -1,19 +1,18 @@
+from __future__ import annotations
+
+import asyncio
 import logging
 import os
-
+import tempfile
 from pathlib import Path
 
 import boto3
 import botocore
-import tempfile
+import botocore.retries.adaptive
 from moto import mock_s3
 
 from chia.data_layer.data_layer_util import ServerInfo
 from chia.data_layer.downloader import S3Downloader
-
-import asyncio
-import botocore.retries.adaptive
-
 
 MY_BUCKET = "my_bucket"
 MY_PREFIX = "mock_folder"
