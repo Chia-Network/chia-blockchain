@@ -51,9 +51,7 @@ class TestWalletSimulator:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {server_1.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
@@ -96,11 +94,8 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {server_1.node_id}
+            wallet_node_2.server.trusted_peers = {server_1.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
@@ -142,9 +137,7 @@ class TestWalletSimulator:
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {fn_server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         await asyncio.sleep(5)
 
@@ -195,14 +188,7 @@ class TestWalletSimulator:
         server_2 = full_node_2.server
 
         if trusted:
-            wallet_0.config["trusted_peers"] = {
-                server_0.node_id.hex(): server_0.node_id.hex(),
-                server_1.node_id.hex(): server_1.node_id.hex(),
-                server_2.node_id.hex(): server_2.node_id.hex(),
-            }
-
-        else:
-            wallet_0.config["trusted_peers"] = {}
+            wallet_0.server.trusted_peers = {server_0.node_id, server_1.node_id, server_2.node_id}
 
         # wallet0 <-> sever0
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
@@ -256,11 +242,8 @@ class TestWalletSimulator:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {server_0.node_id.hex(): server_0.node_id.hex()}
-            wallet_node_1.config["trusted_peers"] = {server_0.node_id.hex(): server_0.node_id.hex()}
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_0.server.trusted_peers = {server_0.node_id}
+            wallet_node_1.server.trusted_peers = {server_0.node_id}
         await wallet_0_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
         await wallet_1_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
@@ -365,15 +348,8 @@ class TestWalletSimulator:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_1.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_1.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
@@ -431,15 +407,8 @@ class TestWalletSimulator:
         api_0 = WalletRpcApi(wallet_node)
         api_1 = WalletRpcApi(wallet_node_2)
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_1.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_1.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
@@ -499,15 +468,8 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_1.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_1.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
@@ -573,15 +535,8 @@ class TestWalletSimulator:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_1.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_1.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         expected_confirmed_balance = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
@@ -663,11 +618,8 @@ class TestWalletSimulator:
 
         ph2 = await wallet_2.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {fn_server.node_id}
+            wallet_node_2.server.trusted_peers = {fn_server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
@@ -758,9 +710,7 @@ class TestWalletSimulator:
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {server_1.node_id}
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -826,11 +776,8 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {server_1.node_id}
+            wallet_node_2.server.trusted_peers = {server_1.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         # Test general string
@@ -889,11 +836,8 @@ class TestWalletSimulator:
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {server_1.node_id}
+            wallet_node_2.server.trusted_peers = {server_1.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 

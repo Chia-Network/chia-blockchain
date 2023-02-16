@@ -69,15 +69,8 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     ph_token = bytes32(token_bytes())
 
     if trusted:
-        wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_2.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_1.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
+        wallet_node_1.server.trusted_peers = {full_node_api.full_node.server.node_id}
+        wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
     await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)

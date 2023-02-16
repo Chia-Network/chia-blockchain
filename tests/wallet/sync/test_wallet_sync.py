@@ -160,10 +160,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         for block in default_400_blocks:
             await full_node_api.full_node.add_block(block)
@@ -212,10 +209,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         base_num_blocks = 400
         for block in default_400_blocks:
@@ -250,10 +244,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         for block in default_400_blocks[:20]:
             await full_node_api.full_node.add_block(block)
@@ -272,10 +263,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         for block in default_400_blocks[:200]:
             await full_node_api.full_node.add_block(block)
@@ -293,10 +281,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         for block in default_400_blocks:
             await full_node_api.full_node.add_block(block)
@@ -341,10 +326,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         phs = []
         for wallet_node, wallet_server in wallets:
@@ -396,10 +378,7 @@ class TestWalletSync:
         full_node_server = full_node_api.full_node.server
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -1169,10 +1148,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
         # Trusted node sync
-        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-
-        # Untrusted node sync
-        wallets[1][0].config["trusted_peers"] = {}
+        wallets[0][0].server.trusted_peers = {full_node_server.node_id}
 
         def flaky_get_coin_state(node, func):
             async def new_func(*args, **kwargs):

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Callable, Tuple
+from typing import Callable, Dict, Set, Tuple
 
 import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.server import ChiaServer
+from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.connection_utils import connect_and_get_peer
@@ -35,3 +37,32 @@ async def test_connection_string_conversion(
     converted = method(peer)
     print(converted)
     assert len(converted) < 1000
+
+
+@pytest.mark.parametrize(
+    "trusted,expected_result",
+    [
+        ({}, set()),
+        ({"": None}, set()),
+        ({"asdf": None}, set()),
+        ({"my_trusted_node": None}, set()),
+        ({"00" * 32: None}, {bytes32(b"\0" * 32)}),
+        ({"00" * 32: None, "00" * 31 + "01": None}, {bytes32(b"\0" * 32), bytes32(b"\0" * 31 + b"\1")}),
+        (
+            {"00" * 32: None, "00" * 31 + "01": None, "invalid": None},
+            {bytes32(b"\0" * 32), bytes32(b"\0" * 31 + b"\1")},
+        ),
+        ({"00" * 32: None, "00" * 31 + "0R": None, "invalid": None}, {bytes32(b"\0" * 32)}),
+    ],
+)
+@pytest.mark.asyncio
+async def test_server_trusted_peers(trusted: Dict[str, object], expected_result: Set[bytes32], bt: BlockTools) -> None:
+    config = bt.config
+    config["wallet"]["trusted_peers"] = trusted
+    service = create_wallet_service(
+        bt.root_path,
+        config,
+        bt.constants,
+        connect_to_daemon=False,
+    )
+    assert service._server.trusted_peers == expected_result

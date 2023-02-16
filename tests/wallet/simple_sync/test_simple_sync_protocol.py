@@ -650,7 +650,7 @@ class TestSimpleSyncProtocol:
         assert not s.has_ph_subscription(phs[2])
         assert not s.has_ph_subscription(phs[3])
         full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
-        full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
+        full_node_api.full_node.server.trusted_peers = {server_2.node_id}
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
@@ -691,7 +691,7 @@ class TestSimpleSyncProtocol:
         assert not s.has_coin_subscription(coins[2])
         assert not s.has_coin_subscription(coins[3])
         full_node_api.full_node.config["trusted_max_subscribe_items"] = 4
-        full_node_api.full_node.config["trusted_peers"] = {server_2.node_id.hex(): server_2.node_id.hex()}
+        full_node_api.full_node.server.trusted_peers = {server_2.node_id}
         assert full_node_api.is_trusted(con) is True
         msg_response = await full_node_api.register_interest_in_coin(msg, con)
         assert msg_response.type == ProtocolMessageTypes.respond_to_coin_update.value

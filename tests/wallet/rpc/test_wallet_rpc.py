@@ -135,11 +135,8 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
     hostname = config["self_hostname"]
 
     if request.param:
-        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-    else:
-        wallet_node.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
+        wallet_node.server.trusted_peers = {full_node_server.node_id}
+        wallet_node_2.server.trusted_peers = {full_node_server.node_id}
 
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)

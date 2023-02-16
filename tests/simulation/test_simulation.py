@@ -154,8 +154,6 @@ class TestSimulation:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-        wallet_node.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
 
         # enable auto_farming
         await full_node_api.update_autofarm_config(True)

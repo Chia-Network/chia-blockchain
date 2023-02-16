@@ -108,11 +108,7 @@ async def one_wallet_node_and_rpc(
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await wallet_node.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -156,11 +152,7 @@ async def setup(
     )
 
     if trusted:
-        wallet_node.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node.config["trusted_peers"] = {}
+        wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
 

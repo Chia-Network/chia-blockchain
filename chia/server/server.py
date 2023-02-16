@@ -8,7 +8,7 @@ import traceback
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -34,6 +34,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.config import parse_trusted_peers_config
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
@@ -131,6 +132,7 @@ class ChiaServer:
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
     exempt_peer_networks: List[Union[IPv4Network, IPv6Network]]
+    trusted_peers: Set[bytes32]
     all_connections: Dict[bytes32, WSChiaConnection] = field(default_factory=dict)
     on_connect: Optional[ConnectionCallback] = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -222,6 +224,7 @@ class ChiaServer:
             ssl_client_context=ssl_client_context,
             node_id=calculate_node_id(node_id_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
+            trusted_peers=parse_trusted_peers_config(config.get("trusted_peers", {})),
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
         )
 
@@ -673,15 +676,10 @@ class ChiaServer:
             return inbound_count < cast(int, self.config["max_inbound_timelord"])
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
-        if trusted_peers is None:
-            return False
+    def is_trusted_peer(self, peer: WSChiaConnection) -> bool:
         if not self.config.get("testing", False) and peer.peer_host == "127.0.0.1":
             return True
-        if peer.peer_node_id.hex() not in trusted_peers:
-            return False
-
-        return True
+        return peer.peer_node_id in self.trusted_peers
 
     def set_capabilities(self, capabilities: List[Tuple[uint16, str]]) -> None:
         self._local_capabilities_for_handshake = capabilities

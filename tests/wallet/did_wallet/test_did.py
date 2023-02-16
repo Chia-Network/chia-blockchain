@@ -71,16 +71,8 @@ class TestDIDWallet:
         assert sk0 == sk1
 
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_1.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
+            wallet_node_0.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_1.server.trusted_peers = {full_node_api.full_node.server.node_id}
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -154,19 +146,9 @@ class TestDIDWallet:
         ph1 = await wallet_1.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_1.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node_0.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_1.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
         await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -318,15 +300,8 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
@@ -475,15 +450,8 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
@@ -545,15 +513,8 @@ class TestDIDWallet:
         api_0 = WalletRpcApi(wallet_node)
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(1, num_blocks):
@@ -644,15 +605,8 @@ class TestDIDWallet:
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(1, num_blocks):
@@ -827,15 +781,8 @@ class TestDIDWallet:
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -924,15 +871,8 @@ class TestDIDWallet:
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -989,15 +929,8 @@ class TestDIDWallet:
         ph1 = await wallet1.get_new_puzzlehash()
         api_0 = WalletRpcApi(wallet_node)
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -1075,15 +1008,8 @@ class TestDIDWallet:
         ph1 = await wallet1.get_new_puzzlehash()
         api_0 = WalletRpcApi(wallet_node)
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -1142,15 +1068,8 @@ class TestDIDWallet:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -1217,15 +1136,8 @@ class TestDIDWallet:
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.server.trusted_peers = {full_node_api.full_node.server.node_id}
+            wallet_node_2.server.trusted_peers = {full_node_api.full_node.server.node_id}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
