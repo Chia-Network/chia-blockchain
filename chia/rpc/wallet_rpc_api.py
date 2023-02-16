@@ -2268,25 +2268,28 @@ class WalletRpcApi:
         nfts: List[NFTCoinInfo] = []
         if wallet_id is not None:
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-            nfts = await nft_wallet.get_current_nfts()
         else:
-            for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.NFT.value:
-                    assert isinstance(wallet, NFTWallet)
-                    nfts.extend(await wallet.get_current_nfts())
-        start_index = request.get("start_index", 0)
-        num = request.get("num", len(nfts))
+            nft_wallet = None
+        try:
+            start_index = int(request.get("start_index"))
+        except (TypeError, ValueError):
+            start_index = 0
+        try:
+            count = int(request.get("num"))
+        except (TypeError, ValueError):
+            count = 50
         nft_info_list = []
-        count = 0
+        if nft_wallet is not None:
+            nfts = await nft_wallet.get_current_nfts(start_index=start_index, count=count)
+        else:
+            nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
         for nft in nfts:
-            if count >= start_index and count - start_index < num:
-                nft_info = await nft_puzzles.get_nft_info_from_puzzle(
-                    nft,
-                    self.service.wallet_state_manager.config,
-                    request.get("ignore_size_limit", False),
-                )
-                nft_info_list.append(nft_info)
-            count += 1
+            nft_info = await nft_puzzles.get_nft_info_from_puzzle(
+                nft,
+                self.service.wallet_state_manager.config,
+                request.get("ignore_size_limit", False),
+            )
+            nft_info_list.append(nft_info)
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
     async def nft_set_nft_did(self, request):
