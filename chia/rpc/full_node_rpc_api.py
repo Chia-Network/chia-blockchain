@@ -179,9 +179,9 @@ class FullNodeRpcApi:
             space = {"space": uint128(0)}
 
         if self.service.mempool_manager is not None:
-            mempool_size = len(self.service.mempool_manager.mempool.spends)
-            mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
-            mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees
+            mempool_size = self.service.mempool_manager.mempool.size()
+            mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost()
+            mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees()
             mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
             mempool_max_total_cost = self.service.mempool_manager.mempool_max_total_cost
         else:
@@ -725,13 +725,13 @@ class FullNodeRpcApi:
         }
 
     async def get_all_mempool_tx_ids(self, request: Dict) -> EndpointResult:
-        ids = list(self.service.mempool_manager.mempool.spends.keys())
+        ids = list(self.service.mempool_manager.mempool.all_spend_ids())
         return {"tx_ids": ids}
 
     async def get_all_mempool_items(self, request: Dict) -> EndpointResult:
         spends = {}
-        for tx_id, item in self.service.mempool_manager.mempool.spends.items():
-            spends[tx_id.hex()] = item
+        for item in self.service.mempool_manager.mempool.all_spends():
+            spends[item.name.hex()] = item
         return {"mempool_items": spends}
 
     async def get_mempool_item_by_tx_id(self, request: Dict) -> EndpointResult:
@@ -812,9 +812,9 @@ class FullNodeRpcApi:
         # such as estimating a higher fee for a longer transaction time.
         estimates = make_monotonically_decreasing(estimates)
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
-        mempool_size = self.service.mempool_manager.mempool.total_mempool_cost
-        mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees
-        num_mempool_spends = len(self.service.mempool_manager.mempool.spends)
+        mempool_size = self.service.mempool_manager.mempool.total_mempool_cost()
+        mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees()
+        num_mempool_spends = self.service.mempool_manager.mempool.size()
         mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]

@@ -354,7 +354,7 @@ class TestPoolWalletRpc:
 
         # Create some CAT wallets to increase wallet IDs
         def mempool_empty() -> bool:
-            return len(full_node_api.full_node.mempool_manager.mempool.spends.keys()) == 0
+            return full_node_api.full_node.mempool_manager.mempool.size() == 0
 
         await client.delete_unconfirmed_transactions(1)
         await full_node_api.process_all_wallet_transactions(wallet=wallet)

@@ -116,7 +116,7 @@ async def farm_block_with_spend(
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
-    return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
+    return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
