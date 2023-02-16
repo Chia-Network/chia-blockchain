@@ -38,7 +38,14 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_secret_key,
     puzzle_for_pk,
 )
-from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPayment, Offer
+from chia.wallet.trading.offer import (
+    OFFER_MOD,
+    OFFER_MOD_HASH,
+    OFFER_MOD_OLD,
+    OFFER_MOD_OLD_HASH,
+    NotarizedPayment,
+    Offer,
+)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
@@ -280,8 +287,8 @@ class NFTWallet:
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
-            num = await self.get_current_nfts()
-            if len(num) == 0 and self.did_id is not None:
+            num = await self.get_nft_count()
+            if num == 0 and self.did_id is not None:
                 # Check if the wallet owns the DID
                 for did_wallet in await self.wallet_state_manager.get_all_wallet_info_entries(
                     wallet_type=WalletType.DECENTRALIZED_ID
@@ -494,8 +501,8 @@ class NFTWallet:
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
-    async def get_current_nfts(self) -> List[NFTCoinInfo]:
-        return await self.nft_store.get_nft_list(wallet_id=self.id())
+    async def get_current_nfts(self, start_index: int = 0, count: int = 50) -> List[NFTCoinInfo]:
+        return await self.nft_store.get_nft_list(wallet_id=self.id(), start_index=start_index, count=count)
 
     async def get_nft_count(self) -> int:
         return await self.nft_store.count(wallet_id=self.id())
@@ -783,7 +790,10 @@ class NFTWallet:
         fee: uint64,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        old: bool = False,
     ) -> Offer:
+        DESIRED_OFFER_MOD = OFFER_MOD_OLD if old else OFFER_MOD
+        DESIRED_OFFER_MOD_HASH = OFFER_MOD_OLD_HASH if old else OFFER_MOD_HASH
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
         for asset, amount in offer_dict.items():
@@ -816,7 +826,9 @@ class NFTWallet:
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
             if amount > 0 and offer_side_royalty_split > 0:
                 settlement_ph: bytes32 = (
-                    OFFER_MOD_HASH if asset is None else construct_puzzle(driver_dict[asset], OFFER_MOD).get_tree_hash()
+                    DESIRED_OFFER_MOD_HASH
+                    if asset is None
+                    else construct_puzzle(driver_dict[asset], DESIRED_OFFER_MOD).get_tree_hash()
                 )
                 trade_prices.append([uint64(math.floor(amount / offer_side_royalty_split)), settlement_ph])
 
@@ -882,13 +894,13 @@ class NFTWallet:
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
             requested_payments, list(all_offered_coins)
         )
-        announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
+        announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict, old)
         for asset, payments in royalty_payments.items():
             if asset is None:  # xch offer
-                offer_puzzle = OFFER_MOD
-                royalty_ph = OFFER_MOD_HASH
+                offer_puzzle = DESIRED_OFFER_MOD
+                royalty_ph = DESIRED_OFFER_MOD_HASH
             else:
-                offer_puzzle = construct_puzzle(driver_dict[asset], OFFER_MOD)
+                offer_puzzle = construct_puzzle(driver_dict[asset], DESIRED_OFFER_MOD)
                 royalty_ph = offer_puzzle.get_tree_hash()
             announcements_to_assert.extend(
                 [
@@ -914,12 +926,12 @@ class NFTWallet:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
                     tx = await wallet.generate_signed_transaction(
                         abs(amount),
-                        Offer.ph(),
+                        DESIRED_OFFER_MOD_HASH,
                         primaries=[
                             AmountWithPuzzlehash(
                                 {
                                     "amount": uint64(sum(p.amount for _, p in payments)),
-                                    "puzzlehash": Offer.ph(),
+                                    "puzzlehash": DESIRED_OFFER_MOD_HASH,
                                     "memos": [],
                                 }
                             )
@@ -932,7 +944,7 @@ class NFTWallet:
                 elif asset not in fungible_asset_dict:
                     txs = await wallet.generate_signed_transaction(
                         [abs(amount)],
-                        [Offer.ph()],
+                        [DESIRED_OFFER_MOD_HASH],
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
@@ -942,7 +954,7 @@ class NFTWallet:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
                     txs = await wallet.generate_signed_transaction(
                         [abs(amount), sum(p.amount for _, p in payments)],
-                        [Offer.ph(), Offer.ph()],
+                        [DESIRED_OFFER_MOD_HASH, DESIRED_OFFER_MOD_HASH],
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
@@ -981,17 +993,19 @@ class NFTWallet:
                                     None,
                                     [
                                         Payment(
-                                            Offer.ph(), uint64(sum(p.amount for _, p in duplicate_payments)), []
+                                            DESIRED_OFFER_MOD_HASH,
+                                            uint64(sum(p.amount for _, p in duplicate_payments)),
+                                            [],
                                         ).as_condition_args()
                                     ],
                                 )
                             ).cons(inner_royalty_sol)
 
                         if asset is None:  # xch offer
-                            offer_puzzle = OFFER_MOD
-                            royalty_ph = OFFER_MOD_HASH
+                            offer_puzzle = DESIRED_OFFER_MOD
+                            royalty_ph = DESIRED_OFFER_MOD_HASH
                         else:
-                            offer_puzzle = construct_puzzle(driver_dict[asset], OFFER_MOD)
+                            offer_puzzle = construct_puzzle(driver_dict[asset], DESIRED_OFFER_MOD)
                             royalty_ph = offer_puzzle.get_tree_hash()
                         if royalty_coin is None:
                             for tx in txs:
@@ -1032,7 +1046,7 @@ class NFTWallet:
                                     "sibling_solutions": "()",
                                 }
                             )
-                            royalty_sol = solve_puzzle(driver_dict[asset], solver, OFFER_MOD, inner_royalty_sol)
+                            royalty_sol = solve_puzzle(driver_dict[asset], solver, DESIRED_OFFER_MOD, inner_royalty_sol)
 
                         new_coin_spend = CoinSpend(royalty_coin, offer_puzzle, royalty_sol)
                         additional_bundles.append(SpendBundle([new_coin_spend], G2Element()))
@@ -1050,7 +1064,7 @@ class NFTWallet:
         # Finally, assemble the tx records properly
         txs_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None])
         aggregate_bundle = SpendBundle.aggregate([txs_bundle, *additional_bundles])
-        offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
+        offer = Offer(notarized_payments, aggregate_bundle, driver_dict, old)
         return offer
 
     async def set_bulk_nft_did(

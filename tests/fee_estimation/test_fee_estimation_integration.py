@@ -21,7 +21,7 @@ from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.clvm_cost import CLVMCost
-from chia.types.fee_rate import FeeRate
+from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32, uint64
 from tests.core.mempool.test_mempool_manager import (
@@ -74,9 +74,9 @@ class FeeEstimatorInterfaceIntegrationVerificationObject(FeeEstimatorInterface):
         """A MempoolItem (transaction and associated info) has been removed from the mempool"""
         self.remove_mempool_item_called_count += 1
 
-    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRate:
+    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRateV2:
         """time_offset_seconds: number of seconds into the future for which to estimate fee"""
-        return FeeRate(uint64(0))
+        return FeeRateV2(0)
 
     def mempool_size(self) -> CLVMCost:
         """Report last seen mempool size"""

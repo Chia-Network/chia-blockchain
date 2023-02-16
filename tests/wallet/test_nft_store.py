@@ -52,6 +52,15 @@ class TestNftStore:
             assert nft == (await db.get_nft_list(wallet_id=uint32(1), did_id=a_bytes32))[0]
             assert nft == await db.get_nft_by_id(a_bytes32)
 
+            # test get nft list pagination
+            assert not (await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=0))
+            assert nft == (await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=1))[0]
+            assert 1 == len(await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=1))
+            assert 2 == len(await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=5))
+            assert nft2 == (await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=2))[1]
+            assert nft2 == (await db.get_nft_list(wallet_id=uint32(1), start_index=1, count=1))[0]
+            assert 0 == len(await db.get_nft_list(wallet_id=uint32(1), start_index=2, count=1))
+
             assert nft == (await db.get_nft_by_coin_id(nft.coin.name()))
             assert await db.exists(nft.coin.name())
             # negative tests

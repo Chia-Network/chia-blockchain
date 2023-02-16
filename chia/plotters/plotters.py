@@ -452,12 +452,19 @@ def call_plotters(root_path: Path, args):
     deprecation_warning = (
         "[DEPRECATED] 'chia plotters install' is no longer available. Use install-plotter.sh/ps1 instead."
     )
-    install_parser = subparsers.add_parser("install", help=deprecation_warning)
-    install_parser.add_argument("install_plotter", type=str, nargs="*")
+    subparsers.add_parser("install", help=deprecation_warning, add_help=False)
 
     deprecation_warning_bb2 = "[DEPRECATED] 'chia plotters bladebit2' was integrated to 'chia plotters bladebit'"
-    bladebit2_parser = subparsers.add_parser("bladebit2", help=deprecation_warning_bb2)
-    bladebit2_parser.add_argument("bladebit2_plotter", type=str, nargs="*")
+    subparsers.add_parser("bladebit2", help=deprecation_warning_bb2, add_help=False)
+
+    known_args = plotters.parse_known_args(args)
+    maybe_plotter = vars(known_args[0]).get("plotter")
+    if maybe_plotter == "install":
+        print(deprecation_warning)
+        return
+    elif maybe_plotter == "bladebit2":
+        print(deprecation_warning_bb2)
+        return
 
     args = plotters.parse_args(args)
 
@@ -471,10 +478,6 @@ def call_plotters(root_path: Path, args):
         plot_bladebit(args, chia_root_path, root_path)
     elif args.plotter == "version":
         show_plotters_version(chia_root_path)
-    elif args.plotter == "install":
-        print(deprecation_warning)
-    elif args.plotter == "bladebit2":
-        print(deprecation_warning_bb2)
 
 
 def get_available_plotters(root_path) -> Dict[str, Any]:

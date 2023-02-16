@@ -52,6 +52,7 @@ class SpendBundle(Streamable):
     def removals(self) -> List[Coin]:
         return [_.coin for _ in self.coin_spends]
 
+    # TODO: this should be removed
     def fees(self) -> int:
         """Unsafe to use for fees validation!!!"""
         amount_in = sum(_.amount for _ in self.removals())
@@ -65,6 +66,7 @@ class SpendBundle(Streamable):
     def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
         debug_spend_bundle(self, agg_sig_additional_data)
 
+    # TODO: this should be removed
     def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()

@@ -22,6 +22,7 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_st
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -112,7 +113,7 @@ class WalletStateManager:
     sync_target: uint32
     genesis: FullBlock
 
-    state_changed_callback: Optional[Callable]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     pending_tx_callback: Optional[Callable]
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
@@ -507,7 +508,7 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
-    async def synced(self):
+    async def synced(self) -> bool:
         if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
@@ -515,7 +516,7 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if "simulator" in self.config.get("selected_network"):
+        if "simulator" in self.config.get("selected_network", ""):
             return True  # sim is always synced if we have a genesis block.
 
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
@@ -802,6 +803,7 @@ class WalletStateManager:
             for remove_id in removed_wallet_ids:
                 self.wallets.pop(remove_id)
                 self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
+                self.state_changed("wallet_removed", remove_id)
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
@@ -1639,6 +1641,7 @@ class WalletStateManager:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
+            self.state_changed("wallet_removed", wallet_id)
 
         return remove_ids
 

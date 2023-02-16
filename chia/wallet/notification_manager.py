@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G2Element
 
@@ -19,6 +19,7 @@ from chia.wallet.notification_store import Notification, NotificationStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import construct_notification
+from chia.wallet.util.wallet_types import WalletType
 
 
 class NotificationManager:
@@ -55,8 +56,13 @@ class NotificationManager:
         else:
             memos: Dict[bytes32, List[bytes]] = compute_memos_for_spend(parent_spend)
             coin_memos: List[bytes] = memos.get(coin_name, [])
+            wallet_info: Optional[
+                Tuple[uint32, WalletType]
+            ] = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(bytes32(coin_memos[0]))
             if (
-                len(coin_memos) == 2
+                wallet_info is not None
+                and wallet_info[1] == WalletType.STANDARD_WALLET
+                and len(coin_memos) == 2
                 and construct_notification(bytes32(coin_memos[0]), uint64(coin_state.coin.amount)).get_tree_hash()
                 == coin_state.coin.puzzle_hash
             ):
