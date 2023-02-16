@@ -137,6 +137,7 @@ class WalletRpcApi:
             "/sign_message_by_id": self.sign_message_by_id,
             "/verify_signature": self.verify_signature,
             "/get_transaction_memo": self.get_transaction_memo,
+            "/get_used_addresses": self.get_used_addresses,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -882,6 +883,30 @@ class WalletRpcApi:
         for coin_id, memo_list in memos.items():
             response[coin_id.hex()] = [memo.hex() for memo in memo_list]
         return {transaction_id.hex(): response}
+
+    async def get_used_addresses(self, request: Dict) -> EndpointResult:
+        """Returns addresses that have actually been used, as determined by looking at the puzzle hash of coins"""
+        wallet_id = int(request.get("wallet_id", 1))
+
+        async with self.service.wallet_state_manager.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT DISTINCT derivation_paths.puzzle_hash, hardened from derivation_paths"
+                " inner join coin_record on derivation_paths.puzzle_hash=coin_record.puzzle_hash"
+                " where coin_record.wallet_id=?"
+                " order by hardened asc",
+                (wallet_id,),
+            )
+
+        return {
+            "addresses": [
+                {
+                    "puzzle_hash": row[0],
+                    "address": encode_puzzle_hash(bytes32.from_hexstr(row[0]), "xch"),
+                    "observer": row[1] == 0,
+                }
+                for row in rows
+            ]
+        }
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
