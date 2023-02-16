@@ -123,7 +123,11 @@ def batch_pre_validate_blocks(
                     if validate_signatures:
                         if npc_result is not None and block.transactions_info is not None:
                             assert npc_result.conds
-                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                            pairs_pks, pairs_msgs = pkm_pairs(
+                                npc_result.conds,
+                                constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                                soft_fork=block.height >= constants.SOFT_FORK_HEIGHT,
+                            )
                             # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
                             pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pairs_pks]
                             if not AugSchemeMPL.aggregate_verify(

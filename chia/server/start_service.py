@@ -14,6 +14,7 @@ from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Opt
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
+from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -276,5 +277,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._log.warning(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
 
-def async_run(coro: Coroutine[object, object, T]) -> T:
+def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
+    if connection_limit is not None:
+        set_chia_policy(connection_limit)
     return asyncio.run(coro)
