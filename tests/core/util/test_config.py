@@ -10,12 +10,13 @@ from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set
 
 import pytest
 import yaml
 
 from chia.simulator.time_out_assert import adjusted_timeout
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,
@@ -23,6 +24,7 @@ from chia.util.config import (
     load_config,
     lock_and_load_config,
     lock_config,
+    parse_trusted_peers_config,
     save_config,
     selected_network_address_prefix,
 )
@@ -332,3 +334,29 @@ class TestConfig:
         config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = "customxch"
         prefix = selected_network_address_prefix(config)
         assert prefix == "customxch"
+
+
+@pytest.mark.parametrize(
+    "config,expected_result",
+    [
+        ({}, set()),
+        ({"": None}, set()),
+        ({"asdf": None}, set()),
+        ({"my_trusted_node": None}, set()),
+        ({"00" * 32: None}, {bytes32(b"\0" * 32)}),
+        ({"00" * 32: None, "00" * 31 + "01": None}, {bytes32(b"\0" * 32), bytes32(b"\0" * 31 + b"\1")}),
+        (
+            {"00" * 32: None, "00" * 31 + "01": None, "invalid": None},
+            {bytes32(b"\0" * 32), bytes32(b"\0" * 31 + b"\1")},
+        ),
+        ({"00" * 32: None, "00" * 31 + "0R": None, "invalid": None}, {bytes32(b"\0" * 32)}),
+    ],
+)
+def test_parse_trusted_peers(config: Dict[str, object], expected_result: Set[bytes32]) -> None:
+    assert parse_trusted_peers_config(config) == expected_result
+
+
+def test_parse_trusted_peers_invalid_logging(caplog: pytest.LogCaptureFixture) -> None:
+    assert parse_trusted_peers_config({"ThisisanexampleNodeID": None, "invalid_node_id": None}) == set()
+    assert "invalid_node_id" in caplog.text
+    assert "ThisisanexampleNodeID" not in caplog.text

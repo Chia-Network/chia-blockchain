@@ -11,12 +11,13 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Optional, Union
+from typing import Any, Callable, Dict, Iterator, Optional, Set, Union
 
 import pkg_resources
 import yaml
 from typing_extensions import Literal
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.lock import Lockfile
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
@@ -325,3 +326,16 @@ def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str)
                     defaulted[service]["selected_network"] = "".join(to_be_referenced)
 
     return defaulted
+
+
+# TODO: Migrate to use a list of peer ids in the config instead of a dict with meaningless values.
+def parse_trusted_peers_config(config: Dict[str, object]) -> Set[bytes32]:
+    trusted_peers = set()
+    for peer_id_string in config.keys():
+        try:
+            trusted_peers.add(bytes32.from_hexstr(peer_id_string))
+        except Exception:
+            # Avoid logging errors for the default config values.
+            if "ThisisanexampleNodeID" not in peer_id_string:
+                log.error(f"Can't add trusted peer, invalid peer id: {peer_id_string}")
+    return trusted_peers
