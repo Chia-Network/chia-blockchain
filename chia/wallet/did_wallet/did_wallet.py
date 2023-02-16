@@ -504,20 +504,6 @@ class DIDWallet:
             parent_coin = child_coin
         assert parent_info is not None
 
-    async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
-    ) -> TransactionRecord:
-        chia_coins = await self.standard_wallet.select_coins(fee)
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
-            fee=fee,
-            coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-        )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
-
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
@@ -631,7 +617,9 @@ class DIDWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
             announcement_to_make = coin.name()
-            chia_tx = await self.create_tandem_xch_tx(fee, Announcement(coin.name(), announcement_to_make))
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+                fee, Announcement(coin.name(), announcement_to_make)
+            )
         else:
             announcement_to_make = None
             chia_tx = None
@@ -727,7 +715,9 @@ class DIDWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
             announcement_to_make = coin.name()
-            chia_tx = await self.create_tandem_xch_tx(fee, Announcement(coin.name(), announcement_to_make))
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+                fee, Announcement(coin.name(), announcement_to_make)
+            )
         else:
             chia_tx = None
         if chia_tx is not None and chia_tx.spend_bundle is not None:

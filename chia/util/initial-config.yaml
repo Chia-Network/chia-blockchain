@@ -577,7 +577,7 @@ wallet:
   auto_claim: True
   auto_claim_tx_fee: 0
   auto_claim_min_amount: 0
-  auto_claim_tx_size: 50
+  auto_claim_coin_size: 50
 
 data_layer:
   # TODO: consider name

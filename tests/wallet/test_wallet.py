@@ -152,14 +152,13 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-
+        wallet_node_2.config["auto_claim_tx_fee"] = 100
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
-
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
         tx = await wallet.generate_signed_transaction(
@@ -183,7 +182,7 @@ class TestWalletSimulator:
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
-        assert await wallet_1.get_confirmed_balance() == 2000000000500
+        assert await wallet_1.get_confirmed_balance() == 4000000000400
 
     @pytest.mark.parametrize(
         "trusted",
@@ -237,15 +236,17 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        resp = await api_0.clawback_transaction(dict({"merkle_coin_id": merkle_coin.name().hex()}))
+        resp = await api_0.clawback_transaction(
+            dict({"merkle_coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
+        )
         json.dumps(resp)
-        tx = tx.from_json_dict_convenience(resp["transaction"])
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        assert len(resp["clawback_coins"]) == 1
+        assert resp["clawback_coins"][0] == merkle_coin.name().hex()
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
-        assert await wallet.get_confirmed_balance() == 4000000000000
-        assert await wallet_1.get_confirmed_balance() == 2000000000000
+        assert await wallet.get_confirmed_balance() == 3999999999000
+        assert await wallet_1.get_confirmed_balance() == 2000000001000
 
     @pytest.mark.parametrize(
         "trusted",

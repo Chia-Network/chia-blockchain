@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
@@ -1035,66 +1034,64 @@ class WalletRpcApi:
         return {"transaction": transaction, "transaction_id": tr.name}
 
     async def clawback_transaction(self, request) -> EndpointResult:
-        if "merkle_coin_id" not in request:
-            raise ValueError("Merkle coin ID is required.")
-        coin_id = bytes32.from_hexstr(request["merkle_coin_id"])
+        if "merkle_coin_ids" not in request:
+            raise ValueError("Merkle coin IDs are required.")
+        coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["merkle_coin_ids"]]
+        tx_fee: uint64 = uint64(request.get("fee", 0))
         # Get inner puzzle
-        merkle_record: Optional[
-            WalletMerkleCoinRecord
-        ] = await self.service.wallet_state_manager.merkle_coin_store.get_coin_record(coin_id)
-        if merkle_record is None:
-            raise ValueError(f"Cannot find merkle coin f{coin_id.hex()}")
-        metadata = json.loads(merkle_record.metadata)
-        if merkle_record.coin_type != MerkleCoinType.CLAWBACK.value:
-            raise ValueError(f"Coin {coin_id.hex()} is not a Clawback coin.")
-        if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
-            raise ValueError("Only support standard XCH wallet.")
-        sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
-        recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
-        derivation_record = await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            sender_puzhash
+        merkle_records: List[
+            Optional[WalletMerkleCoinRecord]
+        ] = await self.service.wallet_state_manager.merkle_coin_store.get_coin_records(
+            coin_ids, include_spent_coins=False
         )
-        if derivation_record is None or metadata["is_recipient"]:
-            raise ValueError(f"You are not the sender of coin {coin_id.hex()}")
-        inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(derivation_record.pubkey)
-        inner_solution: Program = self.service.wallet_state_manager.main_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": sender_puzhash,
-                    "amount": uint64(merkle_record.coin.amount),
-                    "memos": [recipient_puzhash],
-                }
-            ]
-        )
-        coin_spend = generate_clawback_spend_bundle(merkle_record.coin, metadata, inner_puzzle, inner_solution)
-        spend_bundle = await self.service.wallet_state_manager.main_wallet.sign_transaction([coin_spend])
-        # TODO Add tx fee
-        now = uint64(int(time.time()))
-        add_list: List[Coin] = list(spend_bundle.additions())
-        rem_list: List[Coin] = list(spend_bundle.removals())
-        # TODO Not sure if we should show this tx in the XCH wallet since it will receive another one
-        tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=now,
-            to_puzzle_hash=sender_puzhash,
-            amount=uint64(merkle_record.coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=add_list,
-            removals=rem_list,
-            wallet_id=uint32(0),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
-        )
-        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        coin_spends: List[CoinSpend] = []
+        clawback_coins = []
+        for i in range(len(merkle_records)):
+            merkle_record = merkle_records[i]
+            if merkle_record is None:
+                log.warning(f"Cannot find merkle coin f{coin_ids[i].hex()}")
+                continue
+            metadata = json.loads(merkle_record.metadata)
+            if merkle_record.coin_type != MerkleCoinType.CLAWBACK.value:
+                log.warning(f"Coin {coin_ids[i].hex()} is not a Clawback coin.")
+                continue
+            if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
+                log.warning("Only support standard XCH wallet.")
+                continue
+            sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
+            recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    sender_puzhash
+                )
+            )
+            if derivation_record is None or metadata["is_recipient"]:
+                log.warning(f"You are not the sender of coin {coin_ids[i].hex()}")
+                continue
+            inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
+                derivation_record.pubkey
+            )
+            inner_solution: Program = self.service.wallet_state_manager.main_wallet.make_solution(
+                primaries=[
+                    {
+                        "puzzlehash": sender_puzhash,
+                        "amount": uint64(merkle_record.coin.amount),
+                        "memos": [recipient_puzhash],
+                    }
+                ],
+                coin_announcements=None if len(coin_spends) > 0 or tx_fee == 0 else {merkle_record.coin.name()},
+            )
+            coin_spend = generate_clawback_spend_bundle(merkle_record.coin, metadata, inner_puzzle, inner_solution)
+            coin_spends.append(coin_spend)
+            clawback_coins.append(merkle_record.coin.name().hex())
+            if len(coin_spends) >= self.service.wallet_state_manager.config.get("auto_claim_coin_size", 50):
+                await self.service.wallet_state_manager.claim_clawback_coins(coin_spends, tx_fee)
+                coin_spends = []
+        if len(coin_spends) > 0:
+            await self.service.wallet_state_manager.claim_clawback_coins(coin_spends, tx_fee)
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
-            "transaction_id": tx.name.hex(),
+            "success": True,
+            "clawback_coins": clawback_coins,
         }
 
     async def delete_unconfirmed_transactions(self, request) -> EndpointResult:

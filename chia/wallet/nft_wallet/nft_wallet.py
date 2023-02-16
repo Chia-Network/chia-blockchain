@@ -584,20 +584,6 @@ class NFTWallet:
             name,
         )
 
-    async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
-    ) -> TransactionRecord:
-        chia_coins = await self.standard_wallet.select_coins(fee)
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
-            fee=fee,
-            coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-        )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
-
     async def generate_signed_transaction(
         self,
         amounts: List[uint64],
@@ -711,7 +697,9 @@ class NFTWallet:
 
         if fee > 0:
             announcement_to_make = nft_coin.coin.name()
-            chia_tx = await self.create_tandem_xch_tx(fee, Announcement(nft_coin.coin.name(), announcement_to_make))
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+                fee, Announcement(nft_coin.coin.name(), announcement_to_make)
+            )
         else:
             announcement_to_make = None
             chia_tx = None

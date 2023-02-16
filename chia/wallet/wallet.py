@@ -569,6 +569,20 @@ class Wallet:
             memos=list(compute_memos(spend_bundle).items()),
         )
 
+    async def create_tandem_xch_tx(
+        self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
+    ) -> TransactionRecord:
+        chia_coins = await self.select_coins(fee)
+        chia_tx = await self.generate_signed_transaction(
+            uint64(0),
+            (await self.get_new_puzzlehash()),
+            fee=fee,
+            coins=chia_coins,
+            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+        )
+        assert chia_tx.spend_bundle is not None
+        return chia_tx
+
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)

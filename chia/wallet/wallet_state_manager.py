@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import multiprocessing.context
@@ -26,6 +27,7 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -33,6 +35,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
@@ -691,8 +694,8 @@ class WalletStateManager:
         # Get unspent merkle coin
         unspent_coins = await self.merkle_coin_store.get_all_unspent_coins()
         current_timestamp = self.blockchain.get_latest_timestamp()
-        claim_count = 0
-        coin_spends = []
+        coin_spends: List[CoinSpend] = []
+        tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
         for coin in unspent_coins:
             metadata = json.loads(coin.metadata)
             if coin_state.coin.name() == coin.coin.name() and coin_state.spent_height is not None:
@@ -719,22 +722,30 @@ class WalletStateManager:
                     assert derivation_record is not None
                     inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                     inner_solution: Program = self.main_wallet.make_solution(
-                        primaries=[{"puzzlehash": recipient_puzhash, "amount": uint64(coin.coin.amount), "memos": []}]
+                        primaries=[{"puzzlehash": recipient_puzhash, "amount": uint64(coin.coin.amount), "memos": []}],
+                        coin_announcements=None if len(coin_spends) > 0 or tx_fee == 0 else {coin.coin.name()},
                     )
                     coin_spends.append(
                         generate_clawback_spend_bundle(coin.coin, metadata, inner_puzzle, inner_solution)
                     )
-                    claim_count += 1
-                    if len(coin_spends) >= self.config.get("auto_claim_tx_size", 50):
-                        await self.auto_claim_clawback(coin_spends)
-                        claim_count = 0
+                    if len(coin_spends) >= self.config.get("auto_claim_coin_size", 50):
+                        await self.claim_clawback_coins(coin_spends, tx_fee)
                         coin_spends = []
         if len(coin_spends) > 0:
-            await self.auto_claim_clawback(coin_spends)
+            await self.claim_clawback_coins(coin_spends, tx_fee)
 
-    async def auto_claim_clawback(self, coin_spends: List[CoinSpend]):
+    async def claim_clawback_coins(self, coin_spends: List[CoinSpend], fee: uint64):
+        assert len(coin_spends) > 0
         spend_bundle = await self.main_wallet.sign_transaction(coin_spends)
-        # TODO Add tx fee
+        if fee > 0:
+            announcement_to_make = coin_spends[0].coin.name()
+            chia_tx = await self.main_wallet.create_tandem_xch_tx(
+                fee, Announcement(coin_spends[0].coin.name(), announcement_to_make)
+            )
+            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+            await self.add_pending_transaction(chia_tx)
+        # We don't want to mess up tx record here so just push the bundle
         await self.wallet_node.push_tx(spend_bundle)
         for coin_spend in coin_spends:
             # This will make sure we don't double spend
