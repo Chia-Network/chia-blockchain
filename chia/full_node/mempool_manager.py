@@ -18,7 +18,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import Mempool, MempoolRemoveReason
+from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -33,6 +33,7 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util import cached_bls
 from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.condition_tools import pkm_pairs
+from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.inline_executor import InlineExecutor
@@ -187,7 +188,11 @@ class MempoolManager:
             cost_sum += item.cost
             fee_sum += item.fee
             removals.extend(item.removals)
-            additions.extend(item.additions)
+            if item.npc_result.conds is not None:
+                for spend in item.npc_result.conds.spends:
+                    for puzzle_hash, amount, _ in spend.create_coin:
+                        coin = Coin(spend.coin_id, puzzle_hash, amount)
+                        additions.append(coin)
         return (spend_bundles, uint64(cost_sum), additions, removals)
 
     def create_bundle_from_mempool(
@@ -470,6 +475,13 @@ class MempoolManager:
         if cost == 0:
             return Err.UNKNOWN, None, []
 
+        # this is not very likely to happen, but it's here to ensure SQLite
+        # never runs out of precision in its computation of fees.
+        # sqlite's integers are signed int64, so the max value they can
+        # represent is 2^63-1
+        if fees > MEMPOOL_ITEM_FEE_LIMIT or SQLITE_INT_MAX - self.mempool.total_mempool_fees() <= fees:
+            return Err.INVALID_BLOCK_FEE_AMOUNT, None, []
+
         fees_per_cost: float = fees / cost
         # If pool is at capacity check the fee, if not then accept even without the fee
         if self.mempool.at_full_capacity(cost):
@@ -608,14 +620,18 @@ class MempoolManager:
         if use_optimization and last_npc_result is not None:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
-                spendbundle_ids_to_remove: List[bytes32] = []
+                # transactions in the mempool may be spending multiple coins,
+                # when looking up transactions by all coin IDs, we're likely to
+                # find the same transaction multiple times. We put them in a set
+                # to deduplicate
+                spendbundle_ids_to_remove: Set[bytes32] = set()
                 for spend in last_npc_result.conds.spends:
                     items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(bytes32(spend.coin_id))
                     for item in items:
                         included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                         self.remove_seen(item.name)
-                        spendbundle_ids_to_remove.append(item.name)
-                self.mempool.remove_from_pool(spendbundle_ids_to_remove, MempoolRemoveReason.BLOCK_INCLUSION)
+                        spendbundle_ids_to_remove.add(item.name)
+                self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
