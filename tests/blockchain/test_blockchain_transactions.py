@@ -55,7 +55,7 @@ class TestBlockchainTransactions:
         await full_node_api_1.send_transaction(tx)
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-        assert sb is spend_bundle
+        assert sb == spend_bundle
 
         last_block = blocks[-1]
         next_spendbundle, additions, removals = full_node_1.mempool_manager.create_bundle_from_mempool(

@@ -414,7 +414,7 @@ class TestMempoolManager:
 
         assert status == expected
         if expected == MempoolInclusionStatus.SUCCESS:
-            assert mempool_bundle is bundle
+            assert mempool_bundle == bundle
             assert err is None
         else:
             assert mempool_bundle is None
@@ -441,7 +441,7 @@ class TestMempoolManager:
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
-        assert mempool_bundle is bundle
+        assert mempool_bundle == bundle
         assert status == MempoolInclusionStatus.SUCCESS
 
     # this test makes sure that one spend successfully asserts the announce from
@@ -465,7 +465,7 @@ class TestMempoolManager:
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
-        assert mempool_bundle is bundle
+        assert mempool_bundle == bundle
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -758,7 +758,7 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -784,7 +784,7 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -825,7 +825,7 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -857,7 +857,7 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -876,7 +876,7 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -945,7 +945,7 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -988,7 +988,7 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -1044,7 +1044,7 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -1090,7 +1090,7 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     # ensure one spend can assert a coin announcement from another spend
@@ -1113,7 +1113,7 @@ class TestMempoolManager:
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
-        assert mempool_bundle is bundle
+        assert mempool_bundle == bundle
         assert status == MempoolInclusionStatus.SUCCESS
 
     # ensure one spend can assert a coin announcement from another spend, even
@@ -1158,7 +1158,7 @@ class TestMempoolManager:
         assert status == expected_included
         if status == MempoolInclusionStatus.SUCCESS:
             mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
-            assert mempool_bundle is bundle
+            assert mempool_bundle == bundle
 
     @pytest.mark.asyncio
     async def test_coin_announcement_missing_arg(self, one_node_one_block, wallet_a):
@@ -1316,7 +1316,7 @@ class TestMempoolManager:
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
-        assert mempool_bundle is bundle
+        assert mempool_bundle == bundle
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -1360,7 +1360,7 @@ class TestMempoolManager:
         assert status == expected_included
         if status == MempoolInclusionStatus.SUCCESS:
             mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
-            assert mempool_bundle is bundle
+            assert mempool_bundle == bundle
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_missing_arg(self, one_node_one_block, wallet_a):
@@ -1736,7 +1736,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -1813,7 +1813,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
@@ -1888,7 +1888,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert err is None
-        assert sb1 is spend_bundle1
+        assert sb1 == spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
