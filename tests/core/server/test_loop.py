@@ -145,6 +145,7 @@ class ServeInThread:
 
 
 @pytest.mark.asyncio
+@pytest.mark.benchmark
 async def test_loop() -> None:
     print(" ==== launching serve.py")
     with subprocess.Popen(
@@ -237,6 +238,7 @@ async def test_loop() -> None:
     ids=lambda cycles: f"{cycles} cycle{'s' if cycles != 1 else ''}",
 )
 @pytest.mark.asyncio
+@pytest.mark.benchmark
 async def test_limits_connections(repetition: int, cycles: int) -> None:
     ip = "127.0.0.1"
     connection_limit = 25

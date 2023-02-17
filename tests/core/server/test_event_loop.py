@@ -11,6 +11,7 @@ from chia.server.chia_policy import ChiaSelectorEventLoop, PausableServer, _chia
 
 
 @pytest.mark.asyncio
+@pytest.mark.benchmark
 async def test_base_event_loop_has_methods() -> None:
     """
     `ChiaPolicy` overrides `create_server` to create and return the custom `PausableServer`
