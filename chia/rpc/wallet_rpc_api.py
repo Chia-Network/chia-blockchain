@@ -125,7 +125,7 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
-            "/clawback_transaction": self.clawback_transaction,
+            "/clawback_transaction": self.clawback_transactions,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -1033,7 +1033,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
 
-    async def clawback_transaction(self, request) -> EndpointResult:
+    async def clawback_transactions(self, request) -> EndpointResult:
         if "merkle_coin_ids" not in request:
             raise ValueError("Merkle coin IDs are required.")
         coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["merkle_coin_ids"]]
@@ -1060,13 +1060,20 @@ class WalletRpcApi:
                 continue
             sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
             recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
-            derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    sender_puzhash
+            if metadata["is_recipient"]:
+                derivation_record = (
+                    await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                        recipient_puzhash
+                    )
                 )
-            )
-            if derivation_record is None or metadata["is_recipient"]:
-                log.warning(f"You are not the sender of coin {coin_ids[i].hex()}")
+            else:
+                derivation_record = (
+                    await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                        sender_puzhash
+                    )
+                )
+            if derivation_record is None:
+                log.warning(f"You are not able to spend coin {coin_ids[i].hex()}")
                 continue
             inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
                 derivation_record.pubkey
@@ -1074,9 +1081,9 @@ class WalletRpcApi:
             inner_solution: Program = self.service.wallet_state_manager.main_wallet.make_solution(
                 primaries=[
                     {
-                        "puzzlehash": sender_puzhash,
+                        "puzzlehash": recipient_puzhash if metadata["is_recipient"] else sender_puzhash,
                         "amount": uint64(merkle_record.coin.amount),
-                        "memos": [recipient_puzhash],
+                        "memos": [sender_puzhash if metadata["is_recipient"] else recipient_puzhash],
                     }
                 ],
                 coin_announcements=None if len(coin_spends) > 0 or tx_fee == 0 else {merkle_record.coin.name()},
@@ -1091,7 +1098,7 @@ class WalletRpcApi:
             await self.service.wallet_state_manager.claim_clawback_coins(coin_spends, tx_fee)
         return {
             "success": True,
-            "clawback_coins": clawback_coins,
+            "spent_coins": clawback_coins,
         }
 
     async def delete_unconfirmed_transactions(self, request) -> EndpointResult:
