@@ -398,7 +398,7 @@ class DIDWallet:
                 f"{self.wallet_id} "
                 f"but create_fullpuz hash {full_puzzle.get_tree_hash()} failed to match "
                 f"coin hash {coin.puzzle_hash}. Our DIDInfo: {self.did_info} "
-                f"origin_coin={self.did_info.origin_coin.name.hex()}"
+                f"origin_coin={self.did_info.origin_coin.name().hex()}"
                 f"inner_puzzle_for_did_puzzle={inner_puzzle}"
             )
             self.log.error(f"DID wallet {self.wallet_id} state not updated")

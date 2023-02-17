@@ -14,7 +14,8 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+
+# from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
@@ -41,8 +42,8 @@ def get_parent_num(did_wallet: DIDWallet):
 # Where to cut into did creation?
 # Where to plug in spend?
 class TestDIDWallet:
-    def compose_bad_did_spend(self) -> CoinSpend:
-        return None
+    # def compose_bad_did_spend(self) -> CoinSpend:
+    #     return None
 
     @pytest.mark.parametrize(
         "trusted",
@@ -243,7 +244,7 @@ class TestDIDWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_creation_from_coin_spend(
+    async def test_creation_from_incorrect_coin_spend(
         self, self_hostname, two_nodes_two_wallets_with_same_keys: SimulatorsAndWallets, trusted
     ):
         """
