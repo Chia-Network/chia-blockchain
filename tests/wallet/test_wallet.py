@@ -242,6 +242,8 @@ class TestWalletSimulator:
         json.dumps(resp)
         assert len(resp["spent_coins"]) == 1
         assert resp["spent_coins"][0] == merkle_coin.name().hex()
+        # Wait mempool update
+        await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
@@ -309,6 +311,8 @@ class TestWalletSimulator:
         json.dumps(resp)
         assert len(resp["spent_coins"]) == 1
         assert resp["spent_coins"][0] == merkle_coin.name().hex()
+        # Wait mempool update
+        await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
