@@ -182,7 +182,7 @@ class TestWalletSimulator:
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
-        assert await wallet_1.get_confirmed_balance() == 4000000000400
+        await time_out_assert(10, wallet_1.get_confirmed_balance, 4000000000400)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -245,8 +245,8 @@ class TestWalletSimulator:
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
-        assert await wallet.get_confirmed_balance() == 3999999999000
-        assert await wallet_1.get_confirmed_balance() == 2000000001000
+        await time_out_assert(10, wallet.get_confirmed_balance, 3999999999000)
+        await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000001000)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -312,8 +312,8 @@ class TestWalletSimulator:
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
-        assert await wallet.get_confirmed_balance() == 3999999999500
-        assert await wallet_1.get_confirmed_balance() == 4000000000500
+        await time_out_assert(10, wallet.get_confirmed_balance, 3999999999500)
+        await time_out_assert(10, wallet_1.get_confirmed_balance, 4000000000500)
 
     @pytest.mark.parametrize(
         "trusted",
