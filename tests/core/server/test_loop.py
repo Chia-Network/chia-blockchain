@@ -242,19 +242,26 @@ async def test_limits_connections(repetition: int, cycles: int) -> None:
     connection_limit = 25
     connection_attempts = 1000
 
+    trigger_connections = 2
+
     async with serve_in_thread(ip=ip, port=0, connection_limit=connection_limit) as server:
         for cycle in range(cycles):
             clients: List[Client]
 
-            async with Client.open_several(count=connection_attempts, ip=ip, port=server.port()) as clients:
-                are_alive = await asyncio.gather(*(client.is_alive() for client in clients))
+            async with Client.open_several(count=connection_limit, ip=ip, port=server.port()) as good_clients:
+                async with Client.open_several(count=trigger_connections, ip=ip, port=server.port()) as _:
+                    await asyncio.sleep(1)
+                    remaining_connections = connection_attempts - connection_limit - trigger_connections
+                    async with Client.open_several(
+                        count=remaining_connections, ip=ip, port=server.port()
+                    ) as bad_clients:
+                        good_alive = await asyncio.gather(*(client.is_alive() for client in good_clients))
+                        bad_alive = await asyncio.gather(*(client.is_alive() for client in bad_clients))
 
-                connected_clients = [client for client, is_alive in zip(clients, are_alive) if is_alive]
-                not_connected_clients = [client for client, is_alive in zip(clients, are_alive) if not is_alive]
+            actual = {
+                "good": sum(1 if alive else 0 for alive in good_alive),
+                "bad": sum(1 if not alive else 0 for alive in bad_alive),
+            }
+            expected = {"good": connection_limit, "bad": remaining_connections}
 
-            assert len(connected_clients) >= connection_limit, f"cycle={cycle}"
-            assert len(connected_clients) <= connection_limit + allowed_over_connections, f"cycle={cycle}"
-            assert len(not_connected_clients) <= connection_attempts - connection_limit, f"cycle={cycle}"
-            assert (
-                len(not_connected_clients) >= connection_attempts - connection_limit - allowed_over_connections
-            ), f"cycle={cycle}"
+            assert actual == expected, f"cycle={cycle}"
