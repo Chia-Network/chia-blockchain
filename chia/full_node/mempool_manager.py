@@ -158,7 +158,10 @@ class MempoolManager:
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
-        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(self.max_block_clvm_cost)
+        self.use_fee_estimator = False
+        self.fee_estimator: Optional[FeeEstimatorInterface] = None
+        if self.use_fee_estimator:
+            self.fee_estimator = create_bitcoin_fee_estimator(self.max_block_clvm_cost)
         mempool_info = MempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
             FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
@@ -605,7 +608,8 @@ class MempoolManager:
         if self.peak == new_peak:
             return []
         assert new_peak.timestamp is not None
-        self.fee_estimator.new_block_height(new_peak.height)
+        if self.fee_estimator:
+            self.fee_estimator.new_block_height(new_peak.height)
         included_items = []
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
@@ -659,7 +663,8 @@ class MempoolManager:
             f"cost: {self.mempool.total_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
-        self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
+        if self.mempool.fee_estimator:
+            self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         return txs_added
 
     def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:

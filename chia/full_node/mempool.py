@@ -23,12 +23,12 @@ class MempoolRemoveReason(Enum):
 
 
 class Mempool:
-    def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
+    def __init__(self, mempool_info: MempoolInfo, fee_estimator: Optional[FeeEstimatorInterface]):
         self.log: logging.Logger = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
         self.mempool_info: MempoolInfo = mempool_info
-        self.fee_estimator: FeeEstimatorInterface = fee_estimator
+        self.fee_estimator: Optional[FeeEstimatorInterface] = fee_estimator
         self.removal_coin_id_to_spendbundle_ids: Dict[bytes32, List[bytes32]] = {}
         self.total_mempool_cost: CLVMCost = CLVMCost(uint64(0))
         self.total_mempool_fees: int = 0
@@ -80,7 +80,8 @@ class Mempool:
             assert self.total_mempool_cost >= 0
             info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, self.total_mempool_fees, datetime.now())
             if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-                self.fee_estimator.remove_mempool_item(info, item)
+                if self.fee_estimator:
+                    self.fee_estimator.remove_mempool_item(info, item)
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
@@ -110,7 +111,8 @@ class Mempool:
         self.total_mempool_cost = CLVMCost(uint64(self.total_mempool_cost + item.cost))
         self.total_mempool_fees = self.total_mempool_fees + item.fee
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost, self.total_mempool_fees, datetime.now())
-        self.fee_estimator.add_mempool_item(info, item)
+        if self.fee_estimator:
+            self.fee_estimator.add_mempool_item(info, item)
 
     def at_full_capacity(self, cost: int) -> bool:
         """
