@@ -2543,8 +2543,8 @@ class TestMaliciousGenerators:
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
 
 
-@pytest.fixture(scope="function", params=[False, True])
-def softfork(request):
+@pytest.fixture(name="softfork", scope="function", params=[False, True])
+def softfork_fixture(request):
     return request.param
 
 
@@ -2592,7 +2592,7 @@ class TestPkmPairs:
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
-    def test_agg_sig_unsafe(self):
+    def test_agg_sig_unsafe(self, softfork):
         conds = SpendBundleConditions(
             [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0
         )
