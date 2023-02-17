@@ -46,6 +46,9 @@ class WalletNodeAPI:
         The full node sent as a new peak
         """
         self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        if self.wallet_node.is_trusted(peer) and await self.wallet_node.is_peer_synced(peer, peak.height):
+            # Disconnect from all untrusted peers if our local node is trusted and synced
+            await self.wallet_node.disconnect_and_stop_wpeers()
         await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
 
     @api_request()
