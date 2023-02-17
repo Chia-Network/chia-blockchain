@@ -17,7 +17,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def farm_blocks(full_node_api: FullNodeSimulator, ph: bytes32, num_blocks: int) -> int:
@@ -60,7 +59,7 @@ async def test_wallet_tx_retry(
     await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
     await farm_blocks(full_node_1, reward_ph, 2)
-    await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
+    await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
     transaction: TransactionRecord = await wallet_1.generate_signed_transaction(uint64(100), reward_ph)
     sb1: Optional[SpendBundle] = transaction.spend_bundle
@@ -84,7 +83,7 @@ async def test_wallet_tx_retry(
     await farm_blocks(full_node_1, our_ph, 2)
 
     # Wait for wallet to catch up
-    await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
+    await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
     async def check_transaction_in_mempool_or_confirmed(transaction: TransactionRecord) -> bool:
         txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)

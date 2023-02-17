@@ -501,8 +501,8 @@ class NFTWallet:
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
-    async def get_current_nfts(self) -> List[NFTCoinInfo]:
-        return await self.nft_store.get_nft_list(wallet_id=self.id())
+    async def get_current_nfts(self, start_index: int = 0, count: int = 50) -> List[NFTCoinInfo]:
+        return await self.nft_store.get_nft_list(wallet_id=self.id(), start_index=start_index, count=count)
 
     async def get_nft_count(self) -> int:
         return await self.nft_store.count(wallet_id=self.id())

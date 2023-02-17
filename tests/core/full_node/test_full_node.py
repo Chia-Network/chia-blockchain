@@ -55,7 +55,6 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -129,7 +128,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, wallet_height_at_least, True, wallet_node_1, 4)
         await time_out_assert(30, node_height_at_least, True, full_node_1, 4)
         await time_out_assert(30, node_height_at_least, True, full_node_2, 4)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send a transaction to mempool
         tr: TransactionRecord = await wallet.generate_signed_transaction(
@@ -149,7 +148,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, node_height_at_least, True, full_node_1, 5)
         await time_out_assert(30, node_height_at_least, True, full_node_2, 5)
         await time_out_assert(30, wallet_height_at_least, True, wallet_node_1, 5)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         async def check_transaction_confirmed(transaction) -> bool:
             tx = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
@@ -181,7 +180,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         await time_out_assert(10, check_transaction_confirmed, True, tr)
 
@@ -197,7 +196,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 8)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 8)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 8)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send another 2 tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
@@ -252,7 +251,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 9)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         await time_out_assert(10, check_transaction_confirmed, True, tr)
 
@@ -297,7 +296,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 10)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         await time_out_assert(10, check_transaction_confirmed, True, new_tr)
 
@@ -342,7 +341,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 11)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 11)
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 11)
-        await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
+        await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator

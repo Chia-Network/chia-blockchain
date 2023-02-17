@@ -16,6 +16,7 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 
 # Set spawn after stdlib imports, but before other imports
+from chia.clvm.spend_sim import CostLogger
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -44,7 +45,6 @@ from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.wallet_is_synced import wallet_is_synced
 
 multiprocessing.set_start_method("spawn")
 
@@ -676,8 +676,7 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
     await full_node_api.farm_blocks_to_puzzlehash(count=buffer, guarantee_transaction_blocks=True)
 
-    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
-    await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
     assert await wallet_0.get_confirmed_balance() == wallet_0_rewards
     assert await wallet_0.get_unconfirmed_balance() == wallet_0_rewards
@@ -756,3 +755,12 @@ def chia_root_fixture(tmp_path: Path, scripts_path: Path) -> ChiaRoot:
     root.run(args=["configure", "--set-log-level", "INFO"])
 
     return root
+
+
+@pytest.fixture(name="cost_logger", scope="session")
+def cost_logger_fixture() -> Iterator[CostLogger]:
+    cost_logger = CostLogger()
+    yield cost_logger
+    print()
+    print()
+    print(cost_logger.log_cost_statistics())

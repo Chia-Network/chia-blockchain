@@ -56,6 +56,8 @@ class NotificationManager:
         else:
             memos: Dict[bytes32, List[bytes]] = compute_memos_for_spend(parent_spend)
             coin_memos: List[bytes] = memos.get(coin_name, [])
+            if len(coin_memos) == 0:
+                return False
             wallet_info: Optional[
                 Tuple[uint32, WalletType]
             ] = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(bytes32(coin_memos[0]))

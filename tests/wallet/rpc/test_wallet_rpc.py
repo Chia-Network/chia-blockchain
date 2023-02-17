@@ -52,7 +52,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
-from tests.util.wallet_is_synced import wallet_is_synced
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class WalletRpcTestEnvironment:
 
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
-    await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
@@ -603,7 +602,8 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     ph_by_addr = await wallet.get_new_puzzlehash()
     await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"))
     await client.farm_block(encode_puzzle_hash(ph_by_addr, "txch"))
-    await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
@@ -682,7 +682,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # check that we farmed the transaction
     assert check_mempool_spend_count(full_node_api, 0)
-    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+
     await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
@@ -770,7 +771,8 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     cat_asset_id = bytes32.fromhex(res["asset_id"])
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+
     await time_out_assert(5, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
@@ -1025,7 +1027,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
 
-    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=15)
+
     nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
     assert isinstance(nft_wallet, NFTWallet)
 
@@ -1051,8 +1054,10 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
-    await time_out_assert(5, wallet_is_synced, True, wallet_1_node, full_node_api)
-    await time_out_assert(5, wallet_is_synced, True, wallet_2_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=5)
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=5)
+
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
     )[0].id

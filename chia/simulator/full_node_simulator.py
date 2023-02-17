@@ -28,6 +28,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -640,3 +641,34 @@ class FullNodeSimulator(FullNodeAPI):
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
         return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
+
+    async def wallet_is_synced(self, wallet_node: WalletNode) -> bool:
+        wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        full_node_height = self.full_node.blockchain.get_peak_height()
+        has_pending_queue_items = wallet_node.new_peak_queue.has_pending_data_process_items()
+        return wallet_height == full_node_height and not has_pending_queue_items
+
+    async def wait_for_wallet_synced(
+        self,
+        wallet_node: WalletNode,
+        timeout: Optional[float] = 5,
+    ) -> None:
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff_time in backoff_times():
+                if await self.wallet_is_synced(wallet_node=wallet_node):
+                    break
+                await asyncio.sleep(backoff_time)
+
+    async def wallets_are_synced(self, wallet_nodes: List[WalletNode]) -> bool:
+        return all([await self.wallet_is_synced(wallet_node=wallet_node) for wallet_node in wallet_nodes])
+
+    async def wait_for_wallets_synced(
+        self,
+        wallet_nodes: List[WalletNode],
+        timeout: Optional[float] = 5,
+    ) -> None:
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff_time in backoff_times():
+                if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
+                    break
+                await asyncio.sleep(backoff_time)
