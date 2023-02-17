@@ -146,7 +146,7 @@ OPENSSL_VERSION_INT=
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 311 3.11 310 3.10 39 3.9 38 3.8 37 3.7 3; do
+  for V in 311 3.11 310 3.10 39 3.9 38 3.8 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V

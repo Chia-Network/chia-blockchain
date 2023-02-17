@@ -23,7 +23,7 @@ here = pathlib.Path(__file__).parent
 IP = "127.0.0.1"
 PORT = 8444
 NUM_CLIENTS = 500
-allowed_over_connections = 0 if sys.platform == "win32" and sys.version_info >= (3, 8) else 100
+allowed_over_connections = 0 if sys.platform == "win32" else 100
 
 
 @contextlib.asynccontextmanager
@@ -220,10 +220,6 @@ async def test_loop() -> None:
     print(" ==== all checks passed")
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "win32" and sys.version_info < (3, 8),
-    reason="test code errors out with selector event loop",
-)
 # repeating in case there are races or flakes to expose
 @pytest.mark.parametrize(
     argnames="repetition",

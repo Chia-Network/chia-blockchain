@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L278
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L27
     class BaseEventsServer(asyncio.base_events.Server):
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
+        if sys.platform == "win32":
             _loop: ChiaProactorEventLoop
         else:
             _loop: EventsAbstractEventLoop
@@ -160,7 +160,7 @@ class PausableServer(BaseEventsServer):
     def _chia_pause(self) -> None:
         """Pause future calls to accept()."""
         self._paused = True
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
+        if sys.platform == "win32":
             # proactor
             self._loop.disable_connections()
         else:
@@ -172,7 +172,7 @@ class PausableServer(BaseEventsServer):
     def _chia_resume(self) -> None:
         """Resume use of accept() on listening socket(s)."""
         self._paused = False
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
+        if sys.platform == "win32":
             # proactor
             self._loop.enable_connections()
         else:
@@ -334,13 +334,7 @@ class ChiaPolicy(asyncio.DefaultEventLoopPolicy):
     def new_event_loop(self) -> asyncio.AbstractEventLoop:
         # overriding https://github.com/python/cpython/blob/v3.11.0/Lib/asyncio/events.py#L689-L695
         if sys.platform == "win32":
-            if sys.version_info >= (3, 8):
-                # https://docs.python.org/3.11/library/asyncio-policy.html#asyncio.DefaultEventLoopPolicy
-                # Changed in version 3.8: On Windows, ProactorEventLoop is now used by default.
-                loop_factory = ChiaProactorEventLoop
-            else:
-                # separate condition so coverage can report when this is no longer used
-                loop_factory = ChiaSelectorEventLoop
+            loop_factory = ChiaProactorEventLoop
         else:
             loop_factory = ChiaSelectorEventLoop
 

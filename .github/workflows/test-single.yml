@@ -55,14 +55,6 @@ jobs:
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         python:
-          - name: '3.7'
-            file_name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-            exclude_from:
-              limited: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
@@ -94,10 +86,6 @@ jobs:
             exclude_from:
               limited: True
         exclude:
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.7'
           - os:
               matrix: macos
             python:
