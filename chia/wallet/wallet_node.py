@@ -1004,29 +1004,6 @@ class WalletNode:
                 neither.append(node)
         return synced_and_trusted + synced + trusted + neither
 
-    async def disconnect_and_stop_wpeers(self) -> None:
-        if self._server is None:
-            return
-
-        # Close connection of non-trusted peers
-        full_node_connections = self.server.get_connections(NodeType.FULL_NODE)
-        if len(full_node_connections) > 1:
-            for peer in full_node_connections:
-                if not self.is_trusted(peer):
-                    await peer.close()
-
-        if self.wallet_peers is not None:
-            await self.wallet_peers.ensure_is_closed()
-            self.wallet_peers = None
-
-    async def check_for_synced_trusted_peer(self, header_block: HeaderBlock) -> bool:
-        if self._server is None:
-            return False
-        for peer in self.server.get_connections(NodeType.FULL_NODE):
-            if self.is_trusted(peer) and await self.is_peer_synced(peer, header_block.height):
-                return True
-        return False
-
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
         """
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
@@ -1111,8 +1088,6 @@ class WalletNode:
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
-            # Disconnect from all untrusted peers if our local node is trusted and synced
-            await self.disconnect_and_stop_wpeers()
             # Sync to trusted node if we haven't done so yet. As long as we have synced once (and not
             # disconnected), we assume that the full node will continue to give us state updates, so we do
             # not need to resync.
@@ -1148,10 +1123,6 @@ class WalletNode:
         )
         if not syncing and secondary_sync_running:
             self.log.info("Will not do secondary sync, there is already another sync task running.")
-            return False
-
-        if await self.check_for_synced_trusted_peer(new_peak_hb):
-            self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
             return False
 
         try:

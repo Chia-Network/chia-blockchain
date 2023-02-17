@@ -46,6 +46,23 @@ class WalletNodeAPI:
         The full node sent as a new peak
         """
         self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        # For trusted peers check if there are untrusted peers, if so make sure to disconnect them if the trusted node
+        # is synced.
+        if self.wallet_node.is_trusted(peer):
+            full_node_connections = self.wallet_node.server.get_connections(NodeType.FULL_NODE)
+            untrusted_peers = [peer for peer in full_node_connections if not self.wallet_node.is_trusted(peer)]
+
+            # Check for untrusted peers first to avoid calling is_peer_synced if not required
+            if len(untrusted_peers) > 0 and await self.wallet_node.is_peer_synced(peer, peak.height):
+                self.log.info("Connected to a a synced trusted peer, disconnecting from all untrusted nodes.")
+                # Stop peer discovery/connect tasks first
+                if self.wallet_node.wallet_peers is not None:
+                    await self.wallet_node.wallet_peers.ensure_is_closed()
+                    self.wallet_node.wallet_peers = None
+                # Then disconnect from all untrusted nodes
+                for untrusted_peer in untrusted_peers:
+                    await untrusted_peer.close()
+
         await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
 
     @api_request()
