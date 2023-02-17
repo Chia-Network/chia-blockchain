@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import List, Optional, Set
 from unittest.mock import MagicMock
 
@@ -1341,3 +1342,62 @@ class TestWalletSync:
         await asyncio.sleep(3)
         assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
+
+
+@pytest.mark.asyncio
+async def test_long_sync_untrusted_break(
+    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
+):
+    full_nodes, [(wallet_node, wallet_server)], bt = setup_two_nodes_and_wallet
+    trusted_full_node_api = full_nodes[0]
+    trusted_full_node_server = trusted_full_node_api.full_node.server
+    untrusted_full_node_api = full_nodes[1]
+    untrusted_full_node_server = untrusted_full_node_api.full_node.server
+    wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
+
+    sync_canceled = False
+
+    async def register_interest_in_puzzle_hash():
+        nonlocal sync_canceled
+        # Just sleep a long time here to simulate a long-running untrusted sync
+        try:
+            await asyncio.sleep(120)
+        except Exception:
+            sync_canceled = True
+            raise
+
+    def wallet_syncing() -> bool:
+        return wallet_node.wallet_state_manager.sync_mode
+
+    def check_sync_canceled() -> bool:
+        return sync_canceled
+
+    def only_trusted_peer() -> bool:
+        trusted_peers = sum([wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
+        untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
+        return trusted_peers == 1 and untrusted_peers == 0
+
+    for block in default_400_blocks:
+        await trusted_full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+    for block in default_1000_blocks[:400]:
+        await untrusted_full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+    untrusted_full_node_api.register_interest_in_puzzle_hash = MagicMock(
+        return_value=register_interest_in_puzzle_hash()
+    )
+
+    # Connect to the untrusted peer and wait until the long sync started
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(untrusted_full_node_server._port)), None)
+    await time_out_assert(30, wallet_syncing)
+    with caplog.at_level(logging.INFO):
+        # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(trusted_full_node_server._port)), None)
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+        assert trusted_full_node_server.node_id in wallet_node.synced_peers
+        assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
+        assert "Connected to a a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+
+    # Make sure the sync was interrupted
+    assert time_out_assert(30, check_sync_canceled)
+    # And that we only have a trusted peer left
+    assert time_out_assert(30, only_trusted_peer)
