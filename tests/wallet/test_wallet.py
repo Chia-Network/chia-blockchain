@@ -860,6 +860,18 @@ class TestWalletSimulator:
             puzzle.get_tree_hash(),
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
+        # Test informal input
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true"}
+        )
+        puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
 
     @pytest.mark.parametrize(
         "trusted",
