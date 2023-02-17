@@ -236,7 +236,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        resp = await api_0.clawback_transactions(
+        resp = await api_0.spend_clawback_coins(
             dict({"merkle_coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
         )
         json.dumps(resp)
@@ -303,7 +303,7 @@ class TestWalletSimulator:
         await asyncio.sleep(20)
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        resp = await api_1.clawback_transactions(
+        resp = await api_1.spend_clawback_coins(
             dict({"merkle_coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
         )
         json.dumps(resp)
@@ -313,7 +313,65 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         assert await wallet.get_confirmed_balance() == 3999999999500
-        assert await wallet_1.get_confirmed_balance() == 400000000500
+        assert await wallet_1.get_confirmed_balance() == 4000000000500
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_get_clawback_coins(
+        self,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+        self_hostname: str,
+    ) -> None:
+        num_blocks = 1
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+
+        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        # Transfer to normal wallet
+        tx = await wallet.generate_signed_transaction(
+            uint64(500),
+            normal_puzhash,
+            uint64(0),
+            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
+        )
+
+        await wallet.push_transaction(tx)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        # Check merkle coins
+        await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 1, 1000)
+        await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 1, 1000)
+        assert await wallet.get_confirmed_balance() == 3999999999500
+        # clawback merkle coin
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        resp = await api_0.get_clawback_coins(dict({"wallet_id": 1}))
+        json.dumps(resp)
+        assert len(resp["coins"]) == 1
+        assert resp["coins"][0]["coin_id"] == merkle_coin.name().hex()
+        assert not resp["coins"][0]["metadata"]["is_recipient"]
 
     @pytest.mark.parametrize(
         "trusted",

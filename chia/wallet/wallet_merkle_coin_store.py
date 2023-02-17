@@ -167,6 +167,31 @@ class WalletMerkleCoinStore:
 
         return [ret.get(name) for name in coin_names]
 
+    async def get_coin_records_between(
+        self,
+        wallet_id: int,
+        start,
+        end,
+        reverse=False,
+    ) -> List[WalletMerkleCoinRecord]:
+        """Return a list of merkle coins between start and end index. List is in reverse chronological order.
+        start = 0 is most recent transaction
+        """
+        limit = end - start
+
+        if reverse:
+            query_str = "ORDER BY confirmed_height DESC "
+        else:
+            query_str = "ORDER BY confirmed_height ASC "
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                f"SELECT * FROM merkle_coin_record WHERE wallet_id=?" f" {query_str}, rowid" f" LIMIT {start}, {limit}",
+                (wallet_id,),
+            )
+
+        return [self.coin_record_from_row(row) for row in rows]
+
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
         async with self.db_wrapper.reader_no_transaction() as conn:

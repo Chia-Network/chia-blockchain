@@ -125,7 +125,8 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
-            "/clawback_transaction": self.clawback_transactions,
+            "/spend_clawback_coins": self.spend_clawback_coins,
+            "/get_clawback_coins": self.get_clawback_coins,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -1033,7 +1034,37 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
 
-    async def clawback_transactions(self, request) -> EndpointResult:
+    async def get_clawback_coins(self, request) -> EndpointResult:
+        wallet_id = int(request["wallet_id"])
+
+        start = request.get("start", 0)
+        end = request.get("end", 50)
+        reverse = request.get("reverse", False)
+
+        coins = await self.service.wallet_state_manager.merkle_coin_store.get_coin_records_between(
+            wallet_id,
+            start,
+            end,
+            reverse=reverse,
+        )
+        return {
+            "coins": [
+                {
+                    "coin_id": coin.name().hex(),
+                    "coin_type": coin.coin_type,
+                    "amount": coin.coin.amount,
+                    "puzzle_hash": coin.coin.puzzle_hash.hex(),
+                    "parent_coin": coin.coin.parent_coin_info.hex(),
+                    "metadata": json.loads(coin.metadata),
+                    "confirmed_height": coin.confirmed_block_height,
+                    "spent_height": coin.spent_block_height,
+                }
+                for coin in coins
+            ],
+            "wallet_id": wallet_id,
+        }
+
+    async def spend_clawback_coins(self, request) -> EndpointResult:
         if "merkle_coin_ids" not in request:
             raise ValueError("Merkle coin IDs are required.")
         coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["merkle_coin_ids"]]

@@ -1768,6 +1768,7 @@ class WalletStateManager:
         """
         await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
+        await self.merkle_coin_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
