@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import dataclasses
-
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -42,7 +41,7 @@ TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIM
 TEST_HEIGHT = uint32(5)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class TestBlockRecord:
     """
     This is a subset of BlockRecord that the mempool manager uses for peak.
@@ -611,31 +610,33 @@ async def test_process_mempool_items_max_cost() -> None:
 async def test_process_mempool_items_max_fee() -> None:
     # This test exercises the path where an item's inclusion would exceed the
     # maximum fee, so it gets skipped as a result
-    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
-    MAX_FEES_AMOUNT = 5
-    # Maximum fee is checked using MAX_COIN_AMOUNT
-    mempool_manager.constants = dataclasses.replace(mempool_manager.constants, MAX_COIN_AMOUNT=MAX_FEES_AMOUNT)
+    coin1 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(0xFFFFFFFFFFFFFFFF))
+    coin2 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(42))
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        test_coin_records = {
+            coin1.name(): CoinRecord(coin1, uint32(0), uint32(0), False, uint64(42)),
+            coin2.name(): CoinRecord(coin2, uint32(0), uint32(0), False, uint64(42)),
+        }
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
     # Create a spend bundle with a big enough fee that gets it close to the limit
-    CREATED_COIN_AMOUNT = TEST_COIN_AMOUNT - MAX_FEES_AMOUNT
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT]]
-    sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    expected_cost = uint64(2945056)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin1)
+    expected_cost = uint64(2957056)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     # Create a second spend bundle with a relatively smaller fee.
     # Combined with the first spend bundle, we'd exceed the maximum fee
-    conditions = [
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT2 - 1],
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
-    ]
-    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, TEST_COIN2)
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin2)
     assert result[1] == MempoolInclusionStatus.SUCCESS
     spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(item_inclusion_filter=always)
     # The first spend bundle has a higher FPC so it gets picked first
     assert spend_bundles == [sb1]
     # The second spend bundle hits the maximum fee and gets skipped
     assert cost_sum == expected_cost
-    assert additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, CREATED_COIN_AMOUNT)]
-    assert removals == [TEST_COIN]
+    assert additions == [Coin(coin1.name(), IDENTITY_PUZZLE_HASH, 1)]
+    assert removals == [coin1]
 
 
 @pytest.mark.asyncio
