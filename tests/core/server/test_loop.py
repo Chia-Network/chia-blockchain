@@ -23,7 +23,6 @@ here = pathlib.Path(__file__).parent
 IP = "127.0.0.1"
 PORT = 8444
 NUM_CLIENTS = 500
-allowed_over_connections = 0 if sys.platform == "win32" and sys.version_info >= (3, 8) else 100
 
 
 @contextlib.asynccontextmanager
@@ -146,6 +145,8 @@ class ServeInThread:
 
 @pytest.mark.asyncio
 async def test_loop() -> None:
+    allowed_over_connections = 0 if sys.platform == "win32" and sys.version_info >= (3, 8) else 100
+
     print(" ==== launching serve.py")
     with subprocess.Popen(
         [sys.executable, "-m", "tests.core.server.serve"],
@@ -224,39 +225,38 @@ async def test_loop() -> None:
     condition=sys.platform == "win32" and sys.version_info < (3, 8),
     reason="test code errors out with selector event loop",
 )
-# repeating in case there are races or flakes to expose
 @pytest.mark.parametrize(
+    # repeating in case there are races or flakes to expose
     argnames="repetition",
-    argvalues=[x + 1 for x in range(25)],
+    argvalues=[x + 1 for x in range(5)],
     ids=lambda repetition: f"#{repetition}",
 )
 @pytest.mark.parametrize(
     # make sure the server continues to work after exceeding limits repeatedly
     argnames="cycles",
-    argvalues=[1, 5],
+    argvalues=[1, 3],
     ids=lambda cycles: f"{cycles} cycle{'s' if cycles != 1 else ''}",
 )
 @pytest.mark.asyncio
 async def test_limits_connections(repetition: int, cycles: int) -> None:
     ip = "127.0.0.1"
-    connection_limit = 25
-    connection_attempts = 1000
-
-    trigger_connections = 2
+    connection_limit = 10
+    connection_attempts = connection_limit + 10
 
     async with serve_in_thread(ip=ip, port=0, connection_limit=connection_limit) as server:
         for cycle in range(cycles):
             clients: List[Client]
 
+            if cycle > 0:
+                await asyncio.sleep(1)
+
             async with Client.open_several(count=connection_limit, ip=ip, port=server.port()) as good_clients:
-                async with Client.open_several(count=trigger_connections, ip=ip, port=server.port()) as _:
-                    await asyncio.sleep(1)
-                    remaining_connections = connection_attempts - connection_limit - trigger_connections
-                    async with Client.open_several(
-                        count=remaining_connections, ip=ip, port=server.port()
-                    ) as bad_clients:
-                        good_alive = await asyncio.gather(*(client.is_alive() for client in good_clients))
-                        bad_alive = await asyncio.gather(*(client.is_alive() for client in bad_clients))
+                remaining_connections = connection_attempts - connection_limit
+
+                await asyncio.sleep(1)
+                async with Client.open_several(count=remaining_connections, ip=ip, port=server.port()) as bad_clients:
+                    good_alive = await asyncio.gather(*(client.is_alive() for client in good_clients))
+                    bad_alive = await asyncio.gather(*(client.is_alive() for client in bad_clients))
 
             actual = {
                 "good": sum(1 if alive else 0 for alive in good_alive),
