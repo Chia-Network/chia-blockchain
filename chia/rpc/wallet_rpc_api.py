@@ -1368,9 +1368,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
 
             assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(
-                request["message"], target_nft, is_hex
-            )
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, is_hex)
             latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
