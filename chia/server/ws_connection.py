@@ -41,6 +41,10 @@ WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 
+class ConnectionClosingError(Exception):
+    pass
+
+
 class ConnectionClosedCallbackProtocol(Protocol):
     def __call__(
         self,
@@ -163,8 +167,14 @@ class WSChiaConnection:
         )
 
     def _get_extra_info(self, name: str) -> Optional[Any]:
-        assert self.ws._writer is not None, "websocket's ._writer is None, was .prepare() called?"
-        return self.ws._writer.transport.get_extra_info(name)
+        writer = self.ws._writer
+        assert writer is not None, "websocket's ._writer is None, was .prepare() called?"
+        transport = writer.transport
+        if transport is None or transport.is_closing():
+            # The meaning of this condition is based on the existing aiohttp check when writing.
+            # https://github.com/aio-libs/aiohttp/blob/v3.8.4/aiohttp/http_websocket.py#L661-L664
+            raise ConnectionClosingError("Unable to get extra info for a closing transport")
+        return transport.get_extra_info(name)
 
     async def perform_handshake(
         self,

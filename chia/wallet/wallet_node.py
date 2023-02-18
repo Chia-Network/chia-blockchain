@@ -29,7 +29,7 @@ from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
-from chia.server.ws_connection import WSChiaConnection
+from chia.server.ws_connection import ConnectionClosingError, WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -567,6 +567,10 @@ class WalletNode:
             except asyncio.CancelledError:
                 self.log.info("Queue task cancelled, exiting.")
                 raise
+            except ConnectionClosingError as e:
+                if peer is None:
+                    self.log.error(f"Failed handling {item}, unexpected None peer, {e} {traceback.format_exc()}")
+                self.log.info(f"Failed handling {type(item)}, connection closing for {peer.get_peer_logging()}")
             except Exception as e:
                 self.log.error(f"Exception handling {item}, {e} {traceback.format_exc()}")
                 if peer is not None:
