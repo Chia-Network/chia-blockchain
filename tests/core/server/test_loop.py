@@ -245,8 +245,6 @@ async def test_limits_connections(repetition: int, cycles: int) -> None:
 
     async with serve_in_thread(ip=ip, port=0, connection_limit=connection_limit) as server:
         for cycle in range(cycles):
-            clients: List[Client]
-
             if cycle > 0:
                 await asyncio.sleep(1)
 
