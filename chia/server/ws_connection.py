@@ -168,7 +168,13 @@ class WSChiaConnection:
         transport = writer.transport
         if transport is None:
             return None
-        return transport.get_extra_info(name)
+        try:
+            return transport.get_extra_info(name)
+        except AttributeError:
+            # "/usr/lib/python3.11/asyncio/sslproto.py", line 91, in get_extra_info
+            #   return self._ssl_protocol._get_extra_info(name, default)
+            # AttributeError: 'NoneType' object has no attribute '_get_extra_info'
+            return None
 
     async def perform_handshake(
         self,
