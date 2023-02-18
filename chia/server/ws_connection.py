@@ -166,7 +166,7 @@ class WSChiaConnection:
         writer = self.ws._writer
         assert writer is not None, "websocket's ._writer is None, was .prepare() called?"
         transport = writer.transport
-        if transport is None or transport.is_closing():
+        if transport is None:
             return None
         return transport.get_extra_info(name)
 
