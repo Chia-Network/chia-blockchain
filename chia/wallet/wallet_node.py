@@ -1166,20 +1166,19 @@ class WalletNode:
             return False
 
         try:
-            await self.long_sync_from_untrusted(syncing, new_peak_hb, peer)
+            return await self.long_sync_from_untrusted(syncing, new_peak_hb, peer)
         except Exception:
             self.log.exception(f"Error syncing to {peer.get_peer_info()}")
             await peer.close()
             if syncing:
                 self.wallet_state_manager.set_sync_mode(False)
             return False
-        return True
 
-    async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection):
+    async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         if await self.check_for_synced_trusted_peer(new_peak_hb.height):
             self.log.info("abort untrusted, connected to trusted node")
-            return
+            return False
         weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, new_peak_hb)
         old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
@@ -1201,7 +1200,7 @@ class WalletNode:
                 self.log.info("Primary peer syncing")
                 await self.long_sync(new_peak_hb.height, peer, fork_point, rollback=True)
             self.log.info(f"New peak wallet.. {new_peak_hb.height} {peer.get_peer_info()} 12")
-            return
+            return True
 
         # we exit earlier in the case where syncing is False and a Secondary sync is running
         assert self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()
@@ -1209,6 +1208,7 @@ class WalletNode:
         self._secondary_peer_sync_task = asyncio.create_task(
             self.long_sync(new_peak_hb.height, peer, fork_point, rollback=False)
         )
+        return True
 
     async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer) -> bool:
         async with self.wallet_state_manager.lock:
