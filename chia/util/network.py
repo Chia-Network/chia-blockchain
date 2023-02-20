@@ -113,6 +113,13 @@ def is_localhost(peer_host: str) -> bool:
     return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
 
 
+def is_trusted_peer(host: str, node_id: bytes32, trusted_peers: Dict[str, Any], testing: bool = False) -> bool:
+    if testing or is_localhost(host) or node_id.hex() in trusted_peers:
+        return True
+
+    return False
+
+
 def class_for_type(type: NodeType) -> Any:
     if type is NodeType.FULL_NODE:
         from chia.full_node.full_node_api import FullNodeAPI

@@ -36,7 +36,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import WebServer, is_in_network, is_localhost
+from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -681,14 +681,12 @@ class ChiaServer:
         return True
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
-        if trusted_peers is None:
-            return False
-        if not self.config.get("testing", False) and peer.peer_host == "127.0.0.1":
-            return True
-        if peer.peer_node_id.hex() not in trusted_peers:
-            return False
-
-        return True
+        return is_trusted_peer(
+            host=peer.peer_host,
+            node_id=peer.peer_node_id,
+            trusted_peers=trusted_peers,
+            testing=self.config.get("testing", False),
+        )
 
     def set_capabilities(self, capabilities: List[Tuple[uint16, str]]) -> None:
         self._local_capabilities_for_handshake = capabilities
