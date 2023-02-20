@@ -395,12 +395,6 @@ async def three_wallet_nodes():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_simulator():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def wallet_two_node_simulator():
     async for _ in setup_simulators_and_wallets(2, 1, {}):
         yield _
