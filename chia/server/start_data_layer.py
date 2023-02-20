@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
-from chia.data_layer.downloader import HttpDownloader
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
