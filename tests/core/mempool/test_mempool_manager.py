@@ -1260,3 +1260,42 @@ def test_find_duplicate_spends_eligible_3rd_time_another_2nd_time_and_one_non_el
         Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3),
     }
     assert dedup_additions == expected_dedup_additions
+
+
+@pytest.mark.asyncio
+async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak() -> None:
+    # This test makes sure all mempool items that spend a coin (in different ways)
+    # that shows up as spent in a block, get removed properly.
+    mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
+    # Create a bunch of mempool items that spend TEST_COIN in different ways
+    for i in range(3):
+        _, _, result = await generate_and_add_spendbundle(
+            mempool_manager, [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i]]
+        )
+        assert result[1] == MempoolInclusionStatus.SUCCESS
+    assert len(mempool_manager.mempool.get_items_by_coin_id(TEST_COIN_ID)) == 3
+    assert mempool_manager.mempool.size() == 3
+    assert len(list(mempool_manager.mempool.items_by_feerate())) == 3
+    # Setup a new peak where the incoming block has spent TEST_COIN
+    block_record = create_test_block_record(height=uint32(TEST_HEIGHT + 1))
+    npc_result = NPCResult(
+        None,
+        SpendBundleConditions(
+            [Spend(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, None, 0, None, None, None, None, [], [], 0)],
+            0,
+            0,
+            0,
+            None,
+            None,
+            [],
+            0,
+            TEST_COIN_AMOUNT,
+            0,
+        ),
+        uint64(0),
+    )
+    await mempool_manager.new_peak(block_record, npc_result)
+    # As TEST_COIN was a spend in all the mempool items we had, nothing should be left now
+    assert len(mempool_manager.mempool.get_items_by_coin_id(TEST_COIN_ID)) == 0
+    assert mempool_manager.mempool.size() == 0
+    assert len(list(mempool_manager.mempool.items_by_feerate())) == 0
