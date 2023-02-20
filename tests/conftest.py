@@ -27,7 +27,6 @@ from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
-    setup_node_and_wallet,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
     setup_two_nodes,
@@ -251,15 +250,6 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
     @pytest.hookimpl(tryfirst=True)
     def pytest_internalerror(excinfo):
         raise excinfo.value
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname, request):
-    params = {}
-    if request and request.param_index > 0:
-        params = request.param
-    async for _ in setup_node_and_wallet(test_constants, self_hostname, **params):
-        yield _
 
 
 @pytest_asyncio.fixture(scope="function")

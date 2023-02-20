@@ -10,7 +10,6 @@ from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -54,10 +53,9 @@ log = getLogger(__name__)
 
 class TestWalletSync:
     @pytest.mark.asyncio
-    async def test_request_block_headers(self, wallet_node, default_1000_blocks):
+    async def test_request_block_headers(self, simulator_and_wallet, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-        full_node_api: FullNodeAPI
-        full_node_api, wallet_node, full_node_server, wallet_server, bt = wallet_node
+        [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
@@ -100,10 +98,9 @@ class TestWalletSync:
     #     [(10, 8, False, None)],
     # )
     @pytest.mark.asyncio
-    async def test_request_block_headers_rejected(self, wallet_node, default_1000_blocks):
+    async def test_request_block_headers_rejected(self, simulator_and_wallet, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-        full_node_api: FullNodeAPI
-        full_node_api, wallet_node, full_node_server, wallet_server, bt = wallet_node
+        [full_node_api], _, bt = simulator_and_wallet
 
         # start_height, end_height, return_filter, expected_res = test_case
 
