@@ -240,12 +240,12 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(
         self,
-        two_wallet_nodes_five_freeze: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
         num_blocks = 10
-        full_nodes, wallets, _ = two_wallet_nodes_five_freeze
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api_0 = full_nodes[0]
         full_node_0 = full_node_api_0.full_node
         server_0 = full_node_0.server
