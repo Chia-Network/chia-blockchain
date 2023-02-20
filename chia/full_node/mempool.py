@@ -172,6 +172,9 @@ class Mempool:
         """
         Removes an item from the mempool.
         """
+        if items == []:
+            return
+
         removed_items: List[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
 
