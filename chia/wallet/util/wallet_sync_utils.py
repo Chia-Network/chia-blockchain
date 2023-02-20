@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia_rs import compute_merkle_set_root
 
@@ -101,7 +101,7 @@ def validate_additions(
     coins: List[Tuple[bytes32, List[Coin]]],
     proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
     root: bytes32,
-):
+) -> bool:
     if proofs is None:
         # Verify root
         additions_merkle_items: List[bytes32] = []
@@ -161,7 +161,7 @@ def validate_additions(
 
 def validate_removals(
     coins: List[Tuple[bytes32, Optional[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes]]], root: bytes32
-):
+) -> bool:
     if proofs is None:
         # If there are no proofs, it means all removals were returned in the response.
         # we must find the ones relevant to our wallets.
@@ -314,7 +314,7 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
-def get_block_header(block):
+def get_block_header(block: FullBlock) -> HeaderBlock:
     return HeaderBlock(
         block.finished_sub_slots,
         block.reward_chain_block,
@@ -341,6 +341,7 @@ async def request_header_blocks(
         response = await peer.call_api(FullNodeAPI.request_header_blocks, RequestHeaderBlocks(start_height, end_height))
     if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
         return None
+    assert isinstance(response, RespondHeaderBlocks) or isinstance(response, RespondBlockHeaders)
     return response.header_blocks
 
 
@@ -387,7 +388,9 @@ async def fetch_header_blocks_in_range(
     for i in range(start - (start % 32), end + 1, 32):
         request_start = min(uint32(i), end)
         request_end = min(uint32(i + 31), end)
-        res_h_blocks_task: Optional[asyncio.Task] = peer_request_cache.get_block_request(request_start, request_end)
+        res_h_blocks_task: Optional[asyncio.Task[Any]] = peer_request_cache.get_block_request(
+            request_start, request_end
+        )
 
         if res_h_blocks_task is not None:
             log.debug(f"Using cache for: {start}-{end}")

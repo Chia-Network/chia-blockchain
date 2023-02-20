@@ -19,7 +19,6 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 class TestCATWallet:
@@ -55,7 +54,7 @@ class TestCATWallet:
         )
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
@@ -117,7 +116,7 @@ class TestCATWallet:
         )
 
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(
@@ -206,7 +205,7 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == cat_2_hash.hex()
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
@@ -224,7 +223,7 @@ class TestCATWallet:
         tx_id = coin.name().hex()
         memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == cat_2_hash.hex()
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
         for tx_record in tx_records:

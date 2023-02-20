@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import json
 import logging
@@ -101,6 +100,7 @@ class WalletRpcApi:
             "/check_delete_key": self.check_delete_key,
             "/delete_all_keys": self.delete_all_keys,
             # Wallet node
+            "/set_wallet_resync_on_startup": self.set_wallet_resync_on_startup,
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
@@ -174,6 +174,7 @@ class WalletRpcApi:
             "/did_find_lost_did": self.did_find_lost_did,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
+            "/nft_count_nfts": self.nft_count_nfts,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
             "/nft_set_nft_did": self.nft_set_nft_did,
@@ -249,9 +250,7 @@ class WalletRpcApi:
         """
         if self.service is not None:
             self.service._close()
-            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
-            if peers_close_task is not None:
-                await peers_close_task
+            await self.service._await_closed(shutting_down=False)
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -493,6 +492,23 @@ class WalletRpcApi:
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
+    async def set_wallet_resync_on_startup(self, request) -> Dict[str, Any]:
+        """
+        Resync the current logged in wallet. The transaction and offer records will be kept.
+        :param request: optionally pass in `enable` as bool to enable/disable resync
+        :return:
+        """
+        assert self.service.wallet_state_manager is not None
+        try:
+            enable = bool(request.get("enable", True))
+        except ValueError:
+            raise ValueError("Please provide a boolean value for `enable` parameter in request")
+        fingerprint = self.service.logged_in_fingerprint
+        if fingerprint is not None:
+            self.service.set_resync_on_startup(fingerprint, enable)
+        else:
+            raise ValueError("You need to login into wallet to use this RPC call")
+        return {"success": True}
 
     async def get_sync_status(self, request: Dict) -> EndpointResult:
         sync_mode = self.service.wallet_state_manager.sync_mode
@@ -860,7 +876,12 @@ class WalletRpcApi:
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
         assert tr.spend_bundle is not None
-        return {transaction_id.hex(): compute_memos(tr.spend_bundle)}
+        memos: Dict[bytes32, List[bytes]] = compute_memos(tr.spend_bundle)
+        response = {}
+        # Convert to hex string
+        for coin_id, memo_list in memos.items():
+            response[coin_id.hex()] = [memo.hex() for memo in memo_list]
+        return {transaction_id.hex(): response}
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
@@ -1595,7 +1616,7 @@ class WalletRpcApi:
 
         if request.get("advanced", False):
             return {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos},
+                "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
                 "id": offer.name(),
             }
         else:
@@ -2228,30 +2249,47 @@ class WalletRpcApi:
                 nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle, "nft_id": nft_id}
 
+    async def nft_count_nfts(self, request) -> EndpointResult:
+        wallet_id = request.get("wallet_id", None)
+        count = 0
+        if wallet_id is not None:
+            try:
+                nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+            except KeyError:
+                # wallet not found
+                return {"success": False, "error": f"Wallet {wallet_id} not found."}
+            count = await nft_wallet.get_nft_count()
+        else:
+            count = await self.service.wallet_state_manager.nft_store.count()
+        return {"wallet_id": wallet_id, "success": True, "count": count}
+
     async def nft_get_nfts(self, request) -> EndpointResult:
         wallet_id = request.get("wallet_id", None)
         nfts: List[NFTCoinInfo] = []
         if wallet_id is not None:
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-            nfts = await nft_wallet.get_current_nfts()
         else:
-            for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.NFT.value:
-                    assert isinstance(wallet, NFTWallet)
-                    nfts.extend(await wallet.get_current_nfts())
-        start_index = request.get("start_index", 0)
-        num = request.get("num", len(nfts))
+            nft_wallet = None
+        try:
+            start_index = int(request.get("start_index"))
+        except (TypeError, ValueError):
+            start_index = 0
+        try:
+            count = int(request.get("num"))
+        except (TypeError, ValueError):
+            count = 50
         nft_info_list = []
-        count = 0
+        if nft_wallet is not None:
+            nfts = await nft_wallet.get_current_nfts(start_index=start_index, count=count)
+        else:
+            nfts = await self.service.wallet_state_manager.nft_store.get_nft_list(start_index=start_index, count=count)
         for nft in nfts:
-            if count >= start_index and count - start_index < num:
-                nft_info = await nft_puzzles.get_nft_info_from_puzzle(
-                    nft,
-                    self.service.wallet_state_manager.config,
-                    request.get("ignore_size_limit", False),
-                )
-                nft_info_list.append(nft_info)
-            count += 1
+            nft_info = await nft_puzzles.get_nft_info_from_puzzle(
+                nft,
+                self.service.wallet_state_manager.config,
+                request.get("ignore_size_limit", False),
+            )
+            nft_info_list.append(nft_info)
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
     async def nft_set_nft_did(self, request):
@@ -2530,7 +2568,10 @@ class WalletRpcApi:
         if coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(coin_id)
         else:
-            coin_id = bytes32.from_hexstr(coin_id)
+            try:
+                coin_id = bytes32.from_hexstr(coin_id)
+            except ValueError:
+                return {"success": False, "error": f"Invalid Coin ID format for 'coin_id': {request['coin_id']!r}"}
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
         assert peer is not None

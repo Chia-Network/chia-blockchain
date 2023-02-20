@@ -35,6 +35,7 @@ ZDICT = [
     + bytes(NFT_TRANSFER_PROGRAM_DEFAULT),
     bytes(CAT_MOD),
     bytes(OFFER_MOD),
+    b"",  # purposefully break compatibility with older versions
     # more dictionaries go here
 ]
 

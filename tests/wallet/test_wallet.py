@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -29,7 +30,6 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.util.wallet_is_synced import wallet_is_synced, wallets_are_synced
 
 
 class TestWalletSimulator:
@@ -164,7 +164,7 @@ class TestWalletSimulator:
             )
         )
 
-        await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
         assert await wallet.get_confirmed_balance() == permanent_funds
 
     @pytest.mark.parametrize(
@@ -462,8 +462,10 @@ class TestWalletSimulator:
         await wallet.push_transaction(tx)
         await full_node_1.wait_transaction_records_entered_mempool(records=[tx])
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
+        # test json serialization
+        json.dumps(memos)
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
+        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount - tx_fee
 
@@ -475,7 +477,7 @@ class TestWalletSimulator:
                 tx_id = coin.name().hex()
         memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
         assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0].hex() == ph_2.hex()
+        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
 
     @pytest.mark.parametrize(
         "trusted",
@@ -672,7 +674,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         permanent_funds = await full_node_api.farm_blocks_to_wallet(count=permanent_block_count, wallet=wallet)
 
-        await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
         # Ensure that we use a coin that we will not reorg out
         tx_amount = 1000
@@ -687,9 +689,7 @@ class TestWalletSimulator:
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
-        await time_out_assert(
-            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
-        )
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
 
         assert await wallet.get_confirmed_balance() == permanent_funds + reorg_funds - tx_amount
         assert await wallet_2.get_confirmed_balance() == tx_amount
@@ -706,18 +706,14 @@ class TestWalletSimulator:
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
 
-        await time_out_assert(
-            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
-        )
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
         assert await wallet.get_confirmed_balance() == permanent_funds
         assert await wallet_2.get_confirmed_balance() == 0
 
         # process the resubmitted tx
         for _ in range(10):
             await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-            await time_out_assert(
-                20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
-            )
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2], timeout=20)
 
             if (await wallet.get_confirmed_balance() == permanent_funds - tx_amount) and (
                 await wallet_2.get_confirmed_balance() == tx_amount

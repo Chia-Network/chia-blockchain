@@ -6,7 +6,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Dict, List, Optional, Set, Tuple, Union
 
 import aiohttp
 
@@ -35,7 +35,7 @@ from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.downloader import DLDownloader, HttpDownloader
 from chia.data_layer.uploader import DLUploader, FilesystemUploader
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -54,7 +54,7 @@ class DataLayer:
     config: Dict[str, Any]
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    state_changed_callback: Optional[Callable[..., object]]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     wallet_id: uint64
     initialized: bool
     none_bytes: bytes32
@@ -105,7 +105,7 @@ class DataLayer:
         self.downloaders = downloaders
         self.uploaders = uploaders
 
-    def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     async def on_connect(self, connection: WSChiaConnection) -> None:

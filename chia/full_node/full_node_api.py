@@ -18,7 +18,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
@@ -49,8 +49,8 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request
@@ -669,10 +669,10 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: List[MempoolItem] = await self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
+        items: List[SpendBundle] = self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
 
         for item in items:
-            transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
+            transaction = full_node_protocol.RespondTransaction(item)
             msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
             await peer.send_message(msg)
         return None
@@ -1460,28 +1460,69 @@ class FullNodeAPI:
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
 
-        if self.is_trusted(peer):
-            max_items = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
+        trusted = self.is_trusted(peer)
+        if trusted:
+            max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
+            max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)
         else:
-            max_items = self.full_node.config.get("max_subscribe_items", 200000)
+            max_subscriptions = self.full_node.config.get("max_subscribe_items", 200000)
+            max_items = self.full_node.config.get("max_subscribe_response_items", 100000)
 
-        self.full_node.subscriptions.add_ph_subscriptions(peer.peer_node_id, request.puzzle_hashes, max_items)
+        # the returned puzzle hashes are the ones we ended up subscribing to.
+        # It will have filtered duplicates and ones exceeding the subscription
+        # limit.
+        puzzle_hashes = self.full_node.subscriptions.add_ph_subscriptions(
+            peer.peer_node_id, request.puzzle_hashes, max_subscriptions
+        )
 
-        hint_coin_ids = []
-        for puzzle_hash in request.puzzle_hashes:
-            ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
-            hint_coin_ids.extend(ph_hint_coins)
+        start_time = time.monotonic()
+
+        # Note that coin state updates may arrive out-of-order on the client side.
+        # We add the subscription before we're done collecting all the coin
+        # state that goes into the response. CoinState updates may be sent
+        # before we send the response
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, min_height=request.min_height
+            include_spent_coins=True, puzzle_hashes=puzzle_hashes, min_height=request.min_height, max_items=max_items
         )
+        max_items -= len(states)
 
+        hint_coin_ids: Set[bytes32] = set()
+        if max_items > 0:
+            for puzzle_hash in puzzle_hashes:
+                ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash, max_items=max_items)
+                hint_coin_ids.update(ph_hint_coins)
+                max_items -= len(ph_hint_coins)
+                if max_items <= 0:
+                    break
+
+        hint_states: List[CoinState] = []
         if len(hint_coin_ids) > 0:
             hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
-                include_spent_coins=True, coin_ids=hint_coin_ids, min_height=request.min_height
+                include_spent_coins=True,
+                coin_ids=list(hint_coin_ids),
+                min_height=request.min_height,
+                max_items=len(hint_coin_ids),
             )
             states.extend(hint_states)
+
+        end_time = time.monotonic()
+
+        truncated = max_items <= 0
+
+        if truncated or end_time - start_time > 5:
+            self.log.log(
+                logging.WARNING if trusted and truncated else logging.INFO,
+                "RegisterForPhUpdates resulted in %d coin states. "
+                "Request had %d (unique) puzzle hashes and matched %d hints. %s"
+                "The request took %0.2fs",
+                len(states),
+                len(puzzle_hashes),
+                len(hint_states),
+                "The response was truncated. " if truncated else "",
+                end_time - start_time,
+            )
 
         response = wallet_protocol.RespondToPhUpdates(request.puzzle_hashes, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
@@ -1493,13 +1534,19 @@ class FullNodeAPI:
     ) -> Message:
 
         if self.is_trusted(peer):
-            max_items = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
+            max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
+            max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)
         else:
-            max_items = self.full_node.config.get("max_subscribe_items", 200000)
-        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_items)
+            max_subscriptions = self.full_node.config.get("max_subscribe_items", 200000)
+            max_items = self.full_node.config.get("max_subscribe_response_items", 100000)
+
+        # TODO: apparently we have tests that expect to receive a
+        # RespondToCoinUpdates even when subscribing to the same coin multiple
+        # times, so we can't optimize away such DB lookups (yet)
+        self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_subscriptions)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
+            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height, max_items=max_items
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
@@ -1560,7 +1607,8 @@ class FullNodeAPI:
             utc_now = int(utc_time.timestamp())
             deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
             fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]
-            return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, fee_rates)]
+            v1_fee_rates = [fee_rate_v2_to_v1(est) for est in fee_rates]
+            return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, v1_fee_rates)]
 
         fee_estimates: List[FeeEstimate] = get_fee_estimates(
             self.full_node.mempool_manager.mempool.fee_estimator, request.time_targets
