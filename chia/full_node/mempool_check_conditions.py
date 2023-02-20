@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia_rs import LIMIT_STACK, MEMPOOL_MODE, ENABLE_ASSERT_BEFORE
+from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
