@@ -110,11 +110,12 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
 
 
 def is_localhost(peer_host: str) -> bool:
-    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
+    host_str = peer_host.strip("[]")  # remove IPv6 brackets, our code adds this before making the connection
+    return host_str == "127.0.0.1" or host_str == "localhost" or host_str == "::1" or host_str == "0:0:0:0:0:0:0:1"
 
 
 def is_trusted_peer(host: str, node_id: bytes32, trusted_peers: Dict[str, Any], testing: bool = False) -> bool:
-    if testing or is_localhost(host) or node_id.hex() in trusted_peers:
+    if not testing and is_localhost(host) or node_id.hex() in trusted_peers:
         return True
 
     return False
