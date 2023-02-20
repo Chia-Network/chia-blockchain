@@ -35,7 +35,7 @@ class EchoServer(asyncio.Protocol):
 
 async def async_main(
     ip: str = "127.0.0.1",
-    port: int = 8444,
+    port: int = 0,
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
