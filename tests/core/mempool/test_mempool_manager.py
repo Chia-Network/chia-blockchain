@@ -797,3 +797,51 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
     # The first spend bundle hits the maximum block clvm cost and gets skipped
     assert additions == [Coin(coins[1].name(), IDENTITY_PUZZLE_HASH, coins[1].amount - 2)]
     assert removals == [coins[1]]
+
+
+@pytest.mark.parametrize(
+    "opcode,arg,expect_eviction",
+    [
+        # current height: 10 current_time: 10000
+        # we step the chain forward 1 block and 19 seconds
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False),
+        # the coin was created at height: 5 timestamp: 9900
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expect_eviction: bool) -> None:
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        return {TEST_COIN.name(): CoinRecord(TEST_COIN, uint32(5), uint32(0), False, uint64(9900))}.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(
+        get_coin_record,
+        block_height=uint32(10),
+        block_timestamp=uint64(10000),
+        constants=DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0),
+    )
+
+    bundle = spend_bundle_from_conditions(
+        [
+            [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+            [opcode, arg],
+        ],
+        coin=TEST_COIN,
+    )
+    bundle_name = bundle.name()
+    assert (await add_spendbundle(mempool_manager, bundle, bundle_name))[1] == mis.SUCCESS
+    # make sure the spend was added correctly
+    assert mempool_manager.get_spendbundle(bundle_name) == bundle
+
+    block_record = create_test_block_record(height=uint32(11), timestamp=uint64(10019))
+    await mempool_manager.new_peak(block_record, None)
+
+    still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
+    assert still_in_pool != expect_eviction

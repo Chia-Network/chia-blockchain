@@ -515,11 +515,18 @@ class MempoolManager:
             self.peak.timestamp,
         )
 
-        assert_height: Optional[uint32] = None
-        if tl_error:
-            assert_height = compute_assert_height(removal_record_dict, npc_result.conds).assert_height
+        timelocks: TimelockConditions = compute_assert_height(removal_record_dict, npc_result.conds)
 
-        potential = MempoolItem(new_spend, uint64(fees), npc_result, spend_name, first_added_height, assert_height)
+        potential = MempoolItem(
+            new_spend,
+            uint64(fees),
+            npc_result,
+            spend_name,
+            first_added_height,
+            timelocks.assert_height,
+            timelocks.assert_before_height,
+            timelocks.assert_before_seconds,
+        )
 
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
@@ -606,6 +613,8 @@ class MempoolManager:
         assert new_peak.timestamp is not None
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: List[MempoolItemInfo] = []
+
+        self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
