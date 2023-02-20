@@ -175,17 +175,6 @@ def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
         raise ValueError(f"failed to resolve {host} into an IP address")
 
 
-def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict, testing: bool) -> bool:
-    if trusted_peers is None:
-        return False
-    if not testing and peer_host == "127.0.0.1":
-        return True
-    if peer_node_id.hex() not in trusted_peers:
-        return False
-
-    return True
-
-
 def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:
     selected_port: uint16
     for address_string, port, *_ in addresses:
