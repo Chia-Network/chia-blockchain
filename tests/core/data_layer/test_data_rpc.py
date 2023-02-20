@@ -591,7 +591,7 @@ async def test_get_owned_stores(
             launcher_id = bytes32.from_hexstr(res["id"])
             expected_store_ids.append(launcher_id)
 
-        await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 1)
+        await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.5)

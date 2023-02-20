@@ -674,7 +674,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
     # make sure spend is in mempool before farming tx block
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     for i in range(5):
         if check_mempool_spend_count(full_node_api, 0):
             break
