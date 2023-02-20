@@ -5,7 +5,8 @@ from typing import Dict, List, Optional, Tuple
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -66,12 +67,16 @@ def conditions_by_opcode(
     return d
 
 
-def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
+def pkm_pairs(
+    conditions: SpendBundleConditions, additional_data: bytes, *, soft_fork: bool
+) -> Tuple[List[bytes48], List[bytes]]:
     ret: Tuple[List[bytes48], List[bytes]] = ([], [])
 
     for pk, msg in conditions.agg_sig_unsafe:
         ret[0].append(bytes48(pk))
         ret[1].append(msg)
+        if soft_fork and msg.endswith(additional_data):
+            raise ConsensusError(Err.INVALID_CONDITION)
 
     for spend in conditions.spends:
         for pk, msg in spend.agg_sig_me:
@@ -90,6 +95,8 @@ def pkm_pairs_for_conditions_dict(
         assert len(cwa.vars) == 2
         assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
+        if cwa.vars[1].endswith(additional_data):
+            raise ConsensusError(Err.INVALID_CONDITION)
         ret.append((bytes48(cwa.vars[0]), cwa.vars[1]))
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):

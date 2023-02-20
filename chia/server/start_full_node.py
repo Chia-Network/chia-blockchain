@@ -68,10 +68,9 @@ def create_full_node_service(
     )
 
 
-async def async_main() -> int:
+async def async_main(service_config: Dict[str, Any]) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
@@ -87,7 +86,15 @@ def main() -> int:
     freeze_support()
 
     with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_NODE") is not None):
-        return async_run(async_main())
+        service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        target_peer_count = service_config.get("target_peer_count", 80) - service_config.get(
+            "target_outbound_peer_count", 8
+        )
+        if target_peer_count < 0:
+            target_peer_count = None
+        if not service_config.get("use_chia_loop_policy", True):
+            target_peer_count = None
+        return async_run(coro=async_main(service_config), connection_limit=target_peer_count)
 
 
 if __name__ == "__main__":

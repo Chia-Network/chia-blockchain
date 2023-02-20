@@ -404,13 +404,26 @@ full_node:
   # Number of coin_ids | puzzle hashes that node will let wallets subscribe to
   max_subscribe_items: 200000
 
+  # the maximum number of CoinStates will be returned by a RegisterForPhUpdates
+  # request, for untrusted peers
+  max_subscribe_response_items: 100000
+
   # Number of coin_ids | puzzle hashes that node will let local wallets subscribe to
   trusted_max_subscribe_items: 2000000
 
+  # the maximum number of CoinStates will be returned by a RegisterForPhUpdates
+  # request, for trusted peers
+  trusted_max_subscribe_response_items: 500000
+
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
-  dns_servers:
+  dns_servers: &dns_servers
     - "dns-introducer.chia.net"
+    - "chia.ctrlaltdel.ch"
+    - "seeder.dexie.space"
+    - "chia-seeder.h9.com"
+    - "chia.hoffmang.com"
+    - "seeder.xchpool.org"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -436,6 +449,7 @@ full_node:
     private_key:  "config/ssl/full_node/private_full_node.key"
     public_crt:  "config/ssl/full_node/public_full_node.crt"
     public_key:  "config/ssl/full_node/public_full_node.key"
+  use_chia_loop_policy: True
 
 ui:
    # The ui node server (if run) will run on this port
@@ -493,8 +507,7 @@ wallet:
 
   initial_num_public_keys: 425
 
-  dns_servers:
-    - "dns-introducer.chia.net"
+  dns_servers: *dns_servers
 
   full_node_peer:
     host: *self_hostname
@@ -556,12 +569,15 @@ wallet:
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
 
+  # Reset wallet sync data on start for given fingerprint
+  reset_sync_for_fingerprint: null
+
   # After n received unspent transactions, the spam filter will be enabled, which will filter out received
   # coins with very small value. Any standard TX under xch_spam_amount is filtered
   spam_filter_after_n_txs: 200
   xch_spam_amount: 1000000
-  # Accept notifications from parties on chain
-  accept_notifications: False
+  # Enable notifications from parties on chain
+  enable_notifications: True
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 

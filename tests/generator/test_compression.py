@@ -20,7 +20,8 @@ from chia.full_node.bundle_tools import (
 )
 from chia.full_node.generator import create_generator_args, run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
@@ -168,7 +169,7 @@ class TestCompression(TestCase):
 
 class TestDecompression(TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestDecompression, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.maxDiff = None
 
     def test_deserialization(self):

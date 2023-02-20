@@ -45,6 +45,12 @@ class WalletRpcClient(RpcClient):
         except ValueError as e:
             return e.args[0]
 
+    async def set_wallet_resync_on_startup(self, enable: bool = True) -> None:
+        return await self.fetch(
+            path="set_wallet_resync_on_startup",
+            request_json={"enable": enable},
+        )
+
     async def get_logged_in_fingerprint(self) -> int:
         return (await self.fetch("get_logged_in_fingerprint", {}))["fingerprint"]
 
@@ -840,6 +846,11 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
         }
         response = await self.fetch("nft_transfer_nft", request)
+        return response
+
+    async def count_nfts(self, wallet_id: Optional[int]):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_count_nfts", request)
         return response
 
     async def list_nfts(self, wallet_id):

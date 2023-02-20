@@ -16,7 +16,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.notification_store import NotificationStore
-from tests.util.wallet_is_synced import wallets_are_synced
 
 
 # For testing backwards compatibility with a DB change to add height
@@ -86,7 +85,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await time_out_assert(30, wallets_are_synced, True, [wallet_node_1, wallet_node_2], full_node_api)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)
 
     funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
     funds_2 = 0
@@ -97,14 +96,25 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     notification_manager_1 = wsm_1.notification_manager
     notification_manager_2 = wsm_2.notification_manager
 
+    func = notification_manager_2.potentially_add_new_notification
+    notification_manager_2.most_recent_args = tuple()
+
+    async def track_coin_state(*args: Any) -> bool:
+        notification_manager_2.most_recent_args = args
+        result: bool = await func(*args)
+        return result
+
+    notification_manager_2.potentially_add_new_notification = track_coin_state
+
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
         msg: bytes = bytes(case, "utf8")
         if case == "block all":
+            wallet_node_2.config["enable_notifications"] = False
             wallet_node_2.config["required_notification_amount"] = 100
             AMOUNT = uint64(100)
             FEE = uint64(0)
         elif case == "block too low":
-            wallet_node_2.config["accept_notifications"] = True
+            wallet_node_2.config["enable_notifications"] = True
             AMOUNT = uint64(1)
             FEE = uint64(0)
         elif case in ("allow", "allow_larger"):
@@ -160,8 +170,15 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
         == notifications
     )
 
+    sent_notifications = await notification_manager_1.notification_store.get_all_notifications()
+    assert len(sent_notifications) == 0
+
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
     await notification_manager_2.notification_store.delete_notifications([n.coin_id for n in notifications])
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
+
+    assert not await func(*notification_manager_2.most_recent_args)
+    await notification_manager_2.notification_store.delete_all_notifications()
+    assert not await func(*notification_manager_2.most_recent_args)

@@ -9,14 +9,21 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import MempoolRemoveReason
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
-from tests.pools.test_pool_rpc import farm_blocks
-from tests.util.wallet_is_synced import wallet_is_synced
+
+
+async def farm_blocks(full_node_api: FullNodeSimulator, ph: bytes32, num_blocks: int) -> int:
+    # TODO: replace uses with helpers on FullNodeSimulator
+    for i in range(num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    return num_blocks
 
 
 def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
@@ -52,7 +59,7 @@ async def test_wallet_tx_retry(
     await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
     await farm_blocks(full_node_1, reward_ph, 2)
-    await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
+    await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
     transaction: TransactionRecord = await wallet_1.generate_signed_transaction(uint64(100), reward_ph)
     sb1: Optional[SpendBundle] = transaction.spend_bundle
@@ -76,7 +83,7 @@ async def test_wallet_tx_retry(
     await farm_blocks(full_node_1, our_ph, 2)
 
     # Wait for wallet to catch up
-    await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
+    await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)
 
     async def check_transaction_in_mempool_or_confirmed(transaction: TransactionRecord) -> bool:
         txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
