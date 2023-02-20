@@ -44,26 +44,6 @@ class TestDLWallet:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_sim_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
