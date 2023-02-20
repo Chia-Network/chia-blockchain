@@ -4,9 +4,13 @@ import asyncio
 import logging
 import os
 import tempfile
+import warnings
 from pathlib import Path
 
-import boto3
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    import boto3
+
 import botocore
 import botocore.retries.adaptive
 from moto import mock_s3
@@ -89,7 +93,7 @@ class TestS3:
                 loop = asyncio.get_event_loop()
                 coroutine = downloader.download(Path(tmpdir), file_name, "", server_info, 10, log)
                 loop.run_until_complete(coroutine)
-                assert os.path.exists(Path(tmpdir).joinpath(file_name))
         except Exception as e:
             log.error(f"something went wrong {e}")
         self.tearDown()
+        assert os.path.exists(Path(tmpdir).joinpath(file_name))

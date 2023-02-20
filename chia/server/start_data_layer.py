@@ -43,9 +43,7 @@ def create_data_layer_service(
         wallet_root_path = wallet_service.root_path
         wallet_config = wallet_service.config
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
-    data_layer = DataLayer(
-        config=service_config, root_path=root_path, wallet_rpc_init=wallet_rpc_init, downloaders=[HttpDownloader()]
-    )
+    data_layer = DataLayer(config=service_config, root_path=root_path, wallet_rpc_init=wallet_rpc_init)
     api = DataLayerAPI(data_layer)
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")

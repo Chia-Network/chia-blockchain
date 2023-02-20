@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
+import functools
 import logging
 from pathlib import Path
 from urllib.parse import urlparse
@@ -37,7 +40,7 @@ class DLDownloader(Protocol):
         """Download file return result"""
 
 
-class HttpDownloader(DLDownloader):
+class HttpDownloader:
     def __init__(self) -> None:
         self.name = "http downloader"
 
@@ -80,7 +83,7 @@ class HttpDownloader(DLDownloader):
         return True
 
 
-class S3Downloader(DLDownloader):
+class S3Downloader:
     def __init__(self, resource) -> None:  # type:ignore
         self.name = "s3 downloader"
         self.boto_resource = resource
@@ -107,7 +110,9 @@ class S3Downloader(DLDownloader):
         log.debug(f"target file name {target_filename} bucket {bucket}")
         my_bucket = self.boto_resource.Bucket(bucket)
         # Create folder for parent directory
-        # todo do we expect the folder to exist ?
         target_filename.parent.mkdir(parents=True, exist_ok=True)
-        my_bucket.download_file(filename, str(target_filename))
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            await asyncio.get_running_loop().run_in_executor(
+                pool, functools.partial(my_bucket.download_file, filename, str(target_filename))
+            )
         return True
