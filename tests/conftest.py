@@ -326,14 +326,6 @@ async def two_nodes_sim_and_wallets_services():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet() -> AsyncIterator[
-    Tuple[List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools],
-]:
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def one_wallet_and_one_simulator_services():
     async for _ in setup_simulators_and_wallets_service(1, 1, {}):
         yield _

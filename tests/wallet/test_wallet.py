@@ -40,12 +40,12 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase(
         self,
-        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
         num_blocks = 10
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -133,11 +133,11 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(
         self,
-        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]

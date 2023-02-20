@@ -452,8 +452,8 @@ class TestWalletSync:
             await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_request_additions_errors(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+    async def test_request_additions_errors(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         wallet_node, wallet_server = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
@@ -493,8 +493,8 @@ class TestWalletSync:
         assert response.proofs[0][2] is None
 
     @pytest.mark.asyncio
-    async def test_request_additions_success(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+    async def test_request_additions_success(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         wallet_node, wallet_server = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
