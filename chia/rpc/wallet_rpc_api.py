@@ -50,7 +50,8 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
     create_fullpuz,
     match_did_puzzle,
-    program_to_metadata, metadata_to_program,
+    metadata_to_program,
+    program_to_metadata,
 )
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -1794,6 +1795,7 @@ class WalletRpcApi:
             "metadata": program_to_metadata(metadata),
             "launcher_id": singleton_struct.rest().first().as_python().hex(),
             "full_puzzle": full_puzzle,
+            "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
         }
 
@@ -1871,7 +1873,12 @@ class WalletRpcApi:
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
-                elif did_wallet is not None and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash() == coin_state.coin.puzzle_hash:
+                elif (
+                    did_wallet is not None
+                    and did_wallet.did_info.current_inner is not None
+                    and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    == coin_state.coin.puzzle_hash
+                ):
                     # Check if the old wallet has the inner puzzle
                     did_puzzle = did_wallet.did_info.current_inner
                 else:
@@ -1885,11 +1892,37 @@ class WalletRpcApi:
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
                     full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                    matched = True
                     if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                        matched = False
+                        # Brute force addresses
+                        index = 0
+                        derivation_record = await self.service.wallet_state_manager.puzzle_store.get_derivation_record(
+                            uint32(index), uint32(1), False
+                        )
+                        while derivation_record is not None:
+                            our_inner_puzzle = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
+                                derivation_record.pubkey
+                            )
+                            did_puzzle = DID_INNERPUZ_MOD.curry(
+                                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                            )
+                            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                            if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
+                                matched = True
+                                break
+                            index += 1
+                            derivation_record = (
+                                await self.service.wallet_state_manager.puzzle_store.get_derivation_record(
+                                    uint32(index), uint32(1), False
+                                )
+                            )
+
+                    if not matched:
                         return {
                             "success": False,
                             "error": f"Cannot recover DID {launcher_id.hex()}"
-                                     f" because the last spend updated recovery_list_hash/num_verification/metadata.",
+                            f" because the last spend updated recovery_list_hash/num_verification/metadata.",
                         }
 
             if did_wallet is None:
