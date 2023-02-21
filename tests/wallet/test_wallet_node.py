@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
 from blspy import PrivateKey
 
 from chia.simulator.block_tools import test_constants
 from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.time_out_assert import time_out_assert
+from chia.types.full_block import FullBlock
+from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
-from chia.util.keychain import Keychain, generate_mnemonic
-from chia.wallet.wallet_node import WalletNode
+from chia.util.ints import uint16, uint32, uint128
+from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.wallet.wallet_node import Balance, WalletNode
 
 
 @pytest.mark.asyncio
@@ -302,3 +306,81 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: Simulators
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
     assert len(puzzle_hashes) > 1
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)
+
+
+@pytest.mark.asyncio
+async def test_get_balance(
+    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    full_node_server = full_node_api.full_node.server
+
+    def wallet_synced() -> bool:
+        return full_node_server.node_id in wallet_node.synced_peers
+
+    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+        wallet_node._close()  # type: ignore[no-untyped-call] # WalletNode needs hinting here
+        await wallet_node._await_closed(shutting_down=False)
+        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+
+    wallet_id = uint32(1)
+    initial_fingerprint = wallet_node.logged_in_fingerprint
+
+    # TODO, there is a bug in wallet_short_sync_backtrack which leads to a rollback to 0 (-1 which is another a bug) and
+    #       with that to a KeyError when applying the race cache if there are less than WEIGHT_PROOF_RECENT_BLOCKS
+    #       blocks but we still have a peak stored in the DB. So we need to add enough blocks for a weight proof here to
+    #       be able to restart the wallet in this test.
+    for block in default_400_blocks:
+        await full_node_api.full_node.add_block(block)
+
+    # Initially there should be no sync and no balance
+    assert not wallet_synced()
+    assert await wallet_node.get_balance(wallet_id) == Balance()
+    # Generate some funds, get the balance and make sure it's as expected
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await time_out_assert(30, wallet_synced)
+    generated_funds = await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
+    expected_generated_balance = Balance(
+        confirmed_wallet_balance=uint128(generated_funds),
+        unconfirmed_wallet_balance=uint128(generated_funds),
+        spendable_balance=uint128(generated_funds),
+        max_send_amount=uint128(generated_funds),
+        unspent_coin_count=uint32(10),
+    )
+    generated_balance = await wallet_node.get_balance(wallet_id)
+    assert generated_balance == expected_generated_balance
+    # Load another key without funds, make sure the balance is empty.
+    other_key = KeyData.generate()
+    assert wallet_node.local_keychain is not None
+    wallet_node.local_keychain.add_private_key(other_key.mnemonic_str())
+    await restart_with_fingerprint(other_key.fingerprint)
+    assert await wallet_node.get_balance(wallet_id) == Balance()
+    # Load the initial fingerprint again and make sure the balance is still what we generated earlier
+    await restart_with_fingerprint(initial_fingerprint)
+    assert await wallet_node.get_balance(wallet_id) == generated_balance
+    # Connect and sync to the full node, generate more funds and test the balance caching
+    # TODO, there is a bug in untrusted sync if we try to sync to the same peak as stored in the DB after restart
+    #       which leads to a rollback to 0 (-1 which is another a bug) and then to a validation error because the
+    #       downloaded weight proof will not be added to the blockchain properly because we still have a peak with the
+    #       same weight stored in the DB but without chain data. The 1 block generation below can be dropped if we just
+    #       also store the chain data or maybe adjust the weight proof consideration logic in new_valid_weight_proof.
+    await full_node_api.farm_blocks_to_puzzlehash(1)
+    assert not wallet_synced()
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await time_out_assert(30, wallet_synced)
+    generated_funds += await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
+    expected_more_balance = Balance(
+        confirmed_wallet_balance=uint128(generated_funds),
+        unconfirmed_wallet_balance=uint128(generated_funds),
+        spendable_balance=uint128(generated_funds),
+        max_send_amount=uint128(generated_funds),
+        unspent_coin_count=uint32(20),
+    )
+    async with wallet_node.wallet_state_manager.set_sync_mode(uint32(100)):
+        # During sync the balance cache should not become updated, so it still should have the old balance here
+        assert await wallet_node.get_balance(wallet_id) == expected_generated_balance
+    # Now after the sync context the cache should become updated to the newly genertated balance
+    assert await wallet_node.get_balance(wallet_id) == expected_more_balance
+    # Restart one more time and make sure the balance is still correct after start
+    await restart_with_fingerprint(initial_fingerprint)
+    assert await wallet_node.get_balance(wallet_id) == expected_more_balance

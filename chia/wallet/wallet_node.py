@@ -46,10 +46,11 @@ from chia.util.config import (
 )
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
@@ -85,6 +86,18 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
     return path
 
 
+@streamable
+@dataclasses.dataclass(frozen=True)
+class Balance(Streamable):
+    confirmed_wallet_balance: uint128 = uint128(0)
+    unconfirmed_wallet_balance: uint128 = uint128(0)
+    spendable_balance: uint128 = uint128(0)
+    pending_change: uint64 = uint64(0)
+    max_send_amount: uint128 = uint128(0)
+    unspent_coin_count: uint32 = uint32(0)
+    pending_coin_removal_count: uint32 = uint32(0)
+
+
 @dataclasses.dataclass
 class WalletNode:
     config: Dict
@@ -103,6 +116,7 @@ class WalletNode:
     logged_in_fingerprint: Optional[int] = None
     logged_in: bool = False
     _keychain_proxy: Optional[KeychainProxy] = None
+    _balance_cache: Dict[int, Balance] = dataclasses.field(default_factory=dict)
     # Peers that we have long synced to
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
@@ -373,6 +387,10 @@ class WalletNode:
         self.log_in(private_key)
         self.wallet_state_manager.state_changed("sync_changed")
 
+        # Populate the balance caches of the RPC interface for all wallets
+        for wallet_id in self.wallet_state_manager.wallets:
+            await self.get_balance(wallet_id)
+
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
             if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
@@ -407,6 +425,7 @@ class WalletNode:
             await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
+        self._balance_cache = {}
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -1646,3 +1665,30 @@ class WalletNode:
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
             await peer.send_message(msg)
+
+    async def get_balance(self, wallet_id: uint32) -> Balance:
+        self.log.debug(f"get_balance - wallet_id: {wallet_id}")
+        if not self.wallet_state_manager.sync_mode:
+            self.log.debug(f"get_balance - Updating cache for {wallet_id}")
+            async with self.wallet_state_manager.lock:
+                wallet = self.wallet_state_manager.wallets[wallet_id]
+                unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+                balance = await wallet.get_confirmed_balance(unspent_records)
+                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+                spendable_balance = await wallet.get_spendable_balance(unspent_records)
+                pending_change = await wallet.get_pending_change_balance()
+                max_send_amount = await wallet.get_max_send_amount(unspent_records)
+
+                unconfirmed_removals: Dict[
+                    bytes32, Coin
+                ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
+                self._balance_cache[wallet_id] = Balance(
+                    confirmed_wallet_balance=balance,
+                    unconfirmed_wallet_balance=pending_balance,
+                    spendable_balance=spendable_balance,
+                    pending_change=pending_change,
+                    max_send_amount=max_send_amount,
+                    unspent_coin_count=uint32(len(unspent_records)),
+                    pending_coin_removal_count=uint32(len(unconfirmed_removals)),
+                )
+        return self._balance_cache.get(wallet_id, Balance())
