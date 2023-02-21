@@ -560,8 +560,10 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         ):
             if not is_localhost(self.peer_host):
-                msg = f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
-                f"peer: {self.peer_host}"
+                msg = (
+                    f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                    f"peer: {self.peer_host}"
+                )
                 self.log.debug(msg)
                 self.log.addFilter(TimedDuplicateFilter(msg, 60))
 
