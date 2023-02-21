@@ -2224,6 +2224,7 @@ class TestGeneratorConditions:
             (True, None),
             (False, 2300000),
             (False, 3630000),
+            (False, 3830000),
         ],
     )
     def test_unknown_condition(self, mempool: bool, height: uint32):

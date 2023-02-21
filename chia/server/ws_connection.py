@@ -163,8 +163,18 @@ class WSChiaConnection:
         )
 
     def _get_extra_info(self, name: str) -> Optional[Any]:
-        assert self.ws._writer is not None, "websocket's ._writer is None, was .prepare() called?"
-        return self.ws._writer.transport.get_extra_info(name)
+        writer = self.ws._writer
+        assert writer is not None, "websocket's ._writer is None, was .prepare() called?"
+        transport = writer.transport
+        if transport is None:
+            return None
+        try:
+            return transport.get_extra_info(name)
+        except AttributeError:
+            # "/usr/lib/python3.11/asyncio/sslproto.py", line 91, in get_extra_info
+            #   return self._ssl_protocol._get_extra_info(name, default)
+            # AttributeError: 'NoneType' object has no attribute '_get_extra_info'
+            return None
 
     async def perform_handshake(
         self,

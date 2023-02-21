@@ -133,7 +133,7 @@ def db_version(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3630000])
+@pytest.fixture(scope="function", params=[1000000, 3630000, 3830000])
 def softfork_height(request):
     return request.param
 
@@ -319,7 +319,7 @@ async def wallet_nodes():
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_four_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(5, 0, {}, db_version=db_version):
+    async for _ in setup_simulators_and_wallets(4, 0, {}, db_version=db_version):
         yield _
 
 

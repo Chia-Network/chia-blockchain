@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia_rs import LIMIT_STACK, MEMPOOL_MODE
+from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
@@ -41,6 +41,8 @@ def get_name_puzzle_conditions(
 
     if mempool_mode:
         flags = MEMPOOL_MODE
+    elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT:
+        flags = LIMIT_STACK | ENABLE_ASSERT_BEFORE
     elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
         flags = LIMIT_STACK
     else:
