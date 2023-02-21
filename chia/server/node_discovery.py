@@ -62,6 +62,8 @@ class FullNodeDiscovery:
         self.dns_servers = dns_servers
         random.shuffle(dns_servers)  # Don't always start with the same DNS server
         if introducer_info is not None:
+            # get_host_addr is blocking but this only gets called on startup or in the wallet after disconnecting from
+            # all trusted peers.
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
                 str(get_host_addr(introducer_info["host"], prefer_ipv6=False)),
                 introducer_info["port"],
