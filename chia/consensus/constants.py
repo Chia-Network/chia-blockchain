@@ -61,7 +61,11 @@ class ConsensusConstants:
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
     POOL_SUB_SLOT_ITERS: uint64
+    # soft fork initiated in 1.7.0 release
     SOFT_FORK_HEIGHT: uint32
+
+    # soft fork initiated in 1.8.0 release
+    SOFT_FORK2_HEIGHT: uint32
 
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
