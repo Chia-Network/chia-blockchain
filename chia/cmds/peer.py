@@ -20,9 +20,9 @@ from chia.cmds.peer_funcs import peer_async
     default=None,
 )
 @click.option(
-    "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=False
+    "-c", "--connections", help="List connections to the specified service", is_flag=True, type=bool, default=False
 )
-@click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
+@click.option("-a", "--add-connection", help="Connect to another remote Chia service by ip:port", type=str, default="")
 @click.option(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )

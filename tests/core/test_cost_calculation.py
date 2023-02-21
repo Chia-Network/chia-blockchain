@@ -15,7 +15,8 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
@@ -93,15 +94,11 @@ class TestCostCalculation:
         assert puzzle == coin_spend.puzzle_reveal
         assert solution == coin_spend.solution
 
-        assert npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + 404560
-
-        # Create condition + agg_sig_condition + length + cpu_cost
+        clvm_cost = 404560
+        byte_cost = len(bytes(program.program)) * test_constants.COST_PER_BYTE
         assert (
-            npc_result.cost
-            == 404560
-            + ConditionCost.CREATE_COIN.value
-            + ConditionCost.AGG_SIG.value
-            + len(bytes(program.program)) * test_constants.COST_PER_BYTE
+            npc_result.conds.cost
+            == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + clvm_cost + byte_cost
         )
 
         # Create condition + agg_sig_condition + length + cpu_cost
@@ -110,7 +107,7 @@ class TestCostCalculation:
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE
-            + 404560  # clvm cost
+            + clvm_cost
         )
 
     @pytest.mark.asyncio

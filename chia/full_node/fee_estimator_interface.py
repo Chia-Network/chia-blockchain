@@ -4,7 +4,7 @@ from typing_extensions import Protocol
 
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.types.clvm_cost import CLVMCost
-from chia.types.fee_rate import FeeRate
+from chia.types.fee_rate import FeeRateV2
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32
 
@@ -26,7 +26,7 @@ class FeeEstimatorInterface(Protocol):
         """A MempoolItem (transaction and associated info) has been removed from the mempool"""
         pass
 
-    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRate:
+    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRateV2:
         """time_offset_seconds: number of seconds into the future for which to estimate fee"""
         pass
 

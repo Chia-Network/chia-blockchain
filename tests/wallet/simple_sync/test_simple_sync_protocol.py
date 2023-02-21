@@ -27,7 +27,6 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -84,7 +83,9 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
-        assert len(data_response.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
+        # we have already subscribed to this puzzle hash, it will be ignored
+        # we still receive the updates (see below)
+        assert data_response.coin_states == []
 
         # Farm more rewards to check the incoming queue for the updates
         for i in range(0, num_blocks):
@@ -181,7 +182,8 @@ class TestSimpleSyncProtocol:
         data_response_1: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response_1.data)
         assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
         assert len(tx_record.spend_bundle.removals()) == 1
         spent_coin = tx_record.spend_bundle.removals()[0]
@@ -194,13 +196,14 @@ class TestSimpleSyncProtocol:
         # Let's make sure the wallet can handle a non ephemeral launcher
         from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
         await wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         # Send a transaction to make sure the wallet is still running
         tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
@@ -281,7 +284,8 @@ class TestSimpleSyncProtocol:
         assert notified_coins == coins
 
         # Test getting notification for coin that is about to be created
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
 
         tx_record.spend_bundle.additions()
@@ -498,7 +502,8 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -526,12 +531,9 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
-        assert len(data_response.coin_states) == 1
-        coin_records: List[CoinRecord] = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
-            True, hint_puzzle_hash
-        )
-        assert len(coin_records) == 1
-        assert data_response.coin_states[0] == coin_records[0].coin_state
+        # we have already subscribed to this puzzle hash. The full node will
+        # ignore the duplicate
+        assert data_response.coin_states == []
 
     @pytest.mark.asyncio
     async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
@@ -578,7 +580,8 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
-        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),

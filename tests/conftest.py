@@ -16,13 +16,15 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 
 # Set spawn after stdlib imports, but before other imports
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.clvm.spend_sim import CostLogger
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
+    SimulatorsAndWallets,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_node_and_wallet,
@@ -43,7 +45,6 @@ from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.wallet_is_synced import wallet_is_synced
 
 multiprocessing.set_start_method("spawn")
 
@@ -372,7 +373,9 @@ async def two_wallet_nodes(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_services() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+async def two_wallet_nodes_services() -> AsyncIterator[
+    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
 
@@ -431,6 +434,13 @@ async def wallet_two_node_simulator():
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
     async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAndWallets]:
+    key_seed = bt.farmer_master_sk_entropy
+    async for _ in setup_simulators_and_wallets(2, 2, {}, key_seed=key_seed):
         yield _
 
 
@@ -666,8 +676,7 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
     await full_node_api.farm_blocks_to_puzzlehash(count=buffer, guarantee_transaction_blocks=True)
 
-    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
-    await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
     assert await wallet_0.get_confirmed_balance() == wallet_0_rewards
     assert await wallet_0.get_unconfirmed_balance() == wallet_0_rewards
@@ -699,14 +708,6 @@ async def timelord(bt):
 async def timelord_service(bt):
     async for _ in setup_timelord(uint16(0), False, test_constants, bt):
         yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_sim():
-    sim = await SpendSim.create()
-    sim_client = SimClient(sim)
-    await sim.farm_block()
-    return sim, sim_client
 
 
 @pytest.fixture(scope="function")
@@ -754,3 +755,12 @@ def chia_root_fixture(tmp_path: Path, scripts_path: Path) -> ChiaRoot:
     root.run(args=["configure", "--set-log-level", "INFO"])
 
     return root
+
+
+@pytest.fixture(name="cost_logger", scope="session")
+def cost_logger_fixture() -> Iterator[CostLogger]:
+    cost_logger = CostLogger()
+    yield cost_logger
+    print()
+    print()
+    print(cost_logger.log_cost_statistics())

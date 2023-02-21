@@ -12,7 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
-from .coin_spend import CoinSpend
+from .coin_spend import CoinSpend, compute_additions
 
 
 @streamable
@@ -42,16 +42,17 @@ class SpendBundle(Streamable):
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         return cls(coin_spends, aggregated_signature)
 
+    # TODO: this should be removed
     def additions(self) -> List[Coin]:
         items: List[Coin] = []
-        for coin_spend in self.coin_spends:
-            items.extend(coin_spend.additions())
+        for cs in self.coin_spends:
+            items.extend(compute_additions(cs))
         return items
 
     def removals(self) -> List[Coin]:
-        """This should be used only by wallet"""
         return [_.coin for _ in self.coin_spends]
 
+    # TODO: this should be removed
     def fees(self) -> int:
         """Unsafe to use for fees validation!!!"""
         amount_in = sum(_.amount for _ in self.removals())
@@ -65,6 +66,7 @@ class SpendBundle(Streamable):
     def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
         debug_spend_bundle(self, agg_sig_additional_data)
 
+    # TODO: this should be removed
     def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()

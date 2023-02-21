@@ -33,7 +33,7 @@ Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 
 
 class StateChangedProtocol(Protocol):
-    def __call__(self, change: str, change_data: Dict[str, Any]) -> None:
+    def __call__(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
         ...
 
 
