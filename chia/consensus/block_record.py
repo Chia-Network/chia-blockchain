@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import List, Optional
+
+from typing_extensions import Protocol
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
