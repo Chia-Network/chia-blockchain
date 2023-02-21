@@ -144,11 +144,6 @@ async def run_mempool_benchmark() -> None:
 
         mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
 
-        # the mempool only looks at:
-        #   timestamp
-        #   height
-        #   is_transaction_block
-        #   header_hash
         height = start_height
         rec = fake_block_record(height, timestamp)
         await mempool.new_peak(rec, None)
