@@ -5,6 +5,7 @@ import logging
 import time
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
+from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
@@ -93,25 +94,54 @@ def validate_clvm_and_signature(
     return None, bytes(result), new_cache_entries
 
 
+@dataclass
+class TimelockConditions:
+    assert_height: uint32 = uint32(0)
+    assert_before_height: Optional[uint32] = None
+    assert_before_seconds: Optional[uint64] = None
+
+
 def compute_assert_height(
     removal_coin_records: Dict[bytes32, CoinRecord],
     conds: SpendBundleConditions,
-) -> uint32:
+) -> TimelockConditions:
     """
-    Computes the most restrictive height assertion in the spend bundle. Relative
-    height assertions are resolved using the confirmed heights from the coin
-    records.
+    Computes the most restrictive height- and seconds assertion in the spend bundle.
+    Relative heights and times are resolved using the confirmed heights and
+    timestamps from the coin records.
     """
 
-    height: uint32 = uint32(conds.height_absolute)
+    ret = TimelockConditions()
+    ret.assert_height = uint32(conds.height_absolute)
+    ret.assert_before_height = (
+        uint32(conds.before_height_absolute) if conds.before_height_absolute is not None else None
+    )
+    ret.assert_before_seconds = (
+        uint64(conds.before_seconds_absolute) if conds.before_seconds_absolute is not None else None
+    )
 
     for spend in conds.spends:
-        if spend.height_relative is None:
-            continue
-        h = uint32(removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.height_relative)
-        height = max(height, h)
+        if spend.height_relative is not None:
+            h = uint32(removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.height_relative)
+            ret.assert_height = max(ret.assert_height, h)
 
-    return height
+        if spend.before_height_relative is not None:
+            h = uint32(
+                removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.before_height_relative
+            )
+            if ret.assert_before_height is not None:
+                ret.assert_before_height = min(ret.assert_before_height, h)
+            else:
+                ret.assert_before_height = h
+
+        if spend.before_seconds_relative is not None:
+            s = uint64(removal_coin_records[bytes32(spend.coin_id)].timestamp + spend.before_seconds_relative)
+            if ret.assert_before_seconds is not None:
+                ret.assert_before_seconds = min(ret.assert_before_seconds, s)
+            else:
+                ret.assert_before_seconds = s
+
+    return ret
 
 
 class MempoolManager:
@@ -487,7 +517,7 @@ class MempoolManager:
 
         assert_height: Optional[uint32] = None
         if tl_error:
-            assert_height = compute_assert_height(removal_record_dict, npc_result.conds)
+            assert_height = compute_assert_height(removal_record_dict, npc_result.conds).assert_height
 
         potential = MempoolItem(new_spend, uint64(fees), npc_result, spend_name, first_added_height, assert_height)
 

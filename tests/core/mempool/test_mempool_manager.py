@@ -11,7 +11,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
-from chia.full_node.mempool_manager import MempoolManager, can_replace, compute_assert_height
+from chia.full_node.mempool_manager import MempoolManager, TimelockConditions, can_replace, compute_assert_height
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -223,13 +223,21 @@ class TestCheckTimeLocks:
         )
 
 
-def expect(*, height: int = 0) -> uint32:
-    return uint32(height)
+def expect(
+    *, height: int = 0, before_height: Optional[int] = None, before_seconds: Optional[int] = None
+) -> TimelockConditions:
+    ret = TimelockConditions(uint32(height))
+    if before_height is not None:
+        ret.assert_before_height = uint32(before_height)
+    if before_seconds is not None:
+        ret.assert_before_seconds = uint64(before_seconds)
+    return ret
 
 
 @pytest.mark.parametrize(
     "conds,expected",
     [
+        # ASSERT_HEIGHT_*
         # coin birth height is 12
         (make_test_conds(), expect()),
         (make_test_conds(height_absolute=42), expect(height=42)),
@@ -241,10 +249,42 @@ def expect(*, height: int = 0) -> uint32:
         (make_test_conds(height_absolute=42, height_relative=100), expect(height=112)),
         # Same thing but without the absolute height
         (make_test_conds(height_relative=100), expect(height=112)),
+        (make_test_conds(height_relative=0), expect(height=12)),
+        # 42 is more restrictive than 13
+        (make_test_conds(height_absolute=42, height_relative=1), expect(height=42)),
+        # ASSERT_BEFORE_HEIGHT_*
+        (make_test_conds(before_height_absolute=100), expect(before_height=100)),
+        # coin is created at 12 + 1 relative height = 13
+        (make_test_conds(before_height_relative=1), expect(before_height=13)),
+        # coin is created at 12 + 0 relative height = 12
+        (make_test_conds(before_height_relative=0), expect(before_height=12)),
+        # 13 is more restrictive than 42
+        (make_test_conds(before_height_absolute=42, before_height_relative=1), expect(before_height=13)),
+        # 100 is a relative height, and since the coin was confirmed at height 12,
+        # that's 112
+        (make_test_conds(before_height_absolute=200, before_height_relative=100), expect(before_height=112)),
+        # Same thing but without the absolute height
+        (make_test_conds(before_height_relative=100), expect(before_height=112)),
+        # ASSERT_BEFORE_SECONDS_*
+        # coin timestamp is 10000
+        # single absolute assert before seconds
+        (make_test_conds(before_seconds_absolute=20000), expect(before_seconds=20000)),
+        # coin is created at 10000 + 100 relative seconds = 10100
+        (make_test_conds(before_seconds_relative=100), expect(before_seconds=10100)),
+        # coin is created at 10000 + 0 relative seconds = 10000
+        (make_test_conds(before_seconds_relative=0), expect(before_seconds=10000)),
+        # 10100 is more restrictive than 20000
+        (make_test_conds(before_seconds_absolute=20000, before_seconds_relative=100), expect(before_seconds=10100)),
+        # 20000 is a relative seconds, and since the coin was confirmed at seconds
+        # 10000 that's 300000
+        (make_test_conds(before_seconds_absolute=20000, before_seconds_relative=20000), expect(before_seconds=20000)),
+        # Same thing but without the absolute seconds
+        (make_test_conds(before_seconds_relative=20000), expect(before_seconds=30000)),
     ],
 )
-def test_compute_assert_height(conds: SpendBundleConditions, expected: uint32) -> None:
+def test_compute_assert_height(conds: SpendBundleConditions, expected: TimelockConditions) -> None:
     coin_id = TEST_COIN.name()
+
     confirmed_height = uint32(12)
     coin_records = {coin_id: CoinRecord(TEST_COIN, confirmed_height, uint32(0), False, uint64(10000))}
 
