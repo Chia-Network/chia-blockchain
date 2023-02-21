@@ -917,9 +917,9 @@ class WalletNode:
         await self.update_ui()
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
-    async def is_peer_synced(self, peer: WSChiaConnection, header_block: HeaderBlock) -> Optional[uint64]:
+    async def is_peer_synced(self, peer: WSChiaConnection, height: uint32) -> Optional[uint64]:
         # Get last timestamp
-        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(header_block.height, peer)
+        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
         latest_timestamp: Optional[uint64] = None
         if last_tx is not None:
             assert last_tx.foliage_transaction_block is not None
@@ -1023,7 +1023,7 @@ class WalletNode:
         if self._server is None:
             return False
         for peer in self.server.get_connections(NodeType.FULL_NODE):
-            if self.is_trusted(peer) and await self.is_peer_synced(peer, header_block):
+            if self.is_trusted(peer) and await self.is_peer_synced(peer, header_block.height):
                 return True
         return False
 
@@ -1086,7 +1086,7 @@ class WalletNode:
             # dont disconnect from peer, this might be a reorg
             return
 
-        latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, new_peak_hb)
+        latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, new_peak_hb.height)
         if latest_timestamp is None:
             if trusted:
                 self.log.debug(f"Trusted peer {peer.get_peer_info()} is not synced.")
