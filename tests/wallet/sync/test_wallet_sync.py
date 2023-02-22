@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from secrets import token_bytes
 from typing import List, Optional, Set
 from unittest.mock import MagicMock
 
@@ -20,6 +21,7 @@ from chia.server.outbound_message import Message, make_msg
 from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -42,6 +44,10 @@ async def wallet_height_at_least(wallet_node, h):
     if height == h:
         return True
     return False
+
+
+async def local_node_synced(wallet_node):
+    return wallet_node.local_node_synced
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
@@ -1338,3 +1344,72 @@ class TestWalletSync:
         await asyncio.sleep(3)
         assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
+
+    @pytest.mark.asyncio
+    async def test_long_sync_untrusted_break(
+        self, setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname
+    ):
+        full_nodes, wallets, bt = setup_two_nodes_and_wallet
+        trusted_full_node_api = full_nodes[0]
+        trusted_full_node_server = trusted_full_node_api.full_node.server
+        untrusted_full_node_api = full_nodes[1]
+        untrusted_full_node_server = untrusted_full_node_api.full_node.server
+        wallet = wallets[0][0]
+        # Trusted node sync
+        wallet.config["trusted_peers"] = {
+            trusted_full_node_server.node_id.hex(): trusted_full_node_server.node_id.hex()
+        }
+        for i in range(0, 100000):
+            coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(i))
+            await wallet.wallet_state_manager.interested_store.add_interested_coin_id(coin_1.name())
+            await wallet.wallet_state_manager.interested_store.add_interested_puzzle_hash(token_bytes(32), 0)
+
+        for block in default_400_blocks:
+            await trusted_full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        for block in default_1000_blocks[:400]:
+            await untrusted_full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        wallet_node, wallet_server = wallets[0]
+
+        coin_1 = Coin(
+            bytes32(bytes.fromhex("d56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098")),
+            bytes32(bytes.fromhex("9944f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3")),
+            uint64(6602327684212801382),
+        )
+
+        states = [
+            wallet_protocol.CoinState(
+                coin_1,
+                uint32(2287030048),
+                uint32(3361305811),
+            )
+        ]
+
+        response = wallet_protocol.RespondToCoinUpdates(
+            [bytes32(bytes.fromhex("d56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098"))], 0, states
+        )
+        msg1 = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
+
+        response = wallet_protocol.RespondToPhUpdates(
+            [bytes32(bytes.fromhex("d56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098"))], 0, states
+        )
+        msg2 = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
+
+        async def register_coins_mock():
+            await asyncio.sleep(5)
+            return msg1
+
+        async def register_ph_mock():
+            await asyncio.sleep(5)
+            return msg2
+
+        untrusted_full_node_api.register_interest_in_coin = MagicMock(return_value=register_coins_mock())
+        untrusted_full_node_api.register_interest_in_puzzle_hash = MagicMock(return_value=register_ph_mock())
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(untrusted_full_node_server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(trusted_full_node_server._port)), None)
+
+        await time_out_assert(600, local_node_synced, True, wallet_node)
+        assert trusted_full_node_server.node_id in wallet_node.synced_peers
+        assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
