@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_record import BlockRecord, BlockRecordHeaderHash
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -378,7 +378,7 @@ class Blockchain(BlockchainInterface):
             if fetched_full_block.height == 0:
                 # Doing a full reorg, starting at height 0
                 break
-            curr = fetched_block_record.prev_hash
+            curr = BlockRecordHeaderHash(fetched_block_record.prev_hash)
 
         records_to_add: List[BlockRecord] = []
         npc_results: List[NPCResult] = []

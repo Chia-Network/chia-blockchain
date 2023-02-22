@@ -9,7 +9,7 @@ from typing import Iterator, List
 
 from utils import setup_db
 
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_record import BlockRecord, BlockRecordHeaderHash
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.coin_store import CoinStore
@@ -47,7 +47,7 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
 
 def fake_block_record(block_height: uint32, timestamp: uint64) -> BlockRecord:
     return BlockRecord(
-        bytes32(b"a" * 32),  # header_hash
+        BlockRecordHeaderHash(bytes32(b"a" * 32)),  # header_hash
         bytes32(b"b" * 32),  # prev_hash
         block_height,  # height
         uint128(0),  # weight
