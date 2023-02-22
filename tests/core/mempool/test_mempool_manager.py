@@ -7,6 +7,7 @@ from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
@@ -55,10 +56,16 @@ async def get_coin_record_for_test_coins(coin_id: bytes32) -> Optional[CoinRecor
     return test_coin_records.get(coin_id)
 
 
+def height_hash(height: int) -> bytes32:
+    return bytes32(height.to_bytes(32, byteorder="big"))
+
+
 def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 = TEST_TIMESTAMP) -> BlockRecord:
+    header_hash = height_hash(height)
+    prev_hash = height_hash(height - 1)
     return BlockRecord(
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
+        header_hash,
+        prev_hash,
         height,
         uint128(0),
         uint128(0),
@@ -75,7 +82,7 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 
         False,
         uint32(height - 1),
         timestamp,
-        None,
+        prev_hash,
         uint64(0),
         None,
         None,
@@ -536,3 +543,97 @@ async def test_get_items_not_in_filter() -> None:
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
     assert result == [sb1]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("new_height_step", [1, 2, -1])
+@pytest.mark.parametrize("conflict_on", ["spend", "assert_height"])
+async def test_new_peak_conflict_and_pending_cache_promotion(new_height_step: int, conflict_on: str) -> None:
+    # This test covers promoting a conflicting item from the cache, because:
+    # 1. The accepted item gets removed as its assert height becomes no longer valid
+    # 2. The accepted item gets removed as it spends a coin that became spent already
+    coin1 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, 100)
+    coin2 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, 200)
+    coin3 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, 300)
+    test_coin_records = {
+        coin1.name(): CoinRecord(coin1, uint32(0), uint32(0), False, uint64(0)),
+        coin2.name(): CoinRecord(coin2, uint32(0), uint32(0), False, uint64(0)),
+        coin3.name(): CoinRecord(coin3, uint32(0), uint32(0), False, uint64(0)),
+    }
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    # Add an item that spends coins 1 and 2
+    g1 = G1Element()
+    sb1 = spend_bundle_from_conditions([[ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH]], coin1)
+    sb2 = spend_bundle_from_conditions(
+        [
+            [ConditionOpcode.ASSERT_HEIGHT_RELATIVE, TEST_HEIGHT],
+            [ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH],
+        ],
+        coin2,
+    )
+    sb12 = SpendBundle.aggregate([sb1, sb2])
+    sb12_name = sb12.name()
+    result = await add_spendbundle(mempool_manager, sb12, sb12_name)
+    assert result[1] == MempoolInclusionStatus.SUCCESS
+    # Send an item that spends coins 1 and 3
+    sb3 = spend_bundle_from_conditions([[ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH]], coin3)
+    sb13 = SpendBundle.aggregate([sb1, sb3])
+    sb13_name = sb13.name()
+    # Because this item spends coin 1, which the first item does as well, it becomes
+    # pending and gets added to the conflict cache
+    _, status, error = await add_spendbundle(mempool_manager, sb13, sb13_name)
+    assert (status, error) == (MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+    assert mempool_manager._conflict_cache.get(sb12_name) is None
+    assert mempool_manager._conflict_cache.get(sb13_name) is not None
+    # Make sure the first item is in the mempool but the second is not there yet
+    assert mempool_manager.get_spendbundle(sb12_name) == sb12
+    assert mempool_manager.get_spendbundle(sb13_name) is None
+    if conflict_on == "spend":
+        # Setup a new block that marks coin 2 as spent, so the first item gets
+        # removed because of it, and the conflicting one no longer conflicts with it
+        # Mark coin 2 as spent
+        test_coin_records[coin2.name()] = CoinRecord(coin2, uint32(0), TEST_HEIGHT, False, uint64(0))
+        npc_result = NPCResult(
+            None,
+            SpendBundleConditions(
+                [Spend(coin2.name(), IDENTITY_PUZZLE_HASH, None, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+            ),
+            uint64(0),
+        )
+    elif conflict_on == "assert_height":
+        npc_result = NPCResult(
+            None,
+            SpendBundleConditions([], 0, 0, 0, None, None, [], 0),
+            uint64(0),
+        )
+    new_height = uint32(TEST_HEIGHT + new_height_step)
+    block_record = create_test_block_record(height=new_height)
+    await mempool_manager.new_peak(block_record, npc_result)
+    if conflict_on == "spend":
+        # Make sure the first item is no longer in the mempool
+        assert mempool_manager.get_spendbundle(sb12_name) is None
+        # Make sure the second item gets promoted to mempool
+        assert mempool_manager.get_spendbundle(sb13_name) is sb13
+        # Make sure the conflict cache includes neither
+        assert mempool_manager._conflict_cache.get(sb12_name) is None
+        assert mempool_manager._conflict_cache.get(sb13_name) is None
+    elif conflict_on == "assert_height":
+        if new_height_step < 0:
+            # Make sure the first item gets demoted to pending
+            assert mempool_manager._pending_cache.get(sb12_name) is not None
+            # Make sure the second item gets promoted to mempool
+            assert mempool_manager.get_spendbundle(sb13_name) is sb13
+            # Make sure the conflict cache includes neither
+            assert mempool_manager._conflict_cache.get(sb12_name) is None
+            assert mempool_manager._conflict_cache.get(sb13_name) is None
+        else:
+            # Make sure the first item stays in the mempool
+            assert mempool_manager.get_spendbundle(sb12_name) == sb12
+            assert mempool_manager._conflict_cache.get(sb12_name) is None
+            #  Make sure the second item is still conflicting
+            assert mempool_manager.get_spendbundle(sb13_name) is None
+            assert mempool_manager._conflict_cache.get(sb13_name) is not None
