@@ -10,13 +10,12 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram, run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
@@ -273,7 +272,7 @@ class TestCostCalculation:
         with assert_runtime(seconds=0.1, label=request.node.name):
             total_cost = 0
             for i in range(0, 1000):
-                cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+                cost, result = run_chia_program(puzzle_program, solution_program)
                 total_cost += cost
 
 
@@ -289,9 +288,7 @@ async def test_get_puzzle_and_solution_for_coin_performance():
     spends: List[Coin] = []
 
     # first, list all spent coins in the block
-    cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []
-    )
+    cost, result = run_chia_program(LARGE_BLOCK.transactions_generator, DESERIALIZE_MOD, [])
 
     coin_spends = result.first()
     for spend in coin_spends.as_iter():

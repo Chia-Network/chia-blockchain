@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs import compute_merkle_set_root
+from chia_rs import MEMPOOL_MODE, compute_merkle_set_root
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -74,7 +74,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
@@ -84,6 +84,7 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from chia.types.blockchain_format.serialized_program import run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
@@ -149,7 +150,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
     for cs in sb.coin_spends:
 
         parent_id = cs.coin.name()
-        _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+        _, r = run_chia_program(cs.puzzle_reveal, cs.solution)
         for cond in Program.to(r).as_iter():
             atoms = cond.as_iter()
             op = next(atoms).atom
@@ -1719,7 +1720,7 @@ def get_full_block_and_block_record(
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
+        clvm_cost, result = run_chia_program(GENERATOR_MOD, block_program, block_program_args, flags=MEMPOOL_MODE)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 

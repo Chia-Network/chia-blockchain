@@ -5,7 +5,7 @@ from typing import Dict, List
 from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST
+from chia.types.blockchain_format.serialized_program import run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -13,7 +13,7 @@ from chia.types.spend_bundle import SpendBundle
 
 
 def compute_memos_for_spend(coin_spend: CoinSpend) -> Dict[bytes32, List[bytes]]:
-    _, result = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
+    _, result = run_chia_program(coin_spend.puzzle_reveal, coin_spend.solution)
     memos: Dict[bytes32, List[bytes]] = {}
     for condition in result.as_python():
         if condition[0] == ConditionOpcode.CREATE_COIN and len(condition) >= 4:

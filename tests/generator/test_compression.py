@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any, List, Tuple
 from unittest import TestCase
 
 from clvm import SExp
@@ -18,16 +18,19 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
     spend_bundle_to_serialized_coin_spend_entry_list,
 )
-from chia.full_node.generator import create_generator_args, run_generator_unsafe
+from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram, run_chia_program
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 from tests.core.make_block_generator import make_spend_bundle
+
+GENERATOR_MOD = get_generator()
 
 TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_requirement="chia.wallet.puzzles")
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -51,6 +54,12 @@ gen1 = b"aaaaaaaaaa" + original_generator
 gen2 = b"bb" + original_generator
 FAKE_BLOCK_HEIGHT1 = uint32(100)
 FAKE_BLOCK_HEIGHT2 = uint32(200)
+
+
+def run_generator_unsafe(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
+    """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
+    program, args = setup_generator_args(self)
+    return run_chia_program(GENERATOR_MOD, program, args, max_cost=max_cost)
 
 
 @dataclass(frozen=True)

@@ -9,7 +9,8 @@ from clvm_tools.binutils import disassemble
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions_with_cost
 from chia.types.spend_bundle import SpendBundle
@@ -360,7 +361,7 @@ class Offer:
             coin_names.append(name)
             dependencies[name] = []
             announcements[name] = []
-            conditions: Program = spend.puzzle_reveal.run_with_cost(INFINITE_COST, spend.solution)[1]
+            conditions: Program = run_chia_program(spend.puzzle_reveal, spend.solution)[1]
             for condition in conditions.as_iter():
                 if condition.first() == 60:  # create coin announcement
                     announcements[name].append(Announcement(name, condition.at("rf").as_python()).name())

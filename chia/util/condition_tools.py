@@ -6,7 +6,7 @@ from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram, run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -154,7 +154,7 @@ def conditions_for_solution(
 ) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
-        cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
+        cost, r = run_chia_program(puzzle_reveal, solution, max_cost=max_cost)
         error, result = parse_sexp_to_conditions(r)
         return error, result, uint64(cost)
     except Program.EvalError:

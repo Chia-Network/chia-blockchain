@@ -8,7 +8,8 @@ from clvm_tools import binutils
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -31,7 +32,7 @@ POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00
 
 def check_coin_spend(coin_spend: CoinSpend):
     try:
-        cost, result = coin_spend.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend.solution)
+        cost, result = run_chia_program(coin_spend.puzzle_reveal, coin_spend.solution)
     except Exception as ex:
         print(ex)
 
