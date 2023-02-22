@@ -43,7 +43,7 @@ class NotificationStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
+                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY, msg blob, amount blob)"
             )
 
             await conn.execute("CREATE TABLE IF NOT EXISTS all_notification_ids(coin_id blob PRIMARY KEY)")
@@ -68,7 +68,7 @@ class NotificationStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount, height) " "VALUES(?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO notifications (coin_id, msg, amount, height) VALUES(?, ?, ?, ?)",
                 (
                     notification.coin_id,
                     notification.message,

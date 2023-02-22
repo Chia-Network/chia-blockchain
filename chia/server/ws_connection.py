@@ -350,7 +350,7 @@ class WSChiaConnection:
             if self.received_message_callback is not None:
                 await self.received_message_callback(self)
             self.log.debug(
-                f"<- {ProtocolMessageTypes(full_message.type).name} from peer " f"{self.peer_node_id} {self.peer_host}"
+                f"<- {ProtocolMessageTypes(full_message.type).name} from peer {self.peer_node_id} {self.peer_host}"
             )
             message_type = ProtocolMessageTypes(full_message.type).name
 

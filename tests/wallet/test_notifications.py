@@ -30,10 +30,10 @@ async def test_notification_store_backwards_compat() -> None:
     try:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
+                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
             )
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount) " "VALUES(?, ?, ?)",
+                "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
                 (
                     bytes32([0] * 32),
                     bytes([0] * 10),

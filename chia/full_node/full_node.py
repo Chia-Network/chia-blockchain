@@ -988,7 +988,7 @@ class FullNode:
             self.log.info(f"Total of {len(peers_with_peak)} peers with peak {target_peak.height}")
             weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
             self.log.info(
-                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height" f" {target_peak.height}"
+                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height {target_peak.height}"
             )
             cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if cur_peak is not None and target_peak.weight <= cur_peak.weight:
@@ -1707,7 +1707,7 @@ class FullNode:
 
                 elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
                     self.log.info(
-                        f"Received orphan block of height {block.height} rh " f"{block.reward_chain_block.get_hash()}"
+                        f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
                     )
                 else:
                     # Should never reach here, all the cases are covered
@@ -2263,9 +2263,7 @@ class FullNode:
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
                 self.mempool_manager.remove_seen(spend_name)
-                self.log.debug(
-                    f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
-                )
+                self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")
         return status, error
 
     async def _needs_compact_proof(

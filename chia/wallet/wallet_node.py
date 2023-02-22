@@ -892,7 +892,7 @@ class WalletNode:
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
-                        self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                        self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
                     except Exception as e:
                         tb = traceback.format_exc()

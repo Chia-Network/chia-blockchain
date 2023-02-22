@@ -257,7 +257,7 @@ class TestCostCalculation:
     async def test_standard_tx(self, request: pytest.FixtureRequest):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
-            "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
+            "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
         )
         puzzle_program = SerializedProgram.from_bytes(
             p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))
