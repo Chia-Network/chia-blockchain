@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from clvm.casts import int_from_bytes
 
@@ -29,7 +29,11 @@ class CoinSpend(Streamable):
     solution: SerializedProgram
 
 
-def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
+def compute_additions_with_cost(
+    cs: CoinSpend,
+    *,
+    max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+) -> Tuple[List[Coin], int]:
     """
     Run the puzzle in the specified CoinSpend and return the cost and list of
     coins created by the puzzle, i.e. additions. If the cost (CLVM- and
@@ -55,4 +59,9 @@ def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BL
         puzzle_hash = next(atoms).atom
         amount = int_from_bytes(next(atoms).atom)
         ret.append(Coin(parent_id, puzzle_hash, amount))
-    return ret
+
+    return ret, cost
+
+
+def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
+    return compute_additions_with_cost(cs, max_cost=max_cost)[0]
