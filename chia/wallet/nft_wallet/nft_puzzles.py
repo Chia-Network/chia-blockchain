@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint64

@@ -417,8 +417,13 @@ full_node:
 
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
-  dns_servers:
+  dns_servers: &dns_servers
     - "dns-introducer.chia.net"
+    - "chia.ctrlaltdel.ch"
+    - "seeder.dexie.space"
+    - "chia-seeder.h9.com"
+    - "chia.hoffmang.com"
+    - "seeder.xchpool.org"
   farmer_peer:
       host: *self_hostname
       port: 8447
@@ -502,8 +507,7 @@ wallet:
 
   initial_num_public_keys: 425
 
-  dns_servers:
-    - "dns-introducer.chia.net"
+  dns_servers: *dns_servers
 
   full_node_peer:
     host: *self_hostname
@@ -564,6 +568,9 @@ wallet:
 
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
+
+  # Reset wallet sync data on start for given fingerprint
+  reset_sync_for_fingerprint: null
 
   # After n received unspent transactions, the spam filter will be enabled, which will filter out received
   # coins with very small value. Any standard TX under xch_spam_amount is filtered

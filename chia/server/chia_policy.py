@@ -11,7 +11,7 @@ if sys.platform == "win32":
     import _overlapped
     import _winapi
 
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, Tuple, Union
 
 from typing_extensions import Protocol, TypeAlias
 
@@ -53,7 +53,10 @@ if TYPE_CHECKING:
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L278
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L27
     class BaseEventsServer(asyncio.base_events.Server):
-        _loop: EventsAbstractEventLoop
+        if sys.platform == "win32" and sys.version_info >= (3, 8):
+            _loop: ChiaProactorEventLoop
+        else:
+            _loop: EventsAbstractEventLoop
         _sockets: Iterable[socket.socket]
         _active_count: int
         _protocol_factory: _ProtocolFactory
@@ -70,8 +73,43 @@ if TYPE_CHECKING:
         def _start_serving(self) -> None:
             ...
 
+    if sys.platform == "win32":
+        # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L48
+        class _OverlappedFuture(asyncio.Future[Any]):
+            ...
+
+        # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L410
+        # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L44
+        class IocpProactor(asyncio.windows_events.IocpProactor):
+            _loop: Optional[asyncio.events.AbstractEventLoop]
+
+            def _register_with_iocp(self, obj: object) -> None:
+                ...
+
+            def _register(
+                self,
+                ov: _overlapped.Overlapped,
+                obj: socket.socket,
+                callback: Callable[[object, socket.socket, _overlapped.Overlapped], Tuple[socket.socket, object]],
+            ) -> _OverlappedFuture:
+                ...
+
+            def _get_accept_socket(self, family: socket.AddressFamily) -> socket.socket:
+                ...
+
+        # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L309
+        # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L35
+        class ProactorEventLoop(asyncio.windows_events.ProactorEventLoop):
+            # Actually provided on BaseProactorEventLoop
+            # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/proactor_events.py#L627
+            # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/proactor_events.pyi#L75
+            _proactor: Any
+
 else:
     BaseEventsServer = asyncio.base_events.Server
+    if sys.platform == "win32":
+        IocpProactor = asyncio.windows_events.IocpProactor
+        ProactorEventLoop = asyncio.windows_events.ProactorEventLoop
 
 
 class PausableServer(BaseEventsServer):
@@ -209,20 +247,20 @@ class ChiaSelectorEventLoop(asyncio.SelectorEventLoop):
 
 if sys.platform == "win32":
 
-    class ChiaProactor(asyncio.windows_events.IocpProactor):
+    class ChiaProactor(IocpProactor):
         allow_connections: bool
 
-        def __init__(self, *args, **kwargs) -> None:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             super().__init__(*args, **kwargs)
             self.allow_connections = True
 
-        def enable_connections(self):
+        def enable_connections(self) -> None:
             self.allow_connections = True
 
-        def disable_connections(self):
+        def disable_connections(self) -> None:
             self.allow_connections = False
 
-        async def _chia_accept_loop(self, listener):
+        async def _chia_accept_loop(self, listener: socket.socket) -> Tuple[socket.socket, Tuple[object, ...]]:
             while True:
                 # TODO: switch to Event code.
                 while not self.allow_connections:
@@ -234,13 +272,15 @@ if sys.platform == "win32":
                     if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
                         raise
 
-        def _chia_accept(self, listener):
+        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
             self._register_with_iocp(listener)
-            conn = self._get_accept_socket(listener.family)
+            conn = self._get_accept_socket(listener.family)  # pylint: disable=assignment-from-no-return
             ov = _overlapped.Overlapped(_winapi.NULL)
             ov.AcceptEx(listener.fileno(), conn.fileno())
 
-            def finish_accept(trans, key, ov):
+            def finish_accept(
+                trans: object, key: socket.socket, ov: _overlapped.Overlapped
+            ) -> Tuple[socket.socket, object]:
                 ov.getresult()
                 # Use SO_UPDATE_ACCEPT_CONTEXT so getsockname() etc work.
                 buf = struct.pack("@P", listener.fileno())
@@ -248,7 +288,7 @@ if sys.platform == "win32":
                 conn.settimeout(listener.gettimeout())
                 return conn, conn.getpeername()
 
-            async def accept_coro(self, future, conn):
+            async def accept_coro(self: ChiaProactor, future: asyncio.Future[object], conn: socket.socket) -> None:
                 # Coroutine closing the accept socket if the future is cancelled
                 try:
                     await future
@@ -260,16 +300,16 @@ if sys.platform == "win32":
                     if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
                         raise
 
-            future = self._register(ov, listener, finish_accept)
+            future = self._register(ov, listener, finish_accept)  # pylint: disable=assignment-from-no-return
             coro = accept_coro(self, future, conn)
             asyncio.ensure_future(coro, loop=self._loop)
             return future
 
-        def accept(self, listener):
+        def accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
             coro = self._chia_accept_loop(listener)
             return asyncio.ensure_future(coro)
 
-    class ChiaProactorEventLoop(asyncio.windows_events.ProactorEventLoop):
+    class ChiaProactorEventLoop(ProactorEventLoop):
         # Ignoring lack of typing (via Any) since we are passing through and also never
         # call this ourselves.  There may be a good solution if needed in the future.
         # It would be better to use a real ignore since then we would get a complaint
@@ -283,10 +323,10 @@ if sys.platform == "win32":
             proactor = ChiaProactor()
             super().__init__(proactor=proactor)
 
-        def enable_connections(self):
+        def enable_connections(self) -> None:
             self._proactor.enable_connections()
 
-        def disable_connections(self):
+        def disable_connections(self) -> None:
             self._proactor.disable_connections()
 
 

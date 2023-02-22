@@ -10,13 +10,14 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, T
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
+import chia.wallet.singleton
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
@@ -228,7 +229,7 @@ class NFTWallet:
             nft_puzzles.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
         )
         child_puzzle_hash = child_puzzle.get_tree_hash()
-        for new_coin in coin_spend.additions():
+        for new_coin in compute_additions(coin_spend):
             self.log.debug(
                 "Comparing addition: %s with %s, amount: %s ",
                 new_coin.puzzle_hash,
@@ -286,8 +287,8 @@ class NFTWallet:
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
-            num = await self.get_current_nfts()
-            if len(num) == 0 and self.did_id is not None:
+            num = await self.get_nft_count()
+            if num == 0 and self.did_id is not None:
                 # Check if the wallet owns the DID
                 for did_wallet in await self.wallet_state_manager.get_all_wallet_info_entries(
                     wallet_type=WalletType.DECENTRALIZED_ID
@@ -500,8 +501,8 @@ class NFTWallet:
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
-    async def get_current_nfts(self) -> List[NFTCoinInfo]:
-        return await self.nft_store.get_nft_list(wallet_id=self.id())
+    async def get_current_nfts(self, start_index: int = 0, count: int = 50) -> List[NFTCoinInfo]:
+        return await self.nft_store.get_nft_list(wallet_id=self.id(), start_index=start_index, count=count)
 
     async def get_nft_count(self) -> int:
         return await self.nft_store.count(wallet_id=self.id())
@@ -1052,7 +1053,9 @@ class NFTWallet:
 
                         if duplicate_payments != []:
                             payments = duplicate_payments
-                            royalty_coin = next(c for c in new_coin_spend.additions() if c.puzzle_hash == royalty_ph)
+                            royalty_coin = next(
+                                c for c in compute_additions(new_coin_spend) if c.puzzle_hash == royalty_ph
+                            )
                             parent_spend = new_coin_spend
                             continue
                         else:
@@ -1296,7 +1299,7 @@ class NFTWallet:
         for mint_number in range(mint_number_start, mint_number_end):
             # Create  the puzzle, solution and coin spend for the intermediate launcher
             intermediate_launcher_puz = did_wallet_puzzles.INTERMEDIATE_LAUNCHER_MOD.curry(
-                did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, mint_total
+                chia.wallet.singleton.LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
             intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
             primaries.append(
@@ -1322,7 +1325,7 @@ class NFTWallet:
             did_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
             # Create the launcher coin, and add its id to a list to be asserted in the DID spend
-            launcher_coin = Coin(intermediate_launcher_coin.name(), did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, amount)
+            launcher_coin = Coin(intermediate_launcher_coin.name(), chia.wallet.singleton.LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
 
             # Grab the metadata from metadata_list. The index for metadata_list
@@ -1347,7 +1350,7 @@ class NFTWallet:
 
             genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
 
-            launcher_cs = CoinSpend(launcher_coin, did_wallet_puzzles.LAUNCHER_PUZZLE, genesis_launcher_solution)
+            launcher_cs = CoinSpend(launcher_coin, chia.wallet.singleton.LAUNCHER_PUZZLE, genesis_launcher_solution)
             launcher_spends.append(launcher_cs)
 
             eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))
@@ -1441,7 +1444,7 @@ class NFTWallet:
             puzzle_announcements_to_assert=puzzle_assertions,
         )
         did_inner_sol: Program = Program.to([1, did_p2_solution])
-        did_full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+        did_full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
             innerpuz,
             did_wallet.did_info.origin_coin.name(),
         )

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import random
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -12,9 +14,10 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -37,6 +40,45 @@ BlockRecord objects for trimmed down versions.
 There is also a provided NodeClient object which implements many of the methods from chia.rpc.full_node_rpc_client
 and is designed so that you could test with it and then swap in a real rpc client that uses the same code you tested.
 """
+
+
+@asynccontextmanager
+async def sim_and_client(
+    db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
+) -> AsyncIterator[Tuple[SpendSim, SimClient]]:
+    sim: SpendSim = await SpendSim.create(db_path, defaults)
+    try:
+        client: SimClient = SimClient(sim)
+        if pass_prefarm:
+            await sim.farm_block()
+        yield sim, client
+    finally:
+        await sim.close()
+
+
+class CostLogger:
+    def __init__(self) -> None:
+        self.cost_dict: Dict[str, int] = {}
+        self.cost_dict_no_puzs: Dict[str, int] = {}
+
+    def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
+        program: BlockGenerator = simple_solution_generator(spend_bundle)
+        npc_result: NPCResult = get_name_puzzle_conditions(
+            program, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, mempool_mode=True
+        )
+        self.cost_dict[descriptor] = npc_result.cost
+        cost_to_subtract: int = 0
+        for cs in spend_bundle.coin_spends:
+            cost_to_subtract += len(bytes(cs.puzzle_reveal)) * DEFAULT_CONSTANTS.COST_PER_BYTE
+        self.cost_dict_no_puzs[descriptor] = npc_result.cost - cost_to_subtract
+        return spend_bundle
+
+    def log_cost_statistics(self) -> str:
+        merged_dict = {
+            "standard cost": self.cost_dict,
+            "no puzzle reveals": self.cost_dict_no_puzs,
+        }
+        return json.dumps(merged_dict, indent=4)
 
 
 @streamable

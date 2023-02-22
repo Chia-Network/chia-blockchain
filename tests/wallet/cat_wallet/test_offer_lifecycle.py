@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 from blspy import G2Element
 
+from chia.clvm.spend_sim import sim_and_client
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -24,7 +25,6 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
-from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -166,13 +166,9 @@ def generate_secure_bundle(
 
 
 class TestOfferLifecycle:
-    cost: Dict[str, int] = {}
-
     @pytest.mark.asyncio()
-    async def test_complex_offer(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    async def test_complex_offer(self, cost_logger):
+        async with sim_and_client() as (sim, sim_client):
             coins_needed: Dict[Optional[str], List[int]] = {
                 None: [500, 400, 300],
                 "red": [250, 100],
@@ -334,16 +330,6 @@ class TestOfferLifecycle:
             arbitrage_ph: bytes32 = Program.to([3, [], [], 1]).get_tree_hash()
             offer_bundle: SpendBundle = new_offer.to_valid_spend(arbitrage_ph)
 
-            result = await sim_client.push_tx(offer_bundle)
+            result = await sim_client.push_tx(cost_logger.add_cost("Complex Offer", offer_bundle))
             assert result == (MempoolInclusionStatus.SUCCESS, None)
-            self.cost["complex offer"] = cost_of_spend_bundle(offer_bundle)
             await sim.farm_block()
-        finally:
-            await sim.close()
-
-    def test_cost(self):
-        import json
-        import logging
-
-        log = logging.getLogger(__name__)
-        log.warning(json.dumps(self.cost))

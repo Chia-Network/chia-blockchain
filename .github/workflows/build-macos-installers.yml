@@ -142,8 +142,10 @@ jobs:
 
       - name: Get latest prerelease bladebit plotter
         if: env.PRE_RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          PRERELEASE_URL=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
           mkdir "$GITHUB_WORKSPACE/bladebit"
           wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
           tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
@@ -151,8 +153,10 @@ jobs:
 
       - name: Get latest full release bladebit plotter
         if: '!github.event.release.prerelease'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          FULLRELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease | not)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          FULLRELEASE_URL=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease | not)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
           mkdir "$GITHUB_WORKSPACE/bladebit"
           wget -O /tmp/bladebit.tar.gz $FULLRELEASE_URL
           tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit

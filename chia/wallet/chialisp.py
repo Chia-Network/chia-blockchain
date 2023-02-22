@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 def sexp(*argv):
-    return f'({f" ".join([str(arg) for arg in argv])})'
+    return f'({" ".join([str(arg) for arg in argv])})'
 
 
 def cons(a, b):

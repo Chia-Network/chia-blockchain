@@ -6,7 +6,8 @@ from clvm_tools.clvmc import compile_clvm_text
 from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.generator import run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
@@ -114,6 +115,8 @@ class TestROM:
             puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
             height_relative=None,
             seconds_relative=0,
+            before_height_relative=None,
+            before_seconds_relative=None,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
             flags=ELIGIBLE_FOR_DEDUP,

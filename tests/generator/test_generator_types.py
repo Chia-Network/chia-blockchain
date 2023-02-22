@@ -4,7 +4,8 @@ from typing import Dict
 from unittest import TestCase
 
 from chia.full_node.generator import create_block_generator, create_generator_args
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import GeneratorBlockCacheInterface
 from chia.util.ints import uint32
 

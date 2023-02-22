@@ -47,6 +47,7 @@ def create_wallet_service(
         service_config["trusted_peers"]["local_node"] = trusted_peer
     if "short_sync_blocks_behind_threshold" not in service_config:
         service_config["short_sync_blocks_behind_threshold"] = 20
+
     node = WalletNode(
         service_config,
         root_path,

@@ -18,9 +18,9 @@ from chia.util.ints import uint16, uint32
 
 class TestTransactions:
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node_sim_and_wallet, self_hostname):
+    async def test_wallet_coinbase(self, simulator_and_wallet, self_hostname):
         num_blocks = 5
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]

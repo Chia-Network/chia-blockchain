@@ -66,30 +66,33 @@ class PlotKeysResolver:
         if self.resolved_keys is not None:
             return self.resolved_keys
 
-        if self.connect_to_daemon:
-            keychain_proxy: Optional[KeychainProxy] = await connect_to_keychain_and_validate(self.root_path, self.log)
-        else:
-            keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
+        keychain_proxy: Optional[KeychainProxy] = None
+        try:
+            if self.connect_to_daemon:
+                keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            else:
+                keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
-        farmer_public_key: G1Element
-        if self.farmer_public_key is not None:
-            farmer_public_key = G1Element.from_bytes(bytes.fromhex(self.farmer_public_key))
-        else:
-            farmer_public_key = await self.get_farmer_public_key(keychain_proxy)
+            farmer_public_key: G1Element
+            if self.farmer_public_key is not None:
+                farmer_public_key = G1Element.from_bytes(bytes.fromhex(self.farmer_public_key))
+            else:
+                farmer_public_key = await self.get_farmer_public_key(keychain_proxy)
 
-        pool_public_key: Optional[G1Element] = None
-        if self.pool_public_key is not None:
-            if self.pool_contract_address is not None:
-                raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
-            pool_public_key = G1Element.from_bytes(bytes.fromhex(self.pool_public_key))
-        else:
-            if self.pool_contract_address is None:
-                # If nothing is set, farms to the provided key (or the first key)
-                pool_public_key = await self.get_pool_public_key(keychain_proxy)
+            pool_public_key: Optional[G1Element] = None
+            if self.pool_public_key is not None:
+                if self.pool_contract_address is not None:
+                    raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
+                pool_public_key = G1Element.from_bytes(bytes.fromhex(self.pool_public_key))
+            else:
+                if self.pool_contract_address is None:
+                    # If nothing is set, farms to the provided key (or the first key)
+                    pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
-        self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
-        if keychain_proxy is not None:
-            await keychain_proxy.close()
+            self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
+        finally:
+            if keychain_proxy is not None:
+                await keychain_proxy.close()
         return self.resolved_keys
 
     async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:

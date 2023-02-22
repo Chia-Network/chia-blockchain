@@ -134,45 +134,6 @@ async def setup_n_nodes(
         keyring.cleanup()
 
 
-async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants,
-    self_hostname: str,
-    key_seed: Optional[bytes32] = None,
-    db_version: int = 1,
-    disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[Tuple[FullNodeAPI, WalletNode, ChiaServer, ChiaServer, BlockTools], None]:
-    with TempKeyring(populate=True) as keychain:
-        btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
-        full_node_iter = setup_full_node(
-            consensus_constants,
-            "blockchain_test.db",
-            self_hostname,
-            btools,
-            simulator=False,
-            db_version=db_version,
-            disable_capabilities=disable_capabilities,
-        )
-
-        wallet_node_iter = setup_wallet_node(
-            btools.config["self_hostname"],
-            consensus_constants,
-            btools,
-            None,
-            key_seed=key_seed,
-        )
-
-        full_node_service = await full_node_iter.__anext__()
-        full_node_api = full_node_service._api
-        wallet_node_service = await wallet_node_iter.__anext__()
-        wallet = wallet_node_service._node
-        s2 = wallet_node_service._node.server
-
-        yield full_node_api, wallet, full_node_api.full_node.server, s2, btools
-
-        await _teardown_nodes([full_node_iter])
-        await _teardown_nodes([wallet_node_iter])
-
-
 async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
@@ -283,10 +244,10 @@ async def setup_simulators_and_wallets_inner(
             )
         )  # block tools modifies constants
         sim = setup_full_node(
-            bt_tools[index].constants,
-            bt_tools[index].config["self_hostname"],
-            db_name,
-            bt_tools[index],
+            consensus_constants=bt_tools[index].constants,
+            db_name=db_name,
+            self_hostname=bt_tools[index].config["self_hostname"],
+            local_bt=bt_tools[index],
             simulator=True,
             db_version=db_version,
             disable_capabilities=disable_capabilities,
