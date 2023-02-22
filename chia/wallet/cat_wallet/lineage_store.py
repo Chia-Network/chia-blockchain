@@ -27,7 +27,7 @@ class CATLineageStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY KEY," " lineage blob)")
+                (f"CREATE TABLE IF NOT EXISTS {self.table_name}( coin_id text PRIMARY KEY, lineage blob)")
             )
         return self
 
