@@ -20,11 +20,11 @@ from tests.core.node_height import node_height_at_least
 
 @pytest.mark.asyncio
 async def test_protocol_messages(
-    wallet_node_sim_and_wallet: Tuple[
+    simulator_and_wallet: Tuple[
         List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools
     ]
 ) -> None:
-    full_nodes, wallets, bt = wallet_node_sim_and_wallet
+    full_nodes, wallets, bt = simulator_and_wallet
     a_wallet = bt.get_pool_wallet_tool()
     reward_ph = a_wallet.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(

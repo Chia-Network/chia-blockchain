@@ -17,8 +17,8 @@ from tests.util.db_connection import DBConnection
 
 class TestWalletBlockchain:
     @pytest.mark.asyncio
-    async def test_wallet_blockchain(self, wallet_node, default_1000_blocks):
-        full_node_api, wallet_node, full_node_server, wallet_server, _ = wallet_node
+    async def test_wallet_blockchain(self, simulator_and_wallet, default_1000_blocks):
+        [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
         for block in default_1000_blocks[:600]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))

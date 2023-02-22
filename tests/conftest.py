@@ -27,7 +27,6 @@ from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
-    setup_node_and_wallet,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
     setup_two_nodes,
@@ -254,15 +253,6 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname, request):
-    params = {}
-    if request and request.param_index > 0:
-        params = request.param
-    async for _ in setup_node_and_wallet(test_constants, self_hostname, **params):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def node_with_params(request):
     params = {}
     if request:
@@ -336,14 +326,6 @@ async def two_nodes_sim_and_wallets_services():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet() -> AsyncIterator[
-    Tuple[List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools],
-]:
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def one_wallet_and_one_simulator_services():
     async for _ in setup_simulators_and_wallets_service(1, 1, {}):
         yield _
@@ -413,18 +395,6 @@ async def three_wallet_nodes():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_five_freeze():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_simulator():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def wallet_two_node_simulator():
     async for _ in setup_simulators_and_wallets(2, 1, {}):
         yield _
@@ -477,12 +447,6 @@ async def wallet_nodes_mainnet(db_version):
 @pytest_asyncio.fixture(scope="function")
 async def three_nodes_two_wallets():
     async for _ in setup_simulators_and_wallets(3, 2, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_and_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
