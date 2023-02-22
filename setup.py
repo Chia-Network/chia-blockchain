@@ -80,7 +80,7 @@ kwargs = dict(
     description="Chia blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
     extras_require=dict(
