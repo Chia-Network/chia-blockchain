@@ -83,7 +83,7 @@ def create_full_puzzle(
 
 
 async def get_nft_info_from_puzzle(
-    nft_coin_info: NFTCoinInfo, config: Dict = None, ignore_size_limit: bool = False
+    nft_coin_info: NFTCoinInfo, config: Dict[str, Any], ignore_size_limit: bool = False
 ) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
