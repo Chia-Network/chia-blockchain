@@ -50,7 +50,9 @@ class WalletNodeAPI:
         # is synced.
         if self.wallet_node.is_trusted(peer):
             full_node_connections = self.wallet_node.server.get_connections(NodeType.FULL_NODE)
-            untrusted_peers = [peer for peer in full_node_connections if not self.wallet_node.is_trusted(peer)]
+            untrusted_peers = [
+                peer for peer in full_node_connections if not self.wallet_node.is_trusted(peer) and not peer.closed
+            ]
 
             # Check for untrusted peers first to avoid calling is_peer_synced if not required
             if len(untrusted_peers) > 0 and await self.wallet_node.is_peer_synced(peer, peak.height):
