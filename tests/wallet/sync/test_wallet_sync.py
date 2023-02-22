@@ -1253,7 +1253,7 @@ class TestWalletSync:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
             async def len_gt_0(func, *args):
-                return len((await func(*args))) > 0
+                return len(await func(*args)) > 0
 
             await time_out_assert(
                 15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry

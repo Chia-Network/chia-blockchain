@@ -1042,7 +1042,7 @@ class TestDIDWallet:
             odd_amount,
             ph1,
             fee,
-            exclude_coins=set([coin]),
+            exclude_coins={coin},
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])

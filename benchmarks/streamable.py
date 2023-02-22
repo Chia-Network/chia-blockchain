@@ -80,11 +80,11 @@ def print_row(
     stdev_iterations: Union[str, float],
     end: str = "\n",
 ) -> None:
-    mode = "{0:<10}".format(f"{mode}")
-    us_per_iteration = "{0:<12}".format(f"{us_per_iteration}")
-    stdev_us_per_iteration = "{0:>20}".format(f"{stdev_us_per_iteration}")
-    avg_iterations = "{0:>18}".format(f"{avg_iterations}")
-    stdev_iterations = "{0:>22}".format(f"{stdev_iterations}")
+    mode = "{:<10}".format(f"{mode}")
+    us_per_iteration = "{:<12}".format(f"{us_per_iteration}")
+    stdev_us_per_iteration = "{:>20}".format(f"{stdev_us_per_iteration}")
+    avg_iterations = "{:>18}".format(f"{avg_iterations}")
+    stdev_iterations = "{:>22}".format(f"{stdev_iterations}")
     print(f"{mode} | {us_per_iteration} | {stdev_us_per_iteration} | {avg_iterations} | {stdev_iterations}", end=end)
 
 
@@ -192,10 +192,10 @@ def pop_data(key: str, *, old: Dict[str, Any], new: Dict[str, Any]) -> Tuple[Any
 
 
 def print_compare_row(c0: str, c1: Union[str, float], c2: Union[str, float], c3: Union[str, float]) -> None:
-    c0 = "{0:<12}".format(f"{c0}")
-    c1 = "{0:<16}".format(f"{c1}")
-    c2 = "{0:<16}".format(f"{c2}")
-    c3 = "{0:<12}".format(f"{c3}")
+    c0 = "{:<12}".format(f"{c0}")
+    c1 = "{:<16}".format(f"{c1}")
+    c2 = "{:<16}".format(f"{c2}")
+    c3 = "{:<12}".format(f"{c3}")
     print(f"{c0} | {c1} | {c2} | {c3}")
 
 

@@ -13,7 +13,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 
-CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
+CONDITIONS = {k: bytes(v)[0] for k, v in ConditionOpcode.__members__.items()}  # pylint: disable=E1101
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -116,7 +116,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     created = set(spend_bundle.additions())
     spent = set(spend_bundle.removals())
 
-    zero_coin_set = set(coin.name() for coin in created if coin.amount == 0)
+    zero_coin_set = {coin.name() for coin in created if coin.amount == 0}
 
     ephemeral = created.intersection(spent)
     created.difference_update(ephemeral)
@@ -146,9 +146,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             as_hex = [f"0x{_.hex()}" for _ in announcement]
             print(f"  {as_hex} =>\n      {hashed}")
 
-    eor_coin_announcements = sorted(
-        set(_[-1] for _ in created_coin_announcement_pairs) ^ set(asserted_coin_announcements)
-    )
+    eor_coin_announcements = sorted({_[-1] for _ in created_coin_announcement_pairs} ^ set(asserted_coin_announcements))
 
     created_puzzle_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_puzzle_announcements]
     if created_puzzle_announcements:
@@ -158,7 +156,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             print(f"  {as_hex} =>\n      {hashed}")
 
     eor_puzzle_announcements = sorted(
-        set(_[-1] for _ in created_puzzle_announcement_pairs) ^ set(asserted_puzzle_announcements)
+        {_[-1] for _ in created_puzzle_announcement_pairs} ^ set(asserted_puzzle_announcements)
     )
 
     print()

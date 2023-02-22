@@ -131,7 +131,7 @@ def _load_config_maybe_locked(
             with contextlib.ExitStack() as exit_stack:
                 if acquire_lock:
                     exit_stack.enter_context(lock_config(root_path, filename))
-                with open(path, "r") as opened_config_file:
+                with open(path) as opened_config_file:
                     r = yaml.safe_load(opened_config_file)
             if r is None:
                 log.error(f"yaml.safe_load returned None: {path}")

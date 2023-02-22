@@ -32,7 +32,7 @@ class SizedBytes(bytes):
         # created instance satisfies the length limitation of the particular subclass.
         super().__init__()
         if len(self) != self._size:
-            raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
+            raise ValueError(f"bad {type(self).__name__} initializer {v}")
 
     @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
@@ -56,4 +56,4 @@ class SizedBytes(bytes):
         return self.hex()
 
     def __repr__(self) -> str:
-        return "<%s: %s>" % (self.__class__.__name__, str(self))
+        return f"<{self.__class__.__name__}: {str(self)}>"

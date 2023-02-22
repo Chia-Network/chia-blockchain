@@ -67,10 +67,10 @@ class ConsensusConstants:
     # soft fork initiated in 1.8.0 release
     SOFT_FORK2_HEIGHT: uint32
 
-    def replace(self, **changes: object) -> "ConsensusConstants":
+    def replace(self, **changes: object) -> ConsensusConstants:
         return dataclasses.replace(self, **changes)
 
-    def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
+    def replace_str_to_bytes(self, **changes: Any) -> ConsensusConstants:
         """
         Overrides str (hex) values with bytes.
         """

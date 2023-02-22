@@ -118,7 +118,7 @@ def create_cmd(
 ):
     from chia.plotting.create_plots import create_plots, resolve_plot_keys
 
-    class Params(object):
+    class Params:
         def __init__(self):
             self.size = size
             self.num = num

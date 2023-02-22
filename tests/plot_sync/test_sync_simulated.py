@@ -76,8 +76,8 @@ class TestData:
 
         removed_paths: List[Path] = [p.prover.get_filename() for p in removed] if removed is not None else []
         invalid_dict: Dict[Path, int] = {p.prover.get_filename(): 0 for p in self.invalid}
-        keys_missing_set: Set[Path] = set([p.prover.get_filename() for p in self.keys_missing])
-        duplicates_set: Set[str] = set([p.prover.get_filename() for p in self.duplicates])
+        keys_missing_set: Set[Path] = {p.prover.get_filename() for p in self.keys_missing}
+        duplicates_set: Set[str] = {p.prover.get_filename() for p in self.duplicates}
 
         # Inject invalid plots into `PlotManager` of the harvester so that the callback calls below can use them
         # to sync them to the farmer.
@@ -413,7 +413,7 @@ async def test_sync_reset_cases(
     started_sync_id: uint64 = uint64(0)
 
     plot_manager.failed_to_open_filenames = {p.prover.get_filename(): 0 for p in test_data.invalid}
-    plot_manager.no_key_filenames = set([p.prover.get_filename() for p in test_data.keys_missing])
+    plot_manager.no_key_filenames = {p.prover.get_filename() for p in test_data.keys_missing}
 
     async def wait_for_reset() -> bool:
         assert started_sync_id != 0

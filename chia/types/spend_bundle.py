@@ -34,7 +34,7 @@ class SpendBundle(Streamable):
         return self.coin_spends
 
     @classmethod
-    def aggregate(cls, spend_bundles) -> "SpendBundle":
+    def aggregate(cls, spend_bundles) -> SpendBundle:
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         for bundle in spend_bundles:

@@ -391,7 +391,7 @@ async def validate_block_body(
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
-        found: Set[bytes32] = set([u.name for u in unspent_records])
+        found: Set[bytes32] = {u.name for u in unspent_records}
         for rem in removals_from_db:
             if rem in found:
                 continue

@@ -36,17 +36,15 @@ class WalletPuzzleStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS derivation_paths("
-                    "derivation_index int,"
-                    " pubkey text,"
-                    " puzzle_hash text,"
-                    " wallet_type int,"
-                    " wallet_id int,"
-                    " used tinyint,"
-                    " hardened tinyint,"
-                    " PRIMARY KEY(puzzle_hash, wallet_id))"
-                )
+                "CREATE TABLE IF NOT EXISTS derivation_paths("
+                "derivation_index int,"
+                " pubkey text,"
+                " puzzle_hash text,"
+                " wallet_type int,"
+                " wallet_id int,"
+                " used tinyint,"
+                " hardened tinyint,"
+                " PRIMARY KEY(puzzle_hash, wallet_id))"
             )
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS derivation_index_index on derivation_paths(derivation_index)"
@@ -294,7 +292,7 @@ class WalletPuzzleStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT puzzle_hash FROM derivation_paths")
-            return set(bytes32.fromhex(row[0]) for row in rows)
+            return {bytes32.fromhex(row[0]) for row in rows}
 
     async def get_last_derivation_path(self) -> Optional[uint32]:
         """

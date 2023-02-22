@@ -51,7 +51,7 @@ class CacheEntry:
     last_use: float
 
     @classmethod
-    def from_disk_prover(cls, prover: DiskProver) -> "CacheEntry":
+    def from_disk_prover(cls, prover: DiskProver) -> CacheEntry:
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,

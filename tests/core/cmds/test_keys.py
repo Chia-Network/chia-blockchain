@@ -596,20 +596,16 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Public Key: 92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e"
-                    "736234baf9386f7f83"
-                )
+                "Public Key: 92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e"
+                "736234baf9386f7f83"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Signature: a82e7d1b87d8c25a6ccac603194011d73f71fc76c17c1ce4ee53484f81874f116b1cb9dd991bcf9"
-                    "aa41c10beaab54a830fc6f7e5e25a9144f73e38a6fb852a87e36d80f575a6f84359144e6e9499ba9208912de55"
-                    "a1f7514cd8cfa166ae48e64"
-                )
+                "Signature: a82e7d1b87d8c25a6ccac603194011d73f71fc76c17c1ce4ee53484f81874f116b1cb9dd991bcf9"
+                "aa41c10beaab54a830fc6f7e5e25a9144f73e38a6fb852a87e36d80f575a6f84359144e6e9499ba9208912de55"
+                "a1f7514cd8cfa166ae48e64"
             )
             != -1
         )
@@ -629,19 +625,15 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Public Key: b5e383b8192dacff662455bdb3bbfc433f678f0d7ff7f118149e0d2ad39aa6d59ac4cb3662acf8"
-                    "e8307e66069d3a13cc"
-                )
+                "Public Key: b5e383b8192dacff662455bdb3bbfc433f678f0d7ff7f118149e0d2ad39aa6d59ac4cb3662acf8"
+                "e8307e66069d3a13cc"
             )
         ) != -1
         assert (
             result.output.find(
-                (
-                    "Signature: b5b3bc1417f67498748018a7ad2c95acfc5ae2dcd0d9dd0f3abfc7e3f047f2e6cf6c3e775b6caff"
-                    "a3e0baaadc2fe705a100cd4c961d6ff3c575c5c33683eb7b1e2dbbcaf37318227ae40ef8ccf57879a7818fad8f"
-                    "dc573d55c908be2611b8077"
-                )
+                "Signature: b5b3bc1417f67498748018a7ad2c95acfc5ae2dcd0d9dd0f3abfc7e3f047f2e6cf6c3e775b6caff"
+                "a3e0baaadc2fe705a100cd4c961d6ff3c575c5c33683eb7b1e2dbbcaf37318227ae40ef8ccf57879a7818fad8f"
+                "dc573d55c908be2611b8077"
             )
         ) != -1
 
@@ -668,20 +660,16 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Public Key: "
-                    "92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e736234baf9386f7f83"
-                )
+                "Public Key: "
+                "92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e736234baf9386f7f83"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Signature: a82e7d1b87d8c25a6ccac603194011d73f71fc76c17c1ce4ee53484f81874f116b1cb9dd991bcf"
-                    "9aa41c10beaab54a830fc6f7e5e25a9144f73e38a6fb852a87e36d80f575a6f84359144e6e9499ba9208912de"
-                    "55a1f7514cd8cfa166ae48e64"
-                )
+                "Signature: a82e7d1b87d8c25a6ccac603194011d73f71fc76c17c1ce4ee53484f81874f116b1cb9dd991bcf"
+                "9aa41c10beaab54a830fc6f7e5e25a9144f73e38a6fb852a87e36d80f575a6f84359144e6e9499ba9208912de"
+                "55a1f7514cd8cfa166ae48e64"
             )
             != -1
         )
@@ -748,19 +736,15 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Found public key: a4601f992f24047097a30854ef656382911575694439108723698"
-                    "972941e402d737c13df76fdf43597f7b3c2fa9ed27a (HD path: m/12381/8444/2/9)"
-                )
+                "Found public key: a4601f992f24047097a30854ef656382911575694439108723698"
+                "972941e402d737c13df76fdf43597f7b3c2fa9ed27a (HD path: m/12381/8444/2/9)"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Found private key: "
-                    "028e33fa3f8caa3102c028f3bff6b6680e528d9a0c543c479ef0b0339060ef36 (HD path: m/12381/8444/2/9)"
-                )
+                "Found private key: "
+                "028e33fa3f8caa3102c028f3bff6b6680e528d9a0c543c479ef0b0339060ef36 (HD path: m/12381/8444/2/9)"
             )
             != -1
         )
@@ -805,10 +789,8 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Found wallet address: "
-                    "xch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs8taffd (HD path: m/12381/8444/2/30)"
-                )
+                "Found wallet address: "
+                "xch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs8taffd (HD path: m/12381/8444/2/30)"
             )
             != -1
         )
@@ -855,10 +837,8 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Found wallet address: "
-                    "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7 (HD path: m/12381/8444/2/30)"
-                )
+                "Found wallet address: "
+                "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7 (HD path: m/12381/8444/2/30)"
             )
             != -1
         )
@@ -944,10 +924,8 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Found public key: 80dc3a2ea450eb09e24debe22e1b5934911ba530792ef0be361bad"
-                    "ebb168780bd328ff8d4655e5dd573d5bef4a340344 (HD path: m/12381n/8444n/2/35)"
-                )
+                "Found public key: 80dc3a2ea450eb09e24debe22e1b5934911ba530792ef0be361bad"
+                "ebb168780bd328ff8d4655e5dd573d5bef4a340344 (HD path: m/12381n/8444n/2/35)"
             )
             != -1
         )
@@ -993,19 +971,15 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Wallet address 50 (m/12381n/8444n/2n/50n): "
-                    "xch1jp2u7an0mn9hdlw2x05nmje49gwgzmqyvh0qmh6008yksetuvkfs6wrfdq"
-                )
+                "Wallet address 50 (m/12381n/8444n/2n/50n): "
+                "xch1jp2u7an0mn9hdlw2x05nmje49gwgzmqyvh0qmh6008yksetuvkfs6wrfdq"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Wallet address 51 (m/12381n/8444n/2n/51n): "
-                    "xch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8sumvfmt"
-                )
+                "Wallet address 51 (m/12381n/8444n/2n/51n): "
+                "xch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8sumvfmt"
             )
             != -1
         )
@@ -1053,19 +1027,15 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Wallet address 50 (m/12381n/8444n/2n/50n): "
-                    "txch1jp2u7an0mn9hdlw2x05nmje49gwgzmqyvh0qmh6008yksetuvkfshfylvn"
-                )
+                "Wallet address 50 (m/12381n/8444n/2n/50n): "
+                "txch1jp2u7an0mn9hdlw2x05nmje49gwgzmqyvh0qmh6008yksetuvkfshfylvn"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Wallet address 51 (m/12381n/8444n/2n/51n): "
-                    "txch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8s3utl6c"
-                )
+                "Wallet address 51 (m/12381n/8444n/2n/51n): "
+                "txch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8s3utl6c"
             )
             != -1
         )
@@ -1113,37 +1083,29 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                (
-                    "Observer public key 30 (m/12381n/8444n/2/3/4/30): "
-                    "979a1fa0bfc140488d4a9edcfbf244a398fe922618a981cc0fffe5445d811f2237ff8234c0520b28b3096c8269f2731e"
-                )
+                "Observer public key 30 (m/12381n/8444n/2/3/4/30): "
+                "979a1fa0bfc140488d4a9edcfbf244a398fe922618a981cc0fffe5445d811f2237ff8234c0520b28b3096c8269f2731e"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Observer private key 30 (m/12381n/8444n/2/3/4/30): "
-                    "5dd22db24fe28805b101104c543f5bec3808328ad67de3d3dcd9efd6faab13aa"
-                )
+                "Observer private key 30 (m/12381n/8444n/2/3/4/30): "
+                "5dd22db24fe28805b101104c543f5bec3808328ad67de3d3dcd9efd6faab13aa"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Observer public key 31 (m/12381n/8444n/2/3/4/31): "
-                    "ab5885df340a27b5eb3f1c4b8c32889f529ad5ecc4c9718247e36756de2e143c604af9956941a72239124e6fb352782e"
-                )
+                "Observer public key 31 (m/12381n/8444n/2/3/4/31): "
+                "ab5885df340a27b5eb3f1c4b8c32889f529ad5ecc4c9718247e36756de2e143c604af9956941a72239124e6fb352782e"
             )
             != -1
         )
         assert (
             result.output.find(
-                (
-                    "Observer private key 31 (m/12381n/8444n/2/3/4/31): "
-                    "113610b39c2151fd68d7f795d5dd596b94889a3cf7825a56da5c6d2c7e5141a1"
-                )
+                "Observer private key 31 (m/12381n/8444n/2/3/4/31): "
+                "113610b39c2151fd68d7f795d5dd596b94889a3cf7825a56da5c6d2c7e5141a1"
             )
             != -1
         )

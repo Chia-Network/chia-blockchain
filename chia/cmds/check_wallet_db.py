@@ -117,7 +117,7 @@ class FromDB:
 def wallet_type_name(
     wallet_type: int,
 ) -> str:
-    if wallet_type in set(wt.value for wt in WalletType):
+    if wallet_type in {wt.value for wt in WalletType}:
         return f"{WalletType(wallet_type).name} ({wallet_type})"
     else:
         return f"INVALID_WALLET_TYPE ({wallet_type})"
@@ -250,7 +250,7 @@ class WalletDBReader:
             # Check for invalid wallet types in users_wallets
             invalid_wallet_types = set()
             for row in rows:
-                if row[2] not in set(wt.value for wt in WalletType):
+                if row[2] not in {wt.value for wt in WalletType}:
                     invalid_wallet_types.add(row[2])
             if len(invalid_wallet_types) > 0:
                 errors.append(f"Invalid Wallet Types found in table users_wallets: {invalid_wallet_types}")
@@ -310,7 +310,7 @@ class WalletDBReader:
         wrong_type = defaultdict(list)
 
         for d in derivation_paths:
-            if d.wallet_type not in set(wt.value for wt in WalletType):
+            if d.wallet_type not in {wt.value for wt in WalletType}:
                 invalid_wallet_types.append(d.wallet_type)
             if d.wallet_id not in wallet_id_to_type:
                 missing_wallet_ids.append(d.wallet_id)

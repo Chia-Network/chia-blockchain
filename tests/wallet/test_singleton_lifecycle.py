@@ -114,8 +114,8 @@ async def test_only_odd_coins_0(bt):
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
     coins_added, coins_removed = await check_spend_bundle_validity(bt, blocks, spend_bundle)
 
-    coin_set_added = set([_.coin for _ in coins_added])
-    coin_set_removed = set([_.coin for _ in coins_removed])
+    coin_set_added = {_.coin for _ in coins_added}
+    coin_set_removed = {_.coin for _ in coins_removed}
 
     launcher_coin = launcher_spend_bundle.coin_spends[0].coin
 

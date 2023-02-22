@@ -25,7 +25,7 @@ class Payment:
         return self.as_condition().get_tree_hash()
 
     @classmethod
-    def from_condition(cls, condition: Program) -> "Payment":
+    def from_condition(cls, condition: Program) -> Payment:
         python_condition: List = condition.as_python()
         puzzle_hash, amount = python_condition[1:3]
         memos: List[bytes] = []

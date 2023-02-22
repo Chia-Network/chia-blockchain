@@ -274,7 +274,7 @@ class WalletNode:
         async with manage_connection(db_path) as conn:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
-            names = set([x[0] for x in rows])
+            names = {x[0] for x in rows}
             names = names - set(required_tables)
             for name in names:
                 for ignore_name in ignore_tables:

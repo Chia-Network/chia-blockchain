@@ -98,7 +98,7 @@ class Node(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def add(self, toadd: bytes, depth: int) -> "Node":
+    def add(self, toadd: bytes, depth: int) -> Node:
         pass
 
     @abstractmethod

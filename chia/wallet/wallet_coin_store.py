@@ -26,19 +26,17 @@ class WalletCoinStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS coin_record("
-                    "coin_name text PRIMARY KEY,"
-                    " confirmed_height bigint,"
-                    " spent_height bigint,"
-                    " spent int,"
-                    " coinbase int,"
-                    " puzzle_hash text,"
-                    " coin_parent text,"
-                    " amount blob,"
-                    " wallet_type int,"
-                    " wallet_id int)"
-                )
+                "CREATE TABLE IF NOT EXISTS coin_record("
+                "coin_name text PRIMARY KEY,"
+                " confirmed_height bigint,"
+                " spent_height bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount blob,"
+                " wallet_type int,"
+                " wallet_id int)"
             )
 
             # Useful for reorg lookups
@@ -174,13 +172,13 @@ class WalletCoinStore:
             rows = await conn.execute_fetchall(
                 "SELECT * FROM coin_record WHERE wallet_id=? AND spent_height=0", (wallet_id,)
             )
-        return set(self.coin_record_from_row(row) for row in rows)
+        return {self.coin_record_from_row(row) for row in rows}
 
     async def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT * FROM coin_record WHERE spent_height=0")
-        return set(self.coin_record_from_row(row) for row in rows)
+        return {self.coin_record_from_row(row) for row in rows}
 
     async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
         """Returns set of all CoinRecords."""
@@ -193,7 +191,7 @@ class WalletCoinStore:
                 ),
             )
 
-        return set(bytes32.fromhex(row[0]) for row in rows)
+        return {bytes32.fromhex(row[0]) for row in rows}
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:

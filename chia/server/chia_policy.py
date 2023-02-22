@@ -268,7 +268,7 @@ if sys.platform == "win32":
 
                 try:
                     return await self._chia_accept(listener)
-                except WindowsError as exc:  # pylint: disable=E0602
+                except OSError as exc:  # pylint: disable=E0602
                     if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
                         raise
 
@@ -295,7 +295,7 @@ if sys.platform == "win32":
                 except asyncio.CancelledError:
                     conn.close()
                     raise
-                except WindowsError as exc:  # pylint: disable=E0602
+                except OSError as exc:  # pylint: disable=E0602
                     # https://github.com/python/cpython/issues/93821#issuecomment-1157945855
                     if exc.winerror not in (_winapi.ERROR_NETNAME_DELETED, _winapi.ERROR_OPERATION_ABORTED):
                         raise

@@ -145,7 +145,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             )
 
         # Set the pool pks in the farmer
-        pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
+        pool_pubkeys_hex = {bytes(pk).hex() for pk in pool_child_pubkeys}
         if "pool_public_keys" in config["farmer"]:
             for pk_hex in config["farmer"]["pool_public_keys"]:
                 # Add original ones in config

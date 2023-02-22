@@ -47,24 +47,20 @@ ret += check_create("INDEX", "chia/wallet")
 ret += check_create(
     "INDEX",
     "chia/full_node",
-    set(
-        [
-            ("block_store.py", "is_fully_compactified"),
-            ("block_store.py", "height"),
-        ]
-    ),
+    {
+        ("block_store.py", "is_fully_compactified"),
+        ("block_store.py", "height"),
+    },
 )
 ret += check_create("TABLE", "chia/wallet")
 ret += check_create(
     "TABLE",
     "chia/full_node",
-    set(
-        [
-            ("block_store.py", "sub_epoch_segments_v3"),
-            ("block_store.py", "full_blocks"),
-            ("coin_store.py", "coin_record"),
-            ("hint_store.py", "hints"),
-        ]
-    ),
+    {
+        ("block_store.py", "sub_epoch_segments_v3"),
+        ("block_store.py", "full_blocks"),
+        ("coin_store.py", "coin_record"),
+        ("hint_store.py", "hints"),
+    },
 )
 sys.exit(ret)

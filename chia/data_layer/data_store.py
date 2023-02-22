@@ -425,7 +425,7 @@ class DataStore:
         if len(bad_node_hashes) > 0:
             raise NodeHashError(node_hashes=bad_node_hashes)
 
-    _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
+    _checks: Tuple[Callable[[DataStore], Awaitable[None]], ...] = (
         _check_roots_are_incrementing,
         _check_hashes,
     )
@@ -1059,7 +1059,7 @@ class DataStore:
                     tree_id=tree_id,
                     root_hash=previous_root.node_hash,
                 )
-                known_hashes: Set[bytes32] = set(node.hash for node in previous_internal_nodes)
+                known_hashes: Set[bytes32] = {node.hash for node in previous_internal_nodes}
             else:
                 known_hashes = set()
             internal_nodes: List[InternalNode] = await self.get_internal_nodes(
@@ -1287,7 +1287,7 @@ class DataStore:
             )
             old_urls = set()
             if old_subscription is not None:
-                old_urls = set(server_info.url for server_info in old_subscription.servers_info)
+                old_urls = {server_info.url for server_info in old_subscription.servers_info}
             new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
             for server_info in new_servers:
                 await writer.execute(
@@ -1425,14 +1425,14 @@ class DataStore:
                 return set()
             if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
                 return set()
-            insertions = set(
+            insertions = {
                 DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
                 for node in new_pairs
                 if node not in old_pairs
-            )
-            deletions = set(
+            }
+            deletions = {
                 DiffData(type=OperationType.DELETE, key=node.key, value=node.value)
                 for node in old_pairs
                 if node not in new_pairs
-            )
+            }
             return set.union(insertions, deletions)

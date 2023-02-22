@@ -580,7 +580,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     if os.path.exists(args["file"]):
         filepath = pathlib.Path(args["file"])
-        with open(filepath, "r") as file:
+        with open(filepath) as file:
             offer_hex: str = file.read()
             file.close()
     else:

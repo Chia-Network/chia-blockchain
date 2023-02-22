@@ -48,7 +48,7 @@ def fontcolor(pct: float) -> str:
 @lru_cache(maxsize=10000)
 def resolve_function(file: str, line: int) -> str:
     try:
-        with open(file, "r") as f:
+        with open(file) as f:
             all_lines: List[str] = []
             for row in f:
                 all_lines.append(row)

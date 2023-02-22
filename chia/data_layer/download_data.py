@@ -153,13 +153,13 @@ async def insert_from_delta_file(
                     size = int(resp.headers.get("content-length", 0))
                     log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
                     progress_byte = 0
-                    progress_percentage = "{:.0%}".format(0)
+                    progress_percentage = f"{0:.0%}"
                     target_filename = client_foldername.joinpath(filename)
                     with target_filename.open(mode="wb") as f:
                         async for chunk, _ in resp.content.iter_chunks():
                             f.write(chunk)
                             progress_byte += len(chunk)
-                            new_percentage = "{:.0%}".format(progress_byte / size)
+                            new_percentage = f"{progress_byte / size:.0%}"
                             if new_percentage != progress_percentage:
                                 progress_percentage = new_percentage
                                 log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")

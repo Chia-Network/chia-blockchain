@@ -125,7 +125,7 @@ class FileKeyringContent:
 
     @classmethod
     def create_from_path(cls, path: Path) -> FileKeyringContent:
-        loaded_dict = dict(yaml.safe_load(open(path, "r")))
+        loaded_dict = dict(yaml.safe_load(open(path)))
         version = int(loaded_dict["version"])
 
         if version > MAX_SUPPORTED_VERSION:

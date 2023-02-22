@@ -14,6 +14,11 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies: [click~=7.1]
+-   repo: https://github.com/asottile/pyupgrade
+    rev: v3.3.1
+    hooks:
+    -   id: pyupgrade
+        args: ['--py37-plus', '--keep-runtime-typing']
 -   repo: https://github.com/psf/black
     rev: 22.10.0
     hooks:

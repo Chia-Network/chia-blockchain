@@ -20,7 +20,7 @@ if sys.platform == "win32":
 class EchoServer(asyncio.Protocol):
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         peername = transport.get_extra_info("peername")
-        print("connection from {}".format(peername))
+        print(f"connection from {peername}")
         self.transport = transport
 
     def data_received(self, data: bytes) -> None:
@@ -45,7 +45,7 @@ async def async_main(
         [server_socket] = server.sockets
         # TODO: review if this is general enough, such as for ipv6
         port_holder.append(server_socket.getsockname()[1])
-    print("serving on {}".format(server.sockets[0].getsockname()))
+    print(f"serving on {server.sockets[0].getsockname()}")
 
     try:
         if thread_end_event is None:

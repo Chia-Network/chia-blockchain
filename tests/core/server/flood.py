@@ -30,7 +30,7 @@ async def tcp_echo_client(counter: str) -> None:
 
 
 async def main() -> None:
-    await asyncio.gather(*[tcp_echo_client("{}".format(i)) for i in range(0, NUM_CLIENTS)])
+    await asyncio.gather(*[tcp_echo_client(f"{i}") for i in range(0, NUM_CLIENTS)])
 
 
 asyncio.run(main())

@@ -111,7 +111,7 @@ async def run_mempool_benchmark(single_threaded: bool) -> None:
                 await coin_store.new_block(
                     height,
                     timestamp,
-                    set([pool_coin, farmer_coin]),
+                    {pool_coin, farmer_coin},
                     [],
                     [],
                 )

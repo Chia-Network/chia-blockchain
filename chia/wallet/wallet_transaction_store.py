@@ -39,21 +39,19 @@ class WalletTransactionStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS transaction_record("
-                    " transaction_record blob,"
-                    " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
-                    " confirmed_at_height bigint,"
-                    " created_at_time bigint,"
-                    " to_puzzle_hash text,"
-                    " amount blob,"
-                    " fee_amount blob,"
-                    " confirmed int,"
-                    " sent int,"
-                    " wallet_id bigint,"
-                    " trade_id text,"
-                    " type int)"
-                )
+                "CREATE TABLE IF NOT EXISTS transaction_record("
+                " transaction_record blob,"
+                " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
+                " confirmed_at_height bigint,"
+                " created_at_time bigint,"
+                " to_puzzle_hash text,"
+                " amount blob,"
+                " fee_amount blob,"
+                " confirmed int,"
+                " sent int,"
+                " wallet_id bigint,"
+                " trade_id text,"
+                " type int)"
             )
 
             # Useful for reorg lookups

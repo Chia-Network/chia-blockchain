@@ -48,7 +48,7 @@ class TestPuzzleStore:
             assert await db.index_for_pubkey(derivation_recs[0].pubkey) is None
             assert await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) is None
             assert await db.wallet_info_for_puzzle_hash(derivation_recs[2].puzzle_hash) is None
-            assert len((await db.get_all_puzzle_hashes())) == 0
+            assert len(await db.get_all_puzzle_hashes()) == 0
             assert await db.get_last_derivation_path() is None
             assert await db.get_unused_derivation_path() is None
             assert await db.get_derivation_record(0, 2, False) is None
@@ -63,7 +63,7 @@ class TestPuzzleStore:
                 derivation_recs[2].wallet_id,
                 derivation_recs[2].wallet_type,
             )
-            assert len((await db.get_all_puzzle_hashes())) == 2000
+            assert len(await db.get_all_puzzle_hashes()) == 2000
             assert await db.get_last_derivation_path() == 999
             assert await db.get_unused_derivation_path() == 0
             assert await db.get_derivation_record(0, 2, False) == derivation_recs[1]

@@ -47,7 +47,7 @@ class TradeRecord(Streamable):
         return formatted
 
     @classmethod
-    def from_json_dict_convenience(cls, record: Dict[str, Any], offer: str = "") -> "TradeRecord":
+    def from_json_dict_convenience(cls, record: Dict[str, Any], offer: str = "") -> TradeRecord:
         new_record = record.copy()
         new_record["status"] = TradeStatus[record["status"]].value
         del new_record["summary"]

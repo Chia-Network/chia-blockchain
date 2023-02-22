@@ -256,11 +256,11 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         metadata_list = [
             {
                 "hash": bytes32(token_bytes(32)).hex(),
-                "uris": ["https://data.com/{}".format(i)],
+                "uris": [f"https://data.com/{i}"],
                 "meta_hash": bytes32(token_bytes(32)).hex(),
-                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "meta_uris": [f"https://meatadata.com/{i}"],
                 "license_hash": bytes32(token_bytes(32)).hex(),
-                "license_uris": ["https://license.com/{}".format(i)],
+                "license_uris": [f"https://license.com/{i}"],
                 "edition_number": i + 1,
                 "edition_total": n,
             }
@@ -280,7 +280,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
         did_lineage_parent = None
         spends = []
-        nft_ids = set([])
+        nft_ids = set()
         for i in range(0, n, chunk):
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
@@ -459,11 +459,11 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         metadata_list = [
             {
                 "hash": bytes32(token_bytes(32)).hex(),
-                "uris": ["https://data.com/{}".format(i)],
+                "uris": [f"https://data.com/{i}"],
                 "meta_hash": bytes32(token_bytes(32)).hex(),
-                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "meta_uris": [f"https://meatadata.com/{i}"],
                 "license_hash": bytes32(token_bytes(32)).hex(),
-                "license_uris": ["https://license.com/{}".format(i)],
+                "license_uris": [f"https://license.com/{i}"],
                 "edition_number": i + 1,
                 "edition_total": n,
             }
@@ -863,11 +863,11 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         metadata_list = [
             {
                 "hash": bytes32(token_bytes(32)).hex(),
-                "uris": ["https://data.com/{}".format(i)],
+                "uris": [f"https://data.com/{i}"],
                 "meta_hash": bytes32(token_bytes(32)).hex(),
-                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "meta_uris": [f"https://meatadata.com/{i}"],
                 "license_hash": bytes32(token_bytes(32)).hex(),
-                "license_uris": ["https://license.com/{}".format(i)],
+                "license_uris": [f"https://license.com/{i}"],
                 "edition_number": i + 1,
                 "edition_total": n,
             }

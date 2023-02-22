@@ -59,18 +59,16 @@ class CoinStore:
                 # the coin_name is unique in this table because the CoinStore always
                 # only represent a single peak
                 await conn.execute(
-                    (
-                        "CREATE TABLE IF NOT EXISTS coin_record("
-                        "coin_name text PRIMARY KEY,"
-                        " confirmed_index bigint,"
-                        " spent_index bigint,"
-                        " spent int,"
-                        " coinbase int,"
-                        " puzzle_hash text,"
-                        " coin_parent text,"
-                        " amount blob,"
-                        " timestamp bigint)"
-                    )
+                    "CREATE TABLE IF NOT EXISTS coin_record("
+                    "coin_name text PRIMARY KEY,"
+                    " confirmed_index bigint,"
+                    " spent_index bigint,"
+                    " spent int,"
+                    " coinbase int,"
+                    " puzzle_hash text,"
+                    " coin_parent text,"
+                    " amount blob,"
+                    " timestamp bigint)"
                 )
 
             # Useful for reorg lookups

@@ -286,7 +286,7 @@ class TestDLWallet:
             await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
-                coins=set([txs[0].spend_bundle.removals()[0]]),
+                coins={txs[0].spend_bundle.removals()[0]},
                 fee=uint64(1999999999999),
             )
 

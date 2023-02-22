@@ -521,7 +521,7 @@ class DataLayer:
 
             # Subscribe to all local tree_ids that we can find on chain.
             local_tree_ids = await self.data_store.get_tree_ids()
-            subscription_tree_ids = set(subscription.tree_id for subscription in subscriptions)
+            subscription_tree_ids = {subscription.tree_id for subscription in subscriptions}
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:

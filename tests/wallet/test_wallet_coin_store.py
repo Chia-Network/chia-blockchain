@@ -152,19 +152,19 @@ async def test_get_unspent_coins_for_wallet() -> None:
         await store.add_coin_record(record_6)  # this is spent and wallet 2
         await store.add_coin_record(record_7)  # wallet 2
 
-        assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
-        assert await store.get_unspent_coins_for_wallet(2) == set([record_7])
+        assert await store.get_unspent_coins_for_wallet(1) == {record_5}
+        assert await store.get_unspent_coins_for_wallet(2) == {record_7}
         assert await store.get_unspent_coins_for_wallet(3) == set()
 
         await store.set_spent(coin_4.name(), uint32(12))
 
-        assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
-        assert await store.get_unspent_coins_for_wallet(2) == set([record_7])
+        assert await store.get_unspent_coins_for_wallet(1) == {record_5}
+        assert await store.get_unspent_coins_for_wallet(2) == {record_7}
         assert await store.get_unspent_coins_for_wallet(3) == set()
 
         await store.set_spent(coin_7.name(), uint32(12))
 
-        assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
+        assert await store.get_unspent_coins_for_wallet(1) == {record_5}
         assert await store.get_unspent_coins_for_wallet(2) == set()
         assert await store.get_unspent_coins_for_wallet(3) == set()
 
@@ -185,24 +185,24 @@ async def test_get_all_unspent_coins() -> None:
         await store.add_coin_record(record_1)  # not spent
         await store.add_coin_record(record_2)  # not spent
         await store.add_coin_record(record_3)  # spent
-        assert await store.get_all_unspent_coins() == set([record_1, record_2])
+        assert await store.get_all_unspent_coins() == {record_1, record_2}
 
         await store.add_coin_record(record_4)  # spent
         await store.add_coin_record(record_5)  # not spent
         await store.add_coin_record(record_6)  # spent
-        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5])
+        assert await store.get_all_unspent_coins() == {record_1, record_2, record_5}
 
         await store.add_coin_record(record_7)  # not spent
-        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5, record_7])
+        assert await store.get_all_unspent_coins() == {record_1, record_2, record_5, record_7}
 
         await store.set_spent(coin_4.name(), uint32(12))
-        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5, record_7])
+        assert await store.get_all_unspent_coins() == {record_1, record_2, record_5, record_7}
 
         await store.set_spent(coin_7.name(), uint32(12))
-        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5])
+        assert await store.get_all_unspent_coins() == {record_1, record_2, record_5}
 
         await store.set_spent(coin_5.name(), uint32(12))
-        assert await store.get_all_unspent_coins() == set([record_1, record_2])
+        assert await store.get_all_unspent_coins() == {record_1, record_2}
 
         await store.set_spent(coin_2.name(), uint32(12))
         await store.set_spent(coin_1.name(), uint32(12))
@@ -222,8 +222,8 @@ async def test_get_records_by_parent_id() -> None:
         await store.add_coin_record(record_6)
         await store.add_coin_record(record_7)
 
-        assert set(await store.get_coin_records_by_parent_id(coin_1.parent_coin_info)) == set([record_1, record_2])
-        assert set(await store.get_coin_records_by_parent_id(coin_2.parent_coin_info)) == set([record_1, record_2])
+        assert set(await store.get_coin_records_by_parent_id(coin_1.parent_coin_info)) == {record_1, record_2}
+        assert set(await store.get_coin_records_by_parent_id(coin_2.parent_coin_info)) == {record_1, record_2}
         assert await store.get_coin_records_by_parent_id(coin_3.parent_coin_info) == [record_3]
         assert await store.get_coin_records_by_parent_id(coin_4.parent_coin_info) == [record_4]
         assert await store.get_coin_records_by_parent_id(coin_5.parent_coin_info) == [record_5]
@@ -244,13 +244,17 @@ async def test_get_multiple_coin_records() -> None:
         await store.add_coin_record(record_6)
         await store.add_coin_record(record_7)
 
-        assert set(await store.get_multiple_coin_records([coin_1.name(), coin_2.name(), coin_3.name()])) == set(
-            [record_1, record_2, record_3]
-        )
+        assert set(await store.get_multiple_coin_records([coin_1.name(), coin_2.name(), coin_3.name()])) == {
+            record_1,
+            record_2,
+            record_3,
+        }
 
-        assert set(await store.get_multiple_coin_records([coin_5.name(), coin_6.name(), coin_7.name()])) == set(
-            [record_5, record_6, record_7]
-        )
+        assert set(await store.get_multiple_coin_records([coin_5.name(), coin_6.name(), coin_7.name()])) == {
+            record_5,
+            record_6,
+            record_7,
+        }
 
         assert set(
             await store.get_multiple_coin_records(
@@ -264,7 +268,7 @@ async def test_get_multiple_coin_records() -> None:
                     coin_7.name(),
                 ]
             )
-        ) == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
+        ) == {record_1, record_2, record_3, record_4, record_5, record_6, record_7}
 
 
 @pytest.mark.asyncio
@@ -292,7 +296,7 @@ async def test_delete_coin_record() -> None:
                     coin_7.name(),
                 ]
             )
-        ) == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
+        ) == {record_1, record_2, record_3, record_4, record_5, record_6, record_7}
 
         assert await store.get_coin_record(coin_1.name()) == record_1
 
@@ -303,7 +307,7 @@ async def test_delete_coin_record() -> None:
             await store.get_multiple_coin_records(
                 [coin_2.name(), coin_3.name(), coin_4.name(), coin_5.name(), coin_6.name(), coin_7.name()]
             )
-        ) == set([record_2, record_3, record_4, record_5, record_6, record_7])
+        ) == {record_2, record_3, record_4, record_5, record_6, record_7}
 
 
 def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
@@ -407,15 +411,13 @@ async def test_rollback_to_block() -> None:
                     coin_5.name(),
                 ]
             )
-        ) == set(
-            [
-                r1,
-                r2,
-                r3,
-                r4,
-                r5,
-            ]
-        )
+        ) == {
+            r1,
+            r2,
+            r3,
+            r4,
+            r5,
+        }
 
         assert await store.get_coin_record(coin_5.name()) == r5
 

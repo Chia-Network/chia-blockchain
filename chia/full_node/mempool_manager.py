@@ -432,7 +432,7 @@ class MempoolManager:
         assert npc_result.conds is not None
         # build removal list
         removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
-        if set(removal_names) != set([s.name() for s in new_spend.removals()]):
+        if set(removal_names) != {s.name() for s in new_spend.removals()}:
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 

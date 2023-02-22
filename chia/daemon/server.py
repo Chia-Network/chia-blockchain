@@ -652,7 +652,7 @@ class WebSocketServer:
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
 
     def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
@@ -918,7 +918,7 @@ class WebSocketServer:
 
             self._post_process_plotting_job(config)
 
-        except (subprocess.SubprocessError, IOError):
+        except (subprocess.SubprocessError, OSError):
             log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
@@ -1080,7 +1080,7 @@ class WebSocketServer:
                 process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = process
                 success = True
-            except (subprocess.SubprocessError, IOError):
+            except (subprocess.SubprocessError, OSError):
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
 
