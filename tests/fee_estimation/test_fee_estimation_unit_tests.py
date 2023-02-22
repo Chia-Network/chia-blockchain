@@ -16,6 +16,7 @@ from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.fee_rate import FeeRateV2
 from chia.types.mempool_item import MempoolItem
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint32, uint64
 from chia.util.math import make_monotonically_decreasing
 
@@ -60,9 +61,8 @@ def make_block(
 
     for n in range(num_tx):
         block_included = uint32(height - num_blocks_wait_in_mempool)
-        mempool_item = MempoolItem(
-            spend_bundle, fee, NPCResult(None, None, cost), cost, spend_bundle.name(), [], block_included
-        )
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], cost)
+        mempool_item = MempoolItem(spend_bundle, fee, NPCResult(None, conds, cost), spend_bundle.name(), block_included)
         items.append(mempool_item)
     return items
 
