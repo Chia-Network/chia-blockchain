@@ -55,6 +55,7 @@ ciphers = [
 ]
 colon_delimited_ciphers = ":".join(ciphers)
 
+
 def ssl_context_for_server(
     ca_cert: Path,
     ca_key: Path,
