@@ -937,7 +937,7 @@ class WalletNode:
         return latest_timestamp
 
     def is_trusted(self, peer) -> bool:
-        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant
