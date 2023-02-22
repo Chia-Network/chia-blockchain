@@ -87,6 +87,8 @@ class Mempool:
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
 
+        assert item.npc_result.conds is not None
+
         while self.at_full_capacity(item.cost):
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
