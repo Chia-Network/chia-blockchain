@@ -246,7 +246,7 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
     current_sk: PrivateKey = master_sk
 
     # Derive keys along the path
-    for (current_index, derivation_type) in index_and_derivation_types:
+    for current_index, derivation_type in index_and_derivation_types:
         if derivation_type == DerivationType.NONOBSERVER:
             current_sk = _derive_path(current_sk, [current_index])
         elif derivation_type == DerivationType.OBSERVER:
@@ -384,7 +384,7 @@ def _search_derived(
         if len(found_items) > 0 and show_progress:
             print()
 
-        for (term, found_item, found_item_type) in found_items:
+        for term, found_item, found_item_type in found_items:
             # Update remaining_search_terms and found_search_terms
             del remaining_search_terms[term]
             found_search_terms.append(term)
