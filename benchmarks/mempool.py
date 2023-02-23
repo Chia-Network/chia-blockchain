@@ -3,24 +3,23 @@ from __future__ import annotations
 import asyncio
 import cProfile
 from contextlib import contextmanager
+from dataclasses import dataclass
 from subprocess import check_call
 from time import monotonic
 from typing import Dict, Iterator, List, Optional, Tuple
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.wallet_tools import WalletTool
-from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -48,35 +47,32 @@ def make_hash(height: int) -> bytes32:
     return bytes32(height.to_bytes(32, byteorder="big"))
 
 
-def fake_block_record(block_height: uint32, timestamp: uint64) -> BlockRecord:
+@dataclass(frozen=True)
+class BenchBlockRecord:
+    """
+    This is a subset of BlockRecord that the mempool manager uses for peak.
+    """
+
+    header_hash: bytes32
+    height: uint32
+    timestamp: Optional[uint64]
+    prev_transaction_block_height: uint32
+    prev_transaction_block_hash: Optional[bytes32]
+
+    @property
+    def is_transaction_block(self) -> bool:
+        return self.timestamp is not None
+
+
+def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockRecord:
     this_hash = make_hash(block_height)
     prev_hash = make_hash(block_height - 1)
-    return BlockRecord(
-        this_hash,  # header_hash
-        prev_hash,  # prev_hash
-        block_height,  # height
-        uint128(0),  # weight
-        uint128(0),  # total_iters
-        uint8(0),  # signage_point_index
-        ClassgroupElement(bytes100(b"1" * 100)),  # challenge_vdf_output
-        None,  # infused_challenge_vdf_output
-        bytes32(b"f" * 32),  # reward_infusion_new_challenge
-        bytes32(b"c" * 32),  # challenge_block_info_hash
-        uint64(0),  # sub_slot_iters
-        bytes32(b"d" * 32),  # pool_puzzle_hash
-        bytes32(b"e" * 32),  # farmer_puzzle_hash
-        uint64(0),  # required_iters
-        uint8(0),  # deficit
-        False,  # overflow
-        uint32(block_height - 1),  # prev_transaction_block_height
-        timestamp,  # timestamp
-        prev_hash,  # prev_transaction_block_hash
-        uint64(0),  # fees
-        None,  # reward_claims_incorporated
-        None,  # finished_challenge_slot_hashes
-        None,  # finished_infused_challenge_slot_hashes
-        None,  # finished_reward_slot_hashes
-        None,  # sub_epoch_summary_included
+    return BenchBlockRecord(
+        header_hash=this_hash,
+        height=block_height,
+        timestamp=timestamp,
+        prev_transaction_block_height=uint32(block_height - 1),
+        prev_transaction_block_hash=prev_hash,
     )
 
 
@@ -148,11 +144,6 @@ async def run_mempool_benchmark() -> None:
 
         mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
 
-        # the mempool only looks at:
-        #   timestamp
-        #   height
-        #   is_transaction_block
-        #   header_hash
         height = start_height
         rec = fake_block_record(height, timestamp)
         await mempool.new_peak(rec, None)
@@ -204,7 +195,7 @@ async def run_mempool_benchmark() -> None:
         print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")
 
         print("\nProfiling new_peak() (optimized)")
-        blocks: List[Tuple[BlockRecord, NPCResult]] = []
+        blocks: List[Tuple[BenchBlockRecord, NPCResult]] = []
         for coin_id in all_coins.keys():
             height = uint32(height + 1)
             timestamp = uint64(timestamp + 19)
