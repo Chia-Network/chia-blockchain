@@ -7,6 +7,7 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==22.1.0",  # Async IO for files
+    "anyio==3.6.2",
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
@@ -42,7 +43,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "anyio",
     "build",
     "coverage",
     "diff-cover",
