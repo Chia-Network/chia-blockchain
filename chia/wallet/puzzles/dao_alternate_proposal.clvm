@@ -1,5 +1,5 @@
 (mod (
-  @ SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+  SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
   CAT_MOD_HASH
@@ -25,6 +25,7 @@
 (include curry-and-treehash.clinc)
 (include *standard-cl-21*)
 
+(defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
 (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
 
 (defun calculate_timer_puzhash (
@@ -224,7 +225,7 @@
     ; we have passed
     (list
       (list CREATE_COIN dao_finished_state ONE)
-      (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH announcement_args)))  ; s is for spend :)
+      (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
       (list ASSERT_HEIGHT_RELATIVE soft_close_length)
       (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
         (sha256
@@ -234,7 +235,7 @@
             vote_coin_id_or_proposal_timelock_hash  ; check the veracity of these values by if the treasury uses them
             soft_close_length
           )
-          (sha256tree (list SINGLETON_ID vote_coin_id_or_proposal_timelock_hash soft_close_length))
+          (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_id_or_proposal_timelock_hash soft_close_length))
         )
       )
       (list

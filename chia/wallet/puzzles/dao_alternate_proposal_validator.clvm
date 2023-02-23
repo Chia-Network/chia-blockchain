@@ -25,7 +25,7 @@
   (include utility_macros.clib)
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
-
+  (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
   (defconstant TEN_THOUSAND 10000)
 
   (defun-inline calculate_win_percentage (CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)
@@ -76,7 +76,7 @@
           (if (= spend_or_update_flag 's')  ; we must recreate ourselves - singleton layer will prevent shenanigans
             (if (= (f (r (f conditions))) spend_or_update_flag)
               (c
-                (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGELTON_STRUCT (f (r (f conditions)))))
+                (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r (f conditions)))))
                 (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
               )
               (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
@@ -112,7 +112,7 @@
         LOCKUP_MOD_HASH
         TREASURY_MOD_HASH
         CAT_TAIL_HASH
-        (f (r SINGELTON_STRUCT))
+        (f (r SINGLETON_STRUCT))
         yes_votes
         total_votes
         spend_or_update_flag
@@ -120,6 +120,6 @@
       )
     )
     ; then
-    (check_conditions SINGELTON_STRUCT conditions spend_or_update_flag my_amount_or_my_puzhash 0)
+    (check_conditions SINGLETON_STRUCT conditions spend_or_update_flag my_amount_or_my_puzhash 0)
   )
 )
