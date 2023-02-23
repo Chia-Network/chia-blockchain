@@ -731,7 +731,7 @@ class FullNodeRpcApi:
     async def get_all_mempool_items(self, request: Dict) -> EndpointResult:
         spends = {}
         for item in self.service.mempool_manager.mempool.all_spends():
-            spends[item.name.hex()] = item
+            spends[item.name.hex()] = item.to_json_dict()
         return {"mempool_items": spends}
 
     async def get_mempool_item_by_tx_id(self, request: Dict) -> EndpointResult:
@@ -744,7 +744,7 @@ class FullNodeRpcApi:
         if item is None:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
-        return {"mempool_item": item}
+        return {"mempool_item": item.to_json_dict()}
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """

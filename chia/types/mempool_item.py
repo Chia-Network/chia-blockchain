@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
@@ -39,3 +39,14 @@ class MempoolItem(Streamable):
     @property
     def removals(self) -> List[Coin]:
         return self.spend_bundle.removals()
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            "spend_bundle": self.spend_bundle,
+            "fee": self.fee,
+            "npc_result": self.npc_result,
+            "cost": self.cost,
+            "spend_bundle_name": self.spend_bundle_name,
+            "additions": self.additions,
+            "removals": self.removals,
+        }
