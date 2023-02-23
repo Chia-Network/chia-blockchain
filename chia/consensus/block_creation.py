@@ -388,7 +388,7 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info) = create_foliage(
         constants,
         rc_block,
         block_generator,
