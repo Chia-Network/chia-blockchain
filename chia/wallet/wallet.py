@@ -321,6 +321,7 @@ class Wallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -335,7 +336,8 @@ class Wallet:
             for prim in primaries:
                 primaries_amount += prim["amount"]
             total_amount = amount + fee + primaries_amount
-
+        if reuse_puzhash is None:
+            reuse_puzhash = self.wallet_state_manager.config.get("reuse_public_key_for_change", False)
         total_balance = await self.get_spendable_balance()
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
@@ -401,11 +403,7 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    if (
-                        self.wallet_state_manager.config.get("reuse_public_key_for_change", False)
-                        and newpuzzlehash != coin.puzzle_hash
-                    ):
-                        print(f"{newpuzzlehash.hex()} {coin.puzzle_hash.hex()}")
+                    if reuse_puzhash and newpuzzlehash != coin.puzzle_hash:
                         change_puzzle_hash: bytes32 = coin.puzzle_hash
                     else:
                         change_puzzle_hash = await self.get_new_puzzlehash()
@@ -483,6 +481,7 @@ class Wallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -511,6 +510,7 @@ class Wallet:
             max_coin_amount=max_coin_amount,
             exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_coins,
+            reuse_puzhash=reuse_puzhash,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
