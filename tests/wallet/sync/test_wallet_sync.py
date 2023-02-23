@@ -60,7 +60,7 @@ class TestWalletSync:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         for block in default_1000_blocks[:100]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(10), uint32(15), False)
@@ -82,7 +82,7 @@ class TestWalletSync:
             num_blocks, block_list_input=default_1000_blocks, pool_reward_puzzle_hash=ph
         )
         for i in range(0, len(new_blocks)):
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
+            await full_node_api.full_node.add_block(new_blocks[i])
 
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(110), uint32(115), True)
@@ -110,7 +110,7 @@ class TestWalletSync:
         assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
         for block in default_1000_blocks[:150]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(80), uint32(99), False)
@@ -166,7 +166,7 @@ class TestWalletSync:
         wallets[1][0].config["trusted_peers"] = {}
 
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -179,7 +179,7 @@ class TestWalletSync:
         blocks_reorg = bt.get_consecutive_blocks(num_blocks - 1, block_list_input=default_400_blocks[:-5])
         blocks_reorg = bt.get_consecutive_blocks(1, blocks_reorg, guarantee_transaction_block=True, current_time=True)
         for i in range(1, len(blocks_reorg)):
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
+            await full_node_api.full_node.add_block(blocks_reorg[i])
 
         for wallet_node, wallet_server in wallets:
             await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -219,7 +219,7 @@ class TestWalletSync:
 
         base_num_blocks = 400
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
         all_blocks = default_400_blocks
         both_phs = []
         for wallet_node, wallet_server in wallets:
@@ -230,13 +230,13 @@ class TestWalletSync:
             # Tests a reorg with the wallet
             ph = both_phs[i % 2]
             all_blocks = bt.get_consecutive_blocks(1, block_list_input=all_blocks, pool_reward_puzzle_hash=ph)
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(all_blocks[-1]))
+            await full_node_api.full_node.add_block(all_blocks[-1])
 
         new_blocks = bt.get_consecutive_blocks(
             test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
         )
         for i in range(base_num_blocks + 20, len(new_blocks)):
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
+            await full_node_api.full_node.add_block(new_blocks[i])
 
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
@@ -256,7 +256,7 @@ class TestWalletSync:
         wallets[1][0].config["trusted_peers"] = {}
 
         for block in default_400_blocks[:20]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -278,7 +278,7 @@ class TestWalletSync:
         wallets[1][0].config["trusted_peers"] = {}
 
         for block in default_400_blocks[:200]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -299,7 +299,7 @@ class TestWalletSync:
         wallets[1][0].config["trusted_peers"] = {}
 
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -309,7 +309,7 @@ class TestWalletSync:
 
         # Tests a long reorg
         for block in default_1000_blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -326,7 +326,7 @@ class TestWalletSync:
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
 
         for i in range(len(blocks_reorg) - num_blocks - 10, len(blocks_reorg)):
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
+            await full_node_api.full_node.add_block(blocks_reorg[i])
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(
@@ -354,7 +354,7 @@ class TestWalletSync:
 
         # Insert 400 blocks
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         # Farm few more with reward
         for i in range(0, num_blocks - 1):
@@ -382,7 +382,7 @@ class TestWalletSync:
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
         for block in blocks_reorg[-30:]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
@@ -406,14 +406,14 @@ class TestWalletSync:
 
         # Insert 400 blocks
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         # Reorg blocks that carry reward
         num_blocks_reorg = 30
         blocks_reorg = bt.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
 
         for block in blocks_reorg[:-5]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         async def get_tx_count(wsm, wallet_id):
             txs = await wsm.get_all_transactions(wallet_id)
@@ -434,7 +434,7 @@ class TestWalletSync:
         blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=all_blocks_reorg_2)
 
         for block in blocks_reorg_2[-44:]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
             await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
@@ -1302,7 +1302,7 @@ class TestWalletSync:
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         for block in blocks:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
