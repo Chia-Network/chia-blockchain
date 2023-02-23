@@ -69,31 +69,33 @@
     )
   )
 
-  (defun check_conditions (SINGLETON_STRUCT conditions spend_or_update_flag)
+  (defun check_conditions (SINGLETON_STRUCT conditions spend_or_update_flag seen_flag)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
-        (c
-          (if (= spend_or_update_flag 's')
-            (assert
-              (= (f (r (f conditions))) spend_or_update_flag)
-              ; then
-              (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGELTON_STRUCT (f (r (f conditions)))))
+
+          (if (= spend_or_update_flag 's')  ; we must recreate ourselves - singleton layer will prevent shenanigans
+            (if (= (f (r (f conditions))) spend_or_update_flag)
+              (c
+                (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGELTON_STRUCT (f (r (f conditions)))))
+                (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
+              )
+              (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
             )
             (if (= spend_or_update_flag 'u')
               (assert
                 (= (f (r (r (f conditions)))) spend_or_update_flag)
                 ; then
-                (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
+                (c
+                  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
+                  (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
+                )
               )
               (x)  ; proposal not recognised (TODO: maybe add mint as an option here)
             )
           )
-
-          (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag))
-        )
-
+          (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
       )
-      ()
+      (assert seen_flag ())  ; check we've seen something matching the flag and then return empty list
     )
   )
 
@@ -118,6 +120,6 @@
       )
     )
     ; then
-    (check_conditions SINGELTON_STRUCT conditions spend_or_update_flag my_amount_or_my_puzhash)
+    (check_conditions SINGELTON_STRUCT conditions spend_or_update_flag my_amount_or_my_puzhash 0)
   )
 )
