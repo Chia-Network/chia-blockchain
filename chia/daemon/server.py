@@ -213,7 +213,7 @@ class WebSocketServer:
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()
-        asyncio.create_task(self.exit())
+        await self.exit()
         log.info(f"Daemon Server stopping, Services stopped: {service_names}")
         return {"success": True, "services_stopped": service_names}
 
