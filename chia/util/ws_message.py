@@ -8,7 +8,7 @@ from typing_extensions import TypedDict
 from chia.util.json_util import dict_to_json_str
 
 # Messages must follow this format
-# Message = { "command" "command_name",
+# Message = { "command": "command_name",
 #             "data" : {...},
 #             "request_id": "bytes_32",
 #             "destination": "service_name",

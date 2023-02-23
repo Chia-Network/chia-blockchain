@@ -131,7 +131,7 @@ class FullNodeSimulator(FullNodeAPI):
                     config["simulator"]["auto_farm"] = self.auto_farm
                 save_config(self.bt.root_path, "config.yaml", config)
             self.config = config
-            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost > 0:
+            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost() > 0:
                 # if mempool is not empty and auto farm was just enabled, farm a block
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm

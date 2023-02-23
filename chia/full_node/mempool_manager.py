@@ -177,21 +177,17 @@ class MempoolManager:
         spend_bundles: List[SpendBundle] = []
         removals: List[Coin] = []
         additions: List[Coin] = []
-        for dic in reversed(self.mempool.sorted_spends.values()):
-            for item in dic.values():
-                if not item_inclusion_filter(self, item):
-                    continue
-                log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
-                if (
-                    item.cost + cost_sum > self.max_block_clvm_cost
-                    or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT
-                ):
-                    return (spend_bundles, uint64(cost_sum), additions, removals)
-                spend_bundles.append(item.spend_bundle)
-                cost_sum += item.cost
-                fee_sum += item.fee
-                removals.extend(item.removals)
-                additions.extend(item.additions)
+        for item in self.mempool.spends_by_feerate():
+            if not item_inclusion_filter(self, item):
+                continue
+            log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
+            if item.cost + cost_sum > self.max_block_clvm_cost or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT:
+                return (spend_bundles, uint64(cost_sum), additions, removals)
+            spend_bundles.append(item.spend_bundle)
+            cost_sum += item.cost
+            fee_sum += item.fee
+            removals.extend(item.removals)
+            additions.extend(item.additions)
         return (spend_bundles, uint64(cost_sum), additions, removals)
 
     def create_bundle_from_mempool(
@@ -227,7 +223,7 @@ class MempoolManager:
     def get_filter(self) -> bytes:
         all_transactions: Set[bytes32] = set()
         byte_array_list = []
-        for key, _ in self.mempool.spends.items():
+        for key in self.mempool.all_spend_ids():
             if key not in all_transactions:
                 all_transactions.add(key)
                 byte_array_list.append(bytearray(key))
@@ -366,10 +362,9 @@ class MempoolManager:
         """
 
         # Skip if already added
-        if spend_name in self.mempool.spends:
-            cost: Optional[uint64] = self.mempool.spends[spend_name].cost
-            assert cost is not None
-            return uint64(cost), MempoolInclusionStatus.SUCCESS, None
+        existing_item = self.mempool.get_spend_by_id(spend_name)
+        if existing_item is not None:
+            return existing_item.cost, MempoolInclusionStatus.SUCCESS, None
 
         err, item, remove_items = await self.validate_spend_bundle(
             new_spend, npc_result, spend_name, first_added_height
@@ -529,9 +524,8 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                for c_sb_id in self.mempool.removal_coin_id_to_spendbundle_ids[conflicting.name()]:
-                    sb: MempoolItem = self.mempool.spends[c_sb_id]
-                    conflicting_pool_items[sb.name] = sb
+                for item in self.mempool.get_spends_by_coin_id(conflicting.name()):
+                    conflicting_pool_items[item.name] = item
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
@@ -562,7 +556,8 @@ class MempoolManager:
             if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
-            if removal.name() in self.mempool.removal_coin_id_to_spendbundle_ids:
+            items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(removal.name())
+            if len(items) > 0:
                 conflicts.append(removal)
 
         if len(conflicts) > 0:
@@ -572,8 +567,9 @@ class MempoolManager:
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
-        if bundle_hash in self.mempool.spends:
-            return self.mempool.spends[bundle_hash].spend_bundle
+        item: Optional[MempoolItem] = self.mempool.get_spend_by_id(bundle_hash)
+        if item is not None:
+            return item.spend_bundle
         return None
 
     def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
@@ -583,7 +579,7 @@ class MempoolManager:
 
         If include_pending is specified, also check the PENDING cache.
         """
-        item = self.mempool.spends.get(bundle_hash, None)
+        item = self.mempool.get_spend_by_id(bundle_hash)
         if not item and include_pending:
             # no async lock needed since we're not mutating the pending_cache
             item = self._pending_cache.get(bundle_hash)
@@ -614,24 +610,19 @@ class MempoolManager:
         if use_optimization and last_npc_result is not None:
             # We don't reinitialize a mempool, just kick removed items
             if last_npc_result.conds is not None:
-                spendbundle_ids_to_remove = []
+                spendbundle_ids_to_remove: List[bytes32] = []
                 for spend in last_npc_result.conds.spends:
-                    if spend.coin_id in self.mempool.removal_coin_id_to_spendbundle_ids:
-                        spendbundle_ids: List[bytes32] = self.mempool.removal_coin_id_to_spendbundle_ids[
-                            bytes32(spend.coin_id)
-                        ]
-                        spendbundle_ids_to_remove.extend(spendbundle_ids)
-                        for spendbundle_id in spendbundle_ids:
-                            item = self.mempool.spends.get(spendbundle_id)
-                            if item:
-                                included_items.append(item)
-                            self.remove_seen(spendbundle_id)
+                    items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(bytes32(spend.coin_id))
+                    for item in items:
+                        included_items.append(item)
+                        self.remove_seen(item.name)
+                        spendbundle_ids_to_remove.append(item.name)
                 self.mempool.remove_from_pool(spendbundle_ids_to_remove, MempoolRemoveReason.BLOCK_INCLUSION)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
             self.seen_bundle_hashes = {}
-            for item in old_pool.spends.values():
+            for item in old_pool.all_spends():
                 _, result, err = await self.add_spend_bundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, item.height_added_to_mempool
                 )
@@ -655,8 +646,8 @@ class MempoolManager:
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.info(
-            f"Size of mempool: {len(self.mempool.spends)} spends, "
-            f"cost: {self.mempool.total_mempool_cost} "
+            f"Size of mempool: {self.mempool.size()} spends, "
+            f"cost: {self.mempool.total_mempool_cost()} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
@@ -668,11 +659,11 @@ class MempoolManager:
         assert limit > 0
 
         # Send 100 with the highest fee per cost
-        for dic in reversed(self.mempool.sorted_spends.values()):
-            for item in dic.values():
-                if len(items) == limit:
-                    return items
-                if mempool_filter.Match(bytearray(item.spend_bundle_name)):
-                    continue
-                items.append(item.spend_bundle)
+        for item in self.mempool.spends_by_feerate():
+            if len(items) >= limit:
+                return items
+            if mempool_filter.Match(bytearray(item.spend_bundle_name)):
+                continue
+            items.append(item.spend_bundle)
+
         return items

@@ -165,7 +165,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                 "block_record blob)"
             )
             out_db.execute(
-                "CREATE TABLE sub_epoch_segments_v3(" "ses_block_hash blob PRIMARY KEY," "challenge_segments blob)"
+                "CREATE TABLE sub_epoch_segments_v3(ses_block_hash blob PRIMARY KEY, challenge_segments blob)"
             )
             out_db.execute("CREATE TABLE current_peak(key int PRIMARY KEY, hash blob)")
 

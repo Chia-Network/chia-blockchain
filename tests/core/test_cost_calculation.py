@@ -141,7 +141,7 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(
             binutils.assemble(
                 f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
-                f"  (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
+                f"  (() (q . ((48 '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
             ).as_bin()
         )
         generator = BlockGenerator(program, [], [])
@@ -256,7 +256,7 @@ class TestCostCalculation:
     async def test_standard_tx(self, request: pytest.FixtureRequest):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
-            "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
+            "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
         )
         puzzle_program = SerializedProgram.from_bytes(
             p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))

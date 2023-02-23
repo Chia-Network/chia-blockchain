@@ -145,7 +145,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PRERELEASE_URL=$(gh api /repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          PRERELEASE_URL=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
           mkdir "$GITHUB_WORKSPACE/bladebit"
           wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
           tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
@@ -156,7 +156,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          FULLRELEASE_URL=$(gh api /repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease | not)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          FULLRELEASE_URL=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease | not)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
           mkdir "$GITHUB_WORKSPACE/bladebit"
           wget -O /tmp/bladebit.tar.gz $FULLRELEASE_URL
           tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit

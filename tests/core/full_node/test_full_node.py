@@ -417,7 +417,7 @@ class TestFullNodeProtocol:
                 [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
                 None,
             )
-            msg_bytes = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
+            msg_bytes = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("::1", server_2._port))
             msg = fnp.RespondPeers.from_bytes(msg_bytes.data)
             if msg is not None and not (len(msg.peer_list) == 1):
                 return False

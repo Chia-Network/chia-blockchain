@@ -50,9 +50,9 @@ async def get_all_messages_in_queue(queue):
 
 class TestSimpleSyncProtocol:
     @pytest.mark.asyncio
-    async def test_subscribe_for_ph(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_ph(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -227,9 +227,9 @@ class TestSimpleSyncProtocol:
         assert notified_state.spent_height is not None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_coin_id(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_coin_id(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -324,10 +324,10 @@ class TestSimpleSyncProtocol:
         assert notified_state.spent_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_ph_reorg(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_ph_reorg(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         long_blocks = 20
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -399,10 +399,10 @@ class TestSimpleSyncProtocol:
         assert second_state_coin_2.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_coin_id_reorg(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_coin_id_reorg(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         long_blocks = 20
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -466,9 +466,9 @@ class TestSimpleSyncProtocol:
         assert second_coin.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_hint(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_hint(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
-        full_nodes, wallets, bt = wallet_node_simulator
+        full_nodes, wallets, bt = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -622,8 +622,8 @@ class TestSimpleSyncProtocol:
         check_messages_for_hint(all_messages_1)
 
     @pytest.mark.asyncio
-    async def test_ph_subscribe_limits(self, wallet_node_simulator, self_hostname):
-        full_nodes, wallets, _ = wallet_node_simulator
+    async def test_ph_subscribe_limits(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -663,8 +663,8 @@ class TestSimpleSyncProtocol:
         assert not s.has_ph_subscription(phs[5])
 
     @pytest.mark.asyncio
-    async def test_coin_subscribe_limits(self, wallet_node_simulator, self_hostname):
-        full_nodes, wallets, _ = wallet_node_simulator
+    async def test_coin_subscribe_limits(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
