@@ -7,6 +7,8 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.singleton_record import SingletonRecord
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
 
@@ -28,6 +30,7 @@ class WalletSingletonStore:
                     "coin_id blob PRIMARY KEY,"
                     " coin text,"
                     " singleton_id blob,"
+                    " wallet_id int,"
                     " parent_coin_spend blob,"
                     " inner_puzzle_hash blob,"
                     " pending tinyint,"
@@ -37,50 +40,36 @@ class WalletSingletonStore:
                 )
             )
 
-        # This table allows us to have multiple interested wallets in a single singleton
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS singleton_wallet_ids("
-                    "coin_id blob,"
-                    " wallet_id int)"
-                )
-            )
+            await conn.execute("CREATE INDEX IF NOT EXISTS removed_height_index on singleton_records(removed_height)")
 
         return self
 
     async def save_singleton(
         self,
-        coin: Coin,
-        parent_coinspend: CoinSpend,
-        wallet_ids: List[uint32],
-        inner_puzzle_hash: Optional[bytes32],
-        lineage_proof: Optional[bytes32],
-        pending: bool,
-        removed_height: int,
-        custom_data: Optional[Any],
+        record: SingletonRecord
     ) -> None:
-        singleton_id = singleton.get_singleton_id_from_puzzle(Program.to(bytes(parent_coinspend.puzzle)))
+        singleton_id = singleton.get_singleton_id_from_puzzle(record.parent_coinspend.puzzle_reveal)
         pending_int = 0
-        if pending:
-            pending = 1
+        if record.pending:
+            pending_int = 1
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             columns = (
-                "coin_id, coin, singleton_id, parent_coin_spend, inner_puzzle_hash, pending, removed_height, "
+                "coin_id, coin, singleton_id, wallet_id, parent_coin_spend, inner_puzzle_hash, pending, removed_height, "
                 "lineage_proof, custom_data"
             )
             await conn.execute(
-                f"INSERT or REPLACE INTO singleton_records ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT or REPLACE INTO singleton_records ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    coin.name().hex(),
-                    json.dumps(coin.to_json_dict()),
+                    record.coin.name().hex(),
+                    json.dumps(record.coin.to_json_dict()),
                     singleton_id.hex(),
-                    bytes(parent_coinspend),
-                    inner_puzzle_hash,
+                    record.wallet_id,
+                    bytes(record.parent_coinspend),
+                    record.inner_puzzle_hash,
                     pending_int,
-                    removed_height,
-                    json.dumps(lineage_proof.to_json_dict()),
-                    custom_data,
+                    record.removed_height,
+                    bytes(record.lineage_proof),
+                    record.custom_data,
                 ),
             )
 
@@ -143,6 +132,20 @@ class WalletSingletonStore:
     #         )
     #         await cursor.close()
 
+    def process_row(self, row: List[Any]) -> List[Any]:
+        record = SingletonRecord(
+            coin=Coin.from_json_dict(json.loads(row[1])),
+            singleton_id=bytes32.from_hexstr(row[2]),
+            wallet_id=uint32(row[3]),
+            parent_coinspend=CoinSpend.from_bytes(row[4]),
+            inner_puzzle_hash=bytes32.from_bytes(row[5]),  #  inner puz hash
+            pending=True if row[6] == 1 else False,
+            removed_height=uint32(row[7]),
+            lineage_proof=LineageProof.from_bytes(row[8]),
+            custom_data=row[9]
+        )
+        return record
+
     async def get_spends_for_wallet(self, wallet_id: int) -> List[Tuple[uint32, CoinSpend]]:
         """
         Retrieves all entries for a wallet ID.
@@ -150,10 +153,11 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT height, coin_spend FROM pool_state_transitions WHERE wallet_id=? ORDER BY transition_index",
+                "SELECT * FROM singleton_records WHERE wallet_id = ?",
                 (wallet_id,),
             )
-        return [(uint32(row[0]), CoinSpend.from_bytes(row[1])) for row in rows]
+        return [self.process_row(row) for row in rows]
+
 
     async def rollback(self, height: int, singleton_id_arg: int) -> None:
         """
