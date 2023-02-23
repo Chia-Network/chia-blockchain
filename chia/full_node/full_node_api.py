@@ -465,8 +465,8 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_unfinished_block(
-            respond_unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
+        await self.full_node.add_unfinished_block(
+            respond_unfinished_block.unfinished_block, peer, block_bytes=respond_unfinished_block_bytes
         )
         return None
 
@@ -656,7 +656,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        msg, _ = await self.full_node.respond_end_of_sub_slot(request, peer)
+        msg, _ = await self.full_node.add_end_of_sub_slot(request.end_of_slot_bundle, peer)
         return msg
 
     @api_request(peer_required=True)
@@ -1006,12 +1006,11 @@ class FullNodeAPI:
             return None
 
         # Propagate to ourselves (which validates and does further propagations)
-        request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
         try:
-            await self.full_node.respond_unfinished_block(request, None, True)
+            await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
             # If we have an error with this block, try making an empty block
-            self.full_node.log.error(f"Error farming block {e} {request}")
+            self.full_node.log.error(f"Error farming block {e} {new_candidate}")
             candidate_tuple = self.full_node.full_node_store.get_candidate_block(
                 farmer_request.quality_string, backup=True
             )
@@ -1069,8 +1068,7 @@ class FullNodeAPI:
         ):
             return None
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
-        full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
-        msg, added = await self.full_node.respond_end_of_sub_slot(full_node_message, peer)
+        msg, added = await self.full_node.add_end_of_sub_slot(request.end_of_sub_slot_bundle, peer)
         if not added:
             self.log.error(
                 f"Was not able to add end of sub-slot: "
@@ -1408,7 +1406,7 @@ class FullNodeAPI:
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_compact_proof_of_time(request)
+        await self.full_node.add_compact_proof_of_time(request)
         return None
 
     @api_request(peer_required=True, bytes_required=True, execute_task=True)
@@ -1449,7 +1447,7 @@ class FullNodeAPI:
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_compact_vdf(request, peer)
+        await self.full_node.add_compact_vdf(request, peer)
         return None
 
     @api_request(peer_required=True)

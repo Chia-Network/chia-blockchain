@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
@@ -213,8 +212,8 @@ class TestWalletSimulator:
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
         for block in all_blocks:
-            await full_node_1.respond_block(RespondBlock(block))
-            await full_node_2.respond_block(RespondBlock(block))
+            await full_node_1.add_block(block)
+            await full_node_2.add_block(block)
 
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             uint64(10),
