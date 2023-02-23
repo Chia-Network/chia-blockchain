@@ -1,0 +1,40 @@
+(mod
+  (
+    PROPOSAL_VALIDATOR
+    MONEY_RECEIVER
+    PROPOSAL_LENGTH
+    PROPOSAL_SOFTCLOSE_LENGTH
+    (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
+    proposal_validator_solution
+    delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+    delegated_solution  ; this is not secure unless the delegated puzzle secures it
+  )
+  (include utility_macros.clib)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (if delegated_puzzle_reveal
+    ; if we're checking a proposal
+    (assert (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
+      (c
+        (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list announcement_source PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH)))
+        (c
+          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list spend_or_update_flag delegated_puzzle_hash announcement_args))))
+          (a
+            PROPOSAL_VALIDATOR
+            (list
+              proposal_announcement
+              proposal_validator_solution
+              spend_or_update_flag
+              (a delegated_puzzle_reveal delegated_solution)
+            )
+          )
+        )
+      )
+    )
+    ; if we're taking money
+    (a MONEY_RECEIVOR proposal_validator_solution)
+  )
+
+
+)
