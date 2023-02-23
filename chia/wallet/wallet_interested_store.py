@@ -39,7 +39,6 @@ class WalletInterestedStore:
         return [bytes32(bytes.fromhex(row[0])) for row in rows_hex]
 
     async def add_interested_coin_id(self, coin_id: bytes32) -> None:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute("INSERT OR REPLACE INTO interested_coins VALUES (?)", (coin_id.hex(),))
             await cursor.close()
@@ -61,7 +60,6 @@ class WalletInterestedStore:
         return row[0]
 
     async def add_interested_puzzle_hash(self, puzzle_hash: bytes32, wallet_id: int) -> None:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO interested_puzzle_hashes VALUES (?, ?)", (puzzle_hash.hex(), wallet_id)

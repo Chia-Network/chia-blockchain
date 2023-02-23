@@ -151,7 +151,6 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
 
 @pytest.mark.asyncio
 async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlock]) -> None:
-
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)
 

@@ -2105,7 +2105,6 @@ class FullNode:
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: WSChiaConnection
     ) -> Tuple[Optional[Message], bool]:
-
         fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
 
         # We are not interested in sub-slots which have the same challenge chain but different reward chain. If there
@@ -2357,7 +2356,6 @@ class FullNode:
         header_hash: bytes32,
         field_vdf: CompressibleVDFField,
     ) -> bool:
-
         block = await self.block_store.get_full_block(header_hash)
         if block is None:
             return False
@@ -2523,7 +2521,6 @@ class FullNode:
                 self.log.info("Heights found for bluebox to compact: [%s]" % ", ".join(map(str, heights)))
 
                 for h in heights:
-
                     headers = await self.blockchain.get_header_blocks_in_range(h, h, tx_filter=False)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
@@ -2614,7 +2611,6 @@ class FullNode:
 async def node_next_block_check(
     peer: WSChiaConnection, potential_peek: uint32, blockchain: BlockchainInterface
 ) -> bool:
-
     block_response: Optional[Any] = await peer.call_api(
         FullNodeAPI.request_block, full_node_protocol.RequestBlock(potential_peek, True)
     )

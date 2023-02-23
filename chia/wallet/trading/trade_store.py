@@ -482,7 +482,6 @@ class TradeStore:
         return records
 
     async def rollback_to_block(self, block_index: int) -> None:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
             cursor = await conn.execute("DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,))

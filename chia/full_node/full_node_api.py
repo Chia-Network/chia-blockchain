@@ -558,7 +558,6 @@ class FullNodeAPI:
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
-
         if request.index_from_challenge == 0:
             sub_slot: Optional[Tuple[EndOfSubSlotBundle, int, uint128]] = self.full_node.full_node_store.get_sub_slot(
                 request.challenge_hash
@@ -619,7 +618,6 @@ class FullNodeAPI:
                 return None
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
-
                 next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
                 assert sub_slots_for_peak is not None
@@ -1098,7 +1096,6 @@ class FullNodeAPI:
         tx_additions: List[Coin] = []
 
         if block.transactions_generator is not None:
-
             block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
             # get_block_generator() returns None in case the block we specify
             # does not have a generator (i.e. is not a transaction block).
@@ -1459,7 +1456,6 @@ class FullNodeAPI:
     async def register_interest_in_puzzle_hash(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
-
         trusted = self.is_trusted(peer)
         if trusted:
             max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
@@ -1532,7 +1528,6 @@ class FullNodeAPI:
     async def register_interest_in_coin(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
-
         if self.is_trusted(peer):
             max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
             max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)

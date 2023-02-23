@@ -129,7 +129,6 @@ _T_SpendSim = TypeVar("_T_SpendSim", bound="SpendSim")
 
 
 class SpendSim:
-
     db_wrapper: DBWrapper2
     coin_store: CoinStore
     mempool_manager: MempoolManager

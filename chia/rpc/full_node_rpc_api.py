@@ -466,7 +466,6 @@ class FullNodeRpcApi:
         return {"block_record": record}
 
     async def get_unfinished_block_headers(self, request: Dict) -> EndpointResult:
-
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
         if peak is None:
             return {"headers": []}
