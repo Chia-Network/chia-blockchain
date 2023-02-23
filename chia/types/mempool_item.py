@@ -8,7 +8,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 
 @streamable
@@ -42,11 +42,11 @@ class MempoolItem(Streamable):
 
     def to_json_dict(self) -> Dict[str, Any]:
         return {
-            "spend_bundle": self.spend_bundle,
-            "fee": self.fee,
-            "npc_result": self.npc_result,
-            "cost": self.cost,
-            "spend_bundle_name": self.spend_bundle_name,
-            "additions": self.additions,
-            "removals": self.removals,
+            "spend_bundle": recurse_jsonify(self.spend_bundle),
+            "fee": recurse_jsonify(self.fee),
+            "npc_result": recurse_jsonify(self.npc_result),
+            "cost": recurse_jsonify(self.cost),
+            "spend_bundle_name": recurse_jsonify(self.spend_bundle_name),
+            "additions": recurse_jsonify(self.additions),
+            "removals": recurse_jsonify(self.removals),
         }
