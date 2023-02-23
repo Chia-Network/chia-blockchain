@@ -572,6 +572,7 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(message.type)
                 last_time = self.log_rate_limit_last_time[message_type]
                 now = time.monotonic()
+                self.log_rate_limit_last_time[message_type] = now
                 if now - last_time >= 60:
                     msg = f"Rate limiting ourselves. message type: {message_type.name}, peer: {self.peer_host}"
                     self.log.debug(msg)
