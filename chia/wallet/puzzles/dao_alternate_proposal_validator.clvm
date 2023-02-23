@@ -2,6 +2,7 @@
   (
     SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
     PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
     LOCKUP_MOD_HASH
     TREASURY_MOD_HASH
@@ -10,13 +11,10 @@
     PASS_MARGIN
     (announcement_source delegated_puzzle_hash announcement_args)
     (
-      (@ my_solution
-        proposal_id
-        proposal_type
-        total_votes
-        yes_votes
-        my_amount_or_my_puzhash
-      )
+      proposal_id
+      proposal_type
+      total_votes
+      yes_votes
     )
     spend_or_update_flag
     conditions
@@ -25,15 +23,15 @@
   (include utility_macros.clib)
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
-  (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
+
   (defconstant TEN_THOUSAND 10000)
 
-  (defun-inline calculate_win_percentage (CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)
-    (f (divmod (* CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE) TEN_THOUSAND))
+  (defun-inline calculate_win_percentage (TOTAL PERCENTAGE)
+    (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
   )
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
                                       inner_puzzle_hash
                                       (sha256tree SINGLETON_STRUCT)
      )
@@ -72,7 +70,6 @@
   (defun check_conditions (SINGLETON_STRUCT conditions spend_or_update_flag seen_flag)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
-
           (if (= spend_or_update_flag 's')  ; we must recreate ourselves - singleton layer will prevent shenanigans
             (if (= (f (r (f conditions))) spend_or_update_flag)
               (c
@@ -102,12 +99,13 @@
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this and I'm not sure why we want the proposal to announce the solution to this validator
     (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
-    (> YES_VOTES (calculate_win_percentage TOTAL_VOTES PASS_MARGIN))
+    (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
     (=
       announcement_source
       (calculate_proposal_puzzle
         PROPOSAL_MOD_HASH
-        (c (f SINGLETON_STRUCT) (c proposal_id (r (r LAUNCHER_PUZZLE_HASH))))
+        (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+        PROPOSAL_TIMER_MOD_HASH
         CAT_MOD_HASH
         LOCKUP_MOD_HASH
         TREASURY_MOD_HASH
@@ -120,6 +118,6 @@
       )
     )
     ; then
-    (check_conditions SINGLETON_STRUCT conditions spend_or_update_flag my_amount_or_my_puzhash 0)
+    (check_conditions SINGLETON_STRUCT conditions spend_or_update_flag 0)
   )
 )
