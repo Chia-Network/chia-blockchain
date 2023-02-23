@@ -49,8 +49,10 @@ class TestSingletonStore:
                 lineage_proof=lineage_proof,
                 custom_data=custom_data
             )
-
             await db.save_singleton(record)
-
-            spends = await db.get_spends_for_wallet(2)
-        breakpoint()
+            records_by_wallet = await db.get_records_by_wallet_id(2)
+            assert records_by_wallet[0] == record
+            record_by_coin_id = await db.get_record_by_coin_id(parent_coin.name())
+            assert record_by_coin_id == record
+            records_by_singleton_id = await db.get_records_by_singleton_id(launcher_id)
+            assert records_by_singleton_id[0] == record

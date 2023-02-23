@@ -146,15 +146,39 @@ class WalletSingletonStore:
         )
         return record
 
-    async def get_spends_for_wallet(self, wallet_id: int) -> List[Tuple[uint32, CoinSpend]]:
+    async def get_records_by_wallet_id(self, wallet_id: int) -> List[SingletonRecord]:
         """
         Retrieves all entries for a wallet ID.
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM singleton_records WHERE wallet_id = ?",
+                "SELECT * FROM singleton_records WHERE wallet_id = ? ORDER BY removed_height",
                 (wallet_id,),
+            )
+        return [self.process_row(row) for row in rows]
+
+    async def get_record_by_coin_id(self, coin_id: bytes33) -> SingletonRecord:
+        """
+        Retrieves all entries for a coin ID.
+        """
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT * FROM singleton_records WHERE coin_id = ?",
+                (coin_id.hex(),),
+            )
+        return self.process_row(rows[0])
+
+    async def get_records_by_singleton_id(self, singleton_id: bytes33) -> SingletonRecord:
+        """
+        Retrieves all entries for a singleton ID.
+        """
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT * FROM singleton_records WHERE singleton_id = ? ORDER BY removed_height",
+                (singleton_id.hex(),),
             )
         return [self.process_row(row) for row in rows]
 
