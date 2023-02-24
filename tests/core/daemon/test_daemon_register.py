@@ -113,10 +113,14 @@ async def test_remove_connection(get_daemon: Any, bt: Any) -> None:
 
     ws_response_set = ws_server.connections.get(test_service_names[0], {})
     assert len(ws_response_set) == 1
+    ws_to_remove = min(ws_response_set)
 
-    removed_names = ws_server.remove_connection(min(ws_response_set))
-
+    removed_names = ws_server.remove_connection(ws_to_remove)
     assert removed_names == test_service_names
+
+    # remove again, should return empty set and not raise any errors
+    removed_names = ws_server.remove_connection(ws_to_remove)
+    assert len(removed_names) == 0
 
     await client.close()
     await ws_server.stop()

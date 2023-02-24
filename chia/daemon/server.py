@@ -135,7 +135,7 @@ class WebSocketServer:
         self.log = log
         self.services: Dict = dict()
         self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, Set[WebSocketResponse]] = dict()  # service_name : [WebSocket]
+        self.connections: Dict[str, Set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
         self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
@@ -277,7 +277,7 @@ class WebSocketServer:
             try:
                 connections.remove(websocket)
                 service_names.append(service_name)
-            except ValueError:
+            except KeyError:
                 pass
         return service_names
 
