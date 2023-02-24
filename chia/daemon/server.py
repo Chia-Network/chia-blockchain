@@ -216,7 +216,7 @@ class WebSocketServer:
         log.info(f"Daemon Server stopping, Services stopped: {service_names}")
         return {"success": True, "services_stopped": service_names}
 
-    async def incoming_connection(self, request):
+    async def incoming_connection(self, request: web.Request) -> web.StreamResponse:
         ws: WebSocketResponse = web.WebSocketResponse(
             max_msg_size=self.daemon_max_message_size, heartbeat=self.heartbeat
         )
@@ -238,22 +238,7 @@ class WebSocketServer:
                     response = format_response(decoded, error)
                     connections = {ws}  # send error back to the sender
 
-                for connection in connections:
-                    if connection.closed:
-                        # strange, connection is closed, but we still have it in the list
-                        self.remove_connection(connection)
-                        continue
-                    try:
-                        await connection.send_str(response)
-                    except Exception as e:
-                        tb = traceback.format_exc()
-                        service_names = self.remove_connection(connection)
-                        if len(service_names) == 0:
-                            service_names = ["Unknown"]
-
-                        self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
-                        self.log.info(f"Closing websocket with {service_names}")
-                        await connection.close()
+                await self.send_all_responses(connections, response)
             else:
                 service_names = self.remove_connection(ws)
 
@@ -269,6 +254,28 @@ class WebSocketServer:
 
                 await ws.close()
                 break
+
+        return ws
+
+    async def send_all_responses(self, connections: Set[WebSocketResponse], response: Optional[str]) -> None:
+        if response is None:
+            return
+        for connection in connections:
+            try:
+                await connection.send_str(response)
+            except Exception as e:
+                service_names = self.remove_connection(connection)
+                if len(service_names) == 0:
+                    service_names = ["Unknown"]
+
+                tb = ""
+                if not isinstance(e, ConnectionResetError):
+                    tb = traceback.format_exc()
+
+                self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
+                self.log.info(f"Closing websocket with {service_names}")
+
+                await connection.close()
 
     def remove_connection(self, websocket: WebSocketResponse) -> List[str]:
         """Returns a list of service names from which the connection was removed"""
