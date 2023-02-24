@@ -63,6 +63,7 @@ def child_writer_dispatch_with_readiness_check(
     while not started and time.monotonic() < end:
         started = start_file_path.exists()
         sleep(0.1)
+    assert started
 
     try:
         while attempts > 0:
