@@ -204,7 +204,12 @@ class WebSocketServer:
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
-    async def stop(self) -> Dict[str, Any]:
+    def daemon_exit_message(self, message: WsRpcMessage) -> bool:
+        command = message["command"]
+        destination = message["destination"]
+        return command == "exit" and destination == "daemon"
+
+    async def stop_services(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
         service_names = list(self.services.keys())
         stop_service_jobs = [
@@ -213,9 +218,14 @@ class WebSocketServer:
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()
-        await self.exit()
-        log.info(f"Daemon Server stopping, Services stopped: {service_names}")
+        self.log.info(f"Daemon Server stopping, Services stopped: {service_names}")
         return {"success": True, "services_stopped": service_names}
+
+    async def stop(self) -> None:
+        if len(self.services) > 0:
+            await self.stop_services()
+
+        await self.exit()
 
     async def incoming_connection(self, request):
         ws: WebSocketResponse = web.WebSocketResponse(
@@ -242,6 +252,10 @@ class WebSocketServer:
                     for socket in sockets_to_use:
                         try:
                             await socket.send_str(response)
+                            if self.daemon_exit_message(decoded):
+                                # create a task to stop the daemon after sending the response back
+                                asyncio.create_task(self.stop())
+                                return
                         except Exception as e:
                             tb = traceback.format_exc()
                             self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
@@ -353,7 +367,8 @@ class WebSocketServer:
         elif command == "remove_keyring_passphrase":
             response = await self.remove_keyring_passphrase(data)
         elif command == "exit":
-            response = await self.stop()
+            # stop the services, the daemon will exit after sending the response
+            response = await self.stop_services()
         elif command == "register_service":
             response = await self.register_service(websocket, data)
         elif command == "get_status":
@@ -1124,7 +1139,7 @@ class WebSocketServer:
             self.webserver.close()
             await self.webserver.await_closed()
         self.shutdown_event.set()
-        log.info("chia daemon exiting")
+        self.log.info("chia daemon exiting")
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")

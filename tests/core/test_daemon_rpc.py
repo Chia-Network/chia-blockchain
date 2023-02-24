@@ -22,4 +22,6 @@ class TestDaemonRpc:
 
         assert response["data"]["success"]
         assert response["data"]["version"] == __version__
+
+        client.close()
         ws_server.stop()
