@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
-
 import aiohttp
 import pytest
 
+from chia.daemon.server import WebSocketServer
+from chia.simulator.block_tools import BlockTools
 from chia.util.ws_message import create_payload
 
 
 @pytest.mark.asyncio
-async def test_multiple_register_same(get_daemon: Any, bt: Any) -> None:
+async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
 
@@ -40,7 +40,7 @@ async def test_multiple_register_same(get_daemon: Any, bt: Any) -> None:
     await ws.send_str(payload)
     await ws.receive()
 
-    connections = ws_server.connections.get(service_name, {})
+    connections = ws_server.connections.get(service_name, set())
     assert len(connections) == 1
 
     await client.close()
@@ -48,7 +48,7 @@ async def test_multiple_register_same(get_daemon: Any, bt: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_multiple_register_different(get_daemon: Any, bt: Any) -> None:
+async def test_multiple_register_different(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
 
@@ -73,13 +73,13 @@ async def test_multiple_register_different(get_daemon: Any, bt: Any) -> None:
         await ws.receive()
 
     for service_name in test_service_names:
-        connections = ws_server.connections.get(service_name, {})
+        connections = ws_server.connections.get(service_name, set())
         assert len(connections) == 1
 
     await ws.close()
 
     for service_name in test_service_names:
-        connections = ws_server.connections.get(service_name, {})
+        connections = ws_server.connections.get(service_name, set())
         assert len(connections) == 0
 
     await client.close()
@@ -87,7 +87,7 @@ async def test_multiple_register_different(get_daemon: Any, bt: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_remove_connection(get_daemon: Any, bt: Any) -> None:
+async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
 
@@ -111,9 +111,9 @@ async def test_remove_connection(get_daemon: Any, bt: Any) -> None:
         await ws.send_str(payload)
         await ws.receive()
 
-    ws_response_set = ws_server.connections.get(test_service_names[0], {})
-    assert len(ws_response_set) == 1
-    ws_to_remove = min(ws_response_set)
+    connections = ws_server.connections.get(test_service_names[0], set())
+    assert len(connections) == 1
+    ws_to_remove = next(iter(connections))
 
     removed_names = ws_server.remove_connection(ws_to_remove)
     assert removed_names == test_service_names
