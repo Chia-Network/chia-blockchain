@@ -58,8 +58,8 @@ def child_writer_dispatch_with_readiness_check(
 
     # Wait for all processes to indicate readiness
     start_file_path: Path = ready_dir / "start"
-    start = time.time()
-    while not start_file_path.exists() and time.time() - start < 120:
+    end = time.monotonic() + 120
+    while not start_file_path.exists() and time.monotonic() < end:
         sleep(0.1)
 
     try:
@@ -88,8 +88,8 @@ def child_writer_dispatch_with_readiness_check(
 
 def poll_directory(dir: Path, expected_entries: int) -> bool:
     found_all: bool = False
-    start = time.time()
-    while time.time() - start < 120:
+    end = time.monotonic() + 120
+    while time.monotonic() < end:
         entries = list(os.scandir(dir))
         if len(entries) < expected_entries:  # Expecting num_workers of dir entries
             log.warning(f"Polling not complete: {len(entries)} of {expected_entries} entries found")

@@ -33,8 +33,8 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
 
         # Wait up to 120 seconds for all processes to indicate readiness
         start_file_path: Path = Path(ready_file_path.parent) / "start"
-        start = time.time()
-        while not start_file_path.exists() and time.time() - start < 120:
+        end = time.monotonic() + 120
+        while not start_file_path.exists() and time.monotonic() < end:
             sleep(0.1)
 
         assert start_file_path.exists()
@@ -63,12 +63,10 @@ class TestFileKeyringSynchronization:
     def test_multiple_writers(self):
         num_workers = 10
         keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        passphrase_list = list(
-            map(
-                lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}", keyring_path, x),
-                range(num_workers),
-            )
-        )
+        passphrase_list = [
+            ("test-service", f"test-user-{index}", f"passphrase {index}", keyring_path, index)
+            for index in range(num_workers)
+        ]
 
         # Create a directory for each process to indicate readiness
         ready_dir: Path = Path(keyring_path).parent / "ready"
