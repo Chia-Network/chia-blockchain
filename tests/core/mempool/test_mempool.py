@@ -318,7 +318,7 @@ async def respond_transaction(
         self.full_node.full_node_store.pending_tx_request.pop(spend_name)
     if spend_name in self.full_node.full_node_store.peers_with_tx:
         self.full_node.full_node_store.peers_with_tx.pop(spend_name)
-    return await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
+    return await self.full_node.add_transaction(tx.transaction, spend_name, peer, test)
 
 
 async def next_block(full_node_1, wallet_a, bt) -> Coin:
@@ -338,7 +338,7 @@ async def next_block(full_node_1, wallet_a, bt) -> Coin:
     )
 
     for block in blocks:
-        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await full_node_1.full_node.add_block(block)
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 1)
     return list(blocks[-1].get_included_reward_coins())[0]
@@ -487,7 +487,7 @@ class TestMempoolManager:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         spend_bundle1 = generate_test_spend_bundle(wallet_a, list(blocks[-1].get_included_reward_coins())[0])
@@ -549,7 +549,7 @@ class TestMempoolManager:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
@@ -625,7 +625,7 @@ class TestMempoolManager:
         )
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coins = iter(blocks[-1].get_included_reward_coins())
@@ -669,7 +669,7 @@ class TestMempoolManager:
             raise Exception("dummy peer not found")
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + num_blocks)
 
@@ -707,7 +707,7 @@ class TestMempoolManager:
             raise Exception("dummy peer not found")
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
@@ -1563,7 +1563,7 @@ class TestMempoolManager:
         peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 5)
 
@@ -1617,7 +1617,7 @@ class TestMempoolManager:
         )
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
         # coin = list(blocks[-1].get_included_reward_coins())[0]
@@ -1662,7 +1662,7 @@ class TestMempoolManager:
         )
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
@@ -1690,7 +1690,7 @@ class TestMempoolManager:
         # assert spend_bundle is not None
         #
         # tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        # await full_node_1.respond_transaction(tx, peer, test=True)
+        # await full_node_1.add_transaction(tx, peer, test=True)
         #
         # sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
         # assert sb is spend_bundle
@@ -2486,7 +2486,7 @@ class TestMaliciousGenerators:
         )
 
         for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
@@ -2497,7 +2497,7 @@ class TestMaliciousGenerators:
         coin_spend_0 = CoinSpend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
         assert spend_bundle is not None
-        res = await full_node_1.full_node.respond_transaction(new_bundle, new_bundle.name(), test=True)
+        res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
         assert res == (MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE)
 
 

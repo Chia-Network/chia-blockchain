@@ -525,14 +525,7 @@ class WeightProofHandler:
             assert curr.reward_chain_block.challenge_chain_sp_vdf
             cc_sp_vdf_info = curr.reward_chain_block.challenge_chain_sp_vdf
             if not curr.challenge_chain_sp_proof.normalized_to_identity:
-                (
-                    _,
-                    _,
-                    _,
-                    _,
-                    cc_vdf_iters,
-                    _,
-                ) = get_signage_point_vdf_info(
+                (_, _, _, _, cc_vdf_iters, _) = get_signage_point_vdf_info(
                     self.constants,
                     curr.finished_sub_slots,
                     block_record.overflow,
@@ -737,14 +730,7 @@ async def _challenge_block_vdfs(
     block_rec: BlockRecord,
     sub_blocks: Dict[bytes32, BlockRecord],
 ):
-    (
-        _,
-        _,
-        _,
-        _,
-        cc_vdf_iters,
-        _,
-    ) = get_signage_point_vdf_info(
+    (_, _, _, _, cc_vdf_iters, _) = get_signage_point_vdf_info(
         constants,
         header_block.finished_sub_slots,
         block_rec.overflow,

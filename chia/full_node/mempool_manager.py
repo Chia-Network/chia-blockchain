@@ -11,7 +11,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 from blspy import GTElement
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
@@ -115,7 +115,7 @@ class MempoolManager:
     # cache of MempoolItems with height conditions making them not valid yet
     _pending_cache: PendingTxCache
     seen_cache_size: int
-    peak: Optional[BlockRecord]
+    peak: Optional[BlockRecordProtocol]
     mempool: Mempool
 
     def __init__(
@@ -157,7 +157,7 @@ class MempoolManager:
             )
 
         # The mempool will correspond to a certain peak
-        self.peak: Optional[BlockRecord] = None
+        self.peak: Optional[BlockRecordProtocol] = None
         self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(self.max_block_clvm_cost)
         mempool_info = MempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
@@ -589,7 +589,7 @@ class MempoolManager:
         return item
 
     async def new_peak(
-        self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]
+        self, new_peak: Optional[BlockRecordProtocol], last_npc_result: Optional[NPCResult]
     ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.

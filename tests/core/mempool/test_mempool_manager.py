@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
 from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
-from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -21,7 +20,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -42,6 +41,23 @@ TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIM
 TEST_HEIGHT = uint32(5)
 
 
+@dataclass(frozen=True)
+class TestBlockRecord:
+    """
+    This is a subset of BlockRecord that the mempool manager uses for peak.
+    """
+
+    header_hash: bytes32
+    height: uint32
+    timestamp: Optional[uint64]
+    prev_transaction_block_height: uint32
+    prev_transaction_block_hash: Optional[bytes32]
+
+    @property
+    def is_transaction_block(self) -> bool:
+        return self.timestamp is not None
+
+
 async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
     assert False
 
@@ -55,33 +71,17 @@ async def get_coin_record_for_test_coins(coin_id: bytes32) -> Optional[CoinRecor
     return test_coin_records.get(coin_id)
 
 
-def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 = TEST_TIMESTAMP) -> BlockRecord:
-    return BlockRecord(
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
-        height,
-        uint128(0),
-        uint128(0),
-        uint8(0),
-        ClassgroupElement(bytes100(b"0" * 100)),
-        None,
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
-        uint64(0),
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
-        uint64(0),
-        uint8(0),
-        False,
-        uint32(height - 1),
-        timestamp,
-        None,
-        uint64(0),
-        None,
-        None,
-        None,
-        None,
-        None,
+def height_hash(height: int) -> bytes32:
+    return bytes32(height.to_bytes(32, byteorder="big"))
+
+
+def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 = TEST_TIMESTAMP) -> TestBlockRecord:
+    return TestBlockRecord(
+        header_hash=height_hash(height),
+        height=height,
+        timestamp=timestamp,
+        prev_transaction_block_height=uint32(height - 1),
+        prev_transaction_block_hash=height_hash(height - 1),
     )
 
 

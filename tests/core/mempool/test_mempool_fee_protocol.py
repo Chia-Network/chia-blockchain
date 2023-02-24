@@ -6,7 +6,7 @@ from typing import List, Tuple, Union
 import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RespondFeeEstimates
 from chia.server.server import ChiaServer
@@ -37,7 +37,7 @@ async def test_protocol_messages(
     full_node_sim: Union[FullNodeAPI, FullNodeSimulator] = full_nodes[0]
 
     for block in blocks:
-        await full_node_sim.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await full_node_sim.full_node.add_block(block)
 
     await time_out_assert(60, node_height_at_least, True, full_node_sim, blocks[-1].height)
 
