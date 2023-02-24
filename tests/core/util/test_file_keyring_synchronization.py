@@ -11,7 +11,7 @@ from time import sleep
 from chia.simulator.keyring import TempKeyring, using_temp_file_keyring
 from chia.simulator.time_out_assert import adjusted_timeout
 from chia.util.keyring_wrapper import KeyringWrapper
-from tests.core.util.test_lockfile import poll_directory
+from tests.core.util.test_lockfile import wait_for_enough_files_in_directory
 
 log = logging.getLogger(__name__)
 
@@ -34,10 +34,11 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
         # Wait up to 120 seconds for all processes to indicate readiness
         start_file_path: Path = Path(ready_file_path.parent) / "start"
         end = time.monotonic() + 120
-        while not start_file_path.exists() and time.monotonic() < end:
+        started = False
+        while not started and time.monotonic() < end:
+            started = start_file_path.exists()
             sleep(0.1)
-
-        assert start_file_path.exists()
+        assert started
 
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
@@ -79,8 +80,7 @@ class TestFileKeyringSynchronization:
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
 
-            # Wait for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers)
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -89,8 +89,7 @@ class TestFileKeyringSynchronization:
             with open(start_file_path, "w") as f:
                 f.write(f"{os.getpid()}\n")
 
-            # Wait for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers)
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
