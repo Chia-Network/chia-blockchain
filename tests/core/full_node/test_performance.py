@@ -54,7 +54,7 @@ class TestPerformance:
             pool_reward_puzzle_hash=wallet_ph,
         )
         for block in blocks:
-            await full_node_1.full_node.add_block(block)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
         start_height = (
             full_node_1.full_node.blockchain.get_peak().height
@@ -94,7 +94,7 @@ class TestPerformance:
                 guarantee_transaction_block=True,
                 transaction_data=spend_bundle,
             )
-            await full_node_1.full_node.add_block(blocks[-1], fake_peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), fake_peer)
 
         await time_out_assert(20, node_height_at_least, True, full_node_1, start_height + 20)
 
@@ -189,7 +189,7 @@ class TestPerformance:
         with assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
-            res = await full_node_1.full_node.add_block(block_small)
+            res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
 
         log.warning(f"Res: {res}")
 

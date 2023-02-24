@@ -12,6 +12,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
@@ -224,7 +225,8 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=current_time,
                 previous_generator=self.full_node.full_node_store.previous_generator,
             )
-        await self.full_node.add_block(more[-1])
+            rr = RespondBlock(more[-1])
+        await self.full_node.respond_block(rr)
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
@@ -270,7 +272,8 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=current_time,
                 time_per_block=time_per_block,
             )
-        await self.full_node.add_block(more[-1])
+            rr: RespondBlock = RespondBlock(more[-1])
+        await self.full_node.respond_block(rr)
 
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
         new_index = request.new_index
@@ -294,7 +297,7 @@ class FullNodeSimulator(FullNodeAPI):
         )
 
         for block in more_blocks:
-            await self.full_node.add_block(block)
+            await self.full_node.respond_block(RespondBlock(block))
 
     async def farm_blocks_to_puzzlehash(
         self,

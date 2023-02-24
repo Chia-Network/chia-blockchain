@@ -664,7 +664,7 @@ class FullNodeRpcApi:
             status = MempoolInclusionStatus.SUCCESS
             error = None
         else:
-            status, error = await self.service.add_transaction(spend_bundle, spend_name)
+            status, error = await self.service.respond_transaction(spend_bundle, spend_name)
             if status != MempoolInclusionStatus.SUCCESS:
                 if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
                     # Already in mempool

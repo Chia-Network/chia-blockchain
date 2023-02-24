@@ -476,7 +476,7 @@ async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNod
     assert blocks[0].height == 0
 
     for block in blocks:
-        await full_node_1.full_node.add_block(block)
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
@@ -508,7 +508,7 @@ async def two_nodes_one_block():
     assert blocks[0].height == 0
 
     for block in blocks:
-        await full_node_1.full_node.add_block(block)
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 

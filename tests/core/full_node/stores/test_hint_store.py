@@ -6,6 +6,7 @@ import pytest
 from clvm.casts import int_to_bytes
 
 from chia.full_node.hint_store import HintStore
+from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -117,7 +118,7 @@ class TestHintStore:
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         for block in blocks:
-            await full_node_1.full_node.add_block(block, None)
+            await full_node_1.full_node.respond_block(RespondBlock(block), None)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         puzzle_hash = bytes32(32 * b"\0")
@@ -139,7 +140,7 @@ class TestHintStore:
         )
 
         for block in blocks[-10:]:
-            await full_node_1.full_node.add_block(block, None)
+            await full_node_1.full_node.respond_block(RespondBlock(block), None)
 
         get_hint = await full_node_1.full_node.hint_store.get_coin_ids(hint)
 

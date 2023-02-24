@@ -383,7 +383,7 @@ class TestFullNodeBlockCompression:
 
             # Test revert previous_generator
             for block in reog_blocks:
-                await full_node_1.full_node.add_block(block)
+                await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             assert full_node_1.full_node.full_node_store.previous_generator is None
 
 
@@ -439,14 +439,14 @@ class TestFullNodeProtocol:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         blocks = bt.get_consecutive_blocks(1)
         for block in blocks[:1]:
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 1))
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
         for block in bt.get_consecutive_blocks(30):
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
 
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
@@ -491,7 +491,7 @@ class TestFullNodeProtocol:
         # Add some blocks
         blocks = bt.get_consecutive_blocks(4, block_list_input=blocks)
         for block in blocks[-5:]:
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 5))
         blocks = bt.get_consecutive_blocks(1, skip_slots=2, block_list_input=blocks)
 
@@ -535,7 +535,7 @@ class TestFullNodeProtocol:
 
         # Add all blocks
         for block in blocks:
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
 
         original_ss = full_node_1.full_node.full_node_store.finished_sub_slots[:]
 
@@ -561,13 +561,13 @@ class TestFullNodeProtocol:
         blocks = await full_node_1.get_all_full_blocks()
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
 
-        await full_node_1.full_node.add_block(blocks[-1], peer)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
 
         original_ss = full_node_1.full_node.full_node_store.finished_sub_slots[:].copy()
         # Add the block
-        await full_node_1.full_node.add_block(blocks[-1], peer)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
 
         # Replace with original SS in order to imitate race condition (block added but subslot not yet added)
         full_node_1.full_node.full_node_store.finished_sub_slots = original_ss
@@ -614,11 +614,11 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.add_unfinished_block(unf, None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # Do the same thing but with non-genesis
-        await full_node_1.full_node.add_block(block)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3)
 
         block = blocks[-1]
@@ -643,11 +643,11 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.add_unfinished_block(unf, None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # Do the same thing one more time, with overflow
-        await full_node_1.full_node.add_block(block)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3, force_overflow=True)
 
         block = blocks[-1]
@@ -668,7 +668,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.add_unfinished_block(unf, None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # This next section tests making unfinished block with transactions, and then submitting the finished block
@@ -682,8 +682,8 @@ class TestFullNodeProtocol:
             farmer_reward_puzzle_hash=ph,
             pool_reward_puzzle_hash=ph,
         )
-        await full_node_1.full_node.add_block(blocks[-2])
-        await full_node_1.full_node.add_block(blocks[-1])
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-2]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]))
         coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
 
         spend_bundle = wallet_a.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
@@ -709,7 +709,7 @@ class TestFullNodeProtocol:
             [],
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
-        await full_node_1.full_node.add_unfinished_block(unf, None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
         result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
         assert result is not None
@@ -720,7 +720,7 @@ class TestFullNodeProtocol:
         block_no_transactions = dataclasses.replace(block, transactions_generator=None)
         assert block_no_transactions.transactions_generator is None
 
-        await full_node_1.full_node.add_block(block_no_transactions)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block_no_transactions))
         assert full_node_1.full_node.blockchain.contains_block(block.header_hash)
 
     @pytest.mark.asyncio
@@ -751,7 +751,7 @@ class TestFullNodeProtocol:
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
             task_1.cancel()
 
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
             # Ignores, already have
             task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
@@ -790,7 +790,7 @@ class TestFullNodeProtocol:
             pool_reward_puzzle_hash=wallet_ph,
         )
         for block in blocks:
-            await full_node_1.full_node.add_block(block)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
         start_height = (
             full_node_1.full_node.blockchain.get_peak().height
@@ -833,7 +833,7 @@ class TestFullNodeProtocol:
             guarantee_transaction_block=True,
             transaction_data=spend_bundle,
         )
-        await full_node_1.full_node.add_block(blocks[-1], None)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), None)
 
         # Already seen
         await full_node_1.new_transaction(new_transaction, fake_peer)
@@ -917,7 +917,7 @@ class TestFullNodeProtocol:
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
         # Idempotence in resubmission
-        status, err = await full_node_1.full_node.add_transaction(
+        status, err = await full_node_1.full_node.respond_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
         assert status == MempoolInclusionStatus.SUCCESS
@@ -935,7 +935,7 @@ class TestFullNodeProtocol:
         await full_node_1.new_transaction(new_transaction, fake_peer)
 
         # Cannot resubmit transaction, but not because of ALREADY_INCLUDING
-        status, err = await full_node_1.full_node.add_transaction(
+        status, err = await full_node_1.full_node.respond_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
         assert status == MempoolInclusionStatus.FAILED
@@ -951,10 +951,10 @@ class TestFullNodeProtocol:
             guarantee_transaction_block=True,
         )
         for block in blocks[-2:]:
-            await full_node_1.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
 
         # Can now resubmit a transaction after the reorg
-        status, err = await full_node_1.full_node.add_transaction(
+        status, err = await full_node_1.full_node.respond_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
         assert err is None
@@ -979,8 +979,8 @@ class TestFullNodeProtocol:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         for block in blocks[-3:]:
-            await full_node_1.full_node.add_block(block, peer)
-            await full_node_2.full_node.add_block(block, peer)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
+            await full_node_2.full_node.respond_block(fnp.RespondBlock(block), peer)
 
         # Farm another block to clear mempool
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(wallet_ph))
@@ -1035,9 +1035,9 @@ class TestFullNodeProtocol:
         while incoming_queue.qsize() > 0:
             await incoming_queue.get()
 
-        await full_node_1.full_node.add_block(blocks_new[-3], peer)
-        await full_node_1.full_node.add_block(blocks_new[-2], peer)
-        await full_node_1.full_node.add_block(blocks_new[-1], peer)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-3]), peer)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-2]), peer)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-1]), peer)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 3))
         # Invalid transaction does not propagate
@@ -1077,7 +1077,7 @@ class TestFullNodeProtocol:
         )
 
         for block in blocks:
-            await full_node_1.full_node.add_block(block)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
         # Don't have height
         res = await full_node_1.request_block(fnp.RequestBlock(uint32(1248921), False))
@@ -1121,7 +1121,7 @@ class TestFullNodeProtocol:
         )
 
         for block in blocks_t:
-            await full_node_1.full_node.add_block(block)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
         peak_height = blocks_t[-1].height
 
@@ -1183,7 +1183,7 @@ class TestFullNodeProtocol:
         # Don't have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        await full_node_1.full_node.add_unfinished_block(unf, peer)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
 
         # Have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
@@ -1334,7 +1334,7 @@ class TestFullNodeProtocol:
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
         with pytest.raises(ConsensusError, match=f"{str(expected).split('.')[1]}"):
-            await full_node_1.full_node.add_unfinished_block(unf, peer)
+            await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
 
     @pytest.mark.asyncio
     async def test_double_blocks_same_pospace(self, wallet_nodes, self_hostname):
@@ -1370,7 +1370,7 @@ class TestFullNodeProtocol:
             block.transactions_generator,
             [],
         )
-        await full_node_1.full_node.add_unfinished_block(unf, dummy_peer)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), dummy_peer)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash)
 
         block_2 = recursive_replace(
@@ -1381,7 +1381,7 @@ class TestFullNodeProtocol:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         block_2 = recursive_replace(block_2, "transactions_generator", None)
 
-        rb_task = asyncio.create_task(full_node_2.full_node.add_block(block_2, dummy_peer))
+        rb_task = asyncio.create_task(full_node_2.full_node.respond_block(fnp.RespondBlock(block_2), dummy_peer))
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
         rb_task.cancel()
@@ -1393,7 +1393,7 @@ class TestFullNodeProtocol:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=b"12345")
         for block in blocks[:-1]:
-            await full_node_1.full_node.add_block(block)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
         block: FullBlock = blocks[-1]
         overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
         unf = UnfinishedBlock(
@@ -1411,7 +1411,7 @@ class TestFullNodeProtocol:
         # Don't have
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is None
-        await full_node_1.full_node.add_unfinished_block(unf, peer)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
         # Have
         res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is not None
@@ -1422,9 +1422,9 @@ class TestFullNodeProtocol:
         blocks = await full_node_1.get_all_full_blocks()
 
         blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
-        await full_node_1.full_node.add_block(blocks[-3])
-        await full_node_1.full_node.add_block(blocks[-2])
-        await full_node_1.full_node.add_block(blocks[-1])
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-3]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-2]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]))
 
         blockchain = full_node_1.full_node.blockchain
         peak = blockchain.get_peak()
@@ -1447,7 +1447,7 @@ class TestFullNodeProtocol:
         assert fnp.RequestSignagePointOrEndOfSubSlot.from_bytes(res.data).index_from_challenge == uint8(11)
 
         for block in blocks:
-            await full_node_2.full_node.add_block(block)
+            await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
 
         num_slots = 20
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=num_slots)
@@ -1478,9 +1478,9 @@ class TestFullNodeProtocol:
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
-        await full_node_1.full_node.add_block(blocks[-3])
-        await full_node_1.full_node.add_block(blocks[-2])
-        await full_node_1.full_node.add_block(blocks[-1])
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-3]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-2]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]))
 
         blockchain = full_node_1.full_node.blockchain
 
@@ -1517,7 +1517,7 @@ class TestFullNodeProtocol:
         assert len(full_node_1.full_node.full_node_store.future_sp_cache[sp.rc_vdf.challenge]) == 1
 
         # Add block
-        await full_node_1.full_node.add_block(blocks[-1], peer)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
 
         # Now signage point should be added
         assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
@@ -1561,7 +1561,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
         block = blocks[0]
         for b in blocks:
-            await full_node_1.full_node.add_block(b)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(b))
         timelord_protocol_finished = []
         cc_eos_count = 0
         for sub_slot in block.finished_sub_slots:
@@ -1585,7 +1585,7 @@ class TestFullNodeProtocol:
         blocks_2 = bt.get_consecutive_blocks(num_blocks=10, block_list_input=blocks, skip_slots=3)
         block = blocks_2[-10]
         for b in blocks_2[-11:]:
-            await full_node_1.full_node.add_block(b)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(b))
         icc_eos_count = 0
         for sub_slot in block.finished_sub_slots:
             if sub_slot.infused_challenge_chain is not None:
@@ -1643,7 +1643,7 @@ class TestFullNodeProtocol:
         # Note: the below numbers depend on the block cache, so might need to be updated
         assert cc_eos_count == 3 and icc_eos_count == 3
         for compact_proof in timelord_protocol_finished:
-            await full_node_1.full_node.add_compact_proof_of_time(compact_proof)
+            await full_node_1.full_node.respond_compact_proof_of_time(compact_proof)
         stored_blocks = await full_node_1.get_all_full_blocks()
         cc_eos_compact_count = 0
         icc_eos_compact_count = 0
@@ -1668,7 +1668,7 @@ class TestFullNodeProtocol:
         assert has_compact_cc_sp_vdf
         assert has_compact_cc_ip_vdf
         for height, block in enumerate(stored_blocks):
-            await full_node_2.full_node.add_block(block)
+            await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
             assert full_node_2.full_node.blockchain.get_peak().height == height
 
     @pytest.mark.asyncio
@@ -1679,7 +1679,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(num_blocks=1, skip_slots=3)
         blocks_2 = bt.get_consecutive_blocks(num_blocks=3, block_list_input=blocks, skip_slots=3)
         for block in blocks_2[:2]:
-            await full_node_1.full_node.add_block(block)
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
         assert full_node_1.full_node.blockchain.get_peak().height == 1
         # (wrong_vdf_info, wrong_vdf_proof) pair verifies, but it's not present in the blockchain at all.
         block = blocks_2[2]
@@ -1885,9 +1885,9 @@ class TestFullNodeProtocol:
         server_2 = full_node_2.full_node.server
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         for invalid_compact_proof in timelord_protocol_invalid_messages:
-            await full_node_1.full_node.add_compact_proof_of_time(invalid_compact_proof)
+            await full_node_1.full_node.respond_compact_proof_of_time(invalid_compact_proof)
         for invalid_compact_proof in full_node_protocol_invalid_messaages:
-            await full_node_1.full_node.add_compact_vdf(invalid_compact_proof, peer)
+            await full_node_1.full_node.respond_compact_vdf(invalid_compact_proof, peer)
         stored_blocks = await full_node_1.get_all_full_blocks()
         for block in stored_blocks:
             for sub_slot in block.finished_sub_slots:

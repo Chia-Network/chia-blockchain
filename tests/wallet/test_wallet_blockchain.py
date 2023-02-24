@@ -21,7 +21,7 @@ class TestWalletBlockchain:
         [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
         for block in default_1000_blocks[:600]:
-            await full_node_api.full_node.add_block(block)
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         res = await full_node_api.request_proof_of_weight(
             full_node_protocol.RequestProofOfWeight(
