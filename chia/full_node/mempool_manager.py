@@ -171,33 +171,31 @@ class MempoolManager:
 
     def process_mempool_items(
         self, item_inclusion_filter: Callable[[MempoolManager, MempoolItem], bool]
-    ) -> Tuple[List[SpendBundle], uint64, List[Coin], List[Coin]]:
+    ) -> Tuple[List[SpendBundle], uint64, List[Coin]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_bundles: List[SpendBundle] = []
-        removals: List[Coin] = []
         additions: List[Coin] = []
         for item in self.mempool.spends_by_feerate():
             if not item_inclusion_filter(self, item):
                 continue
             log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
             if item.cost + cost_sum > self.max_block_clvm_cost or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT:
-                return (spend_bundles, uint64(cost_sum), additions, removals)
+                return (spend_bundles, uint64(cost_sum), additions)
             spend_bundles.append(item.spend_bundle)
             cost_sum += item.cost
             fee_sum += item.fee
-            removals.extend(item.removals)
             additions.extend(item.additions)
-        return (spend_bundles, uint64(cost_sum), additions, removals)
+        return (spend_bundles, uint64(cost_sum), additions)
 
     def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
         item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
-    ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
+    ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
-        additions and removals in that spend_bundle
+        additions in that spend_bundle
         """
         if self.peak is None or self.peak.header_hash != last_tb_header_hash:
             return None
@@ -210,7 +208,7 @@ class MempoolManager:
             item_inclusion_filter = always
 
         log.info(f"Starting to make block, max cost: {self.max_block_clvm_cost}")
-        spend_bundles, cost_sum, additions, removals = self.process_mempool_items(item_inclusion_filter)
+        spend_bundles, cost_sum, additions = self.process_mempool_items(item_inclusion_filter)
         if len(spend_bundles) == 0:
             return None
         log.info(
@@ -218,7 +216,7 @@ class MempoolManager:
             f"full: {cost_sum / self.max_block_clvm_cost}"
         )
         agg = SpendBundle.aggregate(spend_bundles)
-        return agg, additions, removals
+        return agg, additions
 
     def get_filter(self) -> bytes:
         all_transactions: Set[bytes32] = set()
