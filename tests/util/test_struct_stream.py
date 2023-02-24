@@ -107,7 +107,6 @@ class TestStructStream:
         length: int,
         struct_format: Optional[str],
     ) -> None:
-
         with pytest.raises(ValueError):
             t = cls(upper_boundary + 1)
 

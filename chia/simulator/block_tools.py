@@ -147,7 +147,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
 def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
     ret: List[Coin] = []
     for cs in sb.coin_spends:
-
         parent_id = cs.coin.name()
         _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
@@ -182,7 +181,6 @@ class BlockTools:
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
     ):
-
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -1285,7 +1283,6 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,

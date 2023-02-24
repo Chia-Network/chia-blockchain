@@ -207,7 +207,6 @@ class RpcServer:
         if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
             if data is not None:
-
                 payload = create_payload_dict(
                     "get_connections",
                     data,

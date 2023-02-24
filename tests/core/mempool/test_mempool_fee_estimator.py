@@ -90,7 +90,6 @@ async def test_basics() -> None:
 
 @pytest.mark.asyncio
 async def test_fee_increase() -> None:
-
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         mempool_manager = MempoolManager(coin_store.get_coin_record, test_constants)

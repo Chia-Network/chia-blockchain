@@ -107,7 +107,6 @@ async def run_sync_test(
     node_profiler: bool,
     start_at_checkpoint: Optional[str],
 ) -> None:
-
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler("test-full-sync.log")
@@ -122,7 +121,6 @@ async def run_sync_test(
     logger.addHandler(check_log)
 
     with tempfile.TemporaryDirectory() as root_dir:
-
         root_path = Path(root_dir)
         if start_at_checkpoint is not None:
             shutil.copytree(Path(start_at_checkpoint) / ".", root_path, dirs_exist_ok=True)
@@ -332,7 +330,6 @@ async def run_sync_checkpoint(
     root_path: Path,
     max_height: int,
 ) -> None:
-
     root_path.mkdir(parents=True, exist_ok=True)
 
     chia_init(root_path, should_check_keys=False, v1_db=False)

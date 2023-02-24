@@ -79,7 +79,6 @@ class DataclassOnly:
 
 
 def test_pure_dataclass_not_supported() -> None:
-
     with pytest.raises(UnsupportedType):
 
         @streamable
@@ -93,7 +92,6 @@ class PlainClass:
 
 
 def test_plain_class_not_supported() -> None:
-
     with pytest.raises(UnsupportedType):
 
         @streamable
@@ -141,7 +139,6 @@ class ConvertTupleFailures(Streamable):
     ],
 )
 def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
-
     with pytest.raises(error):
         streamable_from_dict(ConvertTupleFailures, input_dict)
 
@@ -165,7 +162,6 @@ class ConvertListFailures(Streamable):
     ],
 )
 def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
-
     with pytest.raises(error):
         streamable_from_dict(ConvertListFailures, input_dict)
 
@@ -195,7 +191,6 @@ class ConvertByteTypeFailures(Streamable):
     ],
 )
 def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
-
     with pytest.raises(error):
         streamable_from_dict(ConvertByteTypeFailures, input_dict)
 
@@ -221,7 +216,6 @@ class ConvertUnhashableTypeFailures(Streamable):
     ],
 )
 def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
-
     with pytest.raises(error):
         streamable_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
@@ -248,7 +242,6 @@ class ConvertPrimitiveFailures(Streamable):
     ],
 )
 def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> None:
-
     with pytest.raises(error):
         streamable_from_dict(ConvertPrimitiveFailures, input_dict)
 
@@ -321,7 +314,6 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
 def test_streamable_from_dict_failures(
     test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any, error_message: str
 ) -> None:
-
     with pytest.raises(error, match=re.escape(error_message)):
         streamable_from_dict(test_class, input_dict)
 
@@ -742,7 +734,6 @@ def test_parse_optional() -> None:
 
 
 def test_parse_bytes() -> None:
-
     assert parse_bytes(io.BytesIO(b"\x00\x00\x00\x00")) == b""
     assert parse_bytes(io.BytesIO(b"\x00\x00\x00\x01\xff")) == b"\xff"
 
@@ -768,7 +759,6 @@ def test_parse_bytes() -> None:
 
 
 def test_parse_list() -> None:
-
     assert parse_list(io.BytesIO(b"\x00\x00\x00\x00"), parse_bool) == []
     assert parse_list(io.BytesIO(b"\x00\x00\x00\x01\x01"), parse_bool) == [True]
     assert parse_list(io.BytesIO(b"\x00\x00\x00\x03\x01\x00\x01"), parse_bool) == [True, False, True]
@@ -789,7 +779,6 @@ def test_parse_list() -> None:
 
 
 def test_parse_tuple() -> None:
-
     assert parse_tuple(io.BytesIO(b""), []) == ()
     assert parse_tuple(io.BytesIO(b"\x00\x00"), [parse_bool, parse_bool]) == (False, False)
     assert parse_tuple(io.BytesIO(b"\x00\x01"), [parse_bool, parse_bool]) == (False, True)
@@ -832,7 +821,6 @@ def test_parse_size_hints() -> None:
 
 
 def test_parse_str() -> None:
-
     assert parse_str(io.BytesIO(b"\x00\x00\x00\x00")) == ""
     assert parse_str(io.BytesIO(b"\x00\x00\x00\x01a")) == "a"
 
@@ -858,7 +846,6 @@ def test_parse_str() -> None:
 
 
 def test_wrong_decorator_order() -> None:
-
     with pytest.raises(DefinitionError):
 
         @dataclass(frozen=True)
@@ -868,7 +855,6 @@ def test_wrong_decorator_order() -> None:
 
 
 def test_dataclass_not_frozen() -> None:
-
     with pytest.raises(DefinitionError):
 
         @streamable
@@ -878,7 +864,6 @@ def test_dataclass_not_frozen() -> None:
 
 
 def test_dataclass_missing() -> None:
-
     with pytest.raises(DefinitionError):
 
         @streamable
@@ -887,7 +872,6 @@ def test_dataclass_missing() -> None:
 
 
 def test_streamable_inheritance_missing() -> None:
-
     with pytest.raises(DefinitionError):
         # we want to test invalid here, hence the ignore.
         @streamable

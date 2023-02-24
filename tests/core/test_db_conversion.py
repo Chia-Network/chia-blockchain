@@ -30,7 +30,6 @@ class TestDbUpgrade:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("with_hints", [True, False])
     async def test_blocks(self, default_1000_blocks, with_hints: bool):
-
         blocks = default_1000_blocks
 
         hints: List[Tuple[bytes32, bytes]] = []
@@ -54,7 +53,6 @@ class TestDbUpgrade:
             hints.append((coin_id, hint))
 
         with TempFile() as in_file, TempFile() as out_file:
-
             db_wrapper1 = await DBWrapper2.create(
                 database=in_file,
                 reader_count=1,

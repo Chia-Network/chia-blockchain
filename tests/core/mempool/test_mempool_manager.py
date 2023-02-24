@@ -117,7 +117,6 @@ def make_test_conds(
 
 
 class TestCheckTimeLocks:
-
     COIN_CONFIRMED_HEIGHT = uint32(10)
     COIN_TIMESTAMP = uint64(10000)
     PREV_BLOCK_HEIGHT = uint32(15)
@@ -210,7 +209,6 @@ class TestCheckTimeLocks:
 
 
 def test_compute_assert_height() -> None:
-
     c1 = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 1337)
     coin_id = c1.name()
     confirmed_height = uint32(12)

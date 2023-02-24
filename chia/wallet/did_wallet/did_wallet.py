@@ -1178,7 +1178,6 @@ class DIDWallet:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
         if puzzle_args is not None:
-
             p2_puzzle, _, _, _, _ = puzzle_args
             puzzle_hash = p2_puzzle.get_tree_hash()
             pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
@@ -1195,7 +1194,6 @@ class DIDWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-
             puzzle_args = did_wallet_puzzles.match_did_puzzle(*spend.puzzle_reveal.to_program().uncurry())
             if puzzle_args is not None:
                 p2_puzzle, _, _, _, _ = puzzle_args
