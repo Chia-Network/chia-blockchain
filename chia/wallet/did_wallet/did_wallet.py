@@ -1173,7 +1173,7 @@ class DIDWallet:
 
         return parent_info
 
-    async def sign_message(self, message: str) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, is_hex: bool = False) -> Tuple[G1Element, G2Element]:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
@@ -1184,7 +1184,10 @@ class DIDWallet:
             pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+            if is_hex:
+                puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+            else:
+                puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
             return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
         else:
             raise ValueError("Invalid inner DID puzzle.")

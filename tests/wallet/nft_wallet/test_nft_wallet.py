@@ -1796,11 +1796,23 @@ async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: Any, trust
     assert len(coins) == 1
     assert coins[0].owner_did is None
     assert not coins[0].pending_transaction
+    # Test general string
     message = "Hello World"
     response = await api_0.sign_message_by_id(
         {"id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value), "message": message}
     )
     puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+    assert AugSchemeMPL.verify(
+        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        puzzle.get_tree_hash(),
+        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+    )
+    # Test hex string
+    message = "0123456789ABCDEF"
+    response = await api_0.sign_message_by_id(
+        {"id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value), "message": message, "is_hex": True}
+    )
+    puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
     assert AugSchemeMPL.verify(
         G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
         puzzle.get_tree_hash(),
