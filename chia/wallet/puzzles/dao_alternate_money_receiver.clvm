@@ -7,21 +7,22 @@
   input_coins
 )
   (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
                                       inner_puzzle_hash
                                       (sha256tree SINGLETON_STRUCT)
      )
   )
 
-  (defun create_announcements_for_inputs (input_coins)
+  (defun create_announcements_for_payments (input_coins)
     (if input_coins
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT (f input_coins))  ; this allows coins to sync to us
         (c
           (list ASSERT_COIN_ANNOUNCEMENT (sha256 (f input_coins) '$'))
-          (create_announcements_for_inputs (r input_coins))
+          (create_announcements_for_payments (r input_coins))
         )
       )
       ()
@@ -35,7 +36,7 @@
         (list ASSERT_MY_AMOUNT my_amount)
         (c
           (list CREATE_COIN my_inner_puzzle (+ my_amount amount_change))
-          (create_announcement_for_payment input_coins)
+          (create_announcements_for_payments input_coins)
         )
       )
     )

@@ -11,12 +11,12 @@
   TOTAL_VOTES  ; how many people responded
   SPEND_OR_UPDATE_FLAG  ; this is either 's' or 'u' - other types can be added in the future
   PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
-  vote_amount_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+  vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
   vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-  vote_coin_id_or_proposal_timelock_hash  ; this is either the coin ID we're taking a vote from
+  vote_coin_ids_or_proposal_timelock_hash  ; this is either the coin ID we're taking a vote from
   previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
                                  ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-  lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+  lockup_innerpuzhashes_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
                                               ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
   innerpuz_reveal  ; this is only added during the first vote
   soft_close_length  ; revealed by the treasury
@@ -25,7 +25,6 @@
 (include curry-and-treehash.clinc)
 (include *standard-cl-21*)
 
-(defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
 (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
 
 (defun calculate_timer_puzhash (
@@ -112,6 +111,8 @@
 )
 
 (defun calculate_treasury_puzzlehash (
+    treasury_singleton_struct
+    TREASURY_MOD_HASH
     PROPOSAL_VALIDATOR_HASH
     MONEY_RECEIVER_HASH
     PROPOSAL_LENGTH
@@ -140,6 +141,7 @@
   TREASURY_ID
   YES_VOTES
   TOTAL_VOTES
+  SPEND_OR_UPDATE_FLAG
   PROPOSED_PUZ_HASH
   coin_id_list
   vote_amount_list
@@ -185,6 +187,7 @@
           TREASURY_ID
           YES_VOTES
           TOTAL_VOTES
+          SPEND_OR_UPDATE_FLAG
           PROPOSED_PUZ_HASH
           (r coin_id_list)
           (r vote_amount_list)
@@ -210,6 +213,7 @@
           TREASURY_ID
           (if vote_info (+ YES_VOTES sum) YES_VOTES)
           (+ TOTAL_VOTES sum)
+          SPEND_OR_UPDATE_FLAG
           PROPOSED_PUZ_HASH
         )
         ONE  ; why would a proposal hold any value
@@ -230,12 +234,14 @@
       (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
         (sha256
           (calculate_treasury_puzzlehash
-            vote_amount_or_proposal_validator_hash
+            (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+            TREASURY_MOD_HASH
+            vote_amounts_or_proposal_validator_hash
             vote_info_or_money_receiver_hash
-            vote_coin_id_or_proposal_timelock_hash  ; check the veracity of these values by if the treasury uses them
+            vote_coin_ids_or_proposal_timelock_hash  ; check the veracity of these values by if the treasury uses them
             soft_close_length
           )
-          (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_id_or_proposal_timelock_hash soft_close_length))
+          (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_ids_or_proposal_timelock_hash soft_close_length))
         )
       )
       (list
@@ -251,8 +257,9 @@
           (f (r SINGLETON_STRUCT))
         )
       )
+      (list CREATE_PUZZLE_ANNOUNCEMENT soft_close_length)
     )
-    (list CREATE_PUZZLE_ANNOUNCEMENT )
+
     ; We are adding votes to this proposal. vote_info indicates a YES or NO vote.
     (loop_over_vote_coins
       SINGLETON_STRUCT
@@ -266,11 +273,12 @@
       TREASURY_ID
       YES_VOTES
       TOTAL_VOTES
+      SPEND_OR_UPDATE_FLAG
       PROPOSED_PUZ_HASH
-      vote_coin_id_or_proposal_timelock_hash
-      vote_amount_or_proposal_validator_hash
+      vote_coin_ids_or_proposal_timelock_hash
+      vote_amounts_or_proposal_validator_hash
       previous_votes_or_pass_margin
-      lockup_innerpuzhash_or_attendance_required
+      lockup_innerpuzhashes_or_attendance_required
       vote_info_or_money_receiver_hash
       0
       (if (any YES_VOTES TOTAL_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
