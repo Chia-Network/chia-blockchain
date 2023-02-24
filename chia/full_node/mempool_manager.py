@@ -181,7 +181,7 @@ class MempoolManager:
         for item in self.mempool.spends_by_feerate():
             if not item_inclusion_filter(item.name):
                 continue
-            log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
+            log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
             if item.cost + cost_sum > self.max_block_clvm_cost or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT:
                 return (spend_bundles, uint64(cost_sum), additions, removals)
             spend_bundles.append(item.spend_bundle)
