@@ -9,7 +9,7 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram, run_chia_program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, streamable
@@ -44,7 +44,7 @@ def compute_additions_with_cost(
     """
     parent_id = cs.coin.name()
     ret: List[Coin] = []
-    cost, r = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
+    cost, r = run_chia_program(cs.puzzle_reveal, cs.solution, max_cost=max_cost, flags=0)
     for cond in Program.to(r).as_iter():
         if cost > max_cost:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions() for CoinSpend")

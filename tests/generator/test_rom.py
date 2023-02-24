@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
 from chia.consensus.condition_costs import ConditionCost
-from chia.full_node.generator import run_generator_unsafe
+from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram, run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
 
+GENERATOR_MOD = get_generator()
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
 
@@ -109,6 +111,12 @@ def as_atom_list(prg: Program) -> List[bytes]:
     return items
 
 
+def run_generator_unsafe(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
+    """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
+    program, args = setup_generator_args(self)
+    return run_chia_program(GENERATOR_MOD, program, args, max_cost=max_cost)
+
+
 class TestROM:
     def test_rom_inputs(self):
         # this test checks that the generator just works
@@ -116,7 +124,7 @@ class TestROM:
 
         args = Program.to([DESERIALIZE_MOD, [FIRST_GENERATOR, SECOND_GENERATOR]])
         sp = to_sp(COMPILED_GENERATOR_CODE)
-        cost, r = sp.run_with_cost(MAX_COST, args)
+        cost, r = run_chia_program(sp, args, max_cost=MAX_COST)
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 

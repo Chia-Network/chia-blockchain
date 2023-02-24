@@ -17,7 +17,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram, run_chia_program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
@@ -877,9 +877,7 @@ class DataLayerWallet:
             root: bytes32
             inner_puzzle_hash: bytes32
 
-            conditions = puzzle.run_with_cost(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, solution)[
-                1
-            ].as_python()
+            conditions = run_chia_program(puzzle, solution)[1].as_python()
             found_singleton: bool = False
             for condition in conditions:
                 if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
