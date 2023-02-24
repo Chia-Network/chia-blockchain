@@ -756,7 +756,7 @@ class FullNodeAPI:
                     if mempool_bundle is not None:
                         spend_bundle = mempool_bundle[0]
                         additions = mempool_bundle[1]
-                        removals = mempool_bundle[2]
+                        removals = spend_bundle.removals()
                         self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
                         aggregate_signature = spend_bundle.aggregated_signature
                         if self.full_node.full_node_store.previous_generator is not None:

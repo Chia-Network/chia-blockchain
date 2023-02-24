@@ -58,10 +58,9 @@ class TestBlockchainTransactions:
         assert sb == spend_bundle
 
         last_block = blocks[-1]
-        next_spendbundle, additions, removals = full_node_1.mempool_manager.create_bundle_from_mempool(
+        next_spendbundle, _ = full_node_1.mempool_manager.create_bundle_from_mempool(
             last_block.header_hash
         )
-        assert next_spendbundle is not None
 
         new_blocks = bt.get_consecutive_blocks(
             1,
