@@ -231,13 +231,11 @@ class WebSocketServer:
                     if "data" not in decoded:
                         decoded["data"] = {}
                     response, connections = await self.handle_message(ws, decoded)
-                    service_name = decoded["destination"]
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
                     error = {"success": False, "error": f"{e}"}
                     response = format_response(decoded, error)
-                    service_name = "Unknown"
                     connections = {ws}  # send error back to the sender
 
                 for connection in connections:
@@ -249,14 +247,18 @@ class WebSocketServer:
                         await connection.send_str(response)
                     except Exception as e:
                         tb = traceback.format_exc()
-                        self.log.error(f"Unexpected exception trying to send to {service_name} (websocket: {e} {tb})")
-                        self.log.info(f"Closing websocket with {service_name}")
-                        self.remove_connection(connection)
+                        service_names = self.remove_connection(connection)
+                        if len(service_names) == 0:
+                            service_names = ["Unknown"]
+
+                        self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
+                        self.log.info(f"Closing websocket with {service_names}")
                         await connection.close()
             else:
-                service_names = self.find_service_names(ws)
-                if not service_names:
-                    service_names = "Unknown"
+                service_names = self.remove_connection(ws)
+
+                if len(service_names) == 0:
+                    service_names = ["Unknown"]
 
                 if msg.type == WSMsgType.CLOSE:
                     self.log.info(f"ConnectionClosed. Closing websocket with {service_names}")
@@ -265,23 +267,19 @@ class WebSocketServer:
                 else:
                     self.log.info(f"Unexpected message type. Closing websocket with {service_names}. {msg.type}")
 
-                self.remove_connection(ws)
                 await ws.close()
                 break
 
-    def find_service_names(self, websocket: WebSocketResponse) -> List[str]:
+    def remove_connection(self, websocket: WebSocketResponse) -> List[str]:
+        """Returns a list of service names from which the connection was removed"""
         service_names = []
         for service_name, connections in self.connections.items():
-            if websocket in connections:
-                service_names.append(service_name)
-        return service_names
-
-    def remove_connection(self, websocket: WebSocketResponse):
-        for connections in self.connections.values():
             try:
                 connections.remove(websocket)
+                service_names.append(service_name)
             except ValueError:
                 pass
+        return service_names
 
     async def ping_task(self) -> None:
         restart = True
