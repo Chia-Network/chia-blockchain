@@ -887,6 +887,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
 
         for i in range(0, n, chunk):
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],

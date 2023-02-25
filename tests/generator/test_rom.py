@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from typing import List
+
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.generator import run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
@@ -83,6 +86,29 @@ EXPECTED_OUTPUT = (
 )
 
 
+def as_atom_list(prg: Program) -> List[bytes]:
+    """
+    Pretend `prg` is a list of atoms. Return the corresponding
+    python list of atoms.
+
+    At each step, we always assume a node to be an atom or a pair.
+    If the assumption is wrong, we exit early. This way we never fail
+    and always return SOMETHING.
+    """
+    items = []
+    obj = prg
+    while True:
+        pair = obj.pair
+        if pair is None:
+            break
+        atom = pair[0].atom
+        if atom is None:
+            break
+        items.append(atom)
+        obj = pair[1]
+    return items
+
+
 class TestROM:
     def test_rom_inputs(self):
         # this test checks that the generator just works
@@ -114,6 +140,8 @@ class TestROM:
             puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
             height_relative=None,
             seconds_relative=0,
+            before_height_relative=None,
+            before_seconds_relative=None,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
             flags=ELIGIBLE_FOR_DEDUP,
@@ -129,7 +157,7 @@ class TestROM:
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
-            assert extra_data.as_atom_list() == b"extra data for coin".split()
+            assert as_atom_list(extra_data) == b"extra data for coin".split()
 
     def test_block_extras(self):
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
@@ -137,4 +165,4 @@ class TestROM:
         gen = block_generator()
         cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         extra_block_data = r.rest()
-        assert extra_block_data.as_atom_list() == b"extra data for block".split()
+        assert as_atom_list(extra_block_data) == b"extra data for block".split()

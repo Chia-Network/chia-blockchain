@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -44,7 +44,7 @@ class Introducer:
     async def on_connect(self, peer: WSChiaConnection) -> None:
         pass
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         # TODO: fill this out?
         pass
 

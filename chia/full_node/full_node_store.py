@@ -805,6 +805,6 @@ class FullNodeStore:
                 found_last_challenge = True
                 break
         if not found_last_challenge:
-            log.warning(f"Did not find hash {last_challenge_to_add} connected to " f"{challenge_in_chain}")
+            log.warning(f"Did not find hash {last_challenge_to_add} connected to {challenge_in_chain}")
             return None
         return collected_sub_slots

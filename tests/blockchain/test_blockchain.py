@@ -25,7 +25,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -1733,7 +1733,6 @@ class TestPreValidation:
 
 
 class TestBodyValidation:
-
     # TODO: add test for
     # ASSERT_COIN_ANNOUNCEMENT,
     # CREATE_COIN_ANNOUNCEMENT,
@@ -3316,7 +3315,6 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     counter = 0
     for b1, b2 in zip(chain_a, chain_b):
-
         # alternate the order we add blocks from the two chains, to ensure one
         # chain overtakes the other one in weight every other time
         if counter % 2 == 0:
