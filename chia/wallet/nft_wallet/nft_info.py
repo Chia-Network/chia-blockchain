@@ -21,6 +21,8 @@ DEFAULT_STATUS = "DEFAULT"
 class NFTInfo(Streamable):
     """NFT Info for displaying NFT on the UI"""
 
+    nft_id: str
+
     launcher_id: bytes32
     """Launcher coin ID"""
 

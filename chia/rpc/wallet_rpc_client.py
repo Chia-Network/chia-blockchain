@@ -247,7 +247,6 @@ class WalletRpcClient(RpcClient):
         exclude_amounts: Optional[List[uint64]] = None,
         wallet_id: Optional[int] = None,
     ) -> List[TransactionRecord]:
-
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
         for ad in additions:
@@ -308,7 +307,6 @@ class WalletRpcClient(RpcClient):
         exclude_coins: Optional[List[Coin]] = None,
         wallet_id: Optional[int] = None,
     ) -> TransactionRecord:
-
         txs: List[TransactionRecord] = await self.create_signed_transactions(
             additions=additions,
             coins=coins,
@@ -521,7 +519,6 @@ class WalletRpcClient(RpcClient):
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
     ) -> TransactionRecord:
-
         request: Dict[str, Any] = {
             "wallet_type": "pool_wallet",
             "mode": mode,
@@ -846,6 +843,11 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
         }
         response = await self.fetch("nft_transfer_nft", request)
+        return response
+
+    async def count_nfts(self, wallet_id: Optional[int]):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_count_nfts", request)
         return response
 
     async def list_nfts(self, wallet_id):

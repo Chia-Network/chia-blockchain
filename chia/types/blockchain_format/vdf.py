@@ -35,7 +35,6 @@ def verify_vdf(
     discriminant_size: int,
     witness_type: uint8,
 ):
-
     return verify_n_wesolowski(
         str(disc),
         input_el,

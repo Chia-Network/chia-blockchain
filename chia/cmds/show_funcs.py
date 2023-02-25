@@ -181,7 +181,7 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
 
     print("\nFee Rate Estimates:")
     max_name_len = max(len(name) for name in target_times_names)
-    for (n, e) in zip(target_times_names, res["estimates"]):
+    for n, e in zip(target_times_names, res["estimates"]):
         print(f"    {n:>{max_name_len}}: {e:.3f} mojo per CLVM cost")
     print("")
 
@@ -210,7 +210,7 @@ async def show_async(
             if block_header_hash_by_height != "":
                 block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
                 if block_header is not None:
-                    print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
+                    print(f"Header hash of block {block_header_hash_by_height}: {block_header.header_hash.hex()}")
                 else:
                     print("Block height", block_header_hash_by_height, "not found")
             if block_by_header_hash != "":

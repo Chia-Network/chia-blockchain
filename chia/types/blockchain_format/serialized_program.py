@@ -92,7 +92,6 @@ class SerializedProgram:
     def run_as_generator(
         self, max_cost: int, flags: int, *args: Union[Program, SerializedProgram]
     ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
-
         serialized_args = bytearray()
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import pytest
 from blspy import PrivateKey
 
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.server import ChiaServer
-from chia.simulator.block_tools import BlockTools, test_constants
+from chia.simulator.block_tools import test_constants
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, generate_mnemonic
 from chia.wallet.wallet_node import WalletNode
@@ -298,10 +297,8 @@ def test_update_last_used_fingerprint(root_path_populated_with_config: Path) -> 
 
 
 @pytest.mark.asyncio
-async def test_unique_puzzle_hash_subscriptions(
-    wallet_node: Tuple[FullNodeAPI, WalletNode, ChiaServer, ChiaServer, BlockTools]
-) -> None:
-    _, node, _, _, _ = wallet_node
+async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: SimulatorsAndWallets) -> None:
+    _, [(node, _)], bt = simulator_and_wallet
     puzzle_hashes = await node.get_puzzle_hashes_to_subscribe()
     assert len(puzzle_hashes) > 1
     assert len(set(puzzle_hashes)) == len(puzzle_hashes)

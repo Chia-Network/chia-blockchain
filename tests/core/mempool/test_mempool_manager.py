@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
 from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
-from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -21,7 +20,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -42,6 +41,23 @@ TEST_COIN_RECORD3 = CoinRecord(TEST_COIN3, uint32(0), uint32(0), False, TEST_TIM
 TEST_HEIGHT = uint32(5)
 
 
+@dataclass(frozen=True)
+class TestBlockRecord:
+    """
+    This is a subset of BlockRecord that the mempool manager uses for peak.
+    """
+
+    header_hash: bytes32
+    height: uint32
+    timestamp: Optional[uint64]
+    prev_transaction_block_height: uint32
+    prev_transaction_block_hash: Optional[bytes32]
+
+    @property
+    def is_transaction_block(self) -> bool:
+        return self.timestamp is not None
+
+
 async def zero_calls_get_coin_record(_: bytes32) -> Optional[CoinRecord]:
     assert False
 
@@ -55,33 +71,17 @@ async def get_coin_record_for_test_coins(coin_id: bytes32) -> Optional[CoinRecor
     return test_coin_records.get(coin_id)
 
 
-def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 = TEST_TIMESTAMP) -> BlockRecord:
-    return BlockRecord(
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
-        height,
-        uint128(0),
-        uint128(0),
-        uint8(0),
-        ClassgroupElement(bytes100(b"0" * 100)),
-        None,
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
-        uint64(0),
-        IDENTITY_PUZZLE_HASH,
-        IDENTITY_PUZZLE_HASH,
-        uint64(0),
-        uint8(0),
-        False,
-        uint32(height - 1),
-        timestamp,
-        None,
-        uint64(0),
-        None,
-        None,
-        None,
-        None,
-        None,
+def height_hash(height: int) -> bytes32:
+    return bytes32(height.to_bytes(32, byteorder="big"))
+
+
+def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 = TEST_TIMESTAMP) -> TestBlockRecord:
+    return TestBlockRecord(
+        header_hash=height_hash(height),
+        height=height,
+        timestamp=timestamp,
+        prev_transaction_block_height=uint32(height - 1),
+        prev_transaction_block_hash=height_hash(height - 1),
     )
 
 
@@ -105,17 +105,18 @@ def make_test_conds(
     seconds_absolute: uint64 = uint64(0),
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
-        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, [], [], 0)],
+        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, None, None, [], [], 0)],
         0,
         height_absolute,
         seconds_absolute,
+        None,
+        None,
         [],
         0,
     )
 
 
 class TestCheckTimeLocks:
-
     COIN_CONFIRMED_HEIGHT = uint32(10)
     COIN_TIMESTAMP = uint64(10000)
     PREV_BLOCK_HEIGHT = uint32(15)
@@ -208,28 +209,35 @@ class TestCheckTimeLocks:
 
 
 def test_compute_assert_height() -> None:
-
     c1 = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 1337)
     coin_id = c1.name()
     confirmed_height = uint32(12)
     coin_records = {coin_id: CoinRecord(c1, confirmed_height, uint32(0), False, uint64(10000))}
 
     # 42 is the absolute height condition
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), None, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 1 is a relative height, but that only amounts to 13, so the absolute
     # height is more restrictive
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 1, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 100 is a relative height, and sinec the coin was confirmed at height 12,
     # that's 112
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 42, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 112
 
     # Same thing but without the absolute height
-    conds = SpendBundleConditions([Spend(coin_id, bytes32(b"c" * 32), 100, 0, [], [], 0)], 0, 0, 0, [], 0)
+    conds = SpendBundleConditions(
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+    )
     assert compute_assert_height(coin_records, conds) == 112
 
 
@@ -279,7 +287,8 @@ async def test_valid_addition_amount() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
     max_amount = mempool_manager.constants.MAX_COIN_AMOUNT
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount]]
-    sb = spend_bundle_from_conditions(conditions)
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, max_amount)
+    sb = spend_bundle_from_conditions(conditions, coin)
     npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
     assert npc_result.error is None
 
@@ -328,53 +337,29 @@ async def test_double_spend_prevalidation() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "amount,expected_status,expected_error",
-    [
-        (TEST_COIN_AMOUNT, MempoolInclusionStatus.SUCCESS, None),
-        (TEST_COIN_AMOUNT + 1, MempoolInclusionStatus.FAILED, Err.MINTING_COIN),
-    ],
-)
-async def test_minting_coin(
-    amount: uint64,
-    expected_status: MempoolInclusionStatus,
-    expected_error: Optional[Err],
-) -> None:
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        test_coin_records = {TEST_COIN_ID: TEST_COIN_RECORD}
-        return test_coin_records.get(coin_id)
-
-    mempool_manager = await instantiate_mempool_manager(get_coin_record)
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    _, status, error = result[2]
-    assert status == expected_status
-    assert error == expected_error
+async def test_minting_coin() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
+    sb = spend_bundle_from_conditions(conditions)
+    npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    assert npc_result.error is None
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT + 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    with pytest.raises(ValidationError, match="MINTING_COIN"):
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "amount,expected_status,expected_error",
-    [
-        (TEST_COIN_AMOUNT, MempoolInclusionStatus.SUCCESS, None),
-        (TEST_COIN_AMOUNT + 1, MempoolInclusionStatus.FAILED, Err.RESERVE_FEE_CONDITION_FAILED),
-    ],
-)
-async def test_reserve_fee_condition(
-    amount: uint64,
-    expected_status: MempoolInclusionStatus,
-    expected_error: Optional[Err],
-) -> None:
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        test_coin_records = {TEST_COIN_ID: TEST_COIN_RECORD}
-        return test_coin_records.get(coin_id)
-
-    mempool_manager = await instantiate_mempool_manager(get_coin_record)
-    conditions = [[ConditionOpcode.RESERVE_FEE, amount]]
-    result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    _, status, error = result[2]
-    assert status == expected_status
-    assert error == expected_error
+async def test_reserve_fee_condition() -> None:
+    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_record)
+    conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT]]
+    sb = spend_bundle_from_conditions(conditions)
+    npc_result = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    assert npc_result.error is None
+    conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT + 1]]
+    sb = spend_bundle_from_conditions(conditions)
+    with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
+        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
 
 
 @pytest.mark.asyncio
@@ -510,45 +495,42 @@ async def test_ephemeral_timelock(
 async def test_get_items_not_in_filter() -> None:
     mempool_manager = await instantiate_mempool_manager(get_coin_record_for_test_coins)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    _, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
-    mempool_item1 = mempool_manager.get_mempool_item(sb1_name)
+    sb1, sb1_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions)
     conditions2 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
-    _, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
-    mempool_item2 = mempool_manager.get_mempool_item(sb2_name)
+    sb2, sb2_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions2, TEST_COIN2)
     conditions3 = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
-    _, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
-    mempool_item3 = mempool_manager.get_mempool_item(sb3_name)
+    sb3, sb3_name, _ = await generate_and_add_spendbundle(mempool_manager, conditions3, TEST_COIN3)
 
     # Don't filter anything
     empty_filter = PyBIP158([])
-    result = await mempool_manager.get_items_not_in_filter(empty_filter)
-    assert result == [mempool_item3, mempool_item2, mempool_item1]
+    result = mempool_manager.get_items_not_in_filter(empty_filter)
+    assert result == [sb3, sb2, sb1]
 
     # Filter everything
     full_filter = PyBIP158([bytearray(sb1_name), bytearray(sb2_name), bytearray(sb3_name)])
-    result = await mempool_manager.get_items_not_in_filter(full_filter)
+    result = mempool_manager.get_items_not_in_filter(full_filter)
     assert result == []
 
     # Negative limit
     with pytest.raises(AssertionError):
-        await mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
+        mempool_manager.get_items_not_in_filter(empty_filter, limit=-1)
 
     # Zero limit
     with pytest.raises(AssertionError):
-        await mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
+        mempool_manager.get_items_not_in_filter(empty_filter, limit=0)
 
     # Filter only one of the spend bundles
     sb3_filter = PyBIP158([bytearray(sb3_name)])
 
     # With a limit of one, sb2 has the highest FPC
-    result = await mempool_manager.get_items_not_in_filter(sb3_filter, limit=1)
-    assert result == [mempool_item2]
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=1)
+    assert result == [sb2]
 
     # With a higher limit, all bundles aside from sb3 get included
-    result = await mempool_manager.get_items_not_in_filter(sb3_filter, limit=5)
-    assert result == [mempool_item2, mempool_item1]
+    result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=5)
+    assert result == [sb2, sb1]
 
     # Filter two of the spend bundles
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
-    result = await mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
-    assert result == [mempool_item1]
+    result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
+    assert result == [sb1]

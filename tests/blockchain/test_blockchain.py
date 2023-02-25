@@ -1733,7 +1733,6 @@ class TestPreValidation:
 
 
 class TestBodyValidation:
-
     # TODO: add test for
     # ASSERT_COIN_ANNOUNCEMENT,
     # CREATE_COIN_ANNOUNCEMENT,
@@ -3316,7 +3315,6 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     counter = 0
     for b1, b2 in zip(chain_a, chain_b):
-
         # alternate the order we add blocks from the two chains, to ensure one
         # chain overtakes the other one in weight every other time
         if counter % 2 == 0:

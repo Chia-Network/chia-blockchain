@@ -136,7 +136,6 @@ async def get_full_chia_simulator(
         keychain = Keychain()
 
     with Lockfile.create(daemon_launch_lock_path(chia_root)):
-
         mnemonic, fingerprint = mnemonic_fingerprint(keychain)
 
         ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
