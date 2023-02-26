@@ -5,7 +5,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from typing_extensions import Literal
 
@@ -92,7 +92,7 @@ async def write_files_for_root(
     root: Root,
     foldername: Path,
     overwrite: bool = False,
-) -> bool:
+) -> Tuple[bool, Path, Path]:
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:
@@ -124,7 +124,7 @@ async def write_files_for_root(
     except FileExistsError:
         pass
 
-    return written
+    return written, filename_full_tree, filename_diff_tree
 
 
 async def insert_from_delta_file(

@@ -84,9 +84,9 @@ class HttpDownloader:
 
 
 class S3Downloader:
-    def __init__(self, resource) -> None:  # type:ignore
+    def __init__(self, client) -> None:  # type:ignore
         self.name = "s3 downloader"
-        self.boto_resource = resource
+        self.boto_client = client
 
     @staticmethod
     def check_url(url: str, log: logging.Logger) -> bool:
@@ -108,7 +108,7 @@ class S3Downloader:
         bucket = parse_result.netloc
         target_filename = client_folder.joinpath(filename)
         log.debug(f"target file name {target_filename} bucket {bucket}")
-        my_bucket = self.boto_resource.Bucket(bucket)
+        my_bucket = self.boto_client.Bucket(bucket)
         # Create folder for parent directory
         target_filename.parent.mkdir(parents=True, exist_ok=True)
         with concurrent.futures.ThreadPoolExecutor() as pool:

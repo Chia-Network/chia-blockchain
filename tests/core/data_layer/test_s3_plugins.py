@@ -7,6 +7,9 @@ import tempfile
 import warnings
 from pathlib import Path
 
+from chia.data_layer.data_store import DataStore
+from chia.types.blockchain_format.sized_bytes import bytes32
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     import boto3
@@ -15,8 +18,9 @@ import botocore
 import botocore.retries.adaptive
 from moto import mock_s3
 
-from chia.data_layer.data_layer_util import ServerInfo
+from chia.data_layer.data_layer_util import ServerInfo, Status
 from chia.data_layer.downloader import S3Downloader
+from chia.data_layer.uploader import S3Uploader
 
 MY_BUCKET = "my_bucket"
 MY_PREFIX = "mock_folder"
@@ -93,7 +97,36 @@ class TestS3:
                 loop = asyncio.get_event_loop()
                 coroutine = downloader.download(Path(tmpdir), file_name, "", server_info, 10, log)
                 loop.run_until_complete(coroutine)
+                assert os.path.exists(Path(tmpdir).joinpath(file_name))
         except Exception as e:
             log.error(f"something went wrong {e}")
         self.tearDown()
-        assert os.path.exists(Path(tmpdir).joinpath(file_name))
+
+    def test_upload(self, data_store: DataStore, tree_id: bytes32) -> None:
+        key = b"\x01\x02"
+        value = b"abc"
+        self.setUp()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(
+            data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=None,
+                side=None,
+                status=Status.COMMITTED,
+            )
+        )
+        root = loop.run_until_complete(data_store.get_tree_root(tree_id=tree_id))
+        assert root
+        try:
+            uploader = S3Uploader(self.get_client(), MY_BUCKET, [])  # type:ignore
+            with tempfile.NamedTemporaryFile() as fp:
+                fp.write(bytes(fp.name, "utf-8"))
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    loop.run_until_complete(uploader.upload(data_store, tree_id, root, Path(tmpdir), log))
+        except Exception as e:
+            log.error(f"something went wrong {e}")
+        bucket = self.s3.Bucket(MY_BUCKET)
+        assert len(list(bucket.objects.all())) == 2
+        self.tearDown()
