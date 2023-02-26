@@ -53,7 +53,7 @@ class TransactionRecord(Streamable):
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success, we set it to success
-        for (_, mis, _) in self.sent_to:
+        for _, mis, _ in self.sent_to:
             if MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS:
                 return True
         # Note, transactions pending inclusion (pending) return false

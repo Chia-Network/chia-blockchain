@@ -27,7 +27,6 @@ def db_upgrade_func(
     no_update_config: bool = False,
     force: bool = False,
 ) -> None:
-
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
 
     config: Dict
@@ -81,7 +80,6 @@ def db_upgrade_func(
     except RuntimeError as e:
         print(f"conversion failed with error: {e}.")
     except Exception as e:
-
         print(
             textwrap.dedent(
                 f"""\
@@ -167,7 +165,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                 "block_record blob)"
             )
             out_db.execute(
-                "CREATE TABLE sub_epoch_segments_v3(" "ses_block_hash blob PRIMARY KEY," "challenge_segments blob)"
+                "CREATE TABLE sub_epoch_segments_v3(ses_block_hash blob PRIMARY KEY, challenge_segments blob)"
             )
             out_db.execute("CREATE TABLE current_peak(key int PRIMARY KEY, hash blob)")
 
@@ -202,10 +200,8 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                         "SELECT header_hash, height, is_fully_compactified, block FROM full_blocks ORDER BY height DESC"
                     )
                 ) as cursor_2:
-
                     out_db.execute("begin transaction")
                     for row in cursor:
-
                         header_hash = bytes.fromhex(row[0])
                         if header_hash != hh:
                             continue

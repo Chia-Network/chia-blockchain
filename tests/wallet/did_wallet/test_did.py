@@ -1261,6 +1261,7 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+        # Test general string
         message = "Hello World"
         response = await api_0.sign_message_by_id(
             {
@@ -1269,6 +1270,22 @@ class TestDIDWallet:
             }
         )
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test hex string
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+                "is_hex": True,
+            }
+        )
+        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
             puzzle.get_tree_hash(),

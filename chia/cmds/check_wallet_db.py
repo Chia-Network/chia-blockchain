@@ -369,7 +369,6 @@ class WalletDBReader:
 
 
 async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
-
     if db_path is None:
         wallet_db_path = Path(root_path) / "wallet" / "db"
         wallet_db_paths = list(wallet_db_path.glob("blockchain_wallet_*.sqlite"))

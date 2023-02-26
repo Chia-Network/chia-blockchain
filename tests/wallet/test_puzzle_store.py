@@ -15,9 +15,7 @@ from tests.util.db_connection import DBConnection
 class TestPuzzleStore:
     @pytest.mark.asyncio
     async def test_puzzle_store(self):
-
         async with DBConnection(1) as wrapper:
-
             db = await WalletPuzzleStore.create(wrapper)
             derivation_recs = []
             # wallet_types = [t for t in WalletType]

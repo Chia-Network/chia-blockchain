@@ -90,7 +90,6 @@ async def test_basics() -> None:
 
 @pytest.mark.asyncio
 async def test_fee_increase() -> None:
-
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         mempool_manager = MempoolManager(coin_store.get_coin_record, test_constants)
@@ -162,4 +161,4 @@ async def test_total_mempool_fees() -> None:
     assert result[1] == MempoolInclusionStatus.SUCCESS
     # Total fees should be coin1's amount plus coin2's amount minus two mojos
     # for the created coins
-    assert mempool_manager.mempool.total_mempool_fees == 0xFFFFFFFFFFFFFFFF + 3 - 2
+    assert mempool_manager.mempool.total_mempool_fees() == 0xFFFFFFFFFFFFFFFF + 3 - 2

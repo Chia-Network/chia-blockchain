@@ -46,7 +46,6 @@ def test_missing_messages_state_machine() -> None:
 
 
 def test_missing_messages() -> None:
-
     wallet_msgs = {
         "CoinState",
         "CoinStateUpdate",

@@ -476,7 +476,7 @@ class Timelord:
                 rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
                 if rc_info.challenge != rc_challenge:
                     assert rc_challenge is not None
-                    log.warning(f"SP: Do not have correct challenge {rc_challenge.hex()}" f" has {rc_info.challenge}")
+                    log.warning(f"SP: Do not have correct challenge {rc_challenge.hex()} has {rc_info.challenge}")
                     # This proof is on an outdated challenge, so don't use it
                     continue
                 iters_from_sub_slot_start = cc_info.number_of_iterations + self.last_state.get_last_ip()
@@ -745,7 +745,7 @@ class Timelord:
             rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
             if rc_vdf.challenge != rc_challenge:
                 assert rc_challenge is not None
-                log.warning(f"Do not have correct challenge {rc_challenge.hex()} has" f" {rc_vdf.challenge}")
+                log.warning(f"Do not have correct challenge {rc_challenge.hex()} has {rc_vdf.challenge}")
                 # This proof is on an outdated challenge, so don't use it
                 return None
             log.debug("Collected end of subslot vdfs.")

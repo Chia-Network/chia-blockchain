@@ -26,9 +26,7 @@ class CATLineageStore:
         self.table_name = f"lineage_proofs_{asset_id}"
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute(
-                f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY KEY," " lineage blob)"
-            )
+            await conn.execute(f"CREATE TABLE IF NOT EXISTS {self.table_name}(coin_id text PRIMARY KEY, lineage blob)")
         return self
 
     async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
@@ -48,7 +46,6 @@ class CATLineageStore:
             await cursor.close()
 
     async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 f"SELECT * FROM {self.table_name} WHERE coin_id=?;",

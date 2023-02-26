@@ -316,7 +316,6 @@ def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
 
 @pytest.mark.asyncio
 async def test_get_coin_names_to_check() -> None:
-
     r1 = record(coin_1, confirmed=1, spent=0)
     r2 = record(coin_2, confirmed=2, spent=4)
     r3 = record(coin_3, confirmed=3, spent=5)
@@ -338,7 +337,6 @@ async def test_get_coin_names_to_check() -> None:
         await store.add_coin_record(r7)
 
         for i in range(10):
-
             coins = await store.get_coin_names_to_check(i)
 
             # r1 is unspent and should always be included, regardless of height
@@ -359,7 +357,6 @@ async def test_get_coin_names_to_check() -> None:
 
 @pytest.mark.asyncio
 async def test_get_first_coin_height() -> None:
-
     r1 = record(coin_1, confirmed=1, spent=0)
     r2 = record(coin_2, confirmed=2, spent=4)
     r3 = record(coin_3, confirmed=3, spent=5)
@@ -385,7 +382,6 @@ async def test_get_first_coin_height() -> None:
 
 @pytest.mark.asyncio
 async def test_rollback_to_block() -> None:
-
     r1 = record(coin_1, confirmed=1, spent=0)
     r2 = record(coin_2, confirmed=2, spent=4)
     r3 = record(coin_3, confirmed=3, spent=5)

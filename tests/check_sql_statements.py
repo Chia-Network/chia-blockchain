@@ -9,7 +9,6 @@ from typing import Dict, Set, Tuple
 
 
 def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set()) -> int:
-
     lines = check_output(["git", "grep", f"CREATE {sql_type}"], cwd=cwd).decode("ascii").split("\n")
 
     ret = 0

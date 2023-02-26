@@ -81,11 +81,11 @@ async def init_test(
 async def test_mempool_inclusion_filter_basic() -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
         estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
-        assert len(sim.mempool_manager.mempool.spends) == 0
+        assert sim.mempool_manager.mempool.size() == 0
 
         spend_bundle: SpendBundle = make_tx_sb(spend_coins[0])
         status, error = await cli.push_tx(spend_bundle)
-        assert len(sim.mempool_manager.mempool.spends) == 1
+        assert sim.mempool_manager.mempool.size() == 1
         assert error is None
 
         mempool_item = sim.mempool_manager.get_mempool_item(spend_bundle.name())
@@ -98,11 +98,11 @@ async def test_mempool_inclusion_filter_basic() -> None:
             return True
 
         additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=include_none)
-        assert len(sim.mempool_manager.mempool.spends) == 1
+        assert sim.mempool_manager.mempool.size() == 1
         assert removals == []
 
         additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=include_all)
-        assert len(sim.mempool_manager.mempool.spends) == 0
+        assert sim.mempool_manager.mempool.size() == 0
         removal_ids = [c.name() for c in removals]
         assert mempool_item.name not in removal_ids
 
@@ -111,12 +111,12 @@ async def test_mempool_inclusion_filter_basic() -> None:
 async def test_mempoolitem_height_added(db_version: int) -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
         estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
-        assert len(sim.mempool_manager.mempool.spends) == 0
+        assert sim.mempool_manager.mempool.size() == 0
 
         spend_bundle: SpendBundle = make_tx_sb(spend_coins[0])
 
         status, error = await cli.push_tx(spend_bundle)
-        assert len(sim.mempool_manager.mempool.spends) == 1
+        assert sim.mempool_manager.mempool.size() == 1
         log.warning(f"{status, error} = cli.push_tx({spend_bundle.name()})")
 
         mempool_item = sim.mempool_manager.get_mempool_item(spend_bundle.name())
@@ -132,7 +132,7 @@ async def test_mempoolitem_height_added(db_version: int) -> None:
         assert mempool_item.name not in removal_ids
 
         mempool_item2 = sim.mempool_manager.get_mempool_item(spend_bundle.name())
-        assert len(sim.mempool_manager.mempool.spends) == 1
+        assert sim.mempool_manager.mempool.size() == 1
         assert mempool_item2
 
         # This is the important check in this test: ensure height_added_to_mempool does not
@@ -141,7 +141,7 @@ async def test_mempoolitem_height_added(db_version: int) -> None:
 
         # Now farm it into the next block
         additions, removals = await sim.farm_block(the_puzzle_hash)
-        assert len(sim.mempool_manager.mempool.spends) == 0
+        assert sim.mempool_manager.mempool.size() == 0
         assert len(removals) == 1
 
         log.warning(heights)

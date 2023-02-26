@@ -75,7 +75,7 @@ async def test_simulation_farm_blocks_to_wallet(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
 
     # Avoiding an attribute error below.
     assert wallet_node.wallet_state_manager is not None
@@ -113,7 +113,7 @@ async def test_simulation_farm_rewards_to_wallet(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
 
     # Avoiding an attribute error below.
     assert wallet_node.wallet_state_manager is not None
@@ -143,7 +143,7 @@ async def test_wait_transaction_records_entered_mempool(
     tx_amount = 1
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
 
     # Avoiding an attribute hint issue below.
     assert wallet_node.wallet_state_manager is not None
@@ -177,7 +177,7 @@ async def test_process_transaction_records(
     tx_amount = 1
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
 
     # Avoiding an attribute hint issue below.
     assert wallet_node.wallet_state_manager is not None
@@ -219,7 +219,7 @@ async def test_create_coins_with_amounts(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
 
     # Avoiding an attribute hint issue below.
     assert wallet_node.wallet_state_manager is not None
@@ -251,7 +251,7 @@ async def test_create_coins_with_invalid_amounts_raises(
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-    await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo("127.0.0.1", uint16(full_node_api.server._port)), None)
 
     # Avoiding an attribute hint issue below.backoff_times
     assert wallet_node.wallet_state_manager is not None

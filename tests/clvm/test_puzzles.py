@@ -96,7 +96,6 @@ def do_test_spend(
 def default_payments_and_conditions(
     initial_index: int, key_lookup: KeyTool
 ) -> Tuple[List[Tuple[bytes32, int]], Program]:
-
     # the coin we get from coin_db.farm_coin only has amount 1024, so we can
     # only make small payments to avoid failing with MINTING_COIN
     payments = [
