@@ -6,6 +6,9 @@ import os
 import tempfile
 import warnings
 from pathlib import Path
+from typing import List
+
+import pytest
 
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -130,3 +133,60 @@ class TestS3:
         bucket = self.s3.Bucket(MY_BUCKET)
         assert len(list(bucket.objects.all())) == 2
         self.tearDown()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skip(reason="convenience, used for local testing, should not run in ci")
+async def test_with_real_s3_bucket(data_store: DataStore, tree_id: bytes32) -> None:
+    bucket_name = ""
+    aws_access_key_id = ""
+    aws_secret_access_key = ""
+    client = boto3.client(
+        "s3",
+        region_name=REGION,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
+
+    await data_store.insert(
+        key=b"\x01\x02",
+        value=b"abc",
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.COMMITTED,
+    )
+
+    # upload files to s3
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    uploader = S3Uploader(client, bucket_name, [])
+    with tempfile.NamedTemporaryFile() as fp:
+        fp.write(bytes(fp.name, "utf-8"))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            await uploader.upload(data_store, tree_id, root, Path(tmpdir), log)
+            filenames: List[str] = list(next(os.walk(tmpdir), (None, None, []))[2])
+
+    # download uploaded files
+    downloader = S3Downloader(client)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for file_name in filenames:
+            assert os.path.exists(Path(tmpdir).joinpath(file_name)) is False
+            await downloader.download(Path(tmpdir), file_name, "", ServerInfo(f"s3://{bucket_name}/", 0, 0), 10, log)
+            assert os.path.exists(Path(tmpdir).joinpath(file_name))
+        filenames = list(next(os.walk(tmpdir), (None, None, []))[2])
+        log.info(f"downloaded files {filenames}")
+        assert len(filenames) == 2
+
+    # clean up, deletes all files from test bucket!!!!
+    bucket = boto3.resource(
+        "s3",
+        region_name=REGION,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    ).Bucket(bucket_name)
+    assert len(list(bucket.objects.all())) == 2
+    for file in bucket.objects.all():
+        log.info(f"delete bucket file: {file.key}")
+        file.delete()
+
+    assert len(list(bucket.objects.all())) == 0

@@ -108,11 +108,10 @@ class S3Downloader:
         bucket = parse_result.netloc
         target_filename = client_folder.joinpath(filename)
         log.debug(f"target file name {target_filename} bucket {bucket}")
-        my_bucket = self.boto_client.Bucket(bucket)
         # Create folder for parent directory
         target_filename.parent.mkdir(parents=True, exist_ok=True)
         with concurrent.futures.ThreadPoolExecutor() as pool:
             await asyncio.get_running_loop().run_in_executor(
-                pool, functools.partial(my_bucket.download_file, filename, str(target_filename))
+                pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
             )
         return True
