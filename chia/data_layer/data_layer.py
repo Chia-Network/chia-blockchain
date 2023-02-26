@@ -77,8 +77,8 @@ class DataLayer:
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
-        downloaders: List[DLDownloader] = [],
-        uploaders: List[DLUploader] = [],  # dont add FilesystemUploader to this, it is the default uploader
+        downloaders: List[DLDownloader],
+        uploaders: List[DLUploader],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
     ):
         if name == "":
