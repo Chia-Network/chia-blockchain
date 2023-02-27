@@ -619,4 +619,6 @@ async def test_process_mempool_items(
                 assert additions == [Coin(coin2.name(), IDENTITY_PUZZLE_HASH, coin2_amount - 2)]
             elif test_for == "max_fee":
                 assert additions == [Coin(coin2.name(), IDENTITY_PUZZLE_HASH, 2)]
+            else:
+                assert False, "Unexpected case"
             assert removals == [coin2]
