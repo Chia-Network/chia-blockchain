@@ -557,6 +557,7 @@ class TestFor(Enum):
 async def test_process_mempool_items(test_for: TestFor, inclusion_filter: Callable[[bytes32], bool]) -> None:
     coin1_amount = uint64(10000000)
     coin1 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, coin1_amount)
+    coin1_child = Coin(coin1.name(), IDENTITY_PUZZLE_HASH, coin1_amount - 42)
     coin2_amount = uint64(0xFFFFFFFFFFFFFFFF)
     coin2 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, coin2_amount)
 
@@ -593,14 +594,16 @@ async def test_process_mempool_items(test_for: TestFor, inclusion_filter: Callab
         # Make sure this mempool item was included by item_inclusion_filter
         assert spend_bundles == [sb1]
         assert cost_sum == expected_cost1
-        assert additions == [Coin(coin1.name(), IDENTITY_PUZZLE_HASH, coin1_amount - 42)]
+        assert additions == [coin1_child]
         assert removals == [coin1]
         # Create a second item that when combined with the first one we exceed the maximum fee/block clvm cost
         if test_for == TestFor.MAX_FEE:
             conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+            coin2_child = Coin(coin2.name(), IDENTITY_PUZZLE_HASH, 2)
             expected_cost2 = uint64(2957056)
         else:
             conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin2_amount - 2]]
+            coin2_child = Coin(coin2.name(), IDENTITY_PUZZLE_HASH, coin2_amount - 2)
             expected_cost2 = uint64(3065056)
         sb2, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin2)
         assert result == (expected_cost2, MempoolInclusionStatus.SUCCESS, None)
@@ -611,8 +614,8 @@ async def test_process_mempool_items(test_for: TestFor, inclusion_filter: Callab
             assert spend_bundles == [sb1, sb2]
             assert cost_sum == expected_cost1 + expected_cost2
             assert additions == [
-                Coin(coin1.name(), IDENTITY_PUZZLE_HASH, coin1_amount - 42),
-                Coin(coin2.name(), IDENTITY_PUZZLE_HASH, coin2_amount - 2),
+                coin1_child,
+                coin2_child,
             ]
             assert removals == [coin1, coin2]
         else:
@@ -620,10 +623,5 @@ async def test_process_mempool_items(test_for: TestFor, inclusion_filter: Callab
             assert spend_bundles == [sb2]
             # The first item hits the maximum fee/block clvm cost and gets skipped
             assert cost_sum == expected_cost2
-            if test_for == TestFor.MAX_COST:
-                assert additions == [Coin(coin2.name(), IDENTITY_PUZZLE_HASH, coin2_amount - 2)]
-            elif test_for == TestFor.MAX_FEE:
-                assert additions == [Coin(coin2.name(), IDENTITY_PUZZLE_HASH, 2)]
-            else:
-                assert False, "Unexpected case"
+            assert additions == [coin2_child]
             assert removals == [coin2]
