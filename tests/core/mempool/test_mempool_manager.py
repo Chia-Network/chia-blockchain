@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -544,12 +545,16 @@ def never(_: bytes32) -> bool:
     return False
 
 
+class TestFor(Enum):
+    MAX_COST = 0
+    MAX_FEE = 1
+    NORMAL_PATH = 2
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("test_for", ["max_cost", "max_fee", "normal_path"])
+@pytest.mark.parametrize("test_for", [t for t in TestFor])
 @pytest.mark.parametrize("inclusion_filter", [always, never])
-async def test_process_mempool_items(
-    test_for: str, inclusion_filter: Callable[[bytes32], bool]
-) -> None:
+async def test_process_mempool_items(test_for: TestFor, inclusion_filter: Callable[[bytes32], bool]) -> None:
     coin1_amount = uint64(10000000)
     coin1 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, coin1_amount)
     coin2_amount = uint64(0xFFFFFFFFFFFFFFFF)
@@ -564,7 +569,7 @@ async def test_process_mempool_items(
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
     conditions = []
-    if test_for == "max_cost":
+    if test_for == TestFor.MAX_COST:
         g1 = G1Element()
         for _ in range(2436):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
@@ -591,7 +596,7 @@ async def test_process_mempool_items(
         assert additions == [Coin(coin1.name(), IDENTITY_PUZZLE_HASH, coin1_amount - 42)]
         assert removals == [coin1]
         # Create a second item that when combined with the first one we exceed the maximum fee/block clvm cost
-        if test_for == "max_fee":
+        if test_for == TestFor.MAX_FEE:
             conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
             expected_cost2 = uint64(2957056)
         else:
@@ -602,7 +607,7 @@ async def test_process_mempool_items(
         spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(
             item_inclusion_filter=inclusion_filter
         )
-        if test_for == "normal_path":
+        if test_for == TestFor.NORMAL_PATH:
             assert spend_bundles == [sb1, sb2]
             assert cost_sum == expected_cost1 + expected_cost2
             assert additions == [
@@ -615,9 +620,9 @@ async def test_process_mempool_items(
             assert spend_bundles == [sb2]
             # The first item hits the maximum fee/block clvm cost and gets skipped
             assert cost_sum == expected_cost2
-            if test_for == "max_cost":
+            if test_for == TestFor.MAX_COST:
                 assert additions == [Coin(coin2.name(), IDENTITY_PUZZLE_HASH, coin2_amount - 2)]
-            elif test_for == "max_fee":
+            elif test_for == TestFor.MAX_FEE:
                 assert additions == [Coin(coin2.name(), IDENTITY_PUZZLE_HASH, 2)]
             else:
                 assert False, "Unexpected case"
