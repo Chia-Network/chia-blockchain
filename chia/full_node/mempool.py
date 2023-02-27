@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
-from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo
+from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -111,7 +111,9 @@ class Mempool:
             assert self._total_mempool_cost >= 0
             info = FeeMempoolInfo(self.mempool_info, self._total_mempool_cost, self._total_mempool_fees, datetime.now())
             if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-                self.fee_estimator.remove_mempool_item(info, item)
+                self.fee_estimator.remove_mempool_item(
+                    info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool)
+                )
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
@@ -143,7 +145,7 @@ class Mempool:
         self._total_mempool_cost = CLVMCost(uint64(self._total_mempool_cost + item.cost))
         self._total_mempool_fees = self._total_mempool_fees + item.fee
         info = FeeMempoolInfo(self.mempool_info, self._total_mempool_cost, self._total_mempool_fees, datetime.now())
-        self.fee_estimator.add_mempool_item(info, item)
+        self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
 
     def at_full_capacity(self, cost: int) -> bool:
         """
