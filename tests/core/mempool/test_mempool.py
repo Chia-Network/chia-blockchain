@@ -94,10 +94,8 @@ def make_item(idx: int, cost: uint64 = uint64(80), assert_height=100) -> Mempool
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),
-        NPCResult(None, None, cost),
-        cost,
+        NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
         spend_bundle_name,
-        [],
         uint32(0),
         assert_height,
     )
