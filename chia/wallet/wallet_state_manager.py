@@ -1107,7 +1107,7 @@ class WalletStateManager:
                                 coin_state.coin,
                                 uint32(coin_state.created_height),
                                 all_unconfirmed,
-                                wallet_id,
+                                wallet_id,  # here
                                 wallet_type,
                                 peer,
                                 coin_name,
@@ -1394,6 +1394,7 @@ class WalletStateManager:
                 self.log.exception(f"Error adding state... {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
+                    # self.wallets = self.get_all_wallet_info_entries()
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
@@ -1556,9 +1557,23 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
 
+        if not await self.is_valid_wallet_id(wallet_id):
+            msg = f"wallet_id {wallet_id} not in wallet database"
+            self.log.error(msg)
+            raise RuntimeError(msg)
+
         await self.wallets[wallet_id].coin_added(coin, height, peer)
 
         await self.create_more_puzzle_hashes()
+
+    async def verify_wallet_db(self):
+        """Heavyweight DB validation - not intended for production"""
+        pass
+
+    async def is_valid_wallet_id(self, wallet_id: int):
+        wallets = await self.get_all_wallet_info_entries()
+        # also check database
+        return wallet_id in [w.id for w in wallets]
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
         """

@@ -211,7 +211,7 @@ class DIDWallet:
                     recovery_list.append(did[0])
             except Exception:
                 self.log.warning(
-                    f"DID {launch_coin.name().hex()} has a recovery list hash but missing a reveal,"
+                    f"DID {launch_coin.name().hex()} has a recovery list hash but is missing a reveal,"
                     " you may need to reset the recovery info."
                 )
         self.did_info = DIDInfo(
@@ -384,12 +384,26 @@ class DIDWallet:
             else:
                 self.log.warning("Parent coin is not a DID, skipping: %s -> %s", coin.name(), coin)
                 return
-        self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
+        self.log.info(f"DID wallet {self.wallet_id} has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         # Check inner puzzle consistency
-        assert self.did_info.origin_coin is not None
+        if self.did_info.origin_coin is None:
+            self.log.error(f"DID inner puzzle broken wallet_id={self.wallet_id} Our DIDInfo: {self.did_info}")
+            self.log.error(f"DID wallet {self.wallet_id} state not updated")
+            return
         full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
-        assert full_puzzle.get_tree_hash() == coin.puzzle_hash
+        if full_puzzle.get_tree_hash() != coin.puzzle_hash:
+            self.log.error(
+                f"DID coin add FAILED. DID coin {coin.name()} was detected as a DID coin for wallet "
+                f"{self.wallet_id} "
+                f"but create_fullpuz hash {full_puzzle.get_tree_hash()} failed to match "
+                f"coin hash {coin.puzzle_hash}. Our DIDInfo: {self.did_info} "
+                f"origin_coin={self.did_info.origin_coin.name().hex()}"
+                f"inner_puzzle_for_did_puzzle={inner_puzzle}"
+            )
+            self.log.error(f"DID wallet {self.wallet_id} state not updated")
+            return
+
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
 
