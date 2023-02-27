@@ -222,7 +222,7 @@ def init(
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-) -> int:
+) -> Optional[int]:
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):
@@ -254,6 +254,8 @@ def init(
             return -1
     else:
         return chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet, v1_db=v1_db)
+
+    return None
 
 
 def chia_version_number() -> Tuple[str, str, str, str]:
