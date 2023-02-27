@@ -5,21 +5,18 @@ from typing import Optional
 
 import pytest
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate_store import FeeStore
+from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
-from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
 from tests.core.mempool.test_mempool_manager import (
@@ -35,41 +32,31 @@ async def test_basics() -> None:
     fee_store = FeeStore()
     fee_tracker = FeeTracker(fee_store)
 
-    wallet_tool = WalletTool(test_constants)
-    ph = wallet_tool.get_new_puzzlehash()
-    coin = Coin(ph, ph, uint64(10000))
-    spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
     cost = uint64(5000000)
     for i in range(300, 700):
         i = uint32(i)
         items = []
         for _ in range(2, 100):
             fee = uint64(10000000)
-            mempool_item = MempoolItem(
-                spend_bundle,
+            mempool_item = MempoolItemInfo(
+                cost,
                 fee,
-                NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
-                spend_bundle.name(),
                 uint32(i - 1),
             )
             items.append(mempool_item)
 
             fee1 = uint64(200000)
-            mempool_item1 = MempoolItem(
-                spend_bundle,
+            mempool_item1 = MempoolItemInfo(
+                cost,
                 fee1,
-                NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
-                spend_bundle.name(),
                 uint32(i - 40),
             )
             items.append(mempool_item1)
 
             fee2 = uint64(0)
-            mempool_item2 = MempoolItem(
-                spend_bundle,
+            mempool_item2 = MempoolItemInfo(
+                cost,
                 fee2,
-                NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
-                spend_bundle.name(),
                 uint32(i - 270),
             )
             items.append(mempool_item2)
@@ -92,10 +79,6 @@ async def test_fee_increase() -> None:
         btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
         fee_tracker = btc_fee_estimator.get_tracker()
         estimator = SmartFeeEstimator(fee_tracker, uint64(test_constants.MAX_BLOCK_COST_CLVM))
-        wallet_tool = WalletTool(test_constants)
-        ph = wallet_tool.get_new_puzzlehash()
-        coin = Coin(ph, ph, uint64(10000))
-        spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
         random = Random(x=1)
         for i in range(300, 700):
             i = uint32(i)
@@ -104,11 +87,9 @@ async def test_fee_increase() -> None:
                 fee = uint64(0)
                 included_height = uint32(random.randint(i - 60, i - 1))
                 cost = uint64(5000000)
-                mempool_item = MempoolItem(
-                    spend_bundle,
+                mempool_item = MempoolItemInfo(
+                    cost,
                     fee,
-                    NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
-                    spend_bundle.name(),
                     included_height,
                 )
                 items.append(mempool_item)
