@@ -13,7 +13,7 @@ DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_alternate_proposal_validator.clvm")
-DAO_MONEY_VALIDATER_MOD: Program = load_clvm("dao_alternate_money_receiver.clvm")
+DAO_MONEY_RECEIVER_MOD: Program = load_clvm("dao_alternate_money_receiver.clvm")
 DAO_TREASURY_MOD: Program = load_clvm("dao_alternate_treasury.clvm")
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
@@ -167,6 +167,79 @@ def test_proposal_timer() -> None:
     assert len(conds.as_python()) == 4
 
 
+def test_validator() -> None:
+    # SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # CAT_MOD_HASH
+    # LOCKUP_MOD_HASH
+    # TREASURY_MOD_HASH
+    # CAT_TAIL_HASH
+    # ATTENDANCE_REQUIRED
+    # PASS_MARGIN
+    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        1000,
+        5100,
+    )
+    # (announcement_source delegated_puzzle_hash announcement_args)
+    # (
+    #   proposal_id
+    #   total_votes
+    #   yes_votes
+    # )
+    # spend_or_update_flag
+    # conditions
+    proposal: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        singleton_id,
+        950,
+        1200,
+        's',
+        Program.to(1).get_tree_hash(),
+    )
+    full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
+    solution = Program.to([
+        [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0],
+        [singleton_id, 1200, 950],
+        's',
+        [[51, proposal_validator.get_tree_hash(), 201], [51, 0xcafe00d, 40]]
+    ])
+    conds: Program = proposal_validator.run(solution)
+    breakpoint()
+    assert len(conds.as_python()) == 4
+    return
+
+
+def test_receiver() -> None:
+    # MINIMUM_INPUT_AMOUNT  ; this is a minimum of -1 to prevent money being removed, but can be increased to prevent DoS/spam
+    # MY_SINGLETON_STRUCT
+    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct)
+    return
+
+
 def test_treasury() -> None:
     current_cat_issuance: uint64 = uint64(1000)
     attendance_percentage: uint64 = uint64(15)
@@ -176,14 +249,12 @@ def test_treasury() -> None:
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
-    # SINGLETON_STRUCT
-    # PROPOSAL_MOD_HASH
-    # PROPOSAL_TIMER_MOD_HASH
-    # CAT_MOD_HASH
-    # CAT_TAIL
-    # CURRENT_CAT_ISSUANCE
-    # PROPOSAL_PASS_PERCENTAGE
-    # PROPOSAL_TIMELOCK
+    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry()
+    money_receiver = DAO_MONEY_RECEIVER_MOD.curry()
+    # PROPOSAL_VALIDATOR
+    # MONEY_RECEIVER
+    # PROPOSAL_LENGTH
+    # PROPOSAL_SOFTCLOSE_LENGTH
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         [
             singleton_struct,

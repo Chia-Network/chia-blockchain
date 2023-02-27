@@ -12,7 +12,6 @@
     (announcement_source delegated_puzzle_hash announcement_args)
     (
       proposal_id
-      proposal_type
       total_votes
       yes_votes
     )
@@ -102,19 +101,22 @@
     (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
     (=
       announcement_source
-      (calculate_proposal_puzzle
-        PROPOSAL_MOD_HASH
+      (calculate_full_puzzle_hash
         (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-        PROPOSAL_TIMER_MOD_HASH
-        CAT_MOD_HASH
-        LOCKUP_MOD_HASH
-        TREASURY_MOD_HASH
-        CAT_TAIL_HASH
-        (f (r SINGLETON_STRUCT))
-        yes_votes
-        total_votes
-        spend_or_update_flag
-        delegated_puzzle_hash
+        (calculate_proposal_puzzle
+          PROPOSAL_MOD_HASH
+          (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+          PROPOSAL_TIMER_MOD_HASH
+          CAT_MOD_HASH
+          LOCKUP_MOD_HASH
+          TREASURY_MOD_HASH
+          CAT_TAIL_HASH
+          (f (r SINGLETON_STRUCT))
+          yes_votes
+          total_votes
+          spend_or_update_flag
+          delegated_puzzle_hash
+        )
       )
     )
     ; then
