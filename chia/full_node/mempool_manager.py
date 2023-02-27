@@ -170,7 +170,7 @@ class MempoolManager:
         self.pool.shutdown(wait=True)
 
     def process_mempool_items(
-        self, item_inclusion_filter: Callable[[MempoolManager, MempoolItem], bool]
+        self, item_inclusion_filter: Callable[[bytes32], bool]
     ) -> Tuple[List[SpendBundle], uint64, List[Coin], List[Coin]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -178,7 +178,7 @@ class MempoolManager:
         removals: List[Coin] = []
         additions: List[Coin] = []
         for item in self.mempool.spends_by_feerate():
-            if not item_inclusion_filter(self, item):
+            if not item_inclusion_filter(item.name):
                 continue
             log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
             if item.cost + cost_sum > self.max_block_clvm_cost or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT:
@@ -193,7 +193,7 @@ class MempoolManager:
     def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
-        item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
@@ -204,7 +204,7 @@ class MempoolManager:
 
         if item_inclusion_filter is None:
 
-            def always(mm: MempoolManager, mi: MempoolItem) -> bool:
+            def always(bundle_name: bytes32) -> bool:
                 return True
 
             item_inclusion_filter = always
