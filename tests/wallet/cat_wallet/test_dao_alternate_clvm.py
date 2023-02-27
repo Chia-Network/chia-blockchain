@@ -82,7 +82,6 @@ def test_proposal() -> None:
     )
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
-    breakpoint()
     # Test exit
     # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -123,7 +122,6 @@ def test_proposal() -> None:
 
 
 def test_proposal_timer() -> None:
-    proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     # LOCKUP_TIME: uint64 = uint64(200)
@@ -134,11 +132,8 @@ def test_proposal_timer() -> None:
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
     # CAT_MOD_HASH
-    # CAT_TAIL
-    # CURRENT_CAT_ISSUANCE
-    # PROPOSAL_TIMELOCK
-    # PROPOSAL_PASS_PERCENTAGE
-    # MY_PARENT_SINGLETON_STRUCT
+    # CAT_TAIL_HASH
+    # (@ MY_PARENT_SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
     # TREASURY_ID
     proposal_timer_full: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -155,6 +150,7 @@ def test_proposal_timer() -> None:
     # proposal_parent_id
     # proposal_amount
     # proposal_timelock
+    # parent_parent
 
     solution: Program = Program.to(
         [
@@ -164,6 +160,7 @@ def test_proposal_timer() -> None:
             Program.to("parent").get_tree_hash(),
             23,
             200,
+            Program.to("parent_parent").get_tree_hash(),
         ]
     )
     conds: Program = proposal_timer_full.run(solution)
