@@ -6,9 +6,24 @@ from typing import List
 
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
-from chia.types.mempool_item import MempoolItem
 from chia.types.mojos import Mojos
 from chia.util.ints import uint32, uint64
+
+
+@dataclass(frozen=True)
+class MempoolItemInfo:
+    """
+    The information the fee estimator is passed for each mempool item that's
+    added, removed from the mempool and included in blocks
+    """
+
+    cost: int
+    fee: int
+    height_added_to_mempool: uint32
+
+    @property
+    def fee_per_cost(self) -> float:
+        return self.fee / self.cost
 
 
 @dataclass(frozen=True)
@@ -75,4 +90,4 @@ class FeeBlockInfo:  # See BlockRecord
     """
 
     block_height: uint32
-    included_items: List[MempoolItem]
+    included_items: List[MempoolItemInfo]

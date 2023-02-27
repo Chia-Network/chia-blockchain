@@ -4,19 +4,13 @@ import logging
 from typing import List
 
 import pytest
-from chia_rs import Coin
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.fee_estimation import FeeBlockInfo
+from chia.full_node.fee_estimation import FeeBlockInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_constants import INFINITE_FEE_RATE, INITIAL_STEP
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import get_bucket_index, init_buckets
-from chia.simulator.block_tools import test_constants
-from chia.simulator.wallet_tools import WalletTool
 from chia.types.fee_rate import FeeRateV2
-from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint32, uint64
 from chia.util.math import make_monotonically_decreasing
 
@@ -52,19 +46,10 @@ def test_single_estimate() -> None:
 
 
 def make_block(
-    wallet_tool: WalletTool, height: uint32, num_tx: int, cost: uint64, fee: uint64, num_blocks_wait_in_mempool: int
-) -> List[MempoolItem]:
-    items = []
-    ph = wallet_tool.get_new_puzzlehash()
-    coin = Coin(ph, ph, uint64(10000))
-    spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
-
-    for n in range(num_tx):
-        block_included = uint32(height - num_blocks_wait_in_mempool)
-        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], cost)
-        mempool_item = MempoolItem(spend_bundle, fee, NPCResult(None, conds, cost), spend_bundle.name(), block_included)
-        items.append(mempool_item)
-    return items
+    height: uint32, num_tx: int, cost: uint64, fee: uint64, num_blocks_wait_in_mempool: int
+) -> List[MempoolItemInfo]:
+    block_included = uint32(height - num_blocks_wait_in_mempool)
+    return [MempoolItemInfo(cost, fee, block_included)] * num_tx
 
 
 def test_steady_fee_pressure() -> None:
@@ -74,7 +59,6 @@ def test_steady_fee_pressure() -> None:
     """
     max_block_cost_clvm = uint64(1000 * 1000)
     estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
-    wallet_tool = WalletTool(test_constants)
     cost = uint64(5000000)
     fee = uint64(10000000)
     num_blocks_wait_in_mempool = 5
@@ -84,7 +68,7 @@ def test_steady_fee_pressure() -> None:
     estimates_during = []
     for height in range(start, end):
         height = uint32(height)
-        items = make_block(wallet_tool, height, 1, cost, fee, num_blocks_wait_in_mempool)
+        items = make_block(height, 1, cost, fee, num_blocks_wait_in_mempool)
         estimator.new_block(FeeBlockInfo(uint32(height), items))
         estimates_during.append(estimator.estimate_fee_rate(time_offset_seconds=40 * height))
 

@@ -16,7 +16,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo
+from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
@@ -600,7 +600,7 @@ class MempoolManager:
             return []
         assert new_peak.timestamp is not None
         self.fee_estimator.new_block_height(new_peak.height)
-        included_items = []
+        included_items: List[MempoolItemInfo] = []
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -612,7 +612,7 @@ class MempoolManager:
                 for spend in last_npc_result.conds.spends:
                     items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(bytes32(spend.coin_id))
                     for item in items:
-                        included_items.append(item)
+                        included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                         self.remove_seen(item.name)
                         spendbundle_ids_to_remove.append(item.name)
                 self.mempool.remove_from_pool(spendbundle_ids_to_remove, MempoolRemoveReason.BLOCK_INCLUSION)
@@ -632,7 +632,7 @@ class MempoolManager:
                 if result == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
-                    included_items.append(item)
+                    included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())

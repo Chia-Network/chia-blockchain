@@ -14,6 +14,7 @@ from chia.full_node.fee_estimation import (
     FeeBlockInfo,
     FeeMempoolInfo,
     MempoolInfo,
+    MempoolItemInfo,
 )
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import FeeTracker
@@ -67,11 +68,11 @@ class FeeEstimatorInterfaceIntegrationVerificationObject(FeeEstimatorInterface):
         self.current_block_height = block_info.block_height
         self.new_block_called_count += 1
 
-    def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
+    def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItemInfo) -> None:
         """A MempoolItem (transaction and associated info) has been added to the mempool"""
         self.add_mempool_item_called_count += 1
 
-    def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
+    def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItemInfo) -> None:
         """A MempoolItem (transaction and associated info) has been removed from the mempool"""
         self.remove_mempool_item_called_count += 1
 
@@ -143,7 +144,7 @@ def test_mempool_manager_fee_estimator_new_block() -> None:
     mempool = Mempool(test_mempool_info, fee_estimator)
     item = make_mempoolitem()
     height = uint32(4)
-    included_items = [item]
+    included_items = [MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool)]
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     assert mempool.fee_estimator.new_block_called_count == 1  # type: ignore[attr-defined]
 
@@ -187,7 +188,7 @@ def test_current_block_height_new_block() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(10)
-    included_items: List[MempoolItem] = []
+    included_items: List[MempoolItemInfo] = []
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
@@ -196,7 +197,7 @@ def test_current_block_height_new_height_then_new_block() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(11)
-    included_items: List[MempoolItem] = []
+    included_items: List[MempoolItemInfo] = []
     fee_estimator.new_block_height(uint32(height - 1))
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
@@ -206,7 +207,7 @@ def test_current_block_height_new_block_then_new_height() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(12)
-    included_items: List[MempoolItem] = []
+    included_items: List[MempoolItemInfo] = []
     fee_estimator.new_block_height(uint32(height - 1))
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     fee_estimator.new_block_height(uint32(height + 1))
