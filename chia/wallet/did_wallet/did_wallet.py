@@ -356,8 +356,11 @@ class DIDWallet:
         assert sum(c.amount for c in coins) >= amount
         return coins
 
-    def _coin_is_first_singleton(self, coin: Coin):
+    def _coin_is_first_singleton(self, coin: Coin) -> bool:
         parent = self.get_parent_for_coin(coin)
+        if parent is None:
+            return False
+        assert self.did_info.origin_coin
         return parent.parent_name == self.did_info.origin_coin.name()
 
     # This will be used in the recovery case where we don't have the parent info already
