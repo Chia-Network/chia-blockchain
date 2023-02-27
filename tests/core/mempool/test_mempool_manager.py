@@ -125,6 +125,10 @@ def make_test_conds(
     height_absolute: int = 0,
     seconds_relative: Optional[int] = None,
     seconds_absolute: int = 0,
+    before_height_relative: Optional[int] = None,
+    before_height_absolute: Optional[int] = None,
+    before_seconds_relative: Optional[int] = None,
+    before_seconds_absolute: Optional[int] = None,
     cost: int = 0,
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
@@ -134,8 +138,8 @@ def make_test_conds(
                 IDENTITY_PUZZLE_HASH,
                 None if height_relative is None else uint32(height_relative),
                 None if seconds_relative is None else uint64(seconds_relative),
-                None,
-                None,
+                None if before_height_relative is None else uint32(before_height_relative),
+                None if before_seconds_relative is None else uint64(before_seconds_relative),
                 None if birth_height is None else uint32(birth_height),
                 None if birth_seconds is None else uint64(birth_seconds),
                 [],
@@ -146,8 +150,8 @@ def make_test_conds(
         0,
         uint32(height_absolute),
         uint64(seconds_absolute),
-        None,
-        None,
+        uint32(before_height_absolute) if before_height_absolute else None,
+        uint64(before_seconds_absolute) if before_seconds_absolute else None,
         [],
         cost,
         0,
@@ -189,6 +193,18 @@ class TestCheckTimeLocks:
             (make_test_conds(birth_seconds=9999), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (make_test_conds(birth_seconds=10000), None),
             (make_test_conds(birth_seconds=10001), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            # the coin is 5 blocks old in this test
+            (make_test_conds(before_height_relative=5), Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(before_height_relative=6), None),
+            # The block height is 15
+            (make_test_conds(before_height_absolute=15), Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
+            (make_test_conds(before_height_absolute=16), None),
+            # the coin is 150 seconds old in this test
+            (make_test_conds(before_seconds_relative=150), Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
+            (make_test_conds(before_seconds_relative=151), None),
+            # The block timestamp is 10150
+            (make_test_conds(before_seconds_absolute=10150), Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+            (make_test_conds(before_seconds_absolute=10151), None),
         ],
     )
     def test_conditions(
@@ -197,7 +213,12 @@ class TestCheckTimeLocks:
         expected: Optional[Err],
     ) -> None:
         assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            mempool_check_time_locks(
+                self.REMOVALS,
+                conds,
+                self.PREV_BLOCK_HEIGHT,
+                self.PREV_BLOCK_TIMESTAMP,
+            )
             == expected
         )
 
@@ -429,33 +450,54 @@ mis = MempoolInclusionStatus
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
+        # the mempool rules don't allow relative height- or time conditions on
+        # ephemeral spends
         # SECONDS RELATIVE
         (co.ASSERT_SECONDS_RELATIVE, -2, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_SECONDS_RELATIVE, -1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_SECONDS_RELATIVE, 0, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_SECONDS_RELATIVE, 9, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_SECONDS_RELATIVE, 10, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         # HEIGHT RELATIVE
-        # the mempool rules don't allow relative height- or time conditions on
-        # ephemeral spends
         (co.ASSERT_HEIGHT_RELATIVE, -2, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, -1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, 0, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, 1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, 5, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 6, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, 7, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, 10, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         (co.ASSERT_HEIGHT_RELATIVE, 11, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        # BEFORE HEIGHT RELATIVE
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -2, mis.FAILED, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, mis.FAILED, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 5, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         # HEIGHT ABSOLUTE
         (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS, None),
         (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS, None),
         (co.ASSERT_HEIGHT_ABSOLUTE, 6, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
         (co.ASSERT_HEIGHT_ABSOLUTE, 7, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        # BEFORE HEIGHT ABSOLUTE
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, mis.FAILED, Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 5, mis.FAILED, Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 6, mis.SUCCESS, None),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 7, mis.SUCCESS, None),
         # SECONDS ABSOLUTE
         # Current block timestamp is 10050
         (co.ASSERT_SECONDS_ABSOLUTE, 10049, mis.SUCCESS, None),
         (co.ASSERT_SECONDS_ABSOLUTE, 10050, mis.SUCCESS, None),
         (co.ASSERT_SECONDS_ABSOLUTE, 10051, mis.FAILED, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
         (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        # BEFORE SECONDS ABSOLUTE
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10049, mis.FAILED, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10050, mis.FAILED, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10051, mis.SUCCESS, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10052, mis.SUCCESS, None),
     ],
 )
 async def test_ephemeral_timelock(

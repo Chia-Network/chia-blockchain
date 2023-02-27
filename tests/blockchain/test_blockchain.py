@@ -1859,16 +1859,34 @@ class TestBodyValidation:
             (co.ASSERT_SECONDS_RELATIVE, 9, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),  # <- current block time
             (co.ASSERT_SECONDS_RELATIVE, 11, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS RELATIVE
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),  # <- birth time
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 1, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 9, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, rbr.NEW_PEAK),  # <- current block time
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 11, rbr.NEW_PEAK),
             # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT RELATIVE
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, rbr.NEW_PEAK),
             # HEIGHT ABSOLUTE
             (co.ASSERT_HEIGHT_ABSOLUTE, 1, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT ABSOLUTE
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 3, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, rbr.NEW_PEAK),
             # SECONDS ABSOLUTE
             # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_SECONDS_ABSOLUTE, 10019, rbr.NEW_PEAK),
@@ -1878,6 +1896,14 @@ class TestBodyValidation:
             (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.INVALID_BLOCK),  # <- current block
             (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS ABSOLUTE
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, rbr.INVALID_BLOCK),  # <- previous tx-block
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10021, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),  # <- current block
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10031, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
     async def test_timelock_conditions(self, opcode, lock_value, expected, with_softfork2, bt):
@@ -1892,6 +1918,10 @@ class TestBodyValidation:
             if opcode in [
                 ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
             ]:
                 expected = ReceiveBlockResult.NEW_PEAK
 
@@ -2019,19 +2049,36 @@ class TestBodyValidation:
             (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.NEW_PEAK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10031, rbr.INVALID_BLOCK),
             # SECONDS RELATIVE
+            # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS RELATIVE
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x10000000000000000, rbr.NEW_PEAK),
             # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT RELATIVE
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0x100000000, rbr.NEW_PEAK),
             # HEIGHT ABSOLUTE
             (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT ABSOLUTE
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 3, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, rbr.NEW_PEAK),
             # SECONDS ABSOLUTE
             # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_SECONDS_ABSOLUTE, 10020, rbr.NEW_PEAK),  # <- previous tx-block
@@ -2040,6 +2087,12 @@ class TestBodyValidation:
             (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.INVALID_BLOCK),  # <- current tx-block
             (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS ABSOLUTE
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10021, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10031, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
     async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, with_softfork2, bt):
@@ -2055,6 +2108,8 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
                 ConditionOpcode.ASSERT_SECONDS_RELATIVE,
                 ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
             ]:
                 expected = ReceiveBlockResult.INVALID_BLOCK
 
@@ -2066,6 +2121,10 @@ class TestBodyValidation:
             if opcode in [
                 ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
             ]:
                 expected = ReceiveBlockResult.NEW_PEAK
 
