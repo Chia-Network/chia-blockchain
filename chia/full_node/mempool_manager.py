@@ -512,9 +512,7 @@ class MempoolManager:
         if tl_error:
             assert_height = compute_assert_height(removal_record_dict, npc_result.conds)
 
-        potential = MempoolItem(
-            new_spend, uint64(fees), npc_result, cost, spend_name, additions, first_added_height, assert_height
-        )
+        potential = MempoolItem(new_spend, uint64(fees), npc_result, spend_name, first_added_height, assert_height)
 
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:

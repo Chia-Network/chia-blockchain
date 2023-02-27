@@ -19,6 +19,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
 from tests.core.mempool.test_mempool_manager import (
@@ -47,10 +48,8 @@ async def test_basics() -> None:
             mempool_item = MempoolItem(
                 spend_bundle,
                 fee,
-                NPCResult(None, None, cost),
-                cost,
+                NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
                 spend_bundle.name(),
-                [],
                 uint32(i - 1),
             )
             items.append(mempool_item)
@@ -59,10 +58,8 @@ async def test_basics() -> None:
             mempool_item1 = MempoolItem(
                 spend_bundle,
                 fee1,
-                NPCResult(None, None, cost),
-                cost,
+                NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
                 spend_bundle.name(),
-                [],
                 uint32(i - 40),
             )
             items.append(mempool_item1)
@@ -71,10 +68,8 @@ async def test_basics() -> None:
             mempool_item2 = MempoolItem(
                 spend_bundle,
                 fee2,
-                NPCResult(None, None, cost),
-                cost,
+                NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
                 spend_bundle.name(),
-                [],
                 uint32(i - 270),
             )
             items.append(mempool_item2)
@@ -112,10 +107,8 @@ async def test_fee_increase() -> None:
                 mempool_item = MempoolItem(
                     spend_bundle,
                     fee,
-                    NPCResult(None, None, cost),
-                    cost,
+                    NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
                     spend_bundle.name(),
-                    [],
                     included_height,
                 )
                 items.append(mempool_item)
