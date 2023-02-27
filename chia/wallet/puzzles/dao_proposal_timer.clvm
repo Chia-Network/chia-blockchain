@@ -7,7 +7,7 @@
   PROPOSAL_TIMER_MOD_HASH
   CAT_MOD_HASH
   CAT_TAIL_HASH
-  MY_PARENT_SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (PROPOSAL_SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+  (@ MY_PARENT_SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
   TREASURY_ID
   proposal_yes_votes
   proposal_total_votes
@@ -15,6 +15,7 @@
   proposal_parent_id
   proposal_amount
   proposal_timelock
+  parent_parent
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -51,15 +52,6 @@
     )
   )
 
-  ; saves the calculated proposal puzzlehash to use in two conditions rather than calculating it twice
-  (defun generate_proposal_conditions (TREASURY_ID proposal_puzzlehash proposal_parent_id proposal_amount)
-    (list
-      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzzlehash TREASURY_ID))
-      (list ASSERT_MY_PARENT_ID (calculate_coin_id proposal_parent_id proposal_puzzlehash proposal_amount))
-    )
-  )
-
-
   ; main
   (list
     (list ASSERT_HEIGHT_RELATIVE proposal_timelock)
@@ -84,20 +76,26 @@
     )
     (list
         ASSERT_MY_PARENT_ID
-        (calculate_singleton_puzzle_hash
-          MY_PARENT_SINGLETON_STRUCT
-          (calculate_proposal_puzzlehash
+        ; TODO pass in the rest of the parent details
+        (sha256
+          parent_parent
+          (calculate_singleton_puzzle_hash
             MY_PARENT_SINGLETON_STRUCT
-            PROPOSAL_MOD_HASH
-            PROPOSAL_TIMER_MOD_HASH
-            CAT_MOD_HASH
-            CAT_TAIL_HASH
-            TREASURY_ID
-            0
-            0
-            proposal_innerpuzhash
+            (calculate_proposal_puzzlehash
+              MY_PARENT_SINGLETON_STRUCT
+              PROPOSAL_MOD_HASH
+              PROPOSAL_TIMER_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL_HASH
+              TREASURY_ID
+              0
+              0
+              proposal_innerpuzhash
+            )
           )
+          ONE
         )
+
     )
   )
 )

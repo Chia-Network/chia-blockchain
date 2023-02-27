@@ -14,7 +14,7 @@
 
 
 (mod (
-  SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+  (@ SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
   CAT_MOD_HASH
@@ -258,10 +258,11 @@
   ; main
 
   (if proposal_timelock
-    ; terminate_this_proposal: End the proposal, and run (INNERPUZ solution) if the proposal passed
+    ; terminate_this_proposal: End the proposal, and send the information to the treasury
     (c
       (list CREATE_COIN dao_finished_state ONE (c (f (r SINGLETON_STRUCT)) 0))  ; move to announce finished mode. See previous comment about proposal amounts
       (c
+        ; TODO: make this configurable in the treasury
         (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
