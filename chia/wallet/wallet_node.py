@@ -382,7 +382,7 @@ class WalletNode:
 
         self.sync_event = asyncio.Event()
         self.log_in(private_key)
-        self.wallet_state_manager.set_sync_mode(False)
+        self.wallet_state_manager.state_changed("sync_changed")
 
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
@@ -892,7 +892,7 @@ class WalletNode:
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
-                        self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                        self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
                     except Exception as e:
                         tb = traceback.format_exc()
@@ -937,7 +937,7 @@ class WalletNode:
         return latest_timestamp
 
     def is_trusted(self, peer) -> bool:
-        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant
@@ -1111,8 +1111,7 @@ class WalletNode:
             await self.wallet_state_manager.new_peak(new_peak)
 
     async def new_peak_from_trusted(self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection):
-        current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        async with self.wallet_state_manager.lock:
+        async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height) as current_height:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
             # Disconnect from all untrusted peers if our local node is trusted and synced
             await self.disconnect_and_stop_wpeers()
@@ -1120,10 +1119,7 @@ class WalletNode:
             # disconnected), we assume that the full node will continue to give us state updates, so we do
             # not need to resync.
             if peer.peer_node_id not in self.synced_peers:
-                if new_peak_hb.height - current_height > self.LONG_SYNC_THRESHOLD:
-                    self.wallet_state_manager.set_sync_mode(True)
                 await self.long_sync(new_peak_hb.height, peer, uint32(max(0, current_height - 256)), rollback=True)
-                self.wallet_state_manager.set_sync_mode(False)
 
     async def new_peak_from_untrusted(
         self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64
@@ -1146,7 +1142,6 @@ class WalletNode:
         syncing = False
         if far_behind or len(self.synced_peers) == 0:
             syncing = True
-            self.wallet_state_manager.set_sync_mode(True)
 
         secondary_sync_running = (
             self._secondary_peer_sync_task is not None and self._secondary_peer_sync_task.done() is False
@@ -1164,8 +1159,6 @@ class WalletNode:
         except Exception:
             self.log.exception(f"Error syncing to {peer.get_peer_info()}")
             await peer.close()
-            if syncing:
-                self.wallet_state_manager.set_sync_mode(False)
             return False
         return True
 
@@ -1188,10 +1181,8 @@ class WalletNode:
         await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
 
         if syncing:
-            async with self.wallet_state_manager.lock:
-                self.log.info("Primary peer syncing")
+            async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height):
                 await self.long_sync(new_peak_hb.height, peer, fork_point, rollback=True)
-            self.log.info(f"New peak wallet.. {new_peak_hb.height} {peer.get_peer_info()} 12")
             return
 
         # we exit earlier in the case where syncing is False and a Secondary sync is running
@@ -1239,7 +1230,6 @@ class WalletNode:
                     await self.receive_state_from_peer(list(self.race_cache[header_hash]), peer)
 
             self.wallet_state_manager.state_changed("new_block")
-            self.wallet_state_manager.set_sync_mode(False)
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
             return True
 
@@ -1683,7 +1673,6 @@ class WalletNode:
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
-
         response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
             FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
         )

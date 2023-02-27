@@ -32,7 +32,6 @@ def db_cmd() -> None:
 )
 @click.pass_context
 def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, force: bool, **kwargs) -> None:
-
     try:
         in_db_path = kwargs.get("input")
         out_db_path = kwargs.get("output")

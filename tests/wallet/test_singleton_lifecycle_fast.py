@@ -398,7 +398,6 @@ def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent=True):
 def spend_coin_to_singleton(
     puzzle_db: PuzzleDB, launcher_puzzle: Program, coin_store: CoinStore, now: CoinTimestamp
 ) -> Tuple[List[Coin], List[CoinSpend]]:
-
     farmed_coin_amount = 100000
     metadata = [("foo", "bar")]
 
@@ -471,7 +470,6 @@ def filter_p2_singleton(puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, 
 
 
 def test_lifecycle_with_coinstore_as_wallet():
-
     PUZZLE_DB = PuzzleDB()
 
     interested_singletons = []

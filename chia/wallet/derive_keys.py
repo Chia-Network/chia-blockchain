@@ -115,7 +115,6 @@ def match_address_to_sk(
     search_list: Set[bytes32] = set(addresses_to_search)
 
     for i in range(max_ph_to_search):
-
         phs = [
             create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
             create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),

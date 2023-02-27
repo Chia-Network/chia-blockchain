@@ -100,7 +100,6 @@ class Crawler:
 
     async def connect_task(self, peer):
         async def peer_action(peer: WSChiaConnection):
-
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:

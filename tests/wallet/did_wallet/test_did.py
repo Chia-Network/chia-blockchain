@@ -1261,6 +1261,7 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+        # Test general string
         message = "Hello World"
         response = await api_0.sign_message_by_id(
             {
@@ -1274,10 +1275,26 @@ class TestDIDWallet:
             puzzle.get_tree_hash(),
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
+        # Test hex string
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+                "is_hex": True,
+            }
+        )
+        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
 
     @pytest.mark.parametrize(
         "trusted",
-        [True],#, False],
+        [True, False],
     )
     @pytest.mark.asyncio
     async def test_create_did_with_recovery_list(self, self_hostname, two_nodes_two_wallets_with_same_keys, trusted):
@@ -1342,10 +1359,14 @@ class TestDIDWallet:
 
         # Node 0 sets up a DID Wallet with a backup set, but num_of_backup_ids_needed=0
         # (a malformed solution, but legal for the clvm puzzle)
-        recovery_list = [bytes.fromhex("00"*32)]
+        recovery_list = [bytes.fromhex("00" * 32)]
         async with wallet_node_0.wallet_state_manager.lock:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), backups_ids=recovery_list, num_of_backup_ids_needed=0
+                wallet_node_0.wallet_state_manager,
+                wallet_0,
+                uint64(101),
+                backups_ids=recovery_list,
+                num_of_backup_ids_needed=0,
             )
 
         spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -1373,6 +1394,6 @@ class TestDIDWallet:
         all_node_1_wallets = await wallet_node_1.wallet_state_manager.user_store.get_all_wallet_info_entries()
         print(f"Node 1: {all_node_1_wallets}")
         assert (
-                json.loads(all_node_0_wallets[1].data)["current_inner"]
-                == json.loads(all_node_1_wallets[1].data)["current_inner"]
+            json.loads(all_node_0_wallets[1].data)["current_inner"]
+            == json.loads(all_node_1_wallets[1].data)["current_inner"]
         )
