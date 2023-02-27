@@ -60,7 +60,7 @@ def test_proposal() -> None:
     )
     # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-    # vote_coin_id_or_proposal_timelock_hash  ; this is either the coin ID we're taking a vote from
+    # vote_coin_id_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
     # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
     #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
     # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
@@ -84,17 +84,27 @@ def test_proposal() -> None:
     assert len(conds.as_python()) == 3
     breakpoint()
     # Test exit
+    # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+    # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+    # vote_coin_id_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
+    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+    #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+    #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+    # innerpuz_reveal  ; this is only added during the first vote
+    # soft_close_length  ; revealed by the treasury
     solution = Program.to(
         [
-            [[51, 0xCAFEF00D, 200]],
-            P2_SINGLETON_MOD.get_tree_hash(),
-            current_cat_issuance,
+            Program.to("validator_hash").get_tree_hash(),
+            Program.to("receiver_hash").get_tree_hash(),
+            20,
             proposal_pass_percentage,
             1000,
-            LOCKUP_TIME,
+            0,
+            5,
         ]
     )
-    full_proposal = DAO_PROPOSAL_MOD.curry(
+    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
@@ -105,7 +115,8 @@ def test_proposal() -> None:
         treasury_id,
         200,
         350,
-        Program.to(1),
+        's',
+        Program.to(1).get_tree_hash(),
     )
     conds = full_proposal.run(solution)
     assert len(conds.as_python()) == 6
