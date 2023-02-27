@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
@@ -9,7 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 
 @streamable
@@ -47,3 +47,14 @@ class MempoolItem(Streamable):
     @property
     def removals(self) -> List[Coin]:
         return self.spend_bundle.removals()
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            "spend_bundle": recurse_jsonify(self.spend_bundle),
+            "fee": recurse_jsonify(self.fee),
+            "npc_result": recurse_jsonify(self.npc_result),
+            "cost": recurse_jsonify(self.cost),
+            "spend_bundle_name": recurse_jsonify(self.spend_bundle_name),
+            "additions": recurse_jsonify(self.additions),
+            "removals": recurse_jsonify(self.removals),
+        }
