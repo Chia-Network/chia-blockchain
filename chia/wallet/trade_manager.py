@@ -585,7 +585,6 @@ class TradeManager:
             return False, None, str(e)
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
-
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
             if key is None:

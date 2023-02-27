@@ -6,13 +6,15 @@ from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 from blspy import G2Element
 from clvm_tools.binutils import disassemble
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions_with_cost
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
+from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
@@ -137,13 +139,18 @@ class Offer:
 
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
+        max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
             try:
-                adds[cs.coin] = compute_additions(cs)
+                coins, cost = compute_additions_with_cost(cs)
+                max_cost -= cost
+                adds[cs.coin] = coins
             except Exception:
-                pass
+                continue
+            if max_cost < 0:
+                raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
 
     def additions(self) -> List[Coin]:

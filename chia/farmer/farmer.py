@@ -627,7 +627,6 @@ class Farmer:
         for pool_state in self.pool_state.values():
             pool_config: PoolWalletConfig = pool_state["pool_config"]
             if pool_config.launcher_id == launcher_id:
-
                 authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")

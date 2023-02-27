@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Tuple
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
@@ -40,12 +39,12 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase(
         self,
-        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
         num_blocks = 10
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -133,11 +132,11 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(
         self,
-        wallet_node_sim_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -213,8 +212,8 @@ class TestWalletSimulator:
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
         for block in all_blocks:
-            await full_node_1.respond_block(RespondBlock(block))
-            await full_node_2.respond_block(RespondBlock(block))
+            await full_node_1.add_block(block)
+            await full_node_2.add_block(block)
 
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             uint64(10),
@@ -240,12 +239,12 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(
         self,
-        two_wallet_nodes_five_freeze: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
         num_blocks = 10
-        full_nodes, wallets, _ = two_wallet_nodes_five_freeze
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api_0 = full_nodes[0]
         full_node_0 = full_node_api_0.full_node
         server_0 = full_node_0.server
@@ -834,9 +833,34 @@ class TestWalletSimulator:
             wallet_node_2.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        # Test general string
         message = "Hello World"
         response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test hex string
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True}
+        )
+        puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test informal input
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true"}
+        )
+        puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),

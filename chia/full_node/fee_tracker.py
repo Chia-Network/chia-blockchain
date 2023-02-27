@@ -511,7 +511,6 @@ class FeeTracker:
         self.long_horizon.tx_confirmed(blocks_to_confirm, item)
 
     def add_tx(self, item: MempoolItem) -> None:
-
         if item.height_added_to_mempool < self.latest_seen_height:
             self.log.info(f"Processing Item from pending pool: cost={item.cost} fee={item.fee}")
 

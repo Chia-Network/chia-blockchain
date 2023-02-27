@@ -34,10 +34,8 @@ class BlockStore:
         self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-
             log.info("DB: Creating block store tables and indexes.")
             if self.db_wrapper.db_version == 2:
-
                 # TODO: most data in block is duplicated in block_record. The only
                 # reason for this is that our parsing of a FullBlock is so slow,
                 # it's faster to store duplicate data to parse less when we just
@@ -84,7 +82,6 @@ class BlockStore:
                 )
 
             else:
-
                 await conn.execute(
                     "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
                     "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -168,7 +165,6 @@ class BlockStore:
                         raise RuntimeError(f"The blockchain database is corrupt. All of {header_hashes} should exist")
 
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
-
         assert header_hash == block.header_hash
 
         block_bytes: bytes
@@ -193,7 +189,6 @@ class BlockStore:
         self.block_cache.put(header_hash, block)
 
         if self.db_wrapper.db_version == 2:
-
             ses: Optional[bytes] = (
                 None
                 if block_record.sub_epoch_summary_included is None
@@ -331,7 +326,6 @@ class BlockStore:
                 return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
-
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             log.debug(f"cache hit for block {header_hash.hex()}")
@@ -362,7 +356,6 @@ class BlockStore:
                 )
 
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
-
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             log.debug(f"cache hit for block {header_hash.hex()}")
@@ -521,9 +514,7 @@ class BlockStore:
         return ret
 
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-
         if self.db_wrapper.db_version == 2:
-
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT block_record FROM full_blocks WHERE header_hash=?",
@@ -556,7 +547,6 @@ class BlockStore:
 
         ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
-
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND height <= ?",
@@ -567,7 +557,6 @@ class BlockStore:
                         ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         else:
-
             formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
 
             async with self.db_wrapper.reader_no_transaction() as conn:
@@ -601,7 +590,6 @@ class BlockStore:
                 return [maybe_decompress_blob(row[0]) for row in rows]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
-
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
@@ -636,7 +624,6 @@ class BlockStore:
 
         ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
-
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
@@ -683,7 +670,6 @@ class BlockStore:
         return bool(row[0])
 
     async def get_random_not_compactified(self, number: int) -> List[int]:
-
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(

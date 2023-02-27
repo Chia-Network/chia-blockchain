@@ -27,7 +27,6 @@ from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
-    setup_node_and_wallet,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
     setup_two_nodes,
@@ -133,7 +132,7 @@ def db_version(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3630000])
+@pytest.fixture(scope="function", params=[1000000, 3630000, 3830000])
 def softfork_height(request):
     return request.param
 
@@ -254,15 +253,6 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname, request):
-    params = {}
-    if request and request.param_index > 0:
-        params = request.param
-    async for _ in setup_node_and_wallet(test_constants, self_hostname, **params):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def node_with_params(request):
     params = {}
     if request:
@@ -319,7 +309,7 @@ async def wallet_nodes():
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_four_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(5, 0, {}, db_version=db_version):
+    async for _ in setup_simulators_and_wallets(4, 0, {}, db_version=db_version):
         yield _
 
 
@@ -332,14 +322,6 @@ async def two_nodes_sim_and_wallets():
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes_sim_and_wallets_services():
     async for _ in setup_simulators_and_wallets_service(2, 0, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet() -> AsyncIterator[
-    Tuple[List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools],
-]:
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
@@ -413,18 +395,6 @@ async def three_wallet_nodes():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_five_freeze():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_simulator():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def wallet_two_node_simulator():
     async for _ in setup_simulators_and_wallets(2, 1, {}):
         yield _
@@ -481,12 +451,6 @@ async def three_nodes_two_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_and_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
     async for _ in setup_simulators_and_wallets_service(1, 0, {}):
         yield _
@@ -512,7 +476,7 @@ async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNod
     assert blocks[0].height == 0
 
     for block in blocks:
-        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await full_node_1.full_node.add_block(block)
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
@@ -544,7 +508,7 @@ async def two_nodes_one_block():
     assert blocks[0].height == 0
 
     for block in blocks:
-        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await full_node_1.full_node.add_block(block)
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
