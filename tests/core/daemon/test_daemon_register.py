@@ -28,17 +28,9 @@ async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTool
     service_name = "test_service"
     data = {"service": service_name}
     payload = create_payload("register_service", data, service_name, "daemon")
-    await ws.send_str(payload)
-    await ws.receive()
-    payload = create_payload("register_service", data, service_name, "daemon")
-    await ws.send_str(payload)
-    await ws.receive()
-    payload = create_payload("register_service", data, service_name, "daemon")
-    await ws.send_str(payload)
-    await ws.receive()
-    payload = create_payload("register_service", data, service_name, "daemon")
-    await ws.send_str(payload)
-    await ws.receive()
+    for _ in range(4):
+        await ws.send_str(payload)
+        await ws.receive()
 
     connections = ws_server.connections.get(service_name, set())
     assert len(connections) == 1
@@ -64,13 +56,15 @@ async def test_multiple_register_different(get_daemon: WebSocketServer, bt: Bloc
         max_msg_size=100 * 1024 * 1024,
     )
 
-    test_service_names = ["service1, service2", "service3"]
+    test_service_names = ["service1", "service2", "service3"]
 
     for service_name in test_service_names:
         data = {"service": service_name}
         payload = create_payload("register_service", data, service_name, "daemon")
         await ws.send_str(payload)
         await ws.receive()
+
+    assert len(ws_server.connections.keys()) == len(test_service_names)
 
     for service_name in test_service_names:
         connections = ws_server.connections.get(service_name, set())
@@ -103,13 +97,15 @@ async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) ->
         max_msg_size=100 * 1024 * 1024,
     )
 
-    test_service_names = ["service1, service2, service3, service4, service5"]
+    test_service_names = ["service1", "service2", "service3", "service4", "service5"]
 
     for service_name in test_service_names:
         data = {"service": service_name}
         payload = create_payload("register_service", data, service_name, "daemon")
         await ws.send_str(payload)
         await ws.receive()
+
+    assert len(ws_server.connections.keys()) == len(test_service_names)
 
     connections = ws_server.connections.get(test_service_names[0], set())
     assert len(connections) == 1
