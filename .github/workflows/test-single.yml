@@ -200,7 +200,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=zip -O blocks_and_plots.zip
-          # Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
