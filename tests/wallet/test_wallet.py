@@ -382,6 +382,7 @@ class TestWalletSimulator:
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Claim merkle coin
         await asyncio.sleep(20)
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         resp = await api_1.spend_clawback_coins(
@@ -395,7 +396,7 @@ class TestWalletSimulator:
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(20, wallet_node.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
         await time_out_assert(20, wallet_node_2.wallet_state_manager.merkle_coin_store.count_small_unspent, 0, 1000)
-        await time_out_assert(10, wallet.get_confirmed_balance, 3999999999500)
+        await time_out_assert(10, wallet.get_confirmed_balance, 5999999999500)
         await time_out_assert(10, wallet_1.get_confirmed_balance, 10000000000500)
         # Reorg after claim
         height = full_node_api.full_node.blockchain.get_peak_height()

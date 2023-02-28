@@ -65,7 +65,6 @@ class WalletMerkleCoinStore:
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletMerkleCoinRecord, name: Optional[bytes32] = None) -> None:
-        print(record)
         if name is None:
             name = record.name()
         assert record.spent == (record.spent_block_height != 0)
@@ -194,7 +193,6 @@ class WalletMerkleCoinStore:
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
         """
-        print(f"Reorg {height}")
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM merkle_coin_record WHERE confirmed_height>?", (height,))).close()
             await (
