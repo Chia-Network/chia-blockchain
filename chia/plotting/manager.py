@@ -92,8 +92,8 @@ class PlotManager:
     def initial_refresh(self) -> bool:
         return self._initial
 
-    def public_keys_available(self):
-        return len(self.farmer_public_keys) and len(self.pool_public_keys)
+    def public_keys_available(self) -> bool:
+        return len(self.farmer_public_keys) > 0 and len(self.pool_public_keys) > 0
 
     def plot_count(self) -> int:
         with self:
