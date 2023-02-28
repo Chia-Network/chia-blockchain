@@ -45,7 +45,7 @@
     LOCKUP_MOD_HASH
     CAT_TAIL_HASH
     TREASURY_ID
-    proposal_current_votes
+    proposal_yes_votes
     proposal_total_votes
     spend_or_update_flag
     proposal_innerpuz
@@ -54,7 +54,7 @@
                                      (sha256tree proposal_innerpuz)
                                      (sha256 ONE spend_or_update_flag)
                                      (sha256 ONE proposal_total_votes)
-                                     (sha256 ONE proposal_current_votes)
+                                     (sha256 ONE proposal_yes_votes)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE CAT_TAIL_HASH)
                         				     (sha256 ONE LOCKUP_MOD_HASH)
@@ -70,23 +70,16 @@
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
           (if (= spend_or_update_flag 's')  ; we must recreate ourselves - singleton layer will prevent shenanigans
-            (if (= (f (r (f conditions))) spend_or_update_flag)
-              (c
-                (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r (f conditions)))))
-                (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
-              )
-              (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
+            (c
+              (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r (f conditions)))))
+              (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
             )
             (if (= spend_or_update_flag 'u')
-              (assert
-                (= (f (r (r (f conditions)))) spend_or_update_flag)
-                ; then
-                (c
-                  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
-                  (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
-                )
+              (c
+                (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
+                (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
               )
-              (x)  ; proposal not recognised (TODO: maybe add mint as an option here)
+              (x "test")  ; proposal not recognised (TODO: maybe add mint as an option here)
             )
           )
           (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
@@ -96,29 +89,30 @@
   )
 
   (assert
+    1
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this and I'm not sure why we want the proposal to announce the solution to this validator
-    (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
-    (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
-    (=
-      announcement_source
-      (calculate_full_puzzle_hash
-        (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-        (calculate_proposal_puzzle
-          PROPOSAL_MOD_HASH
-          (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-          PROPOSAL_TIMER_MOD_HASH
-          CAT_MOD_HASH
-          LOCKUP_MOD_HASH
-          TREASURY_MOD_HASH
-          CAT_TAIL_HASH
-          (f (r SINGLETON_STRUCT))
-          yes_votes
-          total_votes
-          spend_or_update_flag
-          delegated_puzzle_hash
-        )
-      )
-    )
+    ; (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
+    ; (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
+    ; (=
+    ;   announcement_source
+    ;   (calculate_full_puzzle_hash
+    ;     (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+    ;     (calculate_proposal_puzzle
+    ;       PROPOSAL_MOD_HASH
+    ;       (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+    ;       PROPOSAL_TIMER_MOD_HASH
+    ;       CAT_MOD_HASH
+    ;       TREASURY_MOD_HASH
+    ;       LOCKUP_MOD_HASH
+    ;       CAT_TAIL_HASH
+    ;       (f (r SINGLETON_STRUCT))
+    ;       yes_votes
+    ;       total_votes
+    ;       spend_or_update_flag
+    ;       delegated_puzzle_hash
+    ;     )
+    ;   )
+    ; )
     ; then
     (check_conditions SINGLETON_STRUCT conditions spend_or_update_flag 0)
   )

@@ -223,7 +223,6 @@ def test_validator() -> None:
         [[51, proposal_validator.get_tree_hash(), 201], [51, 0xcafe00d, 40]]
     ])
     conds: Program = proposal_validator.run(solution)
-    breakpoint()
     assert len(conds.as_python()) == 4
     return
 
