@@ -81,13 +81,9 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     with Lockfile.create(daemon_launch_lock_path(root_path)):
-        shutdown_event = asyncio.Event()
-        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
-        await ws_server.start()
-
-        yield ws_server
-
-        await ws_server.stop()
+        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+        async with ws_server.run():
+            yield ws_server
 
 
 async def setup_full_node(
