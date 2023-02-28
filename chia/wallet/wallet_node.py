@@ -506,14 +506,9 @@ class WalletNode:
                         peer = matching_peer[0]
                     async with self.wallet_state_manager.db_wrapper.writer():
                         self.log.info(f"retrying coin_state: {state}")
-                        try:
-                            await self.wallet_state_manager.add_coin_states(
-                                [state], peer, None if fork_height == 0 else fork_height
-                            )
-                        except Exception as e:
-                            self.log.exception(f"Exception while adding states.. : {e}")
-                        else:
-                            await self.wallet_state_manager.blockchain.clean_block_records()
+                        await self.wallet_state_manager.add_coin_states(
+                            [state], peer, None if fork_height == 0 else fork_height
+                        )
             except asyncio.CancelledError:
                 self.log.info("Retry task cancelled, exiting.")
                 raise
@@ -865,14 +860,7 @@ class WalletNode:
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
-                            try:
-                                await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height)
-                            except Exception as e:
-                                tb = traceback.format_exc()
-                                self.log.error(f"Exception while adding state: {e} {tb}")
-                            else:
-                                await self.wallet_state_manager.blockchain.clean_block_records()
-
+                            await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height)
             except Exception as e:
                 tb = traceback.format_exc()
                 log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
@@ -893,16 +881,9 @@ class WalletNode:
                 return False
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.writer():
-                    try:
-                        self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.add_coin_states(states, peer, fork_height)
-                    except Exception as e:
-                        tb = traceback.format_exc()
-                        self.log.error(f"Error adding states.. {e} {tb}")
+                    self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
+                    if not await self.wallet_state_manager.add_coin_states(states, peer, fork_height):
                         return False
-                    else:
-                        await self.wallet_state_manager.blockchain.clean_block_records()
-
             else:
                 while len(all_tasks) >= target_concurrent_tasks:
                     all_tasks = [task for task in all_tasks if not task.done()]

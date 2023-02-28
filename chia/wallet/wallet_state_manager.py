@@ -5,6 +5,7 @@ import json
 import logging
 import multiprocessing.context
 import time
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
@@ -988,7 +989,7 @@ class WalletStateManager:
             wallet_type = WalletType.NFT
         return wallet_id, wallet_type
 
-    async def add_coin_states(
+    async def _add_coin_states(
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
@@ -1362,6 +1363,23 @@ class WalletStateManager:
                 else:
                     await self.retry_store.remove_state(coin_state)
                 continue
+
+    async def add_coin_states(
+        self,
+        coin_states: List[CoinState],
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
+    ) -> bool:
+        try:
+            await self._add_coin_states(coin_states, peer, fork_height)
+        except Exception as e:
+            log_level = logging.DEBUG if peer.closed else logging.ERROR
+            self.log.log(log_level, f"add_coin_states failed - exception {e}, traceback: {traceback.format_exc()}")
+            return False
+
+        await self.blockchain.clean_block_records()
+
+        return True
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
