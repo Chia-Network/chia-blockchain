@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
@@ -95,23 +95,22 @@ class DeleteLabelRequest(Streamable):
         return EmptyResponse()
 
 
+@dataclass
 class KeychainServer:
     """
     Implements a remote keychain service for clients to perform key operations on
     """
 
-    def __init__(self):
-        self._default_keychain = Keychain()
-        self._alt_keychains = {}
+    _default_keychain: Keychain = field(default_factory=Keychain)
+    _alt_keychains: Dict[str, Keychain] = field(default_factory=dict)
 
-    def get_keychain_for_request(self, request: Dict[str, Any]):
+    def get_keychain_for_request(self, request: Dict[str, Any]) -> Keychain:
         """
         Keychain instances can have user and service strings associated with them.
         The keychain backends ultimately point to the same data stores, but the user
         and service strings are used to partition those data stores. We attempt to
         maintain a mapping of user/service pairs to their corresponding Keychain.
         """
-        keychain = None
         user = request.get("kc_user", self._default_keychain.user)
         service = request.get("kc_service", self._default_keychain.service)
         if user == self._default_keychain.user and service == self._default_keychain.service:
