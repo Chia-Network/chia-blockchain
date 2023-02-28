@@ -74,30 +74,13 @@ class Params:
     buffer: int
     num_threads: int
     buckets: int
-    stripe_size: int
     tmp_dir: Path
     tmp2_dir: Optional[Path]
     final_dir: Path
-    plotid: str
-    memo: str
+    plotid: Optional[str]
+    memo: Optional[str]
     nobitfield: bool
-
-    @classmethod
-    def from_args(cls, args: Any) -> Params:
-        return cls(
-            size=args.size,
-            num=args.count,
-            buffer=args.buffer,
-            num_threads=args.threads,
-            buckets=args.buckets,
-            stripe_size=args.stripes,
-            tmp_dir=Path(args.tmpdir),
-            tmp2_dir=Path(args.tmpdir2) if args.tmpdir2 else None,
-            final_dir=Path(args.finaldir),
-            plotid=args.id,
-            memo=args.memo,
-            nobitfield=args.nobitfield,
-        )
+    stripe_size: int = 65536
 
 
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:

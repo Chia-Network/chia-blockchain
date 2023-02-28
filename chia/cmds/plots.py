@@ -9,7 +9,6 @@ import click
 
 from chia.plotting.util import add_plot_directory, validate_plot_size
 
-DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
 
@@ -125,7 +124,6 @@ def create_cmd(
         buffer=buffer,
         num_threads=num_threads,
         buckets=buckets,
-        stripe_size=DEFAULT_STRIPE_SIZE,
         tmp_dir=Path(tmp_dir),
         tmp2_dir=Path(tmp2_dir) if tmp2_dir else None,
         final_dir=Path(final_dir),

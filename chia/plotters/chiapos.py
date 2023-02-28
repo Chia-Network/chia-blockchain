@@ -39,7 +39,21 @@ def plot_chia(args, root_path):
             args.connect_to_daemon,
         )
     )
-    asyncio.run(create_plots(Params.from_args(args=args), plot_keys))
+    params = Params(
+        size=args.size,
+        num=args.count,
+        buffer=args.buffer,
+        num_threads=args.threads,
+        buckets=args.buckets,
+        stripe_size=args.stripes,
+        tmp_dir=Path(args.tmpdir),
+        tmp2_dir=Path(args.tmpdir2) if args.tmpdir2 else None,
+        final_dir=Path(args.finaldir),
+        plotid=args.id,
+        memo=args.memo,
+        nobitfield=args.nobitfield,
+    )
+    asyncio.run(create_plots(params, plot_keys))
     if not args.exclude_final_dir:
         try:
             add_plot_directory(root_path, args.finaldir)
