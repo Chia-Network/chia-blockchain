@@ -1,32 +1,42 @@
 from __future__ import annotations
 import json
 import logging
-from typing import List, Tuple, Optional, Any
+from sqlite3 import Row
+from typing import List, Tuple, Optional, Any, TypeVar
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet import singleton
 from chia.types.coin_spend import CoinSpend
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.singleton import (
+    get_most_recent_singleton_coin_from_coin_spend,
+    get_innerpuzzle_from_puzzle,
+    get_singleton_id_from_puzzle,
+)
 from chia.wallet.singleton_record import SingletonRecord
+from chia.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
 
-log = logging.getLogger(__name__)
+from clvm.casts import int_from_bytes
 
+log = logging.getLogger(__name__)
+_T_WalletSingletonStore = TypeVar("_T_WalletSingletonStore", bound="WalletSingletonStore")
 
 class WalletSingletonStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, wrapper: DBWrapper2):
+    async def create(cls: Type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
         self = cls()
         self.db_wrapper = wrapper
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
-                    "CREATE TABLE IF NOT EXISTS singleton_records("
+                    "CREATE TABLE IF NOT EXISTS singletons("
                     "coin_id blob PRIMARY KEY,"
                     " coin text,"
                     " singleton_id blob,"
@@ -40,7 +50,7 @@ class WalletSingletonStore:
                 )
             )
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS removed_height_index on singleton_records(removed_height)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS removed_height_index on singletons(removed_height)")
 
         return self
 
@@ -58,7 +68,7 @@ class WalletSingletonStore:
                 "lineage_proof, custom_data"
             )
             await conn.execute(
-                f"INSERT or REPLACE INTO singleton_records ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT or REPLACE INTO singletons ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.coin.name().hex(),
                     json.dumps(record.coin.to_json_dict()),
@@ -144,7 +154,45 @@ class WalletSingletonStore:
             lineage_proof=LineageProof.from_bytes(row[8]),
             custom_data=row[9]
         )
-        return record
+
+    async def delete_singleton_by_singleton_id(self, singleton_id: bytes32, height: uint32) -> bool:
+        """Tries to mark a given singleton as deleted at specific height
+
+        This is due to how re-org works
+        Returns `True` if singleton was found and marked deleted or `False` if not."""
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # Remove NFT in the users_nfts table
+            cursor = await conn.execute(
+                "UPDATE singletons SET removed_height=? WHERE singleton_id=?",
+                (int(height), singleton_id.hex())
+            )
+            return cursor.rowcount > 0
+
+    async def delete_singleton_by_coin_id(self, coin_id: bytes32, height: uint32) -> bool:
+        """Tries to mark a given singleton as deleted at specific height
+
+        This is due to how re-org works
+        Returns `True` if singleton was found and marked deleted or `False` if not."""
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # Remove NFT in the users_nfts table
+            cursor = await conn.execute(
+                "UPDATE singletons SET removed_height=? WHERE coin_id=?", (int(height), coin_id.hex())
+            )
+            if cursor.rowcount > 0:
+                log.info("Deleted singleton with coin id: %s", coin_id.hex())
+                return True
+            log.warning("Couldn't find singleton with coin id to delete: %s", coin_id)
+            return False
+
+
+    async def update_pending_transaction(self, coin_id: bytes32, pending: bool) -> bool:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            c = await conn.execute(
+                "UPDATE singletons SET pending=? WHERE coin_id = ?",
+                (pending, coin_id.hex()),
+            )
+            return c.rowcount > 0
+
 
     async def get_records_by_wallet_id(self, wallet_id: int) -> List[SingletonRecord]:
         """
@@ -153,10 +201,10 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM singleton_records WHERE wallet_id = ? ORDER BY removed_height",
+                "SELECT * FROM singletons WHERE wallet_id = ? ORDER BY removed_height",
                 (wallet_id,),
             )
-        return [self.process_row(row) for row in rows]
+        return [self._to_singleton_record(row) for row in rows]
 
     async def get_record_by_coin_id(self, coin_id: bytes33) -> SingletonRecord:
         """
@@ -165,10 +213,13 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM singleton_records WHERE coin_id = ?",
+                "SELECT * FROM singletons WHERE coin_id = ?",
                 (coin_id.hex(),),
             )
-        return self.process_row(rows[0])
+        if rows:
+            return self._to_singleton_record(rows[0])
+        else:
+            return None
 
     async def get_records_by_singleton_id(self, singleton_id: bytes33) -> SingletonRecord:
         """
@@ -177,13 +228,13 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM singleton_records WHERE singleton_id = ? ORDER BY removed_height",
+                "SELECT * FROM singletons WHERE singleton_id = ? ORDER BY removed_height",
                 (singleton_id.hex(),),
             )
-        return [self.process_row(row) for row in rows]
+        return [self._to_singleton_record(row) for row in rows]
 
 
-    async def rollback(self, height: int, singleton_id_arg: int) -> None:
+    async def rollback(self, height: int, wallet_id_arg: int) -> None:
         """
         Rollback removes all entries which have entry_height > height passed in. Note that this is not committed to the
         DB until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
@@ -192,6 +243,6 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "DELETE FROM singleton_records WHERE removed_height>? AND wallet_id=?", (height, wallet_id_arg)
+                "DELETE FROM singletons WHERE removed_height>? AND wallet_id=?", (height, wallet_id_arg)
             )
             await cursor.close()
