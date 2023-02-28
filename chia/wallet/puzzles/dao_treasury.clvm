@@ -3,7 +3,7 @@
 
 (mod (
   (
-    SINGLETON_STRUCT  ; ((SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH)))
+    SINGLETON_STRUCT
     TREASURY_MOD_HASH
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
@@ -137,7 +137,7 @@
     (if (= type 'u')  ; unchanged
       (list
         (list CREATE_COIN new_puzhash (+ my_amount new_amount_change) (c my_singleton_id 0))
-        (list ASSERT_MY_PUZZLEHASH new_puzhash)
+        (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT new_puzhash))
       )
       (if (= type 'r')  ; recurry by index
         (list (list CREATE_COIN (recurry_self TREASURY_MOD_HASH new_puzhash CURRENT_PARAMS ()) (+ my_amount new_amount_change) (c my_singleton_id 0)))

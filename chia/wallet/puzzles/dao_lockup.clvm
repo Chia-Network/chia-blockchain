@@ -273,6 +273,7 @@
                 INNERPUZ
               )
               my_amount
+              ; TODO: add namespace to this announcement to allow announcements from the innerpuz
               (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
               vote_amount
               my_puzhash

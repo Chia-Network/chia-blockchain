@@ -58,25 +58,26 @@
     (list CREATE_PUZZLE_ANNOUNCEMENT (f (r MY_PARENT_SINGLETON_STRUCT)))
     (list
           ASSERT_PUZZLE_ANNOUNCEMENT
-          (calculate_singleton_puzzle_hash
-              MY_PARENT_SINGLETON_STRUCT
-              (calculate_proposal_puzzlehash
+          (sha256
+            (calculate_singleton_puzzle_hash
                 MY_PARENT_SINGLETON_STRUCT
-                PROPOSAL_MOD_HASH
-                PROPOSAL_TIMER_MOD_HASH
-                CAT_MOD_HASH
-                CAT_TAIL_HASH
-                TREASURY_ID
-                proposal_yes_votes
-                proposal_total_votes
-                proposal_innerpuzhash
-              )
+                (calculate_proposal_puzzlehash
+                  MY_PARENT_SINGLETON_STRUCT
+                  PROPOSAL_MOD_HASH
+                  PROPOSAL_TIMER_MOD_HASH
+                  CAT_MOD_HASH
+                  CAT_TAIL_HASH
+                  TREASURY_ID
+                  proposal_yes_votes
+                  proposal_total_votes
+                  proposal_innerpuzhash
+                )
+            )
+            proposal_timelock
           )
-          (sha256tree (list TREASURY_ID proposal_timelock))
     )
     (list
         ASSERT_MY_PARENT_ID
-        ; TODO pass in the rest of the parent details
         (sha256
           parent_parent
           (calculate_singleton_puzzle_hash

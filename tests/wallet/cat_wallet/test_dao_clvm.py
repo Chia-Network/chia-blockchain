@@ -152,6 +152,7 @@ def test_proposal_timer() -> None:
             Program.to("parent").get_tree_hash(),
             23,
             200,
+            Program.to("parent_parent").get_tree_hash(),
         ]
     )
     conds: Program = proposal_timer_full.run(solution)
