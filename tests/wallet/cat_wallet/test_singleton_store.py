@@ -30,7 +30,6 @@ def get_record():
     parent_coinspend = CoinSpend(parent_coin, parent_puz, parent_sol)
     child_coin = Coin(parent_coin.name(), parent_puz_hash, 1)
     wallet_id = 2
-    pending = True
     removed_height = 0
     custom_data = "{'key': 'value'}"
     record = SingletonRecord(
@@ -39,7 +38,6 @@ def get_record():
         wallet_id=wallet_id,
         parent_coinspend=parent_coinspend,
         inner_puzzle_hash=inner_puz_hash,
-        pending=pending,
         removed_height=removed_height,
         lineage_proof=lineage_proof,
         custom_data=custom_data
@@ -59,10 +57,6 @@ class TestSingletonStore:
             assert record_by_coin_id == record
             records_by_singleton_id = await db.get_records_by_singleton_id(record.singleton_id)
             assert records_by_singleton_id[0] == record
-            # modify pending
-            await db.update_pending_transaction(record.coin.name(), False)
-            record_to_check = await db.get_record_by_coin_id(record.coin.name())
-            assert record_to_check.pending == False
 
     @pytest.mark.asyncio
     async def test_singleton_remove(self) -> None:
