@@ -73,7 +73,7 @@ class PlotManager:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
 
-    def reset(self):
+    def reset(self) -> None:
         with self:
             self.last_refresh_time = time.time()
             self.plots.clear()
@@ -89,7 +89,7 @@ class PlotManager:
         self.farmer_public_keys = farmer_public_keys
         self.pool_public_keys = pool_public_keys
 
-    def initial_refresh(self):
+    def initial_refresh(self) -> bool:
         return self._initial
 
     def public_keys_available(self):
