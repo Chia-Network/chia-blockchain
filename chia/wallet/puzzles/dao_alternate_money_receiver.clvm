@@ -2,7 +2,7 @@
   MINIMUM_INPUT_AMOUNT  ; this is a minimum of -1 to prevent money being removed, but can be increased to prevent DoS/spam
   MY_SINGLETON_STRUCT
   my_amount
-  my_inner_puzzle_hash
+  my_treasury_puzzle_hash
   amount_change
   input_coins
 )
@@ -31,11 +31,11 @@
 
   (if (> amount_change MINIMUM_INPUT_AMOUNT)
     (c
-      (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash MY_SINGLETON_STRUCT my_inner_puzzle_hash))
+      (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash MY_SINGLETON_STRUCT my_treasury_puzzle_hash))
       (c
         (list ASSERT_MY_AMOUNT my_amount)
         (c
-          (list CREATE_COIN my_inner_puzzle (+ my_amount amount_change))
+          (list CREATE_COIN my_treasury_puzzle_hash (+ my_amount amount_change))
           (create_announcements_for_payments input_coins)
         )
       )

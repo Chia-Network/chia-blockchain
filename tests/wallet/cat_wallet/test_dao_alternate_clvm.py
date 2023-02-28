@@ -236,6 +236,13 @@ def test_receiver() -> None:
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
     money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct)
+    # my_amount
+    # my_treasury_puzzle_hash
+    # amount_change
+    # input_coins
+    solution = Program.to([201, 0xCAFEF00D, 20, [Program.to("coin_id").get_tree_hash()]])
+    conds: Program = money_receiver.run(solution)
+    assert len(conds.as_python()) == 5
     return
 
 
