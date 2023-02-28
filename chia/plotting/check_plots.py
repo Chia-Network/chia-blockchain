@@ -105,7 +105,7 @@ def check_plots(
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
-    total_good_plots = Counter[str]()
+    total_good_plots: Counter[str] = Counter()
     total_size = 0
     bad_plots_list: List[Path] = []
 
