@@ -1013,6 +1013,8 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_names)
 
         for coin_name, coin_state in zip(coin_names, coin_states):
+            if peer.closed:
+                raise ConnectionError("Connection closed")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.get(coin_name)
             rollback_wallets = None
