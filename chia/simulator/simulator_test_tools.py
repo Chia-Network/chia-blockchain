@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Optional, Tuple
@@ -158,8 +157,7 @@ async def get_full_chia_simulator(
         ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
         ca_key_path = chia_root / config["private_ssl_ca"]["key"]
 
-        shutdown_event = asyncio.Event()
-        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
+        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path)
         await ws_server.setup_process_global_state()
         await ws_server.start()
 
@@ -167,4 +165,4 @@ async def get_full_chia_simulator(
             yield simulator, chia_root, config, mnemonic, fingerprint, keychain
 
         await ws_server.stop()
-        await shutdown_event.wait()  # wait till shutdown is complete
+        await ws_server.shutdown_event.wait()  # wait till shutdown is complete

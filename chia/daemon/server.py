@@ -128,7 +128,6 @@ class WebSocketServer:
         ca_key_path: Path,
         crt_path: Path,
         key_path: Path,
-        shutdown_event: asyncio.Event,
         run_check_keys_on_unlock: bool = False,
     ):
         self.root_path = root_path
@@ -147,7 +146,7 @@ class WebSocketServer:
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
-        self.shutdown_event = shutdown_event
+        self.shutdown_event = asyncio.Event()
 
     async def start(self) -> None:
         self.log.info("Starting Daemon Server")
@@ -1350,20 +1349,17 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 beta_metrics = BetaMetricsLogger(root_path)
                 beta_metrics.start_logging()
 
-            shutdown_event = asyncio.Event()
-
             ws_server = WebSocketServer(
                 root_path,
                 ca_crt_path,
                 ca_key_path,
                 crt_path,
                 key_path,
-                shutdown_event,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
             await ws_server.setup_process_global_state()
             await ws_server.start()
-            await shutdown_event.wait()
+            await ws_server.shutdown_event.wait()
 
             if beta_metrics is not None:
                 await beta_metrics.stop_logging()
