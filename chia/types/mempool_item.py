@@ -9,12 +9,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
-from chia.util.streamable import Streamable, recurse_jsonify, streamable
+from chia.util.streamable import recurse_jsonify
 
 
-@streamable
 @dataclass(frozen=True)
-class MempoolItem(Streamable):
+class MempoolItem:
     spend_bundle: SpendBundle
     fee: uint64
     npc_result: NPCResult
