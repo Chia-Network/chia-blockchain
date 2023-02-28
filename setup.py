@@ -6,7 +6,7 @@ import sys
 from setuptools import setup
 
 dependencies = [
-    "aiofiles==22.1.0",  # Async IO for files
+    "aiofiles==23.1.0",  # Async IO for files
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
