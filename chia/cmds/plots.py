@@ -116,8 +116,8 @@ def create_cmd(
     exclude_final_dir: bool,
     connect_to_daemon: bool,
 ):
-    from chia.plotters.util import Params
     from chia.plotting.create_plots import create_plots, resolve_plot_keys
+    from chia.plotting.util import Params
 
     params = Params(
         size=size,
