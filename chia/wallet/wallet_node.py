@@ -875,10 +875,8 @@ class WalletNode:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                if self._shut_down:
-                    self.log.debug(f"Shutting down while adding state : {e} {tb}")
-                else:
-                    self.log.error(f"Exception while adding state: {e} {tb}")
+                log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
+                self.log.log(log_level, f"receive_and_validate failed - exception: {e}, traceback: {tb}")
 
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
@@ -1519,10 +1517,8 @@ class WalletNode:
             start, end, peer_request_cache, all_peers
         )
         if blocks is None:
-            if self._shut_down:
-                self.log.debug(f"Shutting down, block fetching from: {start} to {end} canceled.")
-            else:
-                self.log.error(f"Error fetching blocks {start} {end}")
+            log_level = logging.DEBUG if self._shut_down or peer.closed else logging.ERROR
+            self.log.log(log_level, f"Error fetching blocks {start} {end}")
             return False
 
         if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
