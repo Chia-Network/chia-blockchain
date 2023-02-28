@@ -237,7 +237,13 @@ class WebSocketServer:
                     decoded = json.loads(msg.data)
                     if "data" not in decoded:
                         decoded["data"] = {}
-                    response, connections = await self.handle_message(ws, decoded)
+
+                    maybe_response = await self.handle_message(ws, decoded)
+                    if maybe_response is None:
+                        continue
+
+                    response, connections = maybe_response
+
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
@@ -264,9 +270,7 @@ class WebSocketServer:
 
         return ws
 
-    async def send_all_responses(self, connections: Set[WebSocketResponse], response: Optional[str]) -> None:
-        if response is None:
-            return
+    async def send_all_responses(self, connections: Set[WebSocketResponse], response: str) -> None:
         for connection in connections:
             try:
                 await connection.send_str(response)
@@ -319,7 +323,7 @@ class WebSocketServer:
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
-    ) -> Tuple[Optional[str], Set[WebSocketResponse]]:
+    ) -> Optional[Tuple[str, Set[WebSocketResponse]]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -331,7 +335,7 @@ class WebSocketServer:
                 sockets = self.connections[destination]
                 return dict_to_json_str(message), sockets
 
-            return None, set()
+            return None
 
         data = message["data"]
         commands_with_data = [
