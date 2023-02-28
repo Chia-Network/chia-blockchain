@@ -44,6 +44,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_new_puzzle_from_proposal_solution,
     get_proposal_timer_puzzle,
     uncurry_treasury,
+    create_dao_spend_proposal,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -55,6 +56,8 @@ from chia.wallet.singleton import (
     get_innerpuzzle_from_puzzle,
     get_singleton_id_from_puzzle,
 )
+from chia.wallet.wallet_singleton_store import WalletSingletonStore
+from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -768,6 +771,18 @@ class DAOWallet:
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
+    def generate_spend_proposal(self, p2_puzzle_hash, amount) -> Program:
+        if amount > self.dao_info.current_treasury_coin.amount:
+            raise ValueError("The proposed spend amount is greater than the treasury balance")
+        relative_change = self.dao_info.current_treasury_coin.amount - amount
+        puzzle = create_dao_spend_proposal(
+            p2_puzzle_hash,
+            amount,
+            self.dao_info.current_treasury_coin.puzzle_hash,
+            relative_change
+        )
+        return puzzle
+
     async def generate_new_proposal(self, proposed_puzzle_hash, fee):
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
@@ -778,7 +793,8 @@ class DAOWallet:
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
         # MH: do you think we should store the cat tail locally as well?
-        cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        breakpoint()
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
             launcher_coin.name(),
@@ -1270,7 +1286,8 @@ class DAOWallet:
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         if tip is None:
             # this is our first time, just store it
-            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+            # await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+            await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
         else:
             tip_spend = tip[1]
 
@@ -1287,7 +1304,8 @@ class DAOWallet:
                         f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
                     )
                 return False
-            await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+            # await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+            await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
 
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend

@@ -83,67 +83,52 @@ class WalletSingletonStore:
                 ),
             )
 
-    # async def add_spend(
-    #     self,
-    #     wallet_id: int,
-    #     spend: CoinSpend,
-    #     height: uint32,
-    # ) -> None:
-    #     """
-    #     Appends (or replaces) entries in the DB. The new list must be at least as long as the existing list, and the
-    #     parent of the first spend must already be present in the DB. Note that this is not committed to the DB
-    #     until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
-    #     get_all_state_transitions.
-    #     """
-    #     async with self.db_wrapper.writer_maybe_transaction() as conn:
-    #         # find the most recent transition in wallet_id
-    #         rows = list(
-    #             await conn.execute_fetchall(
-    #                 "SELECT transition_index, height, coin_spend "
-    #                 "FROM pool_state_transitions "
-    #                 "WHERE wallet_id=? "
-    #                 "ORDER BY transition_index DESC "
-    #                 "LIMIT 1",
-    #                 (wallet_id,),
-    #             )
-    #         )
-    #         serialized_spend = bytes(spend)
-    #         if len(rows) == 0:
-    #             transition_index = 0
-    #         else:
-    #             existing = list(
-    #                 await conn.execute_fetchall(
-    #                     "SELECT COUNT(*) "
-    #                     "FROM pool_state_transitions "
-    #                     "WHERE wallet_id=? AND height=? AND coin_spend=?",
-    #                     (wallet_id, height, serialized_spend),
-    #                 )
-    #             )
-    #             if existing[0][0] != 0:
-    #                 # we already have this transition in the DB
-    #                 return
-    #
-    #             row = rows[0]
-    #             if height < row[1]:
-    #                 raise ValueError("Height cannot go down")
-    #             prev = CoinSpend.from_bytes(row[2])
-    #             if spend.coin.parent_coin_info != prev.coin.name():
-    #                 raise ValueError("New spend does not extend")
-    #             transition_index = row[0]
-    #
-    #         cursor = await conn.execute(
-    #             "INSERT OR IGNORE INTO pool_state_transitions VALUES (?, ?, ?, ?)",
-    #             (
-    #                 transition_index + 1,
-    #                 wallet_id,
-    #                 height,
-    #                 serialized_spend,
-    #             ),
-    #         )
-    #         await cursor.close()
+    async def add_spend(self, wallet_id: uint32, coin_state: CoinSpend, block_height: uint32) -> None:
+        """Given a coin spend of a singleton, attempt to calculate the child coin and details
+        for the new singleton record. Add the new record to the store and remove the old record
+        if it exists
+        """
+        # get singleton_id from puzzle_reveal
+        singleton_id = get_singleton_id_from_puzzle(coin_state.puzzle_reveal)
+        if not singleton_id:
+            raise ValueError("Coin to add is not a valid singleton")
 
-    def process_row(self, row: List[Any]) -> List[Any]:
-        record = SingletonRecord(
+        # get details for singleton record
+        conditions = conditions_dict_for_solution(
+            coin_state.puzzle_reveal.to_program(),
+            coin_state.solution.to_program(),
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+        )
+        cc_cond = [
+            cond for cond in conditions[1][ConditionOpcode.CREATE_COIN]
+            if int_from_bytes(cond.vars[1]) % 2 == 1
+        ][0]
+        coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
+        inner_puz = get_innerpuzzle_from_puzzle(coin_state.puzzle_reveal)
+        lineage_bytes = coin_state.solution.to_program().first().as_atom_list()
+        lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
+        # Create and save the new singleton record
+        new_record = SingletonRecord(
+            coin,
+            singleton_id,
+            wallet_id,
+            coin_state,
+            inner_puz.get_tree_hash(),
+            True,
+            0,
+            lineage_proof,
+            None
+        )
+        await self.save_singleton(new_record)
+        # check if coin is in DB and mark deleted if found
+        current_record = await self.get_record_by_coin_id(coin_state.coin.name())
+        if current_record:
+            self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
+        return
+        
+
+    def _to_singleton_record(self, row: Row) -> SingletonRecord:
+        return SingletonRecord(
             coin=Coin.from_json_dict(json.loads(row[1])),
             singleton_id=bytes32.from_hexstr(row[2]),
             wallet_id=uint32(row[3]),

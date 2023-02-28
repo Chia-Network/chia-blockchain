@@ -88,6 +88,7 @@ from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
+from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 
@@ -141,6 +142,7 @@ class WalletStateManager:
     wallet_node: Any
     pool_store: WalletPoolStore
     dl_store: DataLayerStore
+    singleton_store: WalletSingletonStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
     initial_num_public_keys: int
@@ -198,6 +200,7 @@ class WalletStateManager:
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.retry_store = await WalletRetryStore.create(self.db_wrapper)
+        self.singleton_store = await WalletSingletonStore.create(self.db_wrapper)
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
