@@ -116,22 +116,23 @@ def create_cmd(
     exclude_final_dir: bool,
     connect_to_daemon: bool,
 ):
+    from chia.plotters.util import Params
     from chia.plotting.create_plots import create_plots, resolve_plot_keys
 
-    class Params(object):
-        def __init__(self):
-            self.size = size
-            self.num = num
-            self.buffer = buffer
-            self.num_threads = num_threads
-            self.buckets = buckets
-            self.stripe_size = DEFAULT_STRIPE_SIZE
-            self.tmp_dir = Path(tmp_dir)
-            self.tmp2_dir = Path(tmp2_dir) if tmp2_dir else None
-            self.final_dir = Path(final_dir)
-            self.plotid = plotid
-            self.memo = memo
-            self.nobitfield = nobitfield
+    params = Params(
+        size=size,
+        num=num,
+        buffer=buffer,
+        num_threads=num_threads,
+        buckets=buckets,
+        stripe_size=DEFAULT_STRIPE_SIZE,
+        tmp_dir=Path(tmp_dir),
+        tmp2_dir=Path(tmp2_dir) if tmp2_dir else None,
+        final_dir=Path(final_dir),
+        plotid=plotid,
+        memo=memo,
+        nobitfield=nobitfield,
+    )
 
     root_path: Path = ctx.obj["root_path"]
     try:
@@ -152,7 +153,7 @@ def create_cmd(
         )
     )
 
-    asyncio.run(create_plots(Params(), plot_keys))
+    asyncio.run(create_plots(params, plot_keys))
     if not exclude_final_dir:
         try:
             add_plot_directory(root_path, final_dir)

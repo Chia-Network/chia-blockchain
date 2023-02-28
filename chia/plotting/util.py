@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, final
 
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
@@ -64,6 +64,40 @@ class PlotRefreshResult:
     processed: int = 0
     remaining: int = 0
     duration: float = 0
+
+
+@final
+@dataclass
+class Params:
+    size: int
+    num: int
+    buffer: int
+    num_threads: int
+    buckets: int
+    stripe_size: int
+    tmp_dir: Path
+    tmp2_dir: Optional[Path]
+    final_dir: Path
+    plotid: str
+    memo: str
+    nobitfield: bool
+
+    @classmethod
+    def from_args(cls, args: Any) -> Params:
+        return cls(
+            size=args.size,
+            num=args.count,
+            buffer=args.buffer,
+            num_threads=args.threads,
+            buckets=args.buckets,
+            stripe_size=args.stripes,
+            tmp_dir=Path(args.tmpdir),
+            tmp2_dir=Path(args.tmpdir2) if args.tmpdir2 else None,
+            final_dir=Path(args.finaldir),
+            plotid=args.id,
+            memo=args.memo,
+            nobitfield=args.nobitfield,
+        )
 
 
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
