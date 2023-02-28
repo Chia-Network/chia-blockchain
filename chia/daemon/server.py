@@ -232,6 +232,14 @@ class WebSocketServer:
         while True:
             msg = await ws.receive()
             self.log.debug("Received message: %s", msg)
+            decoded: WsRpcMessage = {
+                "command": "",
+                "ack": False,
+                "data": {},
+                "request_id": "",
+                "destination": "",
+                "origin": "",
+            }
             if msg.type == WSMsgType.TEXT:
                 try:
                     decoded = json.loads(msg.data)

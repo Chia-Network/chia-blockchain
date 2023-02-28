@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, replace
-from typing import Any, Dict, List, Optional, Type, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
 import pytest
@@ -21,7 +21,7 @@ from chia.server.outbound_message import NodeType
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from chia.util.keychain import KeyData
+from chia.util.keychain import Keychain, KeyData
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
@@ -777,3 +777,33 @@ async def test_key_label_methods(
     keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
     await ws.send_str(create_payload(method, parameter, "test", "daemon"))
     assert_response(await ws.receive(), response_data_dict)
+
+
+@pytest.mark.asyncio
+async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    await ws.send_str("{doo: '12'}")  # send some bad json
+    response = await ws.receive()
+
+    # check for error response
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    assert message["data"]["success"] is False
+    assert message["data"]["error"].startswith("Expecting property name")
+
+    # properly register a service
+    service_name = "test_service"
+    data = {"service": service_name}
+    payload = create_payload("register_service", data, service_name, "daemon")
+    await ws.send_str(payload)
+    await ws.receive()
+
+    # send some more bad json
+    await ws.send_str("{doo: '12'}")  # send some bad json
+    response = await ws.receive()
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    assert message["command"] != "register_service"
+    assert message["data"]["success"] is False
+    assert message["data"]["error"].startswith("Expecting property name")
