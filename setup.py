@@ -15,17 +15,17 @@ dependencies = [
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.2",
     "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
-    "aiohttp==3.8.3",  # HTTP server for full node rpc
+    "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.0.1",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
     "cryptography==39.0.1",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.8.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "filelock==3.9.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
-    "setproctitle==1.2.3",  # Gives the chia processes readable names
+    "setproctitle==1.3.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
     "dnspython==2.2.1",  # Query DNS seeds

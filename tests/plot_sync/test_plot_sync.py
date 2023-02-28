@@ -12,7 +12,7 @@ import pytest_asyncio
 from blspy import G1Element
 
 from chia.farmer.farmer_api import Farmer
-from chia.harvester.harvester_api import Harvester
+from chia.harvester.harvester import Harvester
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender

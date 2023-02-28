@@ -34,7 +34,6 @@ class ConflictTxCache:
         self._cache_cost += item.cost
 
         while self._cache_cost > self._cache_max_total_cost or len(self._txs) > self._cache_max_size:
-
             first_in = list(self._txs.keys())[0]
             self._cache_cost -= self._txs[first_in].cost
             self._txs.pop(first_in)
@@ -77,7 +76,6 @@ class PendingTxCache:
         self._by_height.setdefault(item.assert_height, {})[name] = item
 
         while self._cache_cost > self._cache_max_total_cost or len(self._txs) > self._cache_max_size:
-
             # we start removing items with the highest assert_height first
             to_evict = self._by_height.items()[-1]
             if to_evict[1] == {}:

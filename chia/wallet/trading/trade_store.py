@@ -31,9 +31,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
         # no trades to migrate
         return
     try:
-        await db.executemany(
-            "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, trade_id) " "VALUES(?, ?)", inserts
-        )
+        await db.executemany("INSERT INTO coin_of_interest_to_trade_record (coin_id, trade_id) VALUES(?, ?)", inserts)
     except (aiosqlite.OperationalError, aiosqlite.IntegrityError):
         log.exception("Failed to migrate coin_of_interest lookup table for trade_records")
         raise
@@ -111,10 +109,10 @@ class TradeStore:
             )
 
             await conn.execute(
-                ("CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(" " trade_id blob," " coin_id blob)")
+                ("CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)")
             )
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on " "coin_of_interest_to_trade_record(trade_id)"
+                "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on coin_of_interest_to_trade_record(trade_id)"
             )
 
             # coin of interest migration check
@@ -484,7 +482,6 @@ class TradeStore:
         return records
 
     async def rollback_to_block(self, block_index: int) -> None:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
             cursor = await conn.execute("DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,))

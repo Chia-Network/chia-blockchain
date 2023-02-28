@@ -31,7 +31,6 @@ def skip_bytes(buf: memoryview) -> memoryview:
 
 
 def skip_optional(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
-
     if buf[0] == 0:
         return buf[1:]
     assert buf[0] == 1

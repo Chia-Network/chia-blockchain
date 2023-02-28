@@ -892,7 +892,7 @@ class WalletNode:
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
-                        self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                        self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
                     except Exception as e:
                         tb = traceback.format_exc()
@@ -937,7 +937,7 @@ class WalletNode:
         return latest_timestamp
 
     def is_trusted(self, peer) -> bool:
-        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant
@@ -1673,7 +1673,6 @@ class WalletNode:
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
-
         response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
             FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
         )

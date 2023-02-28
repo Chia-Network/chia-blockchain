@@ -21,7 +21,6 @@ from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from chia.cmds.init_funcs import create_default_chia_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -101,7 +100,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import config_path_for_filename, load_config, lock_config, override_config, save_config
+from chia.util.config import (
+    config_path_for_filename,
+    create_default_chia_config,
+    load_config,
+    lock_config,
+    override_config,
+    save_config,
+)
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -147,7 +153,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
 def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
     ret: List[Coin] = []
     for cs in sb.coin_spends:
-
         parent_id = cs.coin.name()
         _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
         for cond in Program.to(r).as_iter():
@@ -182,7 +187,6 @@ class BlockTools:
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
     ):
-
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -776,7 +780,7 @@ class BlockTools:
 
                         blocks[full_block.header_hash] = block_record
                         self.log.info(
-                            f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}"
+                            f"Created block {block_record.height} ove=False, iters {block_record.total_iters}"
                         )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
@@ -1056,9 +1060,7 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        self.log.info(
-                            f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}"
-                        )
+                        self.log.info(f"Created block {block_record.height } ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1287,7 +1289,6 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
@@ -2091,7 +2092,7 @@ def create_test_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info,) = create_test_foliage(
+    (foliage, foliage_transaction_block, transactions_info) = create_test_foliage(
         constants,
         rc_block,
         block_generator,

@@ -49,7 +49,6 @@ REPETITIONS = 100
 
 
 async def main(db_path: Path):
-
     random.seed(0x213FB154)
 
     async with aiosqlite.connect(db_path) as connection:

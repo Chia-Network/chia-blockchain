@@ -11,12 +11,12 @@ from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
 from blspy import GTElement
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo
+from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import Mempool, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
@@ -115,7 +115,7 @@ class MempoolManager:
     # cache of MempoolItems with height conditions making them not valid yet
     _pending_cache: PendingTxCache
     seen_cache_size: int
-    peak: Optional[BlockRecord]
+    peak: Optional[BlockRecordProtocol]
     mempool: Mempool
 
     def __init__(
@@ -157,7 +157,7 @@ class MempoolManager:
             )
 
         # The mempool will correspond to a certain peak
-        self.peak: Optional[BlockRecord] = None
+        self.peak: Optional[BlockRecordProtocol] = None
         self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(self.max_block_clvm_cost)
         mempool_info = MempoolInfo(
             CLVMCost(uint64(self.mempool_max_total_cost)),
@@ -170,7 +170,7 @@ class MempoolManager:
         self.pool.shutdown(wait=True)
 
     def process_mempool_items(
-        self, item_inclusion_filter: Callable[[MempoolManager, MempoolItem], bool]
+        self, item_inclusion_filter: Callable[[bytes32], bool]
     ) -> Tuple[List[SpendBundle], uint64, List[Coin], List[Coin]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -178,7 +178,7 @@ class MempoolManager:
         removals: List[Coin] = []
         additions: List[Coin] = []
         for item in self.mempool.spends_by_feerate():
-            if not item_inclusion_filter(self, item):
+            if not item_inclusion_filter(item.name):
                 continue
             log.info(f"Cumulative cost: {cost_sum}, fee per cost: {item.fee / item.cost}")
             if item.cost + cost_sum > self.max_block_clvm_cost or item.fee + fee_sum > self.constants.MAX_COIN_AMOUNT:
@@ -193,7 +193,7 @@ class MempoolManager:
     def create_bundle_from_mempool(
         self,
         last_tb_header_hash: bytes32,
-        item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
@@ -204,7 +204,7 @@ class MempoolManager:
 
         if item_inclusion_filter is None:
 
-            def always(mm: MempoolManager, mi: MempoolItem) -> bool:
+            def always(bundle_name: bytes32) -> bool:
                 return True
 
             item_inclusion_filter = always
@@ -512,9 +512,7 @@ class MempoolManager:
         if tl_error:
             assert_height = compute_assert_height(removal_record_dict, npc_result.conds)
 
-        potential = MempoolItem(
-            new_spend, uint64(fees), npc_result, cost, spend_name, additions, first_added_height, assert_height
-        )
+        potential = MempoolItem(new_spend, uint64(fees), npc_result, spend_name, first_added_height, assert_height)
 
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
@@ -589,7 +587,7 @@ class MempoolManager:
         return item
 
     async def new_peak(
-        self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]
+        self, new_peak: Optional[BlockRecordProtocol], last_npc_result: Optional[NPCResult]
     ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
@@ -602,7 +600,7 @@ class MempoolManager:
             return []
         assert new_peak.timestamp is not None
         self.fee_estimator.new_block_height(new_peak.height)
-        included_items = []
+        included_items: List[MempoolItemInfo] = []
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -614,7 +612,7 @@ class MempoolManager:
                 for spend in last_npc_result.conds.spends:
                     items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(bytes32(spend.coin_id))
                     for item in items:
-                        included_items.append(item)
+                        included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                         self.remove_seen(item.name)
                         spendbundle_ids_to_remove.append(item.name)
                 self.mempool.remove_from_pool(spendbundle_ids_to_remove, MempoolRemoveReason.BLOCK_INCLUSION)
@@ -634,7 +632,7 @@ class MempoolManager:
                 if result == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
-                    included_items.append(item)
+                    included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())

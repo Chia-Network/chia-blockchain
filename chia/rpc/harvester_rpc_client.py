@@ -21,7 +21,7 @@ class HarvesterRpcClient(RpcClient):
         await self.fetch("refresh_plots", {})
 
     async def delete_plot(self, filename: str) -> bool:
-        return await self.fetch("delete_plot", {"filename": filename})
+        return (await self.fetch("delete_plot", {"filename": filename}))["success"]
 
     async def add_plot_directory(self, dirname: str) -> bool:
         return (await self.fetch("add_plot_directory", {"dirname": dirname}))["success"]
