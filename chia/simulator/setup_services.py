@@ -105,6 +105,8 @@ async def setup_full_node(
 ) -> AsyncGenerator[Service[FullNode], None]:
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
+        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+        gc.collect()
         db_path.unlink()
 
         if db_version > 1:
@@ -200,6 +202,8 @@ async def setup_wallet_node(
         db_path = local_bt.root_path / db_path_replaced
 
         if db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+            gc.collect()
             db_path.unlink()
         service_config["database_path"] = str(db_name)
         service_config["testing"] = True
@@ -233,6 +237,8 @@ async def setup_wallet_node(
         service.stop()
         await service.wait_closed()
         if db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+            gc.collect()
             db_path.unlink()
         keychain.delete_all_keys()
 
