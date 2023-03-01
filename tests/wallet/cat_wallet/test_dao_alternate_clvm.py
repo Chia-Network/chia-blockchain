@@ -10,7 +10,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
+DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_alternate_proposal_timer.clvm")
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_alternate_proposal_validator.clvm")
 DAO_MONEY_RECEIVER_MOD: Program = load_clvm("dao_alternate_money_receiver.clvm")
