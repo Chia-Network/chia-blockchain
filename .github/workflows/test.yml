@@ -14,8 +14,9 @@ on:
   workflow_dispatch:
     inputs:
       matrix_mode:
-        default: ${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }}
+        default: default
         options:
+        - default
         - all
         - limited
         type: choice
@@ -44,7 +45,8 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
-          echo matrix_mode=${{ inputs.matrix_mode }} >> $GITHUB_OUTPUT
+          # TODO: remove REMOVEME below to return to standard behavior, temporarily defaulting all repos to limited
+          echo matrix_mode=${{ ( inputs.matrix_mode != 'default' && inputs.matrix_mode || (( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain REMOVEME' ) && 'limited' || 'all')) }} >> $GITHUB_OUTPUT
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
