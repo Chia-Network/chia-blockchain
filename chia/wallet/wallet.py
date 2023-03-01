@@ -346,7 +346,7 @@ class Wallet:
                 reuse_puzhash = False
             else:
                 reuse_puzhash = reuse_puzhash_config.get(
-                    self.wallet_state_manager.wallet_node.logged_in_fingerprint, False
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
                 )
         total_balance = await self.get_spendable_balance()
         if not ignore_max_send_amount:

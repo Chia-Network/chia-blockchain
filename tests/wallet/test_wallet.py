@@ -150,8 +150,6 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        wallet_node.config["reuse_public_key_for_change"][2999502625] = True
-
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
@@ -161,6 +159,7 @@ class TestWalletSimulator:
             uint64(tx_amount),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             uint64(0),
+            reuse_puzhash=True,
         )
         assert tx.spend_bundle is not None
         assert len(tx.spend_bundle.coin_spends) == 1

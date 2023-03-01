@@ -635,7 +635,7 @@ class CATWallet:
                 reuse_puzhash = False
             else:
                 reuse_puzhash = reuse_puzhash_config.get(
-                    self.wallet_state_manager.wallet_node.logged_in_fingerprint, False
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
                 )
         if coins is None:
             if exclude_coins is None:
