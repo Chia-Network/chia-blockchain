@@ -807,3 +807,19 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
     assert message["command"] != "register_service"
     assert message["data"]["success"] is False
     assert message["data"]["error"].startswith("Expecting property name")
+
+
+@pytest.mark.asyncio
+async def test_unexpected_json(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    await ws.send_str('{"this": "is valid but not expected"}')  # send some valid but unexpected json
+    response = await ws.receive()
+
+    # check for error response
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    assert message["data"]["success"] is False
+    assert message["data"]["error"].startswith("'command'")
