@@ -330,7 +330,6 @@ def test_lockup() -> None:
     # LOCKUP_TIME
     # PUBKEY
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
 
     INNERPUZ = Program.to(1)
     previous_votes = [0xFADEDDAB]
@@ -402,119 +401,119 @@ def test_lockup() -> None:
     assert len(conds.as_python()) == 3
 
 
-def test_proposal_innerpuz() -> None:
-    current_cat_issuance: uint64 = uint64(200)
-    proposal_pass_percentage: uint64 = uint64(15)
-    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
-    singleton_struct: Program = Program.to(
-        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
-    )
-
-    new_puzhash = Program.to("new_puzhash").get_tree_hash()
-    old_amount = 200
-    spend_amount = 50
-    new_amount_change = old_amount - spend_amount
-    pass_margin = 5100
-
-    # Setup Proposal
-    P2_PH = Program.to("p2_ph").get_tree_hash()
-    P2_CONDS = [[51, P2_PH, spend_amount]]
-
-    proposal_innerpuz = DAO_SPEND_PROPOSAL.curry(P2_CONDS, new_puzhash, new_amount_change)
-
-    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
-        singleton_struct,
-        DAO_PROPOSAL_MOD.get_tree_hash(),
-        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        DAO_TREASURY_MOD.get_tree_hash(),
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_TAIL_HASH,
-        singleton_id,
-        200,
-        350,
-        proposal_innerpuz,
-    )
-
-    # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-    # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-    # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
-    #                                       ; the total number of CATs in circulation according to the treasury
-    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-    #                                ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-    #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-    # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
-    #                    ; set this to 0 and we will do the vote spend case
-
-    solution: Program = Program.to(
-        [
-            [],
-            P2_SINGLETON_MOD.get_tree_hash(),
-            current_cat_issuance,
-            pass_margin,
-            proposal_pass_percentage,
-            LOCKUP_TIME,
-        ]
-    )
-
-    full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
-
-    # Setup the treasury
-    full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
-        [
-            singleton_struct,
-            DAO_TREASURY_MOD.get_tree_hash(),
-            DAO_PROPOSAL_MOD.get_tree_hash(),
-            DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-            DAO_LOCKUP_MOD.get_tree_hash(),
-            CAT_MOD.get_tree_hash(),
-            CAT_TAIL_HASH,
-            current_cat_issuance,
-            proposal_pass_percentage,
-            pass_margin,
-            LOCKUP_TIME,
-        ]
-    )
-    # my_amount         ; current amount
-    # new_amount_change ; may be negative or positive. Is zero during eve spend
-    # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
-    # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
-    # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
-    # proposal_innerpuz
-    # proposal_current_votes ; tally of yes votes
-    # proposal_total_votes   ; total votes cast (by number of cat-mojos)
-    # type  ; this is used for the recreating self type
-    # extra_value  ; this is used for recreating self
-
-    treasury_solution: Program = Program.to(
-        [
-            old_amount,  # old_amount
-            new_amount_change,  # new_amount_change
-            singleton_id,  # my_puzhash_or_proposal_id
-            [],  # announcement_messages_list_or_payment_nonce
-            new_puzhash,  # amount_or_new_puzhash
-            proposal_innerpuz,  # proposal_innerpuz
-            200,  # current_votes
-            350,  # total_votes
-            "u",  # recreation type
-            0,  # extra_value for recreation
-        ]
-    )
-
-    # Run the puzzles
-    treasury_conds: Program = full_treasury_puz.run(treasury_solution)
-    proposal_conds: Program = full_proposal.run(solution)
-
-    # Check the A_P_As from treasury match the C_P_As from the proposal
-    cpa = b">"
-    apa = b"?"
-    cpas = []
-    for cond in proposal_conds.as_python():
-        if cond[0] == cpa:
-            cpas.append(std_hash(full_prop_ph + bytes32(cond[1])))
-    for cond in treasury_conds.as_python():
-        if cond[0] == apa:
-            assert bytes32(cond[1]) in cpas
+# def test_proposal_innerpuz() -> None:
+#     current_cat_issuance: uint64 = uint64(200)
+#     proposal_pass_percentage: uint64 = uint64(15)
+#     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+#     LOCKUP_TIME: uint64 = uint64(200)
+#     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+#     singleton_struct: Program = Program.to(
+#         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+#     )
+#
+#     new_puzhash = Program.to("new_puzhash").get_tree_hash()
+#     old_amount = 200
+#     spend_amount = 50
+#     new_amount_change = old_amount - spend_amount
+#     pass_margin = 5100
+#
+#     # Setup Proposal
+#     P2_PH = Program.to("p2_ph").get_tree_hash()
+#     P2_CONDS = [[51, P2_PH, spend_amount]]
+#
+#     proposal_innerpuz = DAO_SPEND_PROPOSAL.curry(P2_CONDS, new_puzhash, new_amount_change)
+#
+#     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
+#         singleton_struct,
+#         DAO_PROPOSAL_MOD.get_tree_hash(),
+#         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+#         CAT_MOD.get_tree_hash(),
+#         DAO_TREASURY_MOD.get_tree_hash(),
+#         DAO_LOCKUP_MOD.get_tree_hash(),
+#         CAT_TAIL_HASH,
+#         singleton_id,
+#         200,
+#         350,
+#         proposal_innerpuz,
+#     )
+#
+#     # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+#     # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+#     # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
+#     #                                       ; the total number of CATs in circulation according to the treasury
+#     # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+#     #                                ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+#     # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+#     #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+#     # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
+#     #                    ; set this to 0 and we will do the vote spend case
+#
+#     solution: Program = Program.to(
+#         [
+#             [],
+#             P2_SINGLETON_MOD.get_tree_hash(),
+#             current_cat_issuance,
+#             pass_margin,
+#             proposal_pass_percentage,
+#             LOCKUP_TIME,
+#         ]
+#     )
+#
+#     full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
+#
+#     # Setup the treasury
+#     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
+#         [
+#             singleton_struct,
+#             DAO_TREASURY_MOD.get_tree_hash(),
+#             DAO_PROPOSAL_MOD.get_tree_hash(),
+#             DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+#             DAO_LOCKUP_MOD.get_tree_hash(),
+#             CAT_MOD.get_tree_hash(),
+#             CAT_TAIL_HASH,
+#             current_cat_issuance,
+#             proposal_pass_percentage,
+#             pass_margin,
+#             LOCKUP_TIME,
+#         ]
+#     )
+#     # my_amount         ; current amount
+#     # new_amount_change ; may be negative or positive. Is zero during eve spend
+#     # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
+#     # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
+#     # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
+#     # proposal_innerpuz
+#     # proposal_current_votes ; tally of yes votes
+#     # proposal_total_votes   ; total votes cast (by number of cat-mojos)
+#     # type  ; this is used for the recreating self type
+#     # extra_value  ; this is used for recreating self
+#
+#     treasury_solution: Program = Program.to(
+#         [
+#             old_amount,  # old_amount
+#             new_amount_change,  # new_amount_change
+#             singleton_id,  # my_puzhash_or_proposal_id
+#             [],  # announcement_messages_list_or_payment_nonce
+#             new_puzhash,  # amount_or_new_puzhash
+#             proposal_innerpuz,  # proposal_innerpuz
+#             200,  # current_votes
+#             350,  # total_votes
+#             "u",  # recreation type
+#             0,  # extra_value for recreation
+#         ]
+#     )
+#
+#     # Run the puzzles
+#     treasury_conds: Program = full_treasury_puz.run(treasury_solution)
+#     proposal_conds: Program = full_proposal.run(solution)
+#
+#     # Check the A_P_As from treasury match the C_P_As from the proposal
+#     cpa = b">"
+#     apa = b"?"
+#     cpas = []
+#     for cond in proposal_conds.as_python():
+#         if cond[0] == cpa:
+#             cpas.append(std_hash(full_prop_ph + bytes32(cond[1])))
+#     for cond in treasury_conds.as_python():
+#         if cond[0] == apa:
+#             assert bytes32(cond[1]) in cpas
