@@ -179,7 +179,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
-    for (k, count) in sorted(dict(total_good_plots).items()):
+    for k, count in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
     grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:

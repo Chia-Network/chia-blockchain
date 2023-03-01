@@ -416,6 +416,10 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 if multiplier > 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
 
+            if fee > 0:
+                print()
+                print(f"Including Fees: {Decimal(fee) / units['chia']} XCH, {fee} mojos")
+
             if royalty_asset_dict != {}:
                 royalty_summary: Dict[Any, List[Dict[str, Any]]] = await wallet_client.nft_calculate_royalties(
                     royalty_asset_dict, fungible_asset_dict
@@ -516,7 +520,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         offer = Offer.from_bytes(record.offer)
         offered, requested, _ = offer.summary()
         outbound_balances: Dict[str, int] = offer.get_pending_amounts()
-        fees: Decimal = Decimal(offer.bundle.fees())
+        fees: Decimal = Decimal(offer.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
         await print_offer_summary(cat_name_resolver, offered)
@@ -524,7 +528,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         await print_offer_summary(cat_name_resolver, requested)
         print("Pending Outbound Balances:")
         await print_offer_summary(cat_name_resolver, outbound_balances, has_fee=(fees > 0))
-        print(f"Included Fees: {fees / units['chia']}")
+        print(f"Included Fees: {fees / units['chia']} XCH, {fees} mojos")
     print("---------------")
 
 
@@ -674,7 +678,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 converted_amount = Decimal(amount) / divisor
                 print(f"  - {converted_amount} {asset} ({amount} mojos)")
 
-    print(f"Included Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+    print(f"Included Fees: {Decimal(offer.fees()) / units['chia']} XCH, {offer.fees()} mojos")
 
     if not examine_only:
         print()
@@ -763,7 +767,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print()
             print(f"{summary['name']}:")
             print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
-            print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
+            print(f"{indent}{'-Pending Total Balance:'.ljust(23)} {unconfirmed_wallet_balance}")
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
             if typ == WalletType.DECENTRALIZED_ID:

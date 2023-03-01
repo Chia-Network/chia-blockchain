@@ -6,7 +6,7 @@ import dataclasses
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
@@ -20,7 +20,7 @@ from chia.plotting.util import (
     remove_plot,
     remove_plot_directory,
 )
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -34,7 +34,7 @@ class Harvester:
     root_path: Path
     _shut_down: bool
     executor: ThreadPoolExecutor
-    state_changed_callback: Optional[Callable]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     cached_challenges: List
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
@@ -77,7 +77,7 @@ class Harvester:
         self._server = None
         self.constants = constants
         self.cached_challenges = []
-        self.state_changed_callback: Optional[Callable] = None
+        self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.parallel_read: bool = config.get("parallel_read", True)
 
     async def _start(self):
@@ -98,9 +98,9 @@ class Harvester:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection):
-        pass
+        self.state_changed("add_connection")
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     def state_changed(self, change: str, change_data: Dict[str, Any] = None):

@@ -15,7 +15,7 @@ from chia.consensus.full_block_to_block_record import header_block_to_sub_block_
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import test_constants
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
@@ -32,7 +32,6 @@ async def test_block_store(tmp_dir, db_version, bt):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
-
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
@@ -88,7 +87,6 @@ async def test_deadlock(tmp_dir, db_version, bt):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
-
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
@@ -117,7 +115,6 @@ async def test_rollback(bt, tmp_dir):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(2) as db_wrapper:
-
         # Use a different file for the blockchain
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
@@ -286,7 +283,6 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
-
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
@@ -324,7 +320,6 @@ async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper_2:
-
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)

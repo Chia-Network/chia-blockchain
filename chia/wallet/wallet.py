@@ -11,7 +11,8 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
@@ -140,7 +141,10 @@ class Wallet:
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
                 if record.spend_bundle is not None:
-                    self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
+                    self.log.warning(
+                        f"TransactionRecord SpendBundle ID: {record.spend_bundle.name()} not in mempool. "
+                        f"(peer, included, error) list: {record.sent_to}"
+                    )
                 continue
             our_spend = False
             for coin in record.removals:
@@ -455,13 +459,18 @@ class Wallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
-    async def sign_message(self, message: str, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
+    async def sign_message(
+        self, message: str, puzzle_hash: bytes32, is_hex: bool = False
+    ) -> Tuple[G1Element, G2Element]:
         # CHIP-0002 message signing as documented at:
         # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
-        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+        if is_hex:
+            puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+        else:
+            puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
         return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
 
     async def generate_signed_transaction(
