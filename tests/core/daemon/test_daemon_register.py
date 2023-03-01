@@ -70,7 +70,7 @@ async def test_multiple_register_different(get_daemon: WebSocketServer, bt: Bloc
         # Check after closing the connection
         for service_name in test_service_names:
             connections = ws_server.connections.get(service_name, set())
-            assert len(connections) == 0
+            assert connections == set()
 
 
 @pytest.mark.asyncio
@@ -107,6 +107,6 @@ async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) ->
             removed_names = ws_server.remove_connection(ws_to_remove)
             assert removed_names == test_service_names
 
-            # remove again, should return empty set and not raise any errors
+            # remove again, should return empty list and not raise any errors
             removed_names = ws_server.remove_connection(ws_to_remove)
-            assert len(removed_names) == 0
+            assert removed_names == list()
