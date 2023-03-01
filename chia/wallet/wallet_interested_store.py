@@ -142,9 +142,7 @@ class WalletInterestedStore:
             )
             await cursor.close()
 
-    async def get_unacknowledged_states_for_asset_id(
-        self, asset_id: bytes32
-    ) -> List[Tuple[CoinState, uint32]]:
+    async def get_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> List[Tuple[CoinState, uint32]]:
         """
         Return all states for a particular asset ID that were ignored
         :param asset_id: CAT asset ID

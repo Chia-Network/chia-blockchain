@@ -388,8 +388,8 @@ class TradeManager:
 
         # We want to subscribe to the coin IDs of all coins that are not the ephemeral offer coins
         offered_coins: Set[Coin] = set([value for values in offer.get_offered_coins().values() for value in values])
-        non_offer_additions: Set[Coin] = set(offer.bundle.additions()) ^ offered_coins
-        non_offer_removals: Set[Coin] = set(offer.bundle.removals()) ^ offered_coins
+        non_offer_additions: Set[Coin] = set(offer.additions()) ^ offered_coins
+        non_offer_removals: Set[Coin] = set(offer.removals()) ^ offered_coins
         await self.wallet_state_manager.add_interested_coin_ids(
             [coin.name() for coin in (*non_offer_removals, *non_offer_additions)]
         )

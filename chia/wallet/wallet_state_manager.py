@@ -791,7 +791,6 @@ class WalletStateManager:
                 await self.interested_store.add_unacknowledged_coin_state(
                     asset_id,
                     coin_state,
-                    peer.peer_node_id,
                     fork_height,
                 )
                 self.state_changed("added_stray_cat")
