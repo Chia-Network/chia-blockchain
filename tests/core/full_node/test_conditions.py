@@ -59,13 +59,18 @@ async def check_spend_bundle_validity(
     blocks: List[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
+    softfork2: bool = False,
 ) -> Tuple[List[CoinRecord], List[CoinRecord]]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
-    constants = bt.constants
+    if softfork2:
+        constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
+    else:
+        constants = bt.constants
+
     db_wrapper, blockchain = await create_ram_blockchain(constants)
     try:
         for block in blocks:
@@ -99,7 +104,11 @@ async def check_spend_bundle_validity(
 
 
 async def check_conditions(
-    bt: BlockTools, condition_solution: Program, expected_err: Optional[Err] = None, spend_reward_index: int = -2
+    bt: BlockTools,
+    condition_solution: Program,
+    expected_err: Optional[Err] = None,
+    spend_reward_index: int = -2,
+    softfork2: bool = False,
 ):
     blocks = await initial_blocks(bt)
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
@@ -109,7 +118,7 @@ async def check_conditions(
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 
-    await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err)
+    await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err, softfork2=softfork2)
 
 
 co = ConditionOpcode
@@ -117,6 +126,7 @@ co = ConditionOpcode
 
 class TestConditions:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("softfork2", [True, False])
     @pytest.mark.parametrize(
         "opcode,value,expected",
         [
@@ -148,9 +158,9 @@ class TestConditions:
             (co.ASSERT_SECONDS_RELATIVE, 0, None),
         ],
     )
-    async def test_condition(self, opcode, value, expected, bt):
+    async def test_condition(self, opcode, value, expected, bt, softfork2):
         conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
-        await check_conditions(bt, conditions, expected_err=expected)
+        await check_conditions(bt, conditions, expected_err=expected, softfork2=softfork2)
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, bt):
