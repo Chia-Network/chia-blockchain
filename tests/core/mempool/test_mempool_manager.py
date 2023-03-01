@@ -550,8 +550,9 @@ async def test_total_mempool_fees() -> None:
     assert result[2] == Err.INVALID_BLOCK_FEE_AMOUNT
 
 
+@pytest.mark.parametrize("reverse_tx_order", [True, False])
 @pytest.mark.asyncio
-async def test_create_bundle_from_mempool() -> None:
+async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     coins = []
     test_coin_records = {}
     for i in range(2000000000, 2000002200):
@@ -562,9 +563,12 @@ async def test_create_bundle_from_mempool() -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return test_coin_records.get(coin_id)
 
-    async def send_to_mempool(coins: List[Coin], *, high_fees: bool = True) -> List[CoinSpend]:
+    async def send_to_mempool(
+        coins: List[Coin], *, high_fees: bool = True, reverse_tx_order: bool = False
+    ) -> List[CoinSpend]:
         spends_list = []
-        for i in range(0, len(coins)):
+        iter_range = reversed(range(0, len(coins))) if reverse_tx_order else range(0, len(coins))
+        for i in iter_range:
             sb, _, res = await generate_and_add_spendbundle(
                 mempool_manager,
                 [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i if high_fees else (coins[i].amount - 1)]],
@@ -575,8 +579,8 @@ async def test_create_bundle_from_mempool() -> None:
         return spends_list
 
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
-    high_rate_spends = await send_to_mempool(coins[0:2000])
-    low_rate_spends = await send_to_mempool(coins[2000:2100], high_fees=False)
+    high_rate_spends = await send_to_mempool(coins[0:2000], reverse_tx_order=reverse_tx_order)
+    low_rate_spends = await send_to_mempool(coins[2000:2100], high_fees=False, reverse_tx_order=reverse_tx_order)
     assert mempool_manager.peak is not None
     result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
