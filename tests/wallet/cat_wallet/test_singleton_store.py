@@ -12,7 +12,11 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet, DAOInfo
 from chia.wallet.wallet_singleton_store import WalletSingletonStore
-from chia.wallet.singleton import create_fullpuz, get_singleton_id_from_puzzle
+from chia.wallet.singleton import (
+    create_fullpuz,
+    get_singleton_id_from_puzzle,
+    get_most_recent_singleton_coin_from_coin_spend
+)
 from chia.wallet.singleton_record import SingletonRecord
 from tests.util.db_connection import DBConnection
 
@@ -50,7 +54,7 @@ class TestSingletonStore:
         async with DBConnection(1) as wrapper:
             db = await WalletSingletonStore.create(wrapper)
             record = get_record()
-            await db.save_singleton(record)
+            await db.add_confirmed_singleton(record)
             records_by_wallet = await db.get_records_by_wallet_id(record.wallet_id)
             assert records_by_wallet[0] == record
             record_by_coin_id = await db.get_record_by_coin_id(record.coin.name())
@@ -64,8 +68,8 @@ class TestSingletonStore:
             db = await WalletSingletonStore.create(wrapper)
             record_1 = get_record()
             record_2 = get_record()
-            await db.save_singleton(record_1)
-            await db.save_singleton(record_2)
+            await db.add_confirmed_singleton(record_1)
+            await db.add_confirmed_singleton(record_2)
             resp_1 = await db.delete_singleton_by_coin_id(record_1.coin.name(), 1)
             assert resp_1
             resp_2 = await db.delete_singleton_by_singleton_id(record_2.singleton_id, 1)
@@ -75,6 +79,16 @@ class TestSingletonStore:
             record = await db.get_record_by_coin_id(record_2.coin.name())
             assert record.removed_height == 1
 
-            
-
-            
+    @pytest.mark.asyncio
+    async def test_unconfirmed_singleton(self) -> None:
+        async with DBConnection(1) as wrapper:
+            db = await WalletSingletonStore.create(wrapper)
+            record_1 = get_record()
+            record_2 = get_record()
+            height = 10
+            await db.add_unconfirmed_singleton(record_1.parent_coinspend, record_1.wallet_id, height)
+            record_1_coin = get_most_recent_singleton_coin_from_coin_spend(record_1.parent_coinspend)
+            unconfirmed_record_1 = await db.get_unconfirmed_singleton_by_coin_id(record_1_coin.name())
+            unconfirmed_record_2 = await db.get_unconfirmed_singletons_by_singleton_id(record_1.singleton_id)
+            assert unconfirmed_record_1 == unconfirmed_record_2[0]
+            await db.confirm_unconfirmed_singleton(record_1.singleton_id)

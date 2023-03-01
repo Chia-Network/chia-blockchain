@@ -18,7 +18,6 @@ class SingletonRecord:
     wallet_id: uint32
     parent_coinspend: CoinSpend
     inner_puzzle_hash: Optional[bytes32]
-    pending: bool
     removed_height: int
     lineage_proof: LineageProof
     custom_data: Optional[Any]
