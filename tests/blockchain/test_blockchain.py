@@ -1680,6 +1680,10 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
 
+co = ConditionOpcode
+rbr = ReceiveBlockResult
+
+
 class TestPreValidation:
     @pytest.mark.asyncio
     async def test_pre_validation_fails_bad_blocks(self, empty_blockchain, bt):
@@ -1871,27 +1875,27 @@ class TestBodyValidation:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected,with_garbage",
         [
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK, False),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK, False),
+            (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK, False),
+            (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK, False),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK, False),
+            (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK, False),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK, False),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK, False),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK, False),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK, False),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK, False),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK, False),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK, False),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK, False),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK, False),
             # additional garbage at the end of parameters
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, True),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, True),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, True),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, True),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK, True),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK, True),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK, True),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK, True),
         ],
     )
     async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, with_garbage, bt):
