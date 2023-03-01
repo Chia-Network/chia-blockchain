@@ -78,40 +78,49 @@
                 (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
                 (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
               )
-              (x "test")  ; proposal not recognised (TODO: maybe add mint as an option here)
+              (x)  ; proposal not recognised (TODO: maybe add mint as an option here)
             )
           )
-          (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
+          (if
+            (all  ; block both types of announcement in the update case
+              (= spend_or_update_flag 'u')
+              (any
+                (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
+                (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+              )
+            )
+            (x)
+            (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
+          )
       )
       (assert seen_flag ())  ; check we've seen something matching the flag and then return empty list
     )
   )
 
   (assert
-    1
-    ; (= (sha256tree my_solution) announcement_args) - quex suggested this and I'm not sure why we want the proposal to announce the solution to this validator
-    ; (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
-    ; (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
-    ; (=
-    ;   announcement_source
-    ;   (calculate_full_puzzle_hash
-    ;     (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-    ;     (calculate_proposal_puzzle
-    ;       PROPOSAL_MOD_HASH
-    ;       (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-    ;       PROPOSAL_TIMER_MOD_HASH
-    ;       CAT_MOD_HASH
-    ;       TREASURY_MOD_HASH
-    ;       LOCKUP_MOD_HASH
-    ;       CAT_TAIL_HASH
-    ;       (f (r SINGLETON_STRUCT))
-    ;       yes_votes
-    ;       total_votes
-    ;       spend_or_update_flag
-    ;       delegated_puzzle_hash
-    ;     )
-    ;   )
-    ; )
+    ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
+    (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
+    (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
+    (=
+      announcement_source
+      (calculate_full_puzzle_hash
+        (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+        (calculate_proposal_puzzle
+          PROPOSAL_MOD_HASH
+          (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+          PROPOSAL_TIMER_MOD_HASH
+          CAT_MOD_HASH
+          TREASURY_MOD_HASH
+          LOCKUP_MOD_HASH
+          CAT_TAIL_HASH
+          (f (r SINGLETON_STRUCT))
+          yes_votes
+          total_votes
+          spend_or_update_flag
+          delegated_puzzle_hash
+        )
+      )
+    )
     ; then
     (check_conditions SINGLETON_STRUCT conditions spend_or_update_flag 0)
   )
