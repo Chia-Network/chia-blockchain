@@ -563,24 +563,31 @@ async def test_create_bundle_from_mempool(reverse_tx_order: bool) -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return test_coin_records.get(coin_id)
 
-    async def send_to_mempool(
-        coins: List[Coin], *, high_fees: bool = True, reverse_tx_order: bool = False
-    ) -> List[CoinSpend]:
+    async def make_coin_spends(coins: List[Coin], *, high_fees: bool = True) -> List[CoinSpend]:
         spends_list = []
-        iter_range = reversed(range(0, len(coins))) if reverse_tx_order else range(0, len(coins))
-        for i in iter_range:
-            sb, _, res = await generate_and_add_spendbundle(
-                mempool_manager,
-                [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i if high_fees else (coins[i].amount - 1)]],
+        for i in range(0, len(coins)):
+            coin_spend = CoinSpend(
                 coins[i],
+                IDENTITY_PUZZLE,
+                Program.to(
+                    [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i if high_fees else (coins[i].amount - 1)]]
+                ),
             )
-            assert res[1] == MempoolInclusionStatus.SUCCESS
-            spends_list.extend(sb.coin_spends)
+            spends_list.append(coin_spend)
         return spends_list
 
+    async def send_spends_to_mempool(coin_spends: List[CoinSpend]) -> None:
+        g2 = G2Element()
+        for cs in coin_spends:
+            sb = SpendBundle([cs], g2)
+            result = await add_spendbundle(mempool_manager, sb, sb.name())
+            assert result[1] == MempoolInclusionStatus.SUCCESS
+
     mempool_manager = await instantiate_mempool_manager(get_coin_record)
-    high_rate_spends = await send_to_mempool(coins[0:2000], reverse_tx_order=reverse_tx_order)
-    low_rate_spends = await send_to_mempool(coins[2000:2100], high_fees=False, reverse_tx_order=reverse_tx_order)
+    high_rate_spends = await make_coin_spends(coins[0:2000])
+    low_rate_spends = await make_coin_spends(coins[2000:2100], high_fees=False)
+    spends = low_rate_spends + high_rate_spends if reverse_tx_order else high_rate_spends + low_rate_spends
+    await send_spends_to_mempool(spends)
     assert mempool_manager.peak is not None
     result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
