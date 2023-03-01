@@ -287,12 +287,12 @@ class WebSocketServer:
                 if len(service_names) == 0:
                     service_names = ["Unknown"]
 
-                tb = ""
-                if not isinstance(e, ConnectionResetError):
+                if isinstance(e, ConnectionResetError):
+                    self.log.info(f"Peer disconnected. Closing websocket with {service_names}")
+                else:
                     tb = traceback.format_exc()
-
-                self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
-                self.log.info(f"Closing websocket with {service_names}")
+                    self.log.error(f"Unexpected exception trying to send to {service_names} (websocket: {e} {tb})")
+                    self.log.info(f"Closing websocket with {service_names}")
 
                 await connection.close()
 
