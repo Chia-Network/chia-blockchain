@@ -302,9 +302,9 @@ class WebSocketServer:
         for service_name, connections in self.connections.items():
             try:
                 connections.remove(websocket)
-                service_names.append(service_name)
             except KeyError:
-                pass
+                continue
+            service_names.append(service_name)
         return service_names
 
     async def ping_task(self) -> None:
