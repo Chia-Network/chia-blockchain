@@ -290,7 +290,6 @@ async def setup_farmer_multi_harvester(
     *,
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]]:
-
     farmer_node_iterators = [
         setup_farmer(
             block_tools,

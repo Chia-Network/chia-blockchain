@@ -129,7 +129,6 @@ _T_SpendSim = TypeVar("_T_SpendSim", bound="SpendSim")
 
 
 class SpendSim:
-
     db_wrapper: DBWrapper2
     coin_store: CoinStore
     mempool_manager: MempoolManager
@@ -220,7 +219,7 @@ class SpendSim:
     async def farm_block(
         self,
         puzzle_hash: bytes32 = bytes32(b"0" * 32),
-        item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Tuple[List[Coin], List[Coin]]:
         # Fees get calculated
         fees = uint64(0)

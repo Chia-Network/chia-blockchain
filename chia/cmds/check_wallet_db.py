@@ -16,6 +16,27 @@ from chia.wallet.util.wallet_types import WalletType
 # TODO: Check for missing paired wallets (eg. No DID wallet for an NFT)
 # TODO: Check for missing DID Wallets
 
+help_text = """
+\b
+    The purpose of this command is find potential issues in Chia wallet databases.
+    The core chia client currently uses sqlite to store the wallet databases, one database per key.
+\b
+    Guide to warning diagnostics:
+    ----------------------------
+    "Missing Wallet IDs": A wallet was created and later deleted. By itself, this is okay because
+                          the wallet does not reuse wallet IDs. However, this information may be useful
+                          in conjunction with other information.
+\b
+    Guide to error diagnostics:
+    --------------------------
+    Diagnostics in the error section indicate an error in the database structure.
+    In general, this does not indicate an error in on-chain data, nor does it mean that you have lost coins.
+\b
+    An example is "Missing DerivationPath indexes" - a derivation path is a sub-key of your master key. Missing
+    derivation paths could cause your wallet to not "know" about transactions that happened on the blockchain.
+\b
+"""
+
 
 def _validate_args_addresses_used(wallet_id: int, last_index: int, last_hardened: int, dp: DerivationPath) -> None:
     if last_hardened:
@@ -335,7 +356,8 @@ class WalletDBReader:
 
         return errors
 
-    async def scan(self, db_path: Path) -> None:
+    async def scan(self, db_path: Path) -> int:
+        """Returns number of lines of error output (not warnings)"""
         self.db_wrapper = await DBWrapper2.create(
             database=db_path,
             reader_count=self.config.get("db_readers", 4),
@@ -345,42 +367,47 @@ class WalletDBReader:
         # TODO: Pass down db_wrapper
         wallets = await self.get_all_wallets()
         derivation_paths = await self.get_derivation_paths()
+        errors = []
+        warnings = []
         try:
-            errors = []
-
             if self.verbose:
                 await self.show_tables()
                 print_min_max_derivation_for_wallets(derivation_paths)
 
-            errors.extend(await self.check_wallets())
+            warnings.extend(await self.check_wallets())
+
             errors.extend(self.check_wallets_missing_derivations(wallets, derivation_paths))
             errors.extend(self.check_unexpected_derivation_entries(wallets, derivation_paths))
             errors.extend(self.check_derivations_are_compact(wallets, derivation_paths))
             errors.extend(check_addresses_used_contiguous(derivation_paths))
 
+            if len(warnings) > 0:
+                print(f"    ---- Warnings Found for {db_path.name} ----")
+                print("\n".join(warnings))
             if len(errors) > 0:
-                print("\n    ---- Errors Found ----")
+                print(f"    ---- Errors Found for {db_path.name}----")
                 print("\n".join(errors))
-                sys.exit(2)
-            else:
-                print("No errors found.\n")
         finally:
             await self.db_wrapper.close()
+        return len(errors)
 
 
 async def scan(root_path: str, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
-
     if db_path is None:
         wallet_db_path = Path(root_path) / "wallet" / "db"
         wallet_db_paths = list(wallet_db_path.glob("blockchain_wallet_*.sqlite"))
     else:
         wallet_db_paths = [Path(db_path)]
 
+    num_errors = 0
     for wallet_db_path in wallet_db_paths:
         w = WalletDBReader()
         w.verbose = verbose
         print(f"Reading {wallet_db_path}")
-        await w.scan(Path(wallet_db_path))
+        num_errors += await w.scan(Path(wallet_db_path))
+
+    if num_errors > 0:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

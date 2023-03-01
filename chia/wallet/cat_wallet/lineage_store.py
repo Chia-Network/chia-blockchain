@@ -48,7 +48,6 @@ class CATLineageStore:
             await cursor.close()
 
     async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
-
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 f"SELECT * FROM {self.table_name} WHERE coin_id=?;",

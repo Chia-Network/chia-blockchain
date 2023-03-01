@@ -54,7 +54,6 @@ def _create_shutdown_file() -> IO:
 
 
 class WeightProofHandler:
-
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 20
@@ -74,7 +73,6 @@ class WeightProofHandler:
         self.multiprocessing_context = multiprocessing_context
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
-
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
             log.error("unknown tip")
@@ -859,7 +857,6 @@ def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
     weight_proof: WeightProof,
 ) -> Tuple[Optional[List[SubEpochSummary]], Optional[List[uint128]]]:
-
     last_ses_hash, last_ses_sub_height = _get_last_ses_hash(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
@@ -1074,7 +1071,6 @@ def _validate_sub_slot_data(
     sub_slots: List[SubSlotData],
     ssi: uint64,
 ) -> Tuple[bool, List[Tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
-
     sub_slot_data = sub_slots[sub_slot_idx]
     assert sub_slot_idx > 0
     prev_ssd = sub_slots[sub_slot_idx - 1]
@@ -1381,7 +1377,6 @@ def __get_rc_sub_slot(
     summaries: List[SubEpochSummary],
     curr_ssi: uint64,
 ) -> RewardChainSubSlot:
-
     ses = summaries[uint32(segment.sub_epoch_n - 1)]
     # find first challenge in sub epoch
     first_idx = None
@@ -1646,7 +1641,6 @@ def _validate_vdf_batch(
     vdf_list: List[Tuple[bytes, bytes, bytes]],
     shutdown_file_path: Optional[pathlib.Path] = None,
 ):
-
     for vdf_proof_bytes, class_group_bytes, info in vdf_list:
         vdf = VDFProof.from_bytes(vdf_proof_bytes)
         class_group = ClassgroupElement.from_bytes(class_group_bytes)

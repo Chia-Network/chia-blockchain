@@ -160,7 +160,6 @@ class ChiaServer:
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = __name__,
     ) -> ChiaServer:
-
         log = logging.getLogger(name)
         log.info("Service capabilities: %s", capabilities)
 

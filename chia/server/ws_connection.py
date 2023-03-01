@@ -137,7 +137,6 @@ class WSChiaConnection:
         local_capabilities_for_handshake: List[Tuple[uint16, str]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
-
         assert ws._writer is not None
         peername = ws._writer.transport.get_extra_info("peername")
 
@@ -572,6 +571,7 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(message.type)
                 last_time = self.log_rate_limit_last_time[message_type]
                 now = time.monotonic()
+                self.log_rate_limit_last_time[message_type] = now
                 if now - last_time >= 60:
                     msg = f"Rate limiting ourselves. message type: {message_type.name}, peer: {self.peer_host}"
                     self.log.debug(msg)

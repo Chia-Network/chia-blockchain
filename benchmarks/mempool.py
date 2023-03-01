@@ -77,7 +77,6 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 
 
 async def run_mempool_benchmark() -> None:
-
     all_coins: Dict[bytes32, CoinRecord] = {}
 
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
@@ -96,7 +95,6 @@ async def run_mempool_benchmark() -> None:
 
     print("Building SpendBundles")
     for peer in range(NUM_PEERS):
-
         print(f"  peer {peer}")
         print("     reward coins")
         unspent: List[Coin] = []

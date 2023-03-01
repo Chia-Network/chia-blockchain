@@ -510,7 +510,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_coin_announcement_consumed(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -592,7 +591,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_puzzle_announcement_consumed(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -804,7 +802,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_seconds_relative(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -862,7 +859,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_seconds_absolute(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -921,7 +917,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
