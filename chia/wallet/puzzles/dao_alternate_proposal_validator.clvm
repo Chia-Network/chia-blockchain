@@ -9,13 +9,12 @@
     CAT_TAIL_HASH
     ATTENDANCE_REQUIRED
     PASS_MARGIN
-    (announcement_source delegated_puzzle_hash announcement_args)
+    (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag)
     (
       proposal_id
       total_votes
       yes_votes
     )
-    spend_or_update_flag
     conditions
   )
 

@@ -8,10 +8,12 @@
     proposal_validator_solution
     delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
     delegated_solution  ; this is not secure unless the delegated puzzle secures it
+                        ; unused in add money spend case
   )
   (include utility_macros.clib)
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+
 
   (if delegated_puzzle_reveal
     ; if we're checking a proposal
@@ -25,7 +27,6 @@
             (list
               proposal_announcement
               proposal_validator_solution
-              spend_or_update_flag
               (a delegated_puzzle_reveal delegated_solution)
             )
           )
@@ -33,7 +34,7 @@
       )
     )
     ; if we're taking money
-    (a MONEY_RECEIVOR proposal_validator_solution)
+    (a MONEY_RECEIVER proposal_validator_solution)
   )
 
 
