@@ -11,7 +11,14 @@ on:
   pull_request:
     branches:
     - '**'
-  workflow_dispatch: null
+  workflow_dispatch:
+    inputs:
+      matrix_mode:
+        default: ${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }}
+        options:
+        - all
+        - limited
+        type: choice
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
@@ -37,7 +44,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
-          echo matrix_mode=${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }} >> $GITHUB_OUTPUT
+          echo matrix_mode=${{ inputs.matrix_mode }} >> $GITHUB_OUTPUT
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
