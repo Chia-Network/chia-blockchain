@@ -155,7 +155,6 @@ def get_file(frame: FrameType) -> str:
 
 
 def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
-
     if event in ["c_call", "c_return", "c_exception"]:
         return
 
@@ -198,7 +197,6 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
     #    f.write(f"{indent}CALL {t} {get_stack(frame)}\n")
 
     elif event == "return":
-
         fi = ti.stack.get(frame)
         assert fi is not None
 
@@ -210,7 +208,6 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
             # with open("instrumentation.log", "a") as f:
             #    f.write(f"{indent}SUSPEND {t} {get_stack(frame)}\n")
         else:
-
             # with open("instrumentation.log", "a") as f:
             #    f.write(f"{indent}RETURN {t} {get_stack(frame)}\n")
 
@@ -290,7 +287,6 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
 
             # print all nodes (functions)
             for name, fun_info in call_tree.items():
-
                 # frames that are less than 0.1% of the total wall-clock time are
                 # filtered
                 if fun_info.duration / total_duration < 0.001:
@@ -310,7 +306,6 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
 
             # print all edges (calls)
             for name, fun_info in call_tree.items():
-
                 if name in filter_frames:
                     continue
 

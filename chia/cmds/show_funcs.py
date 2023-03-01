@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -164,7 +165,7 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
     target_times = [60, 120, 300]
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
-    print(res)
+    print(json.dumps(res))
     print("\n")
     print(f"  Mempool max cost: {res['mempool_max_size']:>12} CLVM cost")
     print(f"      Mempool cost: {res['mempool_size']:>12} CLVM cost")
@@ -180,8 +181,8 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
 
     print("\nFee Rate Estimates:")
     max_name_len = max(len(name) for name in target_times_names)
-    for (n, e) in zip(target_times_names, res["estimates"]):
-        print(f"    {n:>{max_name_len}}: {e} mojo per CLVM cost")
+    for n, e in zip(target_times_names, res["estimates"]):
+        print(f"    {n:>{max_name_len}}: {e:.3f} mojo per CLVM cost")
     print("")
 
 
@@ -195,8 +196,7 @@ async def show_async(
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
-    node_client: Optional[FullNodeRpcClient]
-    async with get_any_service_client("full_node", rpc_port, root_path) as node_config_fp:
+    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as node_config_fp:
         node_client, config, _ = node_config_fp
         if node_client is not None:
             # Check State
@@ -209,7 +209,7 @@ async def show_async(
             if block_header_hash_by_height != "":
                 block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
                 if block_header is not None:
-                    print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
+                    print(f"Header hash of block {block_header_hash_by_height}: {block_header.header_hash.hex()}")
                 else:
                     print("Block height", block_header_hash_by_height, "not found")
             if block_by_header_hash != "":

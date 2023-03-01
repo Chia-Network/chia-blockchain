@@ -8,9 +8,10 @@ from clvm_tools import binutils
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
@@ -228,7 +229,7 @@ class SingletonWallet:
         current_coin_name = self.current_state.name()
         for coin_spend in removals:
             if coin_spend.coin.name() == current_coin_name:
-                for coin in coin_spend.additions():
+                for coin in compute_additions(coin_spend):
                     if coin.amount & 1 == 1:
                         parent_puzzle_hash = coin_spend.coin.puzzle_hash
                         parent_puzzle = puzzle_db.puzzle_for_hash(parent_puzzle_hash)
@@ -354,7 +355,7 @@ def claim_p2_singleton(
     )
     p2_singleton_coin_spend = CoinSpend(
         p2_singleton_coin,
-        p2_singleton_puzzle.to_serialized_program(),
+        SerializedProgram.from_program(p2_singleton_puzzle),
         p2_singleton_solution,
     )
     expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, bytes(b"$")).name()
@@ -397,7 +398,6 @@ def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent=True):
 def spend_coin_to_singleton(
     puzzle_db: PuzzleDB, launcher_puzzle: Program, coin_store: CoinStore, now: CoinTimestamp
 ) -> Tuple[List[Coin], List[CoinSpend]]:
-
     farmed_coin_amount = 100000
     metadata = [("foo", "bar")]
 
@@ -442,7 +442,7 @@ def find_interesting_singletons(puzzle_db: PuzzleDB, removals: List[CoinSpend]) 
             r = Program.from_bytes(bytes(coin_spend.solution))
             key_value_list = r.rest().rest().first()
 
-            eve_coin = coin_spend.additions()[0]
+            eve_coin = compute_additions(coin_spend)[0]
 
             lineage_proof = lineage_proof_for_coin_spend(coin_spend)
             launcher_id = coin_spend.coin.name()
@@ -470,7 +470,6 @@ def filter_p2_singleton(puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, 
 
 
 def test_lifecycle_with_coinstore_as_wallet():
-
     PUZZLE_DB = PuzzleDB()
 
     interested_singletons = []

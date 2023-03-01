@@ -118,6 +118,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "new_signage_point",
+                    data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "new_farming_info":
             payloads.append(
                 create_payload_dict(
@@ -125,6 +133,14 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "new_farming_info",
+                    change_data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "harvester_update":
@@ -136,6 +152,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "harvester_removed":
             payloads.append(
                 create_payload_dict(
@@ -143,6 +167,14 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_removed",
+                    change_data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "submitted_partial":
@@ -163,10 +195,28 @@ class FarmerRpcApi:
                     "metrics",
                 )
             )
+        elif change == "add_connection":
+            payloads.append(
+                create_payload_dict(
+                    "add_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "close_connection":
+            payloads.append(
+                create_payload_dict(
+                    "close_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
 
         return payloads
 
-    async def get_signage_point(self, request: Dict) -> EndpointResult:
+    async def get_signage_point(self, request: Dict[str, Any]) -> EndpointResult:
         sp_hash = hexstr_to_bytes(request["sp_hash"])
         for _, sps in self.service.sps.items():
             for sp in sps:
@@ -185,7 +235,7 @@ class FarmerRpcApi:
                     }
         raise ValueError(f"Signage point {sp_hash.hex()} not found")
 
-    async def get_signage_points(self, _: Dict) -> EndpointResult:
+    async def get_signage_points(self, _: Dict[str, Any]) -> EndpointResult:
         result: List[Dict[str, Any]] = []
         for sps in self.service.sps.values():
             for sp in sps:
@@ -205,12 +255,12 @@ class FarmerRpcApi:
                 )
         return {"signage_points": result}
 
-    async def get_reward_targets(self, request: Dict) -> EndpointResult:
+    async def get_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
         search_for_private_key = request["search_for_private_key"]
         max_ph_to_search = request.get("max_ph_to_search", 500)
         return await self.service.get_reward_targets(search_for_private_key, max_ph_to_search)
 
-    async def set_reward_targets(self, request: Dict) -> EndpointResult:
+    async def set_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
         farmer_target, pool_target = None, None
         if "farmer_target" in request:
             farmer_target = request["farmer_target"]
@@ -228,7 +278,7 @@ class FarmerRpcApi:
             )
         return plot_count
 
-    async def get_pool_state(self, _: Dict) -> EndpointResult:
+    async def get_pool_state(self, request: Dict[str, Any]) -> EndpointResult:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
@@ -237,12 +287,12 @@ class FarmerRpcApi:
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
-    async def set_payout_instructions(self, request: Dict) -> EndpointResult:
+    async def set_payout_instructions(self, request: Dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
         return {}
 
-    async def get_harvesters(self, _: Dict) -> EndpointResult:
+    async def get_harvesters(self, request: Dict[str, Any]) -> EndpointResult:
         return await self.service.get_harvesters(False)
 
     async def get_harvesters_summary(self, _: Dict[str, object]) -> EndpointResult:
@@ -285,7 +335,7 @@ class FarmerRpcApi:
     async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
-    async def get_pool_login_link(self, request: Dict) -> EndpointResult:
+    async def get_pool_login_link(self, request: Dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
         login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
         if login_link is None:

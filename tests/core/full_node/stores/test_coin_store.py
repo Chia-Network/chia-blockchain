@@ -318,7 +318,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     async def test_basic_reorg(self, tmp_dir, db_version, bt):
-
         async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
@@ -327,7 +326,6 @@ class TestCoinStoreWithBlocks:
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
             try:
-
                 records: List[Optional[CoinRecord]] = []
 
                 for block in blocks:
@@ -436,6 +434,19 @@ class TestCoinStoreWithBlocks:
             assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 603)) == 0
             assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"1")], 0)) == 0
 
+            # test max_items limit
+            for limit in [0, 1, 42, 300]:
+                assert (
+                    len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0, max_items=limit))
+                    == limit
+                )
+
+            # if the limit is very high, we should get all of them
+            assert (
+                len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0, max_items=10000))
+                == 300
+            )
+
             coins = [cr.coin.name() for cr in crs]
             bad_coins = [std_hash(cr.coin.name()) for cr in crs]
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 0)) == 600
@@ -443,3 +454,10 @@ class TestCoinStoreWithBlocks:
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 300)) == 302
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 603)) == 0
             assert len(await coin_store.get_coin_states_by_ids(True, bad_coins, 0)) == 0
+
+            # test max_items limit
+            for limit in [0, 1, 42, 300]:
+                assert len(await coin_store.get_coin_states_by_ids(True, coins, 0, max_items=limit)) == limit
+
+            # if the limit is very high, we should get all of them
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, 0, max_items=10000)) == 600
