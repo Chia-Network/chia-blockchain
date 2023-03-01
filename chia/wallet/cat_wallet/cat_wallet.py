@@ -611,6 +611,7 @@ class CATWallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -628,7 +629,14 @@ class CATWallet:
             extra_delta, limitations_solution = 0, Program.to([])
         payment_amount: int = sum([p.amount for p in payments])
         starting_amount: int = payment_amount - extra_delta
-
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    self.wallet_state_manager.wallet_node.logged_in_fingerprint, False
+                )
         if coins is None:
             if exclude_coins is None:
                 exclude_coins = set()
@@ -666,16 +674,14 @@ class CATWallet:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 list(cat_coins)[0].puzzle_hash
             )
-            if derivation_record is not None and self.wallet_state_manager.config.get(
-                "reuse_public_key_for_change", False
-            ):
-                changepuzzlehash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
-                if changepuzzlehash in set([p.puzzle_hash for p in payments]):
+            if derivation_record is not None and reuse_puzhash:
+                change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
+                if change_puzhash in set([p.puzzle_hash for p in payments]):
                     # We cannot create two coins for one puzzle at the same time, create a new puzhash for the change
-                    changepuzzlehash = await self.get_new_inner_hash()
+                    change_puzhash = await self.get_new_inner_hash()
             else:
-                changepuzzlehash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": changepuzzlehash, "amount": uint64(change), "memos": []})
+                change_puzhash = await self.get_new_inner_hash()
+            primaries.append({"puzzlehash": change_puzhash, "amount": uint64(change), "memos": []})
 
         limitations_program_reveal = Program.to([])
         if self.cat_info.my_tail is None:
@@ -777,6 +783,7 @@ class CATWallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_cat_coins: Optional[Set[Coin]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -805,6 +812,7 @@ class CATWallet:
             max_coin_amount=max_coin_amount,
             exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_cat_coins,
+            reuse_puzhash=reuse_puzhash,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records

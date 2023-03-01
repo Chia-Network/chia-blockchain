@@ -989,6 +989,7 @@ class WalletRpcApi:
             }
         else:
             exclude_coins = set()
+
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
                 amount,
@@ -999,6 +1000,7 @@ class WalletRpcApi:
                 max_coin_amount=max_coin_amount,
                 exclude_coin_amounts=exclude_coin_amounts,
                 exclude_coins=exclude_coins,
+                reuse_puzhash=request.get("reuse_addr", None),
             )
             await wallet.push_transaction(tx)
 
@@ -1494,6 +1496,7 @@ class WalletRpcApi:
                     max_coin_amount=max_coin_amount,
                     exclude_coin_amounts=exclude_coin_amounts,
                     exclude_cat_coins=exclude_coins,
+                    reuse_puzhash=request.get("reuse_addr", None),
                 )
                 for tx in txs:
                     await wallet.standard_wallet.push_transaction(tx)
@@ -1508,6 +1511,7 @@ class WalletRpcApi:
                 max_coin_amount=max_coin_amount,
                 exclude_coin_amounts=exclude_coin_amounts,
                 exclude_cat_coins=exclude_coins,
+                reuse_puzhash=request.get("reuse_addr", None),
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)

@@ -262,7 +262,6 @@ class TestCATWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        wallet_node.config["reuse_public_key_for_change"] = True
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -300,7 +299,9 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-        tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
+        tx_records = await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], fee=uint64(1), reuse_puzhash=True
+        )
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
             if tx_record.wallet_id is cat_wallet.id():

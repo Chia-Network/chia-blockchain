@@ -169,6 +169,7 @@ class WalletRpcClient(RpcClient):
         max_coin_amount: uint64 = uint64(0),
         exclude_amounts: Optional[List[uint64]] = None,
         exclude_coin_ids: Optional[List[str]] = None,
+        reuse_addr: Optional[bool] = None,
     ) -> TransactionRecord:
         if memos is None:
             send_dict: Dict = {
@@ -180,6 +181,7 @@ class WalletRpcClient(RpcClient):
                 "max_coin_amount": max_coin_amount,
                 "exclude_coin_amounts": exclude_amounts,
                 "exclude_coin_ids": exclude_coin_ids,
+                "reuse_addr": reuse_addr,
             }
         else:
             send_dict = {
@@ -192,6 +194,7 @@ class WalletRpcClient(RpcClient):
                 "max_coin_amount": max_coin_amount,
                 "exclude_coin_amounts": exclude_amounts,
                 "exclude_coin_ids": exclude_coin_ids,
+                "reuse_addr": reuse_addr,
             }
         res = await self.fetch("send_transaction", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
@@ -639,6 +642,7 @@ class WalletRpcClient(RpcClient):
         exclude_coin_ids: Optional[List[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
         removals: Optional[List[Coin]] = None,
+        reuse_addr: Optional[bool] = None,
     ) -> TransactionRecord:
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -648,6 +652,7 @@ class WalletRpcClient(RpcClient):
             "max_coin_amount": max_coin_amount,
             "exclude_coin_amounts": exclude_amounts,
             "exclude_coin_ids": exclude_coin_ids,
+            "reuse_addr": reuse_addr,
         }
         if amount is not None and inner_address is not None:
             send_dict["amount"] = amount

@@ -341,7 +341,13 @@ class Wallet:
                 primaries_amount += prim["amount"]
             total_amount = amount + fee + primaries_amount
         if reuse_puzhash is None:
-            reuse_puzhash = self.wallet_state_manager.config.get("reuse_public_key_for_change", False)
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    self.wallet_state_manager.wallet_node.logged_in_fingerprint, False
+                )
         total_balance = await self.get_spendable_balance()
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
