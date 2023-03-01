@@ -17,23 +17,23 @@ async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTool
 
     # setup receive service to connect to the daemon
     async with aiohttp.ClientSession() as client:
-        ws = await client.ws_connect(
+        async with client.ws_connect(
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
-        )
+        ) as ws:
 
-        service_name = "test_service"
-        data = {"service": service_name}
-        payload = create_payload("register_service", data, service_name, "daemon")
-        for _ in range(4):
-            await ws.send_str(payload)
-            await ws.receive()
+            service_name = "test_service"
+            data = {"service": service_name}
+            payload = create_payload("register_service", data, service_name, "daemon")
+            for _ in range(4):
+                await ws.send_str(payload)
+                await ws.receive()
 
-    connections = ws_server.connections.get(service_name, set())
-    assert len(connections) == 1
+            connections = ws_server.connections.get(service_name, set())
+            assert len(connections) == 1
 
 
 @pytest.mark.asyncio
@@ -45,30 +45,29 @@ async def test_multiple_register_different(get_daemon: WebSocketServer, bt: Bloc
 
     # setup receive service to connect to the daemon
     async with aiohttp.ClientSession() as client:
-        ws = await client.ws_connect(
+        async with client.ws_connect(
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
-        )
+        ) as ws:
 
-        test_service_names = ["service1", "service2", "service3"]
+            test_service_names = ["service1", "service2", "service3"]
 
-        for service_name in test_service_names:
-            data = {"service": service_name}
-            payload = create_payload("register_service", data, service_name, "daemon")
-            await ws.send_str(payload)
-            await ws.receive()
+            for service_name in test_service_names:
+                data = {"service": service_name}
+                payload = create_payload("register_service", data, service_name, "daemon")
+                await ws.send_str(payload)
+                await ws.receive()
 
-        assert len(ws_server.connections.keys()) == len(test_service_names)
+            assert sorted(ws_server.connections.keys()) == test_service_names
 
-        for service_name in test_service_names:
-            connections = ws_server.connections.get(service_name, set())
-            assert len(connections) == 1
+            for service_name in test_service_names:
+                connections = ws_server.connections.get(service_name, set())
+                assert len(connections) == 1
 
-        await ws.close()
-
+        # Check after closing the connection
         for service_name in test_service_names:
             connections = ws_server.connections.get(service_name, set())
             assert len(connections) == 0
@@ -83,31 +82,31 @@ async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) ->
 
     # setup receive service to connect to the daemon
     async with aiohttp.ClientSession() as client:
-        ws = await client.ws_connect(
+        async with client.ws_connect(
             f"wss://127.0.0.1:{daemon_port}",
             autoclose=True,
             autoping=True,
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
-        )
+        ) as ws:
 
-        test_service_names = ["service1", "service2", "service3", "service4", "service5"]
+            test_service_names = ["service1", "service2", "service3", "service4", "service5"]
 
-        for service_name in test_service_names:
-            data = {"service": service_name}
-            payload = create_payload("register_service", data, service_name, "daemon")
-            await ws.send_str(payload)
-            await ws.receive()
+            for service_name in test_service_names:
+                data = {"service": service_name}
+                payload = create_payload("register_service", data, service_name, "daemon")
+                await ws.send_str(payload)
+                await ws.receive()
 
-    assert len(ws_server.connections.keys()) == len(test_service_names)
+            assert sorted(ws_server.connections.keys()) == test_service_names
 
-    connections = ws_server.connections.get(test_service_names[0], set())
-    assert len(connections) == 1
-    ws_to_remove = next(iter(connections))
+            connections = ws_server.connections.get(test_service_names[0], set())
+            assert len(connections) == 1
+            ws_to_remove = next(iter(connections))
 
-    removed_names = ws_server.remove_connection(ws_to_remove)
-    assert removed_names == test_service_names
+            removed_names = ws_server.remove_connection(ws_to_remove)
+            assert removed_names == test_service_names
 
-    # remove again, should return empty set and not raise any errors
-    removed_names = ws_server.remove_connection(ws_to_remove)
-    assert len(removed_names) == 0
+            # remove again, should return empty set and not raise any errors
+            removed_names = ws_server.remove_connection(ws_to_remove)
+            assert len(removed_names) == 0
