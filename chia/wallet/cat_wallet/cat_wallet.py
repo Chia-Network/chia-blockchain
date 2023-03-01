@@ -212,7 +212,8 @@ class CATWallet:
         for state in await self.wallet_state_manager.interested_store.get_unacknowledged_states_for_asset_id(
             limitations_program_hash
         ):
-            await self.wallet_state_manager.retry_store.add_state(*state)
+            peer_id: bytes32 = (await self.wallet_state_manager.wallet_node.get_full_node_peer()).peer_node_id
+            await self.wallet_state_manager.retry_store.add_state(state[0], peer_id, state[1])
 
         await self.wallet_state_manager.interested_store.delete_unacknowledged_states_for_asset_id(
             limitations_program_hash

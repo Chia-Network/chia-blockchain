@@ -32,7 +32,7 @@ class WalletInterestedStore:
             await conn.execute(f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_tokens({fields})")
 
             # Table for coin states of unknown CATs
-            fields = "coin_state blob PRIMARY KEY, asset_id blob, peer blob, fork_height int"
+            fields = "coin_state blob PRIMARY KEY, asset_id blob, fork_height int"
             await conn.execute(f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_token_states({fields})")
             await conn.execute("CREATE INDEX IF NOT EXISTS asset_id on unacknowledged_asset_token_states(asset_id)")
 
@@ -125,7 +125,6 @@ class WalletInterestedStore:
         self,
         asset_id: bytes32,
         coin_state: CoinState,
-        peer_id: bytes32,
         fork_height: Optional[uint32],
     ) -> None:
         """
@@ -133,24 +132,23 @@ class WalletInterestedStore:
         user decides to acknowledge the asset ID.
         :param asset_id: CAT asset ID
         :param coin_state: The state being ignored
-        :param peer_id: The ID of the peer who sent the state
         :param fork_height: The fork height when the state was sent
         :return: None
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR IGNORE INTO unacknowledged_asset_token_states VALUES(?, ?, ?, ?)",
-                (bytes(coin_state), asset_id, peer_id, 0 if fork_height is None else fork_height),
+                (bytes(coin_state), asset_id, 0 if fork_height is None else fork_height),
             )
             await cursor.close()
 
     async def get_unacknowledged_states_for_asset_id(
         self, asset_id: bytes32
-    ) -> List[Tuple[CoinState, bytes32, uint32]]:
+    ) -> List[Tuple[CoinState, uint32]]:
         """
         Return all states for a particular asset ID that were ignored
         :param asset_id: CAT asset ID
-        :return: list of coin state, peer id, fork height tuples ready to be inserted into the retry store
+        :return: list of coin state, fork height tuples ready to be inserted into the retry store
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -158,7 +156,7 @@ class WalletInterestedStore:
                 "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id,)
             )
 
-        return [(CoinState.from_bytes(row[0]), bytes32(row[2]), uint32(row[3])) for row in rows]
+        return [(CoinState.from_bytes(row[0]), uint32(row[2])) for row in rows]
 
     async def delete_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> None:
         """
