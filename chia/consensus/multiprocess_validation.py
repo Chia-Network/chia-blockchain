@@ -94,6 +94,7 @@ def batch_pre_validate_blocks(
                         cost_per_byte=constants.COST_PER_BYTE,
                         mempool_mode=False,
                         height=block.height,
+                        constants=constants,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:

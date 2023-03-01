@@ -431,41 +431,35 @@ async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
     assert mempool_manager.get_spendbundle(reordered_sb_name) is None
 
 
+co = ConditionOpcode
+mis = MempoolInclusionStatus
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS, None),
         # The rules allow spending an ephemeral coin with an ASSERT_SECONDS_RELATIVE 0 condition
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS, None),
+        (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS, None),
         # Unlike ASSERT_SECONDS_RELATIVE, for ASSERT_HEIGHT_RELATIVE the block height
         # must be greater than the coin creation height + the argument, which means
         # the coin cannot be spent in the same block (where the height would be the same)
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 6, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 7, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 6, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 7, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
         # Current block timestamp is 10050
-        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10050, MempoolInclusionStatus.SUCCESS, None),
-        (
-            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
-            10051,
-            MempoolInclusionStatus.FAILED,
-            Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
-        ),
-        (
-            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
-            10052,
-            MempoolInclusionStatus.FAILED,
-            Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
-        ),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10049, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10050, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10051, mis.FAILED, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
     ],
 )
 async def test_ephemeral_timelock(
