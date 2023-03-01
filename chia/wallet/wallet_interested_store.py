@@ -147,12 +147,11 @@ class WalletInterestedStore:
             await cursor.close()
 
     async def get_unacknowledged_states_for_asset_id(
-        self, asset_id: bytes32, delete_after: bool = False
+        self, asset_id: bytes32
     ) -> List[Tuple[CoinState, bytes32, uint32]]:
         """
         Return all states for a particular asset ID that were ignored
         :param asset_id: CAT asset ID
-        :param delete_after: Boolean to delete the states after they are returned (default: False)
         :return: list of coin state, peer id, fork height tuples ready to be inserted into the retry store
         """
 
@@ -161,11 +160,17 @@ class WalletInterestedStore:
                 "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id,)
             )
 
+        return [(CoinState.from_bytes(row[0]), bytes32(row[2]), uint32(row[3])) for row in rows]
+
+    async def delete_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> None:
+        """
+        Delete all states for a particular asset ID that were ignored
+        :param asset_id: CAT asset ID
+        :return: None
+        """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "DELETE from unacknowledged_asset_token_states WHERE asset_id=?",
                 (asset_id,),
             )
             await cursor.close()
-
-        return [(CoinState.from_bytes(row[0]), bytes32(row[2]), uint32(row[3])) for row in rows]
