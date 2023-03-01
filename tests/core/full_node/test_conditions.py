@@ -112,6 +112,9 @@ async def check_conditions(
     await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err)
 
 
+co = ConditionOpcode
+
+
 class TestConditions:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -121,28 +124,28 @@ class TestConditions:
             # the coin being spent was created in the 3rd block
             # ensure invalid heights fail and pass correctly, depending on
             # which end of the range they exceed
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, None),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, None),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, -1, None),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 0, None),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, None),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, None),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, -1, None),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 0, None),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (co.ASSERT_HEIGHT_ABSOLUTE, -1, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 0, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, -1, None),
+            (co.ASSERT_SECONDS_RELATIVE, 0, None),
+            (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, -1, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
             # test boundary values
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, None),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 3, None),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10000, None),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
+            (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, 0, None),
         ],
     )
     async def test_condition(self, opcode, value, expected, bt):
