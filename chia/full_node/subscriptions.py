@@ -112,7 +112,6 @@ class PeerSubscriptions:
                 break
 
     def remove_peer(self, peer_id: bytes32) -> None:
-
         counter = 0
         puzzle_hashes = self._peer_puzzle_hash.get(peer_id)
         if puzzle_hashes is not None:

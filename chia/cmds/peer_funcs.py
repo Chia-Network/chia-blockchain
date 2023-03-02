@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.cmds.cmds_util import get_any_service_client
+from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
 
 
@@ -113,8 +113,8 @@ async def peer_async(
     add_connection: str,
     remove_connection: str,
 ) -> None:
-    rpc_client: Optional[RpcClient]
-    async with get_any_service_client(node_type, rpc_port, root_path) as node_config_fp:
+    client_type = NODE_TYPES[node_type]
+    async with get_any_service_client(client_type, rpc_port, root_path) as node_config_fp:
         rpc_client, config, _ = node_config_fp
         if rpc_client is not None:
             # Check or edit node connections

@@ -94,6 +94,7 @@ def batch_pre_validate_blocks(
                         cost_per_byte=constants.COST_PER_BYTE,
                         mempool_mode=False,
                         height=block.height,
+                        constants=constants,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:
@@ -116,7 +117,6 @@ def batch_pre_validate_blocks(
                 successfully_validated_signatures = False
                 # If we failed CLVM, no need to validate signature, the block is already invalid
                 if error_int is None:
-
                     # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
                     # signature (which also puts in an error) or we didn't validate the signature because we want to
                     # validate it later. receive_block will attempt to validate the signature later.

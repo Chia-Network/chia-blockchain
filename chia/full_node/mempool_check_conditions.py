@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia_rs import LIMIT_STACK, MEMPOOL_MODE
+from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
 
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -33,7 +34,13 @@ log = logging.getLogger(__name__)
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool, height: Optional[uint32] = None
+    generator: BlockGenerator,
+    max_cost: int,
+    *,
+    cost_per_byte: int,
+    mempool_mode: bool,
+    height: Optional[uint32] = None,
+    constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> NPCResult:
     # in mempool mode, the height doesn't matter, because it's always strict.
     # But otherwise, height must be specified to know which rules to apply
@@ -41,7 +48,9 @@ def get_name_puzzle_conditions(
 
     if mempool_mode:
         flags = MEMPOOL_MODE
-    elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
+    elif height is not None and height >= constants.SOFT_FORK2_HEIGHT:
+        flags = LIMIT_STACK | ENABLE_ASSERT_BEFORE
+    elif height is not None and height >= constants.SOFT_FORK_HEIGHT:
         flags = LIMIT_STACK
     else:
         flags = 0

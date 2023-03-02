@@ -32,7 +32,7 @@ logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on deb
 
 
 def mempool_not_empty(fnapi: FullNodeSimulator) -> bool:
-    return len(fnapi.full_node.mempool_manager.mempool.spends) > 0
+    return fnapi.full_node.mempool_manager.mempool.size() > 0
 
 
 async def farm_blocks_until(
@@ -720,9 +720,7 @@ async def test_nft_offer_sell_nft_for_cat(
     cats_to_mint = 100000
     cats_to_trade = uint64(10000)
     async with wallet_node_maker.wallet_state_manager.lock:
-        full_node_api.full_node.log.warning(
-            f"Mempool size: {len(full_node_api.full_node.mempool_manager.mempool.spends)}"
-        )
+        full_node_api.full_node.log.warning(f"Mempool size: {full_node_api.full_node.mempool_manager.mempool.size()}")
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(cats_to_mint)
         )

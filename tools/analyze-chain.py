@@ -71,7 +71,6 @@ def callable_for_module_function_path(call: str) -> Callable:
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
 def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
-
     call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, List[bytes], float, int], None]
     if call is None:
         call_f = partial(default_call, verify_signatures)

@@ -41,7 +41,7 @@ from chia.wallet.derive_keys import (
 )
 
 
-def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
+def dict_add_new_default(updated: Dict[str, Any], default: Dict[str, Any], do_not_migrate_keys: Dict[str, Any]) -> None:
     for k in do_not_migrate_keys:
         if k in updated and do_not_migrate_keys[k] == "":
             updated.pop(k)
@@ -155,7 +155,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         save_config(new_root, "config.yaml", config)
 
 
-def copy_files_rec(old_path: Path, new_path: Path):
+def copy_files_rec(old_path: Path, new_path: Path) -> None:
     if old_path.is_file():
         print(f"{new_path}")
         new_path.parent.mkdir(parents=True, exist_ok=True)
@@ -171,7 +171,7 @@ def migrate_from(
     new_root: Path,
     manifest: List[str],
     do_not_migrate_settings: List[str],
-):
+) -> int:
     """
     Copy all the files in "manifest" to the new config directory.
     """
@@ -193,7 +193,7 @@ def migrate_from(
 
     with lock_and_load_config(new_root, "config.yaml") as config:
         config_str: str = initial_config_file("config.yaml")
-        default_config: Dict = yaml.safe_load(config_str)
+        default_config: Dict[str, Any] = yaml.safe_load(config_str)
         flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
         dict_add_new_default(config, default_config, flattened_keys)
 
@@ -204,7 +204,7 @@ def migrate_from(
     return 1
 
 
-def copy_cert_files(cert_path: Path, new_path: Path):
+def copy_cert_files(cert_path: Path, new_path: Path) -> None:
     for old_path_child in cert_path.glob("*.crt"):
         new_path_child = new_path / old_path_child.name
         copy_files_rec(old_path_child, new_path_child)
@@ -222,7 +222,7 @@ def init(
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-):
+) -> Optional[int]:
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):
@@ -254,6 +254,8 @@ def init(
             return -1
     else:
         return chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet, v1_db=v1_db)
+
+    return None
 
 
 def chia_version_number() -> Tuple[str, str, str, str]:
@@ -316,7 +318,7 @@ def chia_init(
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-):
+) -> int:
     """
     Standard first run initialization or migration steps. Handles config creation,
     generation of SSL certs, and setting target addresses (via check_keys).
@@ -383,7 +385,7 @@ def chia_init(
     if should_check_keys:
         check_keys(root_path)
 
-    config: Dict
+    config: Dict[str, Any]
 
     db_path_replaced: str
     if v1_db:
