@@ -48,6 +48,7 @@ jobs:
           CHIA_COMMENT_TRIGGER_PULL_NUMBER: ${{ github.event.issue.number }}
         run: |
           import json
+          import os
           import subprocess
           import sys
 
