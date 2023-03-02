@@ -1,0 +1,40 @@
+on:
+  issue_comment:
+    types:
+    - created
+
+jobs:
+  pr_commented:
+    name: PR comment
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo ${the_context} | jq
+        env:
+          the_context: ${{ toJson(github) }}
+
+      - run: |
+          echo ${the_context} | jq
+        env:
+          the_context: ${{ toJson(job) }}
+
+      - run: |
+          echo ${the_context} | jq
+        env:
+          the_context: ${{ toJson(steps) }}
+
+      - run: |
+          echo ${the_context} | jq
+        env:
+          the_context: ${{ toJson(runner) }}
+
+      - run: |
+          echo ${the_context} | jq
+        env:
+          the_context: ${{ toJson(strategy) }}
+
+      - run: |
+          echo ${the_context} | jq
+        env:
+          the_context: ${{ toJson(matrix) }}
