@@ -49,24 +49,28 @@ jobs:
         run: |
           import json
           import subprocess
+          import sys
 
           github = json.loads(os.environ["GITHUB_CONTEXT"])
           body = os.environ["CHIA_COMMENT_TRIGGER_BODY"].strip()
-          first_line, _, _ = body.partition("\n")
+          first_line = body[:body.find("\n")]
           command, mode = [segment.strip() for segment in first_line.split(":")]
 
-          if command == "matrix mode":
-              pull_number = os.environ["CHIA_COMMENT_TRIGGER_PULL_NUMBER"]
-              subprocess.run(
-                  [
-                      "gh",
-                      "workflow",
-                      "run",
-                      "test.yml",
-                      "--ref",
-                      f"refs/pull/{pull_number}/merged",
-                      "--field",
-                      f"matrix_mode={matrix_mode}",
-                  ],
-                  check=True,
-              )
+          if command != "matrix mode":
+              print("comment does not match")
+              sys.exit(0)
+
+          print("comment matches")
+          pull_number = os.environ["CHIA_COMMENT_TRIGGER_PULL_NUMBER"]
+          command = [
+              "gh",
+              "workflow",
+              "run",
+              "test.yml",
+              "--ref",
+              f"refs/pull/{pull_number}/merged",
+              "--field",
+              f"matrix_mode={matrix_mode}",
+          ]
+          print(f"about to run: {command}")
+          subprocess.run(command, check=True)
