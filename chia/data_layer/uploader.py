@@ -22,7 +22,7 @@ class DLUploader(Protocol):
     def __init__(self) -> None:
         ...
 
-    async def check_store_id(
+    def check_store_id(
         self,
         store_id: bytes32,
         log: logging.Logger,
@@ -35,6 +35,7 @@ class DLUploader(Protocol):
         tree_id: bytes32,
         root: Root,
         foldername: Path,
+        log: logging.Logger,
         overwrite: bool = False,
     ) -> bool:
         """upload file return result"""
@@ -50,7 +51,7 @@ class FilesystemUploader:
     def __init__(self) -> None:
         self.name = "file system uploader"
 
-    async def check_store_id(
+    def check_store_id(
         self,
         store_id: bytes32,
         log: logging.Logger,
@@ -84,14 +85,16 @@ class S3Uploader:
         self.store_ids = store_ids
         self.bucket = bucket
 
-    async def check_store_id(
+    def check_store_id(
         self,
         store_id: bytes32,
         log: logging.Logger,
     ) -> bool:
-        if store_id in self.store_ids:
-            log.info(f"{self.name} uploader handles store {store_id}")
-            return True
+        log.info(f"check uploader {store_id} {self.store_ids}")
+        for store in self.store_ids:
+            if store_id == store:
+                log.info(f"almog {self.name} uploader handles store {store}")
+                return True
         return False
 
     async def upload(

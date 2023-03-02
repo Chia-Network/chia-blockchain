@@ -443,6 +443,7 @@ class DataLayer:
                 tree_id,
                 root,
                 self.server_files_location,
+                self.log,
             ):
                 break
 
