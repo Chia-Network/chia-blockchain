@@ -33,6 +33,8 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_MY_PARENT_ID = bytes([71])
     ASSERT_MY_PUZZLEHASH = bytes([72])
     ASSERT_MY_AMOUNT = bytes([73])
+    ASSERT_MY_BIRTH_SECONDS = bytes([74])
+    ASSERT_MY_BIRTH_HEIGHT = bytes([75])
 
     # the conditions below ensure that we're "far enough" in the future
 
