@@ -383,6 +383,7 @@ def test_lockup() -> None:
             1,
             20,
             child_puzhash,
+            0,
         ]
     )
     conds: Program = full_lockup_puz.run(solution)

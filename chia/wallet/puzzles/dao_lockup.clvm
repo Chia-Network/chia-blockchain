@@ -21,6 +21,7 @@
   vote_info
   vote_amount
   my_puzhash
+  new_innerpuzhash  ; only include this if we're changing owners
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -161,9 +162,9 @@
     )
   )
 
-  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH active_votes INNERPUZ)
+  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH active_votes innerpuzhash)
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
-                                     (sha256 ONE INNERPUZ)
+                                     innerpuzhash
                                      (sha256tree active_votes)
                                      (sha256 ONE CAT_TAIL_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
@@ -247,19 +248,23 @@
         (c
           (list ASSERT_MY_COIN_ID my_id)
           (c
-            (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
-              SINGLETON_MOD_HASH
-              SINGLETON_LAUNCHER_PUZHASH
-              LOCKUP_MOD_HASH
-              CAT_MOD_HASH
-              CAT_TAIL_HASH
-              PROPOSAL_MOD_HASH
-              INNERPUZ
-              my_id
-              new_proposal_vote_id_or_removal_id
-              ACTIVE_VOTES
-              proposal_curry_vals
+            (if new_proposal_vote_id_or_removal_id
+              (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
+                SINGLETON_MOD_HASH
+                SINGLETON_LAUNCHER_PUZHASH
+                LOCKUP_MOD_HASH
+                CAT_MOD_HASH
+                CAT_TAIL_HASH
+                PROPOSAL_MOD_HASH
+                INNERPUZ
+                my_id
+                new_proposal_vote_id_or_removal_id
+                ACTIVE_VOTES
+                proposal_curry_vals
+              )
+              (list REMARK)
             )
+
             (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
               (a INNERPUZ inner_solution)
               (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
@@ -270,7 +275,7 @@
                 CAT_MOD_HASH
                 CAT_TAIL_HASH
                 (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
-                INNERPUZ
+                (if new_innerpuzhash new_innerpuzhash (sha256tree INNERPUZ))
               )
               my_amount
               ; TODO: add namespace to this announcement to allow announcements from the innerpuz
@@ -285,7 +290,7 @@
       )
     )
 
-    ; return to return_address - check if our locked list is empty
+    ; return to return_address or remove something from active list - check if our locked list is empty
     (if ACTIVE_VOTES
       (check_for_removal_announcement  ; locked list is not empty, so we must be trying to remove something from it
         PROPOSAL_MOD_HASH
