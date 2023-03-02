@@ -15,6 +15,6 @@ def setproctitle(ps_name: str) -> None:
 
 def getproctitle() -> str:
     if no_setproctitle is False:
-        return pysetproctitle.getproctitle()
+        return str(pysetproctitle.getproctitle())
 
     return ""

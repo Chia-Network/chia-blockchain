@@ -29,6 +29,7 @@ from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
+from chia.util.chia_setproctitle import setproctitle
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.json_util import dict_to_json_str
@@ -36,7 +37,6 @@ from chia.util.keychain import Keychain, passphrase_requirements, supports_os_pa
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
-from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()

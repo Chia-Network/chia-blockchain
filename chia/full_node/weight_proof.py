@@ -41,10 +41,10 @@ from chia.types.weight_proof import (
     WeightProof,
 )
 from chia.util.block_cache import BlockCache
+from chia.util.chia_setproctitle import getproctitle, setproctitle
 from chia.util.chunks import chunks
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 

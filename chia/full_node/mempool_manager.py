@@ -32,13 +32,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util import cached_bls
 from chia.util.cached_bls import LOCAL_CACHE
+from chia.util.chia_setproctitle import getproctitle, setproctitle
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 

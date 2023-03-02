@@ -21,9 +21,9 @@ from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
+from chia.util.chia_setproctitle import setproctitle
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
-from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
 from .reconnect_task import start_reconnect_task

@@ -15,11 +15,11 @@ from aiohttp import web
 from chia.data_layer.download_data import is_filename_valid
 from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
+from chia.util.chia_setproctitle import setproctitle
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.network import WebServer
 from chia.util.path import path_from_root
-from chia.util.setproctitle import setproctitle
 
 # from chia.cmds.chia import monkey_patch_click
 

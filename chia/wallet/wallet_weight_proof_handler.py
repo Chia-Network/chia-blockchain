@@ -12,8 +12,8 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.weight_proof import WeightProof
+from chia.util.chia_setproctitle import getproctitle, setproctitle
 from chia.util.ints import uint32
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
