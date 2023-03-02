@@ -13,20 +13,14 @@ from chia.util.network import is_trusted_peer
     [
         # IPv6 localhost testing
         ("::1", bytes32(b"0" * 32), {}, False, True),
-        ("[::1]", bytes32(b"0" * 32), {}, False, True),
         # IPv6 localhost testing with mismatched node_id (still True)
         ("::1", bytes32(b"d" * 32), {bytes32(b"a" * 32).hex(): "0"}, False, True),
-        ("[::1]", bytes32(b"d" * 32), {bytes32(b"a" * 32).hex(): "0"}, False, True),
         # IPv6 localhost testing with testing flag True
         ("::1", bytes32(b"0" * 32), {}, True, False),
-        ("[::1]", bytes32(b"0" * 32), {}, True, False),
         ("::1", bytes32(b"d" * 32), {bytes32(b"a" * 32).hex(): "0"}, True, False),
-        ("[::1]", bytes32(b"d" * 32), {bytes32(b"a" * 32).hex(): "0"}, True, False),
         # IPv6 localhost long form
         ("0:0:0:0:0:0:0:1", bytes32(b"0" * 32), {}, False, True),
-        ("[0:0:0:0:0:0:0:1]", bytes32(b"0" * 32), {}, False, True),
         ("0:0:0:0:0:0:0:1", bytes32(b"0" * 32), {}, True, False),
-        ("[0:0:0:0:0:0:0:1]", bytes32(b"0" * 32), {}, True, False),
         # IPv4 localhost testing
         ("127.0.0.1", bytes32(b"0" * 32), {}, False, True),
         ("localhost", bytes32(b"0" * 32), {}, False, True),
