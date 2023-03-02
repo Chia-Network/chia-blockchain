@@ -18,5 +18,5 @@
   (assert (= MERKLE_ROOT (simplify_merkle_proof (sha256tree puzzle_to_execute) merkle_proof))
     (a puzzle_to_execute inner_solution)
   )
-  ;; (simplify_merkle_proof (sha256tree puzzle_to_execute) merkle_proof)
+
 )
