@@ -540,7 +540,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
     requested_spends: List[CoinSpend] = [
         cs for cs in offer.to_spend_bundle().coin_spends if cs.coin.parent_coin_info == bytes32([0] * 32)
     ]
-    for spend in offer.coin_spends:
+    for spend in offer.coin_spends():
         # Operating directly on the serialization, we're going to jump to either the first instance of
         # the DL graftroot mod, or the announcements we expect from the requested payments
         solution_bytes: bytes = bytes(spend.solution)
@@ -622,7 +622,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
 
     return SpendBundle(
         new_spends,
-        offer.aggregated_signature,
+        offer.aggregated_signature(),
     )
 
 
