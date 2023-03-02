@@ -57,10 +57,11 @@ jobs:
           command, mode = [segment.strip() for segment in first_line.split(":")]
 
           if command != "matrix mode":
-              print("comment does not match")
+              print(f"comment does not match: {first_line}")
               sys.exit(0)
 
           print("comment matches")
+          print(f"  mode: {mode}")
           pull_number = os.environ["CHIA_COMMENT_TRIGGER_PULL_NUMBER"]
           command = [
               "gh",
