@@ -40,3 +40,33 @@ jobs:
           echo ${the_context} | jq
         env:
           the_context: ${{ toJson(matrix) }}
+
+      - shell: python
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+          CHIA_COMMENT_TRIGGER_BODY: ${{ github.event.comment.body }}
+          CHIA_COMMENT_TRIGGER_PULL_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          import json
+          import subprocess
+
+          github = json.loads(os.environ["GITHUB_CONTEXT"])
+          body = os.environ["CHIA_COMMENT_TRIGGER_BODY"].strip()
+          first_line, _, _ = body.partition("\n")
+          command, mode = [segment.strip() for segment in first_line.split(":")]
+
+          if command == "matrix mode":
+              pull_number = os.environ["CHIA_COMMENT_TRIGGER_PULL_NUMBER"]
+              subprocess.run(
+                  [
+                      "gh",
+                      "workflow",
+                      "run",
+                      "test.yml",
+                      "--ref",
+                      f"refs/pull/{pull_number}/merged",
+                      "--field",
+                      f"matrix_mode={matrix_mode}",
+                  ],
+                  check=True,
+              )
