@@ -470,9 +470,6 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id)
-            if generation is None:
-                raise Exception("no gen available")
-
             cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation AND status == :status",
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
