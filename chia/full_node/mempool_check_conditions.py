@@ -135,6 +135,12 @@ def mempool_check_time_locks(
 
     for spend in bundle_conds.spends:
         unspent = removal_coin_records[bytes32(spend.coin_id)]
+        if spend.birth_height is not None:
+            if spend.birth_height != unspent.confirmed_block_index:
+                return Err.ASSERT_MY_BIRTH_HEIGHT_FAILED
+        if spend.birth_seconds is not None:
+            if spend.birth_seconds != unspent.timestamp:
+                return Err.ASSERT_MY_BIRTH_SECONDS_FAILED
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED

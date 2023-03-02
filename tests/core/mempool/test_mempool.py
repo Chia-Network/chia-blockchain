@@ -371,6 +371,15 @@ class TestMempoolManager:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 5, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 6, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10049, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10050, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10051, mis.FAILED),
             (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS),
             (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS),
             (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS),

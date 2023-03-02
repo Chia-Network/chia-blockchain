@@ -99,6 +99,8 @@ async def instantiate_mempool_manager(
 
 def make_test_conds(
     *,
+    birth_height: Optional[uint32] = None,
+    birth_seconds: Optional[uint64] = None,
     height_relative: Optional[uint32] = None,
     height_absolute: uint32 = uint32(0),
     seconds_relative: uint64 = uint64(0),
@@ -113,8 +115,8 @@ def make_test_conds(
                 seconds_relative,
                 None,
                 None,
-                None,
-                None,
+                birth_height,
+                birth_seconds,
                 [],
                 [],
                 0,
@@ -218,6 +220,46 @@ class TestCheckTimeLocks:
         expected_error: Optional[Err],
     ) -> None:
         conds = make_test_conds(seconds_absolute=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # the coin's birth height is
+            (9, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (10, None),
+            (11, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+        ],
+    )
+    def test_assert_my_birth_height(
+        self,
+        value: uint32,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(birth_height=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # the coin's birth timestamp is
+            (9999, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (10000, None),
+            (10001, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+        ],
+    )
+    def test_assert_my_birth_seconds(
+        self,
+        value: uint64,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(birth_seconds=value)
         assert (
             mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
             == expected_error
