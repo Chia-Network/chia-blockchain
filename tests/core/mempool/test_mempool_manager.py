@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -528,3 +529,93 @@ async def test_get_items_not_in_filter() -> None:
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
     assert result == [sb1]
+
+
+def always(_: bytes32) -> bool:
+    return True
+
+
+def never(_: bytes32) -> bool:
+    return False
+
+
+class TestFor(Enum):
+    MAX_COST = 0
+    MAX_FEE = 1
+    NORMAL_PATH = 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_for", [t for t in TestFor])
+@pytest.mark.parametrize("inclusion_filter", [always, never])
+async def test_process_mempool_items(test_for: TestFor, inclusion_filter: Callable[[bytes32], bool]) -> None:
+    coin1_amount = uint64(10000000)
+    coin1 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, coin1_amount)
+    coin1_child = Coin(coin1.name(), IDENTITY_PUZZLE_HASH, coin1_amount - 42)
+    coin2_amount = uint64(0xFFFFFFFFFFFFFFFF)
+    coin2 = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, coin2_amount)
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        test_coin_records = {
+            coin1.name(): CoinRecord(coin1, uint32(0), uint32(0), False, uint64(0)),
+            coin2.name(): CoinRecord(coin2, uint32(0), uint32(0), False, uint64(0)),
+        }
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    conditions = []
+    if test_for == TestFor.MAX_COST:
+        g1 = G1Element()
+        for _ in range(2436):
+            conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
+        expected_cost1 = uint64(5498561056)
+    else:
+        expected_cost1 = uint64(2945056)
+    # We're leaving a small fee in this one
+    conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin1_amount - 42])
+    sb1, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin1)
+    assert result == (expected_cost1, MempoolInclusionStatus.SUCCESS, None)
+    spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(
+        item_inclusion_filter=inclusion_filter
+    )
+    if inclusion_filter == never:
+        # Make sure this mempool item got skipped by item_inclusion_filter
+        assert len(spend_bundles) == 0
+        assert cost_sum == 0
+        assert len(additions) == 0
+        assert len(removals) == 0
+    elif inclusion_filter == always:
+        # Make sure this mempool item was included by item_inclusion_filter
+        assert spend_bundles == [sb1]
+        assert cost_sum == expected_cost1
+        assert additions == [coin1_child]
+        assert removals == [coin1]
+        # Create a second item that when combined with the first one we exceed the maximum fee/block clvm cost
+        if test_for == TestFor.MAX_FEE:
+            conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+            coin2_child = Coin(coin2.name(), IDENTITY_PUZZLE_HASH, 2)
+            expected_cost2 = uint64(2957056)
+        else:
+            conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin2_amount - 2]]
+            coin2_child = Coin(coin2.name(), IDENTITY_PUZZLE_HASH, coin2_amount - 2)
+            expected_cost2 = uint64(3065056)
+        sb2, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin2)
+        assert result == (expected_cost2, MempoolInclusionStatus.SUCCESS, None)
+        spend_bundles, cost_sum, additions, removals = mempool_manager.process_mempool_items(
+            item_inclusion_filter=inclusion_filter
+        )
+        if test_for == TestFor.NORMAL_PATH:
+            assert spend_bundles == [sb1, sb2]
+            assert cost_sum == expected_cost1 + expected_cost2
+            assert additions == [
+                coin1_child,
+                coin2_child,
+            ]
+            assert removals == [coin1, coin2]
+        else:
+            # The second item has a higher FPC so it should get picked first
+            assert spend_bundles == [sb2]
+            # The first item hits the maximum fee/block clvm cost and gets skipped
+            assert cost_sum == expected_cost2
+            assert additions == [coin2_child]
+            assert removals == [coin2]
