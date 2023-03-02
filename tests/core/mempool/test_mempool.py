@@ -342,6 +342,10 @@ async def next_block(full_node_1, wallet_a, bt) -> Coin:
     return list(blocks[-1].get_included_reward_coins())[0]
 
 
+co = ConditionOpcode
+mis = MempoolInclusionStatus
+
+
 class TestMempoolManager:
     @pytest.mark.asyncio
     async def test_basic_mempool_manager(self, two_nodes_one_block, wallet_a, self_hostname):
@@ -367,26 +371,26 @@ class TestMempoolManager:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING),
+            (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING),
             # the absolute height and seconds tests require fresh full nodes to
             # run the test on. The fixture (one_node_one_block) creates a block,
             # then condition_tester2 creates another 3 blocks
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 6, MempoolInclusionStatus.PENDING),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 7, MempoolInclusionStatus.PENDING),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 6, mis.PENDING),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 7, mis.PENDING),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10050, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10051, MempoolInclusionStatus.FAILED),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10052, MempoolInclusionStatus.FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10049, mis.SUCCESS),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10050, mis.SUCCESS),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10051, mis.FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED),
         ],
     )
     async def test_ephemeral_timelock(self, one_node_one_block, wallet_a, opcode, lock_value, expected):
