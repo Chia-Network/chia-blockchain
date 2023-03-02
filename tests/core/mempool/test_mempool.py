@@ -396,9 +396,7 @@ class TestMempoolManager:
     async def test_ephemeral_timelock(self, one_node_one_block, wallet_a, opcode, lock_value, expected):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
-            tx1 = wallet_a.generate_signed_transaction(
-                uint64(1000000), wallet_a.get_new_puzzlehash(), coin_2, conditions.copy(), uint64(0)
-            )
+            tx1 = wallet_a.generate_signed_transaction(uint64(1000000), wallet_a.get_new_puzzlehash(), coin_2)
 
             ephemeral_coin: Coin = tx1.additions()[0]
             tx2 = wallet_a.generate_signed_transaction(
