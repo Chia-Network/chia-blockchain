@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+import re
 import statistics
 from pathlib import Path
 from random import Random
@@ -193,6 +194,15 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
         expected.append(expected_generation)
 
     assert generations == expected
+
+
+@pytest.mark.asyncio
+async def test_get_tree_generation_returns_none_when_none_available(
+    raw_data_store: DataStore,
+    tree_id: bytes32,
+) -> None:
+    with pytest.raises(Exception, match=re.escape(f"No generations found for tree ID: {tree_id.hex()}")):
+        await raw_data_store.get_tree_generation(tree_id=tree_id)
 
 
 @pytest.mark.asyncio
