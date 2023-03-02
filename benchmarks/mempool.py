@@ -238,6 +238,40 @@ async def run_mempool_benchmark() -> None:
         print(f"  time: {stop - start:0.4f}s")
         print(f"  per call: {(stop - start) / len(blocks) * 1000:0.2f}ms")
 
+        print("== test churn")
+
+        mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        height = start_height
+        rec = fake_block_record(height, timestamp)
+        await mempool.new_peak(rec, None)
+
+        blk_idx = 0
+        all_coin_ids = list(all_coins.keys())
+        with enable_profiler(True, f"churn-{suffix}"):
+            start = monotonic()
+            for spend in range(len(spend_bundles[0])):
+                tasks = []
+                for peer in range(NUM_PEERS):
+                    tasks.append(asyncio.create_task(add_spend_bundles([spend_bundles[peer][spend]])))
+                await asyncio.gather(*tasks)
+
+                # we've added NUM_PEER transactions, now receive a new block where 1
+                # coin is spent
+                height = uint32(height + 1)
+                timestamp = uint64(timestamp + 19)
+                rec = fake_block_record(height, timestamp)
+                coin_id = all_coin_ids[blk_idx]
+                npc_result = NPCResult(
+                    None,
+                    SpendBundleConditions(
+                        [Spend(coin_id, bytes32(b" " * 32), None, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+                    ),
+                    uint64(1000000000),
+                )
+                await mempool.new_peak(rec, npc_result)
+                blk_idx += 1
+            stop = monotonic()
+
 
 if __name__ == "__main__":
     import logging
