@@ -7,6 +7,7 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
+    "anyio==3.6.2",
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
@@ -28,10 +29,10 @@ dependencies = [
     "setproctitle==1.3.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
-    "dnspython==2.2.1",  # Query DNS seeds
+    "dnspython==2.3.0",  # Query DNS seeds
     "watchdog==2.3.1",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.4.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.5.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.4.0",
     "packaging==23.0",
     "psutil==5.9.4",
@@ -42,7 +43,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "anyio",
     "build",
     "coverage",
     "diff-cover",
