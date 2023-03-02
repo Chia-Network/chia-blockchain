@@ -48,7 +48,7 @@ jobs:
       run: bash build_scripts/clean-runner.sh || true
 
     - name: Set Env
-      uses: Chia-Network/actions/setjobenv@main
+      uses: Chia-Network/actions/setjobenv@wallentx/setjobenv
       
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number

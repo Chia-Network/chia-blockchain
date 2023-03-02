@@ -57,7 +57,7 @@ jobs:
         run: bash build_scripts/clean-runner.sh || true
 
       - name: Set Env
-        uses: Chia-Network/actions/setjobenv@main
+        uses: Chia-Network/actions/setjobenv@wallentx/setjobenv
 
       - name: Test for secrets access
         id: check_secrets

@@ -36,7 +36,7 @@ jobs:
         submodules: recursive
 
     - name: Set Env
-      uses: Chia-Network/actions/setjobenv@main
+      uses: Chia-Network/actions/setjobenv@wallentx/setjobenv
 
     - name: Set git urls to https instead of ssh
       run: |
