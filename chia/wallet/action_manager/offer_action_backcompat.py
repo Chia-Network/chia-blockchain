@@ -11,7 +11,8 @@ from chia.data_layer.data_layer_wallet import OuterDriver as DLOuterDriver
 from chia.data_layer.data_layer_wallet import UpdateMetadataDL
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -539,7 +540,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
     requested_spends: List[CoinSpend] = [
         cs for cs in offer.to_spend_bundle().coin_spends if cs.coin.parent_coin_info == bytes32([0] * 32)
     ]
-    for spend in offer.bundle.coin_spends:
+    for spend in offer.coin_spends:
         # Operating directly on the serialization, we're going to jump to either the first instance of
         # the DL graftroot mod, or the announcements we expect from the requested payments
         solution_bytes: bytes = bytes(spend.solution)
@@ -621,7 +622,7 @@ def offer_to_spend(offer: Offer) -> SpendBundle:
 
     return SpendBundle(
         new_spends,
-        offer.bundle.aggregated_signature,
+        offer.aggregated_signature,
     )
 
 

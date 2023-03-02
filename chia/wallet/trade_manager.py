@@ -762,8 +762,8 @@ class TradeManager:
             ]
             complete_offer = Offer.from_spend_bundle(
                 SpendBundle(
-                    [*offer_no_payments.bundle.coin_spends, *payment_spends],
-                    offer_no_payments.bundle.aggregated_signature,
+                    [*offer_no_payments.coin_spends, *payment_spends],
+                    offer_no_payments.aggregated_signature,
                 )
             )
         else:
