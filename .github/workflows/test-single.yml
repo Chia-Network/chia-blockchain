@@ -130,7 +130,9 @@ jobs:
           fetch-depth: 0
 
       - name: Set Env
-        uses: Chia-Network/actions/setjobenv@main
+        uses: Chia-Network/actions/setjobenv@wallentx/setjobenv
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main

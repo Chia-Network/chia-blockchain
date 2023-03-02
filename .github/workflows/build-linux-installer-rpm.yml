@@ -45,6 +45,8 @@ jobs:
 
     - name: Set Env
       uses: Chia-Network/actions/setjobenv@wallentx/setjobenv
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: Chia-Network/actions/enforce-semver@main
       if: env.FULL_RELEASE == 'true'
