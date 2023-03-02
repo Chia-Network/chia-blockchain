@@ -16,12 +16,12 @@ import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
 from typing_extensions import final
 from watchdog.events import DirModifiedEvent, FileSystemEvent, FileSystemEventHandler
-from watchdog.observers import Observer
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelExists, KeychainLabelInvalid
 from chia.util.lock import Lockfile
 from chia.util.streamable import convert_byte_type
+from chia.util.watchdog_observer import TypedObserver
 
 SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
@@ -171,7 +171,7 @@ class FileKeyringContent:
 
 @final
 @dataclass
-class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot subclass "" (has type "Any")
+class FileKeyring(FileSystemEventHandler):  # type: ignore[misc]
     """
     FileKeyring provides a file-based keyring store to manage a FileKeyringContent .The public interface is intended
     to align with the API provided by the keyring module such that the KeyringWrapper class can pick an appropriate
@@ -181,7 +181,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     keyring_path: Path
     # Cache of the whole plaintext YAML file contents (never encrypted)
     cached_file_content: FileKeyringContent
-    keyring_observer: Observer = field(default_factory=Observer)
+    keyring_observer: TypedObserver = field(default_factory=TypedObserver)
     load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
     # Cache of the decrypted YAML contained in keyring.data
