@@ -1064,6 +1064,8 @@ class WalletStateManager:
                         ):
                             continue
 
+                    if coin_state.spent_height is not None and coin_name in trade_removals:
+                        trade_coin_removed.append(coin_state)
                     wallet_id: Optional[uint32] = None
                     wallet_type: Optional[WalletType] = None
                     if wallet_info is not None:
@@ -1116,8 +1118,6 @@ class WalletStateManager:
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
                         self.log.debug("Coin Removed: %s", coin_state)
-                        if coin_name in trade_removals:
-                            trade_coin_removed.append(coin_state)
                         children: Optional[List[CoinState]] = None
                         record = local_record
                         if record is None:
@@ -1592,11 +1592,29 @@ class WalletStateManager:
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
+
         updated = await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         if updated:
             tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
             if tx is not None:
-                self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
+                if send_status and error and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO):
+                    if tx.spend_bundle is not None:
+                        coins_removed = tx.spend_bundle.removals()
+                        for removed_coin in coins_removed:
+                            trade = await self.trade_manager.get_trade_by_coin(removed_coin)
+                            if trade is not None:
+                                # offer was tied to these coins, lets subscribe to them to get a confirmation to
+                                # cancel it if it's confirmed
+                                # we send transactions to multiple peers, and in cases when mempool gets
+                                # fragmented, it's safest to wait for confirmation from blockchain before setting
+                                # offer to failed
+                                await self.add_interested_coin_ids([removed_coin.name()])
+
+                    self.state_changed(
+                        "tx_update", tx.wallet_id, {"transaction": tx, "error": error.name, "status": send_status.value}
+                    )
+                else:
+                    self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
     async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
         """
