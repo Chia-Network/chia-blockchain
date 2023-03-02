@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_from_bytes
@@ -326,7 +326,7 @@ _T_UpdateMetadata = TypeVar("_T_UpdateMetadata", bound="UpdateMetadata")
 @dataclass(frozen=True)
 class UpdateMetadata:
     metadata_solution: Program
-    metadata_updater: Program = NFT_METADATA_UPDATER
+    metadata_updater: Program = field(default_factory=lambda: NFT_METADATA_UPDATER)
 
     @staticmethod
     def name() -> str:
