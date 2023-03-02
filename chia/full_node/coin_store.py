@@ -36,10 +36,8 @@ class CoinStore:
         self = CoinStore(db_wrapper, LRUCache(100))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-
             log.info("DB: Creating coin store tables and indexes.")
             if self.db_wrapper.db_version == 2:
-
                 # the coin_name is unique in this table because the CoinStore always
                 # only represent a single peak
                 await conn.execute(
@@ -55,7 +53,6 @@ class CoinStore:
                 )
 
             else:
-
                 # the coin_name is unique in this table because the CoinStore always
                 # only represent a single peak
                 await conn.execute(
@@ -193,7 +190,7 @@ class CoinStore:
                 if self.db_wrapper.db_version == 2:
                     names_db = tuple(names_chunk)
                 else:
-                    names_db = tuple([n.hex() for n in names_chunk])
+                    names_db = tuple(n.hex() for n in names_chunk)
                 cursors.append(
                     await conn.execute(
                         f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -273,7 +270,6 @@ class CoinStore:
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
-
         coins = set()
 
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -284,7 +280,6 @@ class CoinStore:
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 (self.maybe_to_hex(puzzle_hash), start_height, end_height),
             ) as cursor:
-
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
@@ -316,7 +311,6 @@ class CoinStore:
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 puzzle_hashes_db + (start_height, end_height),
             ) as cursor:
-
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
@@ -348,7 +342,6 @@ class CoinStore:
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 names_db + (start_height, end_height),
             ) as cursor:
-
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
@@ -370,11 +363,13 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hashes: List[bytes32],
         min_height: uint32 = uint32(0),
+        *,
+        max_items: int = 50000,
     ) -> List[CoinState]:
         if len(puzzle_hashes) == 0:
             return []
 
-        coins = set()
+        coins: Set[CoinState] = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             for puzzles in chunks(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
@@ -387,12 +382,16 @@ class CoinStore:
                     f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
                     f'WHERE puzzle_hash in ({"?," * (len(puzzles) - 1)}?) '
                     f"AND (confirmed_index>=? OR spent_index>=?)"
-                    f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                    puzzle_hashes_db + (min_height, min_height),
+                    f"{'' if include_spent_coins else 'AND spent_index=0'}"
+                    " LIMIT ?",
+                    puzzle_hashes_db + (min_height, min_height, max_items - len(coins)),
                 ) as cursor:
                     row: sqlite3.Row
-                    async for row in cursor:
+                    for row in await cursor.fetchall():
                         coins.add(self.row_to_coin_state(row))
+
+                if len(coins) >= max_items:
+                    break
 
         return list(coins)
 
@@ -421,7 +420,6 @@ class CoinStore:
                     f"{'' if include_spent_coins else 'AND spent_index=0'}",
                     parent_ids_db + (start_height, end_height),
                 ) as cursor:
-
                     async for row in cursor:
                         coin = self.row_to_coin(row)
                         coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
@@ -433,11 +431,13 @@ class CoinStore:
         include_spent_coins: bool,
         coin_ids: List[bytes32],
         min_height: uint32 = uint32(0),
+        *,
+        max_items: int = 50000,
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
             return []
 
-        coins = set()
+        coins: Set[CoinState] = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             for ids in chunks(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: Tuple[Any, ...]
@@ -449,11 +449,15 @@ class CoinStore:
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                     f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(ids) - 1)}?) '
                     f"AND (confirmed_index>=? OR spent_index>=?)"
-                    f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                    coin_ids_db + (min_height, min_height),
+                    f"{'' if include_spent_coins else 'AND spent_index=0'}"
+                    " LIMIT ?",
+                    coin_ids_db + (min_height, min_height, max_items - len(coins)),
                 ) as cursor:
-                    async for row in cursor:
+                    for row in await cursor.fetchall():
                         coins.add(self.row_to_coin_state(row))
+                if len(coins) >= max_items:
+                    break
+
         return list(coins)
 
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
@@ -501,7 +505,6 @@ class CoinStore:
 
     # Store CoinRecord in DB
     async def _add_coin_records(self, records: List[CoinRecord]) -> None:
-
         if self.db_wrapper.db_version == 2:
             values2 = []
             for record in records:
@@ -548,7 +551,6 @@ class CoinStore:
 
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_names: List[bytes32], index: uint32) -> None:
-
         assert len(coin_names) == 0 or index > 0
 
         if len(coin_names) == 0:

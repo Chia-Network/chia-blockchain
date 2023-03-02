@@ -25,6 +25,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
+from chia.util.network import IPAddress, get_host_addr
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -61,8 +62,10 @@ class FullNodeDiscovery:
         self.dns_servers = dns_servers
         random.shuffle(dns_servers)  # Don't always start with the same DNS server
         if introducer_info is not None:
+            # get_host_addr is blocking but this only gets called on startup or in the wallet after disconnecting from
+            # all trusted peers.
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
-                introducer_info["host"],
+                str(get_host_addr(introducer_info["host"], prefer_ipv6=False)),
                 introducer_info["port"],
             )
         else:
@@ -390,9 +393,6 @@ class FullNodeDiscovery:
                     addr = info.peer_info
                     if has_collision:
                         break
-                    if addr is not None and not addr.is_valid():
-                        addr = None
-                        continue
                     if not is_feeler and addr.get_group() in groups:
                         addr = None
                         continue
@@ -600,7 +600,6 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def request_peers(self, peer_info: PeerInfo) -> Optional[Message]:
         try:
-
             # Prevent a fingerprint attack: do not send peers to inbound connections.
             # This asymmetric behavior for inbound and outbound connections was introduced
             # to prevent a fingerprinting attack: an attacker can send specific fake addresses
@@ -647,8 +646,9 @@ class FullNodePeers(FullNodeDiscovery):
                     relay_peer, num_peers = await self.relay_queue.get()
                 except asyncio.CancelledError:
                     return None
-                relay_peer_info = PeerInfo(relay_peer.host, relay_peer.port)
-                if not relay_peer_info.is_valid():
+                try:
+                    IPAddress.create(relay_peer.host)
+                except ValueError:
                     continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
                 connections = self.server.get_connections(NodeType.FULL_NODE)

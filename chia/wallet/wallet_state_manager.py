@@ -6,9 +6,10 @@ import logging
 import multiprocessing.context
 import time
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -134,8 +135,7 @@ class WalletStateManager:
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
-    sync_mode: bool
-    sync_target: uint32
+    _sync_target: Optional[uint32]
     genesis: FullBlock
 
     state_changed_callback: Optional[StateChangedProtocol] = None
@@ -225,8 +225,7 @@ class WalletStateManager:
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
-        self.sync_mode = False
-        self.sync_target = uint32(0)
+        self._sync_target = None
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
         self.state_changed_callback = None
         self.pending_tx_callback = None
@@ -570,13 +569,39 @@ class WalletStateManager:
             return True
         return False
 
-    def set_sync_mode(self, mode: bool, sync_height: uint32 = uint32(0)):
-        """
-        Sets the sync mode. This changes the behavior of the wallet node.
-        """
-        self.sync_mode = mode
-        self.sync_target = sync_height
-        self.state_changed("sync_changed")
+    @property
+    def sync_mode(self) -> bool:
+        return self._sync_target is not None
+
+    @property
+    def sync_target(self) -> Optional[uint32]:
+        return self._sync_target
+
+    @asynccontextmanager
+    async def set_sync_mode(self, target_height: uint32) -> AsyncIterator[uint32]:
+        if self.log.level == logging.DEBUG:
+            self.log.debug(f"set_sync_mode enter {await self.blockchain.get_finished_sync_up_to()}-{target_height}")
+        async with self.lock:
+            start_time = time.time()
+            start_height = await self.blockchain.get_finished_sync_up_to()
+            self._sync_target = target_height
+            self.log.info(f"set_sync_mode syncing - range: {start_height}-{target_height}")
+            self.state_changed("sync_changed")
+            try:
+                yield start_height
+            except Exception:
+                self.log.exception(
+                    f"set_sync_mode failed - range: {start_height}-{target_height}, seconds: {time.time() - start_time}"
+                )
+            finally:
+                self._sync_target = None
+                self.state_changed("sync_changed")
+                if self.log.level == logging.DEBUG:
+                    self.log.debug(
+                        f"set_sync_mode exit - range: {start_height}-{target_height}, "
+                        f"get_finished_sync_up_to: {await self.blockchain.get_finished_sync_up_to()}, "
+                        f"seconds: {time.time() - start_time}"
+                    )
 
     async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint128:
         """

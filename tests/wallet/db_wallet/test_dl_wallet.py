@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import Any, AsyncIterator, Iterator, List
+from typing import Any, Iterator, List
 
 import pytest
-import pytest_asyncio
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
-from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.types.blockchain_format.coin import Coin
@@ -39,38 +38,15 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
 
 
 class TestDLWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_sim_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_initial_creation(self, self_hostname: str, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
-        full_nodes, wallets, _ = wallet_node
+    async def test_initial_creation(
+        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
+    ) -> None:
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
@@ -118,9 +94,9 @@ class TestDLWallet:
     )
     @pytest.mark.asyncio
     async def test_get_owned_singletons(
-        self, self_hostname: str, wallet_node: SimulatorsAndWallets, trusted: bool
+        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
     ) -> None:
-        full_nodes, wallets, _ = wallet_node
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
@@ -253,8 +229,10 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_lifecycle(self, self_hostname: str, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
-        full_nodes, wallets, _ = wallet_node
+    async def test_lifecycle(
+        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
+    ) -> None:
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]

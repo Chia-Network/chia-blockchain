@@ -3,14 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia_rs import LIMIT_STACK, MEMPOOL_MODE, NO_NEG_DIV
+from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
-from chia_rs import run_chia_program
+from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
 
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.generator import setup_generator_args
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -34,36 +34,36 @@ log = logging.getLogger(__name__)
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool, height: Optional[uint32] = None
+    generator: BlockGenerator,
+    max_cost: int,
+    *,
+    cost_per_byte: int,
+    mempool_mode: bool,
+    height: Optional[uint32] = None,
+    constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> NPCResult:
-    block_program, block_program_args = setup_generator_args(generator)
-    size_cost = len(bytes(generator.program)) * cost_per_byte
-    max_cost -= size_cost
-    if max_cost < 0:
-        return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), None, uint64(0))
-
     # in mempool mode, the height doesn't matter, because it's always strict.
     # But otherwise, height must be specified to know which rules to apply
     assert mempool_mode or height is not None
 
     if mempool_mode:
         flags = MEMPOOL_MODE
-    elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
-        flags = NO_NEG_DIV | LIMIT_STACK
+    elif height is not None and height >= constants.SOFT_FORK2_HEIGHT:
+        flags = LIMIT_STACK | ENABLE_ASSERT_BEFORE
+    elif height is not None and height >= constants.SOFT_FORK_HEIGHT:
+        flags = LIMIT_STACK
     else:
-        # conditions must use integers in canonical encoding (i.e. no redundant
-        # leading zeros)
-        # the division operator may not be used with negative operands
-        flags = NO_NEG_DIV
+        flags = 0
 
     try:
-        err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
+        block_args = [bytes(gen) for gen in generator.generator_refs]
+        err, result = run_block_generator(bytes(generator.program), block_args, max_cost, flags)
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None, uint64(0))
         else:
             assert result is not None
-            return NPCResult(None, result, uint64(result.cost + size_cost))
+            return NPCResult(None, result, uint64(result.cost))
     except BaseException:
         log.exception("get_name_puzzle_condition failed")
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))

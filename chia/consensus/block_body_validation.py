@@ -319,6 +319,7 @@ async def validate_block_body(
                     cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
                     height=curr.height,
+                    constants=constants,
                 )
                 removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.conds)
             else:
@@ -470,7 +471,9 @@ async def validate_block_body(
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None
-        pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+        pairs_pks, pairs_msgs = pkm_pairs(
+            npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA, soft_fork=height >= constants.SOFT_FORK_HEIGHT
+        )
 
     # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster

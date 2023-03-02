@@ -33,7 +33,6 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from tests.util.wallet_is_synced import wallet_is_synced
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -83,7 +82,7 @@ async def init_wallet_and_node(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
-    await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     balance = await wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance()
     assert balance == funds
     wallet_rpc_api = WalletRpcApi(wallet_node)
@@ -117,7 +116,7 @@ async def farm_block_with_spend(
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
-    return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
+    return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
@@ -592,7 +591,7 @@ async def test_get_owned_stores(
             launcher_id = bytes32.from_hexstr(res["id"])
             expected_store_ids.append(launcher_id)
 
-        await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 1)
+        await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.5)

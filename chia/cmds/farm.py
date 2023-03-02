@@ -44,9 +44,7 @@ def farm_cmd() -> None:
 @click.option(
     "-fp",
     "--farmer-rpc-port",
-    help=(
-        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml"
-    ),
+    help=("Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml"),
     type=int,
     default=None,
     show_default=True,

@@ -10,6 +10,7 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint64
 from chia.wallet.action_manager.protocols import WalletAction
 from chia.wallet.action_manager.wallet_actions import Condition
@@ -18,6 +19,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
+from chia.wallet.util.address_type import AddressType
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
@@ -85,7 +87,7 @@ def create_full_puzzle(
 
 
 async def get_nft_info_from_puzzle(
-    nft_coin_info: NFTCoinInfo, config: Dict = None, ignore_size_limit: bool = False
+    nft_coin_info: NFTCoinInfo, config: Dict[str, Any], ignore_size_limit: bool = False
 ) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
@@ -108,6 +110,7 @@ async def get_nft_info_from_puzzle(
         license_uris.append(str(uri, "utf-8"))
     off_chain_metadata: Optional[str] = None
     nft_info = NFTInfo(
+        encode_puzzle_hash(uncurried_nft.singleton_launcher_id, prefix=AddressType.NFT.hrp(config=config)),
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
         uncurried_nft.owner_did,
