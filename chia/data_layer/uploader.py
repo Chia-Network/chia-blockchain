@@ -93,7 +93,7 @@ class S3Uploader:
         log.info(f"check uploader {store_id} {self.store_ids}")
         for store in self.store_ids:
             if store_id == store:
-                log.info(f"almog {self.name} uploader handles store {store}")
+                log.info(f"{self.name} uploader handles store {store}")
                 return True
         return False
 
