@@ -7,6 +7,7 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint16, uint32, uint64
@@ -639,6 +640,7 @@ class WalletRpcClient(RpcClient):
         exclude_coin_ids: Optional[List[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
         removals: Optional[List[Coin]] = None,
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
     ) -> TransactionRecord:
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -663,6 +665,10 @@ class WalletRpcClient(RpcClient):
             raise ValueError("Must specify either amount and inner_address or additions")
         if removals is not None and len(removals) > 0:
             send_dict["coins"] = [c.to_json_dict() for c in removals]
+        if cat_discrepancy is not None:
+            send_dict["extra_delta"] = cat_discrepancy[0]
+            send_dict["tail_reveal"] = bytes(cat_discrepancy[1]).hex()
+            send_dict["tail_solution"] = bytes(cat_discrepancy[2]).hex()
         res = await self.fetch("cat_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 

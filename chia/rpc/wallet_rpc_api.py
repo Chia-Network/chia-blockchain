@@ -1487,12 +1487,31 @@ class WalletRpcApi:
             }
         else:
             exclude_coins = None
+        cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
+            request.get("extra_delta", None),
+            request.get("tail_reveal", None),
+            request.get("tail_solution", None),
+        )
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None
+        if cat_discrepancy_params != (None, None, None):
+            if None in cat_discrepancy_params:
+                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
+            else:
+                assert cat_discrepancy_params[0] is not None
+                assert cat_discrepancy_params[1] is not None
+                assert cat_discrepancy_params[2] is not None
+                cat_discrepancy = (
+                    cat_discrepancy_params[0],  # mypy sanitization
+                    Program.fromhex(cat_discrepancy_params[1]),
+                    Program.fromhex(cat_discrepancy_params[2]),
+                )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     fee,
+                    cat_discrepancy=cat_discrepancy,
                     coins=coins,
                     memos=memos if memos else None,
                     min_coin_amount=min_coin_amount,
