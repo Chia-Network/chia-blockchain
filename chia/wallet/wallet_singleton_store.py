@@ -137,7 +137,7 @@ class WalletSingletonStore:
             lineage_proof=lineage_proof,
             custom_data=None
         )
-        await self.save_singleton(new_record)
+        await self.add_confirmed_singleton(new_record)
         # check if coin is in DB and mark deleted if found
         current_record = await self.get_record_by_coin_id(coin_spend.coin.name())
         if current_record:

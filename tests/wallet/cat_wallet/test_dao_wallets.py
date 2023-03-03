@@ -160,7 +160,8 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # await asyncio.sleep(10)
+    if not trusted:
+        await asyncio.sleep(1)
     # Verify apply_state_transition is called after a spend to the Treasury Singleton
     assert dao_wallet_0.apply_state_transition_call_count == 1
 
@@ -172,12 +173,6 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     dao_tsy_coin = dao_wallet_0.dao_info.current_treasury_coin
     assert dao_tsy_coin.amount == funding_amt + 1
 
-    # propose to pay 100000 mojos to wallet_1
-    proposal_amt = 100000
-    fee = 100
-    inner_proposal = dao_wallet_0.generate_spend_proposal(ph_1, proposal_amt)
-    proposal_spend = await dao_wallet_0.generate_new_proposal(inner_proposal.get_tree_hash(), fee)
-    breakpoint()
 
 def test_dao_singleton_update():
     pass

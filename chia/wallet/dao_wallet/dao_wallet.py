@@ -44,7 +44,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_new_puzzle_from_proposal_solution,
     get_proposal_timer_puzzle,
     uncurry_treasury,
-    create_dao_spend_proposal,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -770,18 +769,6 @@ class DAOWallet:
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
-
-    def generate_spend_proposal(self, p2_puzzle_hash, amount) -> Program:
-        if amount > self.dao_info.current_treasury_coin.amount:
-            raise ValueError("The proposed spend amount is greater than the treasury balance")
-        relative_change = self.dao_info.current_treasury_coin.amount - amount
-        puzzle = create_dao_spend_proposal(
-            p2_puzzle_hash,
-            amount,
-            self.dao_info.current_treasury_coin.puzzle_hash,
-            relative_change
-        )
-        return puzzle
 
     async def generate_new_proposal(self, proposed_puzzle_hash, fee):
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
