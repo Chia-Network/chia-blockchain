@@ -19,7 +19,7 @@ from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 # from chia.types.condition_opcodes import ConditionOpcode
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
-ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
+ACS_MU: Program = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
 SINGLETON_TOP_LAYER_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
