@@ -130,8 +130,8 @@ jobs:
         run: |
           LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*${{ matrix.os.bladebit-suffix }}.tar.gz'
-          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}.tar.gz
+          gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*${{ matrix.os.bladebit-suffix }}'
+          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
           chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - name: Get latest prerelease bladebit plotter
@@ -141,8 +141,8 @@ jobs:
         run: |
           LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*${{ matrix.os.bladebit-suffix }}.tar.gz'
-          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}.tar.gz
+          gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*${{ matrix.os.bladebit-suffix }}'
+          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
           chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - uses: ./.github/actions/install
