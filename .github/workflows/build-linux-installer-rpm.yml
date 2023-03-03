@@ -21,7 +21,7 @@ concurrency:
 jobs:
   build:
     name: Linux amd64 RPM Installer
-    runs-on: centos-latest
+    runs-on: ubuntu-latest
     container:
       image: chianetwork/centos7-builder:latest
     timeout-minutes: 40
