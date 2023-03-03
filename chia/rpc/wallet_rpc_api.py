@@ -46,7 +46,12 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle, program_to_metadata
+from chia.wallet.did_wallet.did_wallet_puzzles import (
+    DID_INNERPUZ_MOD,
+    match_did_puzzle,
+    metadata_to_program,
+    program_to_metadata,
+)
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
@@ -1963,6 +1968,7 @@ class WalletRpcApi:
             "metadata": program_to_metadata(metadata),
             "launcher_id": singleton_struct.rest().first().as_python().hex(),
             "full_puzzle": full_puzzle,
+            "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
         }
 
@@ -1993,9 +1999,6 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
         hint_list = compute_coin_hints(coin_spend)
-        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
-            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
-        ).get_tree_hash()
         derivation_record = None
         # Hint is required, if it doesn't have any hint then it should be invalid
         is_invalid = len(hint_list) == 0
@@ -2006,11 +2009,9 @@ class WalletRpcApi:
                 )
             )
             if derivation_record is not None:
+                is_invalid = False
                 break
-            # Check if the mismatch is because of the memo bug
-            if hint == old_inner_puzhash:
-                is_invalid = True
-                break
+            is_invalid = True
         if is_invalid:
             # This is an invalid DID, check if we are owner
             derivation_record = (
@@ -2032,15 +2033,6 @@ class WalletRpcApi:
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
-            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
-            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
-                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
-                    did_puzzle = did_puzzle_empty_recovery
-                else:
-                    return {
-                        "success": False,
-                        "error": f"Cannot recover DID {launcher_id.hex()} because the last spend is metadata update.",
-                    }
             # Check if we have the DID wallet
             did_wallet: Optional[DIDWallet] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -2049,6 +2041,62 @@ class WalletRpcApi:
                     if wallet.did_info.origin_coin.name() == launcher_id:
                         did_wallet = wallet
                         break
+
+            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
+            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
+                    did_puzzle = did_puzzle_empty_recovery
+                elif (
+                    did_wallet is not None
+                    and did_wallet.did_info.current_inner is not None
+                    and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    == coin_state.coin.puzzle_hash
+                ):
+                    # Check if the old wallet has the inner puzzle
+                    did_puzzle = did_wallet.did_info.current_inner
+                else:
+                    # Try override
+                    if "recovery_list_hash" in request:
+                        recovery_list_hash = Program.from_bytes(bytes.fromhex(request["recovery_list_hash"]))
+                    num_verification = request.get("num_verification", num_verification)
+                    if "metadata" in request:
+                        metadata = metadata_to_program(request["metadata"])
+                    did_puzzle = DID_INNERPUZ_MOD.curry(
+                        our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                    )
+                    full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                    matched = True
+                    if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                        matched = False
+                        # Brute force addresses
+                        index = 0
+                        derivation_record = await self.service.wallet_state_manager.puzzle_store.get_derivation_record(
+                            uint32(index), uint32(1), False
+                        )
+                        while derivation_record is not None:
+                            our_inner_puzzle = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
+                                derivation_record.pubkey
+                            )
+                            did_puzzle = DID_INNERPUZ_MOD.curry(
+                                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                            )
+                            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                            if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
+                                matched = True
+                                break
+                            index += 1
+                            derivation_record = (
+                                await self.service.wallet_state_manager.puzzle_store.get_derivation_record(
+                                    uint32(index), uint32(1), False
+                                )
+                            )
+
+                    if not matched:
+                        return {
+                            "success": False,
+                            "error": f"Cannot recover DID {launcher_id.hex()}"
+                            f" because the last spend updated recovery_list_hash/num_verification/metadata.",
+                        }
 
             if did_wallet is None:
                 # Create DID wallet

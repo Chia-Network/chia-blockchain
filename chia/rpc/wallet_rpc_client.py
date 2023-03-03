@@ -45,7 +45,7 @@ class WalletRpcClient(RpcClient):
         except ValueError as e:
             return e.args[0]
 
-    async def set_wallet_resync_on_startup(self, enable: bool = True) -> None:
+    async def set_wallet_resync_on_startup(self, enable: bool = True) -> Dict[str, Any]:
         return await self.fetch(
             path="set_wallet_resync_on_startup",
             request_json={"enable": enable},

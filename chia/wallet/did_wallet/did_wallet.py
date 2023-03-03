@@ -356,7 +356,18 @@ class DIDWallet:
         assert sum(c.amount for c in coins) >= amount
         return coins
 
+    def _coin_is_first_singleton(self, coin: Coin) -> bool:
+        parent = self.get_parent_for_coin(coin)
+        if parent is None:
+            return False
+        assert self.did_info.origin_coin
+        return parent.parent_name == self.did_info.origin_coin.name()
+
     # This will be used in the recovery case where we don't have the parent info already
+    # But it is also called whenever a Singleton coin from this wallet is spent
+    # We can improve this interface by passing in the CoinSpend, as well
+    # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
+    # or only call it in the recovery spend case
     async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
 
@@ -380,6 +391,7 @@ class DIDWallet:
                     parent_innerpuz.get_tree_hash(),
                     uint64(parent_state.coin.amount),
                 )
+
                 await self.add_parent(coin.parent_coin_info, parent_info)
             else:
                 self.log.warning("Parent coin is not a DID, skipping: %s -> %s", coin.name(), coin)
@@ -388,8 +400,11 @@ class DIDWallet:
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         # Check inner puzzle consistency
         assert self.did_info.origin_coin is not None
-        full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
-        assert full_puzzle.get_tree_hash() == coin.puzzle_hash
+
+        # TODO: if not the first singleton, and solution mode == recovery
+        if not self._coin_is_first_singleton(coin):
+            full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
+            assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
 
