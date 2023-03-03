@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
+import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
@@ -82,6 +83,8 @@ async def run_mempool_benchmark() -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return all_coins.get(coin_id)
 
+    churn_only = "--churn-only" in sys.argv
+
     wt = WalletTool(DEFAULT_CONSTANTS)
 
     spend_bundles: List[List[SpendBundle]] = []
@@ -124,14 +127,15 @@ async def run_mempool_benchmark() -> None:
             bundles.append(tx)
         spend_bundles.append(bundles)
 
-        bundles = []
-        print("     replacement spend bundles")
-        for coin in unspent:
-            tx = wt.generate_signed_transaction(
-                uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx + 10000000
-            )
-            bundles.append(tx)
-        replacement_spend_bundles.append(bundles)
+        if not churn_only:
+            bundles = []
+            print("     replacement spend bundles")
+            for coin in unspent:
+                tx = wt.generate_signed_transaction(
+                    uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx + 10000000
+                )
+                bundles.append(tx)
+            replacement_spend_bundles.append(bundles)
 
     start_height = height
     for single_threaded in [False, True]:
@@ -157,110 +161,48 @@ async def run_mempool_benchmark() -> None:
 
         suffix = "st" if single_threaded else "mt"
 
-        print("\nProfiling add_spend_bundle()")
-        total_bundles = 0
-        tasks = []
-        with enable_profiler(True, f"add-{suffix}"):
-            start = monotonic()
-            for peer in range(NUM_PEERS):
-                total_bundles += len(spend_bundles[peer])
-                tasks.append(asyncio.create_task(add_spend_bundles(spend_bundles[peer])))
-            await asyncio.gather(*tasks)
-            stop = monotonic()
-        print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
-
-        print("\nProfiling add_spend_bundle() with replace-by-fee")
-        total_bundles = 0
-        tasks = []
-        with enable_profiler(True, f"replace-{suffix}"):
-            start = monotonic()
-            for peer in range(NUM_PEERS):
-                total_bundles += len(replacement_spend_bundles[peer])
-                tasks.append(asyncio.create_task(add_spend_bundles(replacement_spend_bundles[peer])))
-            await asyncio.gather(*tasks)
-            stop = monotonic()
-        print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
-
-        print("\nProfiling create_bundle_from_mempool()")
-        with enable_profiler(True, f"create-{suffix}"):
-            start = monotonic()
-            for _ in range(500):
-                mempool.create_bundle_from_mempool(rec.header_hash)
-            stop = monotonic()
-        print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")
-
-        print("\nProfiling new_peak() (optimized)")
-        blocks: List[Tuple[BenchBlockRecord, NPCResult]] = []
-        for coin_id in all_coins.keys():
-            height = uint32(height + 1)
-            timestamp = uint64(timestamp + 19)
-            rec = fake_block_record(height, timestamp)
-            npc_result = NPCResult(
-                None,
-                SpendBundleConditions(
-                    [Spend(coin_id, bytes32(b" " * 32), None, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
-                ),
-                uint64(1000000000),
-            )
-            blocks.append((rec, npc_result))
-
-        with enable_profiler(True, f"new-peak-{suffix}"):
-            start = monotonic()
-            for rec, npc_result in blocks:
-                await mempool.new_peak(rec, npc_result)
-            stop = monotonic()
-        print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / len(blocks) * 1000:0.2f}ms")
-
-        print("\nProfiling new_peak() (reorg)")
-        blocks = []
-        for coin_id in all_coins.keys():
-            height = uint32(height + 2)
-            timestamp = uint64(timestamp + 28)
-            rec = fake_block_record(height, timestamp)
-            npc_result = NPCResult(
-                None,
-                SpendBundleConditions(
-                    [Spend(coin_id, bytes32(b" " * 32), None, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
-                ),
-                uint64(1000000000),
-            )
-            blocks.append((rec, npc_result))
-
-        with enable_profiler(True, f"new-peak-reorg-{suffix}"):
-            start = monotonic()
-            for rec, npc_result in blocks:
-                await mempool.new_peak(rec, npc_result)
-            stop = monotonic()
-        print(f"  time: {stop - start:0.4f}s")
-        print(f"  per call: {(stop - start) / len(blocks) * 1000:0.2f}ms")
-
-        print("== test churn")
-
-        mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
-        height = start_height
-        rec = fake_block_record(height, timestamp)
-        await mempool.new_peak(rec, None)
-
-        blk_idx = 0
-        all_coin_ids = list(all_coins.keys())
-        with enable_profiler(True, f"churn-{suffix}"):
-            start = monotonic()
-            for spend in range(len(spend_bundles[0])):
-                tasks = []
+        if not churn_only:
+            print("\nProfiling add_spend_bundle()")
+            total_bundles = 0
+            tasks = []
+            with enable_profiler(True, f"add-{suffix}"):
+                start = monotonic()
                 for peer in range(NUM_PEERS):
-                    tasks.append(asyncio.create_task(add_spend_bundles([spend_bundles[peer][spend]])))
+                    total_bundles += len(spend_bundles[peer])
+                    tasks.append(asyncio.create_task(add_spend_bundles(spend_bundles[peer])))
                 await asyncio.gather(*tasks)
+                stop = monotonic()
+            print(f"  time: {stop - start:0.4f}s")
+            print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
 
-                # we've added NUM_PEER transactions, now receive a new block where 1
-                # coin is spent
+            print("\nProfiling add_spend_bundle() with replace-by-fee")
+            total_bundles = 0
+            tasks = []
+            with enable_profiler(True, f"replace-{suffix}"):
+                start = monotonic()
+                for peer in range(NUM_PEERS):
+                    total_bundles += len(replacement_spend_bundles[peer])
+                    tasks.append(asyncio.create_task(add_spend_bundles(replacement_spend_bundles[peer])))
+                await asyncio.gather(*tasks)
+                stop = monotonic()
+            print(f"  time: {stop - start:0.4f}s")
+            print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
+
+            print("\nProfiling create_bundle_from_mempool()")
+            with enable_profiler(True, f"create-{suffix}"):
+                start = monotonic()
+                for _ in range(500):
+                    mempool.create_bundle_from_mempool(rec.header_hash)
+                stop = monotonic()
+            print(f"  time: {stop - start:0.4f}s")
+            print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")
+
+            print("\nProfiling new_peak() (optimized)")
+            blocks: List[Tuple[BenchBlockRecord, NPCResult]] = []
+            for coin_id in all_coins.keys():
                 height = uint32(height + 1)
                 timestamp = uint64(timestamp + 19)
                 rec = fake_block_record(height, timestamp)
-                coin_id = all_coin_ids[blk_idx]
                 npc_result = NPCResult(
                     None,
                     SpendBundleConditions(
@@ -268,9 +210,89 @@ async def run_mempool_benchmark() -> None:
                     ),
                     uint64(1000000000),
                 )
-                await mempool.new_peak(rec, npc_result)
-                blk_idx += 1
+                blocks.append((rec, npc_result))
+
+            with enable_profiler(True, f"new-peak-{suffix}"):
+                start = monotonic()
+                for rec, npc_result in blocks:
+                    await mempool.new_peak(rec, npc_result)
+                stop = monotonic()
+            print(f"  time: {stop - start:0.4f}s")
+            print(f"  per call: {(stop - start) / len(blocks) * 1000:0.2f}ms")
+
+            print("\nProfiling new_peak() (reorg)")
+            blocks = []
+            for coin_id in all_coins.keys():
+                height = uint32(height + 2)
+                timestamp = uint64(timestamp + 28)
+                rec = fake_block_record(height, timestamp)
+                npc_result = NPCResult(
+                    None,
+                    SpendBundleConditions(
+                        [Spend(coin_id, bytes32(b" " * 32), None, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+                    ),
+                    uint64(1000000000),
+                )
+                blocks.append((rec, npc_result))
+
+            with enable_profiler(True, f"new-peak-reorg-{suffix}"):
+                start = monotonic()
+                for rec, npc_result in blocks:
+                    await mempool.new_peak(rec, npc_result)
+                stop = monotonic()
+            print(f"  time: {stop - start:0.4f}s")
+            print(f"  per call: {(stop - start) / len(blocks) * 1000:0.2f}ms")
+
+        print("== test churn")
+
+        print("\nProfiling add_spend_bundle() + new_peak()")
+        mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+        height = start_height
+        rec = fake_block_record(height, timestamp)
+        await mempool.new_peak(rec, None)
+
+        counter = 0
+        blk_idx = 0
+        all_coin_ids = list(all_coins.keys())
+        with enable_profiler(True, f"churn-{suffix}"):
+            start = monotonic()
+            for i in range(5):
+                for spend in range(len(spend_bundles[0])):
+                    tasks = []
+                    for peer in range(NUM_PEERS):
+                        tasks.append(asyncio.create_task(add_spend_bundles([spend_bundles[peer][spend]])))
+                    await asyncio.gather(*tasks)
+
+                    # we've added NUM_PEER transactions, now receive a new block where 1
+                    # coin is spent
+                    height = uint32(height + 1)
+                    timestamp = uint64(timestamp + 19)
+                    rec = fake_block_record(height, timestamp)
+                    coin_id = all_coin_ids[blk_idx]
+                    npc_result = NPCResult(
+                        None,
+                        SpendBundleConditions(
+                            [Spend(coin_id, bytes32(b" " * 32), None, 0, None, None, [], [], 0)],
+                            0,
+                            0,
+                            0,
+                            None,
+                            None,
+                            [],
+                            0,
+                        ),
+                        uint64(1000000000),
+                    )
+                    await mempool.new_peak(rec, npc_result)
+                    blk_idx += 1
+                    counter += 1
             stop = monotonic()
+
+        print(f"  time: {stop - start:0.4f}s")
+        print(f"  per block: {(stop - start) / counter * 1000:0.2f}ms")
+        if churn_only:
+            # skip single-threaded version
+            break
 
 
 if __name__ == "__main__":
