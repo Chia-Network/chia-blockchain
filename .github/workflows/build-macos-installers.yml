@@ -116,9 +116,9 @@ jobs:
         run: |
           LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE/madmax"
-          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }}'
+          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
           mv chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }} $GITHUB_WORKSPACE/madmax/chia_plot
-          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }}'
+          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
           mv chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }} $GITHUB_WORKSPACE/madmax/chia_plot_k34
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
