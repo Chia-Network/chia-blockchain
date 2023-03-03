@@ -100,8 +100,6 @@ class DNSServer:
     async def periodically_get_reliable_peers(self):
         sleep_interval = 0
         while True:
-            sleep_interval = min(15, sleep_interval + 1)
-            await asyncio.sleep(sleep_interval * 60)
             try:
                 # TODO: double check this. It shouldn't take this long to connect.
                 crawl_db = await aiosqlite.connect(self.db_path, timeout=600)
@@ -142,6 +140,9 @@ class DNSServer:
                 )
             except Exception as e:
                 log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
+
+            sleep_interval = min(15, sleep_interval + 1)
+            await asyncio.sleep(sleep_interval * 60)
 
     async def get_peers_to_respond(self, ipv4_count, ipv6_count):
         peers = []
