@@ -528,3 +528,36 @@ async def test_get_items_not_in_filter() -> None:
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
     assert result == [sb1]
+
+
+@pytest.mark.asyncio
+async def test_total_mempool_fees() -> None:
+
+    coin_records: Dict[bytes32, CoinRecord] = {}
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        return coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+
+    # the limit of total fees in the mempool is 2^63
+    # the limit per mempool item is 2^50, that lets us add 8192 items with the
+    # maximum amount of fee before reaching the total mempool limit
+    amount = uint64(2**50)
+    total_fee = 0
+    for i in range(8192):
+        coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, amount)
+        coin_records[coin.name()] = CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))
+        amount = uint64(amount - 1)
+        # the fee is 1 less than the amount because we create a coin of 1 mojo
+        total_fee += amount
+        _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin)
+        assert result[1] == MempoolInclusionStatus.SUCCESS
+        assert mempool_manager.mempool.total_mempool_fees() == total_fee
+
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, amount)
+    coin_records[coin.name()] = CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin)
+    assert result[1] == MempoolInclusionStatus.FAILED
+    assert result[2] == Err.INVALID_BLOCK_FEE_AMOUNT
