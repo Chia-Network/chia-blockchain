@@ -56,7 +56,7 @@ class TradeManager:
                     "sibling_spends": List[bytes]  # The parent spends for the siblings
                     "sibling_puzzles": List[Program]  # The inner puzzles of the siblings (always OFFER_MOD)
                     "sibling_solutions": List[Program]  # The inner solution of the siblings
-                }
+            }
             )
 
     Wallet:
@@ -135,7 +135,6 @@ class TradeManager:
             return
         if coin_state.spent_height is None:
             self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
-
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
@@ -156,7 +155,6 @@ class TradeManager:
         )
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
-
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_addition_ids) == set(coin_state_names):
             height = coin_states[0].created_height
@@ -382,8 +380,8 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
-    async def save_trade(self, trade: TradeRecord) -> None:
-        await self.trade_store.add_trade_record(trade)
+    async def save_trade(self, trade: TradeRecord, offer_name: bytes32) -> None:
+        await self.trade_store.add_trade_record(trade, offer_name)
         self.wallet_state_manager.state_changed("offer_added")
 
     async def create_offer_for_ids(
@@ -424,7 +422,7 @@ class TradeManager:
         )
 
         if success is True and trade_offer is not None and not validate_only:
-            await self.save_trade(trade_offer)
+            await self.save_trade(trade_offer, created_offer.name())
 
         return success, trade_offer, error
 
@@ -603,6 +601,7 @@ class TradeManager:
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
             [c.name() for c in non_ephemeral_removals], peer=peer
         )
+
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
@@ -764,7 +763,7 @@ class TradeManager:
             sent_to=[],
         )
 
-        await self.save_trade(trade_record)
+        await self.save_trade(trade_record, offer.name())
 
         # Dummy transaction for the sake of the wallet push
         push_tx = TransactionRecord(

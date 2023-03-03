@@ -319,6 +319,7 @@ async def validate_block_body(
                     cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
                     height=curr.height,
+                    constants=constants,
                 )
                 removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.conds)
             else:

@@ -142,6 +142,8 @@ class TestROM:
             seconds_relative=0,
             before_height_relative=None,
             before_seconds_relative=None,
+            birth_height=None,
+            birth_seconds=None,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
             flags=ELIGIBLE_FOR_DEDUP,

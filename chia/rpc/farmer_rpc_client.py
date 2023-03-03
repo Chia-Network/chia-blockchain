@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient
@@ -24,7 +24,7 @@ class FarmerRpcClient(RpcClient):
             return None
 
     async def get_signage_points(self) -> List[Dict[str, Any]]:
-        return (await self.fetch("get_signage_points", {}))["signage_points"]
+        return cast(List[Dict[str, Any]], (await self.fetch("get_signage_points", {}))["signage_points"])
 
     async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict[str, Any]:
         response = await self.fetch(
@@ -81,6 +81,6 @@ class FarmerRpcClient(RpcClient):
     async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:
         try:
             result = await self.fetch("get_pool_login_link", {"launcher_id": launcher_id.hex()})
-            return result["login_link"]
+            return cast(Optional[str], result["login_link"])
         except ValueError:
             return None
