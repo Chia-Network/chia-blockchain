@@ -388,6 +388,17 @@ class CATWallet:
     async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
+    async def get_puzzle_hash(self, new: bool) -> bytes32:
+        if new:
+            return await self.get_new_puzzlehash()
+        else:
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            if record is None:
+                return await self.get_new_puzzlehash()
+            return record.puzzle_hash
+
     def require_derivation_paths(self) -> bool:
         return True
 

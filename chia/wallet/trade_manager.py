@@ -437,6 +437,7 @@ class TradeManager:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         old: bool = False,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -445,6 +446,14 @@ class TradeManager:
             driver_dict = {}
         if solver is None:
             solver = Solver({})
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
@@ -459,7 +468,7 @@ class TradeManager:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
-                        p2_ph: bytes32 = await wallet.get_new_puzzlehash()
+                        p2_ph: bytes32 = await wallet.get_puzzle_hash(new=not reuse_puzhash)
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
@@ -469,7 +478,7 @@ class TradeManager:
                                     f"Cannot request assets from wallet id {wallet.id()} without more information"
                                 )
                     else:
-                        p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
+                        p2_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(new=not reuse_puzhash)
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
