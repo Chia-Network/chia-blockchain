@@ -356,6 +356,7 @@ class WalletNode:
         path.parent.mkdir(parents=True, exist_ok=True)
         if self.config.get("reset_sync_for_fingerprint") == fingerprint:
             await self.reset_sync_db(path, fingerprint)
+        # We need to login before initialize the wallet state manager
         self.log_in(private_key)
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,

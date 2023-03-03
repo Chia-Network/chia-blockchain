@@ -41,6 +41,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
@@ -708,7 +709,7 @@ class WalletStateManager:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
         # Check if the coin is clawback
-        clawback_args = match_clawback_puzzle(puzzle, solution)
+        clawback_args = match_clawback_puzzle(puzzle, solution, self.constants.MAX_BLOCK_COST_CLVM)
         if clawback_args is not None:
             return await self.handle_clawback(clawback_args, coin_state, coin_spend)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
@@ -719,7 +720,7 @@ class WalletStateManager:
         # Get unspent merkle coin
         unspent_coins = await self.merkle_coin_store.get_all_unspent_coins()
         current_timestamp = self.blockchain.get_latest_timestamp()
-        coin_spends: List[CoinSpend] = []
+        merkle_coins: List[Tuple[Coin, Dict[str, Any]]] = []
         tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
         for coin in unspent_coins:
             metadata = json.loads(coin.metadata)
@@ -742,30 +743,46 @@ class WalletStateManager:
             ):
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata["time_lock"]:
-                    recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
-                    derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
-                    assert derivation_record is not None
-                    inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
-                    inner_solution: Program = self.main_wallet.make_solution(
-                        primaries=[{"puzzlehash": recipient_puzhash, "amount": uint64(coin.coin.amount), "memos": []}],
-                        coin_announcements=None if len(coin_spends) > 0 or tx_fee == 0 else {coin.coin.name()},
-                    )
-                    coin_spends.append(
-                        generate_clawback_spend_bundle(coin.coin, metadata, inner_puzzle, inner_solution)
-                    )
-                    if len(coin_spends) >= self.config.get("auto_claim_coin_size", 50):
-                        await self.claim_clawback_coins(coin_spends, tx_fee)
-                        coin_spends = []
-        if len(coin_spends) > 0:
-            await self.claim_clawback_coins(coin_spends, tx_fee)
+                    merkle_coins.append((coin.coin, metadata))
+                    if len(merkle_coins) >= self.config.get("auto_claim_coin_size", 50):
+                        await self.claim_clawback_coins(merkle_coins, tx_fee)
+                        merkle_coins = []
+        if len(merkle_coins) > 0:
+            await self.claim_clawback_coins(merkle_coins, tx_fee)
 
-    async def claim_clawback_coins(self, coin_spends: List[CoinSpend], fee: uint64):
-        assert len(coin_spends) > 0
+    async def claim_clawback_coins(self, merkle_coins: List[Tuple[Coin, Dict[str, Any]]], fee: uint64) -> List[bytes32]:
+        assert len(merkle_coins) > 0
+        coin_spends: List[CoinSpend] = []
+        message_list: List[bytes32] = [c[0].name() for c in merkle_coins]
+        message: bytes32 = std_hash(b"".join(message_list))
+        clawback_coins = []
+        for coin, metadata in merkle_coins:
+            recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
+            sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
+            if metadata["is_recipient"]:
+                derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
+            else:
+                derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
+            if derivation_record is None:
+                self.log.warning(f"You are not able to spend coin {coin.name().hex()}")
+                continue
+            inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            inner_solution: Program = self.main_wallet.make_solution(
+                primaries=[
+                    {
+                        "puzzlehash": recipient_puzhash if metadata["is_recipient"] else sender_puzhash,
+                        "amount": uint64(coin.amount),
+                        "memos": [sender_puzhash if metadata["is_recipient"] else recipient_puzhash],
+                    }
+                ],
+                coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
+            )
+            coin_spends.append(generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution))
+            clawback_coins.append(coin.name())
         spend_bundle = await self.main_wallet.sign_transaction(coin_spends)
         if fee > 0:
-            announcement_to_make = coin_spends[0].coin.name()
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
-                fee, Announcement(coin_spends[0].coin.name(), announcement_to_make)
+                fee, Announcement(coin_spends[0].coin.name(), message)
             )
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
@@ -775,6 +792,7 @@ class WalletStateManager:
         for coin_spend in coin_spends:
             # This will make sure we don't double spend
             await self.merkle_coin_store.set_spent(coin_spend.coin.name(), uint32(0))
+        return clawback_coins
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)

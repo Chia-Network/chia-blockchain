@@ -60,7 +60,6 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.clawback.cb_puzzles import generate_clawback_spend_bundle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_record import TradeRecord
@@ -1081,7 +1080,7 @@ class WalletRpcApi:
         ] = await self.service.wallet_state_manager.merkle_coin_store.get_coin_records(
             coin_ids, include_spent_coins=False
         )
-        coin_spends: List[CoinSpend] = []
+        merkle_coins: List[Tuple[Coin, Dict[str, Any]]] = []
         clawback_coins = []
         for i in range(len(merkle_records)):
             merkle_record = merkle_records[i]
@@ -1095,47 +1094,17 @@ class WalletRpcApi:
             if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
                 log.warning("Only support standard XCH wallet.")
                 continue
-            sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
-            recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
-            if metadata["is_recipient"]:
-                derivation_record = (
-                    await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        recipient_puzhash
-                    )
+            merkle_coins.append((merkle_record.coin, metadata))
+            if len(merkle_coins) >= self.service.wallet_state_manager.config.get("auto_claim_coin_size", 50):
+                clawback_coins.extend(
+                    await self.service.wallet_state_manager.claim_clawback_coins(merkle_coins, tx_fee)
                 )
-            else:
-                derivation_record = (
-                    await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        sender_puzhash
-                    )
-                )
-            if derivation_record is None:
-                log.warning(f"You are not able to spend coin {coin_ids[i].hex()}")
-                continue
-            inner_puzzle: Program = self.service.wallet_state_manager.main_wallet.puzzle_for_pk(
-                derivation_record.pubkey
-            )
-            inner_solution: Program = self.service.wallet_state_manager.main_wallet.make_solution(
-                primaries=[
-                    {
-                        "puzzlehash": recipient_puzhash if metadata["is_recipient"] else sender_puzhash,
-                        "amount": uint64(merkle_record.coin.amount),
-                        "memos": [sender_puzhash if metadata["is_recipient"] else recipient_puzhash],
-                    }
-                ],
-                coin_announcements=None if len(coin_spends) > 0 or tx_fee == 0 else {merkle_record.coin.name()},
-            )
-            coin_spend = generate_clawback_spend_bundle(merkle_record.coin, metadata, inner_puzzle, inner_solution)
-            coin_spends.append(coin_spend)
-            clawback_coins.append(merkle_record.coin.name().hex())
-            if len(coin_spends) >= self.service.wallet_state_manager.config.get("auto_claim_coin_size", 50):
-                await self.service.wallet_state_manager.claim_clawback_coins(coin_spends, tx_fee)
-                coin_spends = []
-        if len(coin_spends) > 0:
-            await self.service.wallet_state_manager.claim_clawback_coins(coin_spends, tx_fee)
+                merkle_coins = []
+        if len(merkle_coins) > 0:
+            clawback_coins.extend(await self.service.wallet_state_manager.claim_clawback_coins(merkle_coins, tx_fee))
         return {
             "success": True,
-            "spent_coins": clawback_coins,
+            "spent_coins": [c.hex() for c in clawback_coins],
         }
 
     async def delete_unconfirmed_transactions(self, request) -> EndpointResult:

@@ -6,6 +6,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.condition_tools import conditions_for_solution
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
@@ -77,14 +79,30 @@ def create_merkle_solution(
     return Program.to([merkle_proof, cb_inner_puz, cb_inner_solution])
 
 
-def match_clawback_puzzle(inner_puzzle: Program, inner_solution: Program) -> Optional[Tuple[uint64, bytes32, bytes32]]:
+def match_clawback_puzzle(
+    inner_puzzle: Program, inner_solution: Program, max_cost: int
+) -> Optional[Tuple[uint64, bytes32, bytes32]]:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurry_puzzle(inner_puzzle).mod:
         return None
     # Fetch Remark condition
-    for condition in inner_solution.rest().first().as_python()[1:]:
-        if condition[1] == bytes(PuzzleDecoratorType.CLAWBACK.name, "utf-8"):
-            return uint64(int.from_bytes(condition[2], "big")), condition[3], condition[4]
+    error, conditions, cost = conditions_for_solution(
+        inner_puzzle,
+        inner_solution,
+        max_cost,
+    )
+    if conditions is not None:
+        for condition in conditions:
+            if (
+                condition.opcode == ConditionOpcode.REMARK
+                and len(condition.vars) == 4
+                and condition.vars[0] == bytes(PuzzleDecoratorType.CLAWBACK.name, "utf-8")
+            ):
+                return (
+                    uint64(int.from_bytes(condition.vars[1], "big")),
+                    bytes32.from_bytes(condition.vars[2]),
+                    bytes32.from_bytes(condition.vars[3]),
+                )
     return None
 
 

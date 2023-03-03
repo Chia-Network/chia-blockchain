@@ -221,7 +221,7 @@ class WalletRpcClient(RpcClient):
 
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
-    async def get_clawback_coins(self, wallet_id: int, start: int = 0, end: int = 50, reverse: bool = False) -> None:
+    async def get_clawback_coins(self, wallet_id: int, start: int = 0, end: int = 50, reverse: bool = False) -> Dict:
         response = await self.fetch(
             "get_clawback_coins",
             {"wallet_id": wallet_id, "start": start, "end": end, "reverse": reverse},
@@ -232,7 +232,7 @@ class WalletRpcClient(RpcClient):
         self,
         merkle_coin_ids: List[str],
         fee: int = 0,
-    ) -> None:
+    ) -> Dict:
         response = await self.fetch(
             "spend_clawback_coins",
             {"merkle_coin_ids": merkle_coin_ids, "fee": fee},
