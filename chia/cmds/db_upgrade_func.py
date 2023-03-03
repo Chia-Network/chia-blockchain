@@ -7,7 +7,7 @@ import sys
 import textwrap
 from pathlib import Path
 from time import time
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -29,7 +29,7 @@ def db_upgrade_func(
 ) -> None:
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
 
-    config: Dict
+    config: Dict[str, Any]
     selected_network: str
     db_pattern: str
     if in_db_path is None or out_db_path is None:

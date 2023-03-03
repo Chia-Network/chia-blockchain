@@ -633,3 +633,64 @@ class TestCATTrades:
         await full_node.process_transaction_records(records=txs)
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
+
+    @pytest.mark.asyncio
+    async def test_trade_conflict(self, three_wallets_prefarm):
+        (
+            [wallet_node_maker, maker_funds],
+            [wallet_node_taker, taker_funds],
+            [wallet_node_trader, trader_funds],
+            full_node,
+        ) = three_wallets_prefarm
+        wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
+        xch_to_cat_amount = uint64(100)
+
+        async with wallet_node_maker.wallet_state_manager.lock:
+            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+            )
+
+            tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+
+        await full_node.process_transaction_records(records=tx_records)
+
+        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
+        await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
+        maker_funds -= xch_to_cat_amount
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
+
+        chia_for_cat = {
+            wallet_maker.id(): 1000,
+            cat_wallet_maker.id(): -4,
+        }
+
+        trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
+        trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
+        trade_manager_trader = wallet_node_trader.wallet_state_manager.trade_manager
+
+        async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
+            trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+            if trade_rec:
+                return TradeStatus(trade_rec.status)
+            raise ValueError("Couldn't find the trade record")
+
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
+        assert error is None
+        assert success is True
+        assert trade_make is not None
+        peer = wallet_node_taker.get_full_node_peer()
+        offer = Offer.from_bytes(trade_make.offer)
+        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
+        # we shouldn't be able to respond to a duplicate offer
+        with pytest.raises(ValueError):
+            await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
+        await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
+
+        # pushing into mempool while already in it should fail
+        tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, fee=uint64(10))
+        await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_trader, tr2)
+        assert await trade_manager_trader.get_coins_of_interest()
+        offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
+        await full_node.process_transaction_records(records=offer_tx_records)
+        await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
