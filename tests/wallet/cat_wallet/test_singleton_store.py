@@ -85,8 +85,7 @@ class TestSingletonStore:
             db = await WalletSingletonStore.create(wrapper)
             record_1 = get_record()
             record_2 = get_record()
-            height = 10
-            await db.add_unconfirmed_singleton(record_1.parent_coinspend, record_1.wallet_id, height)
+            await db.add_unconfirmed_singleton(record_1.parent_coinspend, record_1.wallet_id)
             record_1_coin = get_most_recent_singleton_coin_from_coin_spend(record_1.parent_coinspend)
             unconfirmed_record_1 = await db.get_unconfirmed_singleton_by_coin_id(record_1_coin.name())
             unconfirmed_record_2 = await db.get_unconfirmed_singletons_by_singleton_id(record_1.singleton_id)

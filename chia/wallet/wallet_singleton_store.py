@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 _T_WalletSingletonStore = TypeVar("_T_WalletSingletonStore", bound="WalletSingletonStore")
 CONFIRMED_COLS = ("coin_id, coin, singleton_id, wallet_id, parent_coin_spend, "
                  "inner_puzzle_hash, removed_height, lineage_proof, custom_data")
-UNCONFIRMED_COLS = "coin_id, singleton_id, wallet_id, added_height, coin_spend"
+UNCONFIRMED_COLS = "coin_id, singleton_id, wallet_id, coin_spend"
 
 class WalletSingletonStore:
     db_wrapper: DBWrapper2
@@ -63,13 +63,11 @@ class WalletSingletonStore:
                     "coin_id blob PRIMARY KEY,"
                     " singleton_id blob,"
                     " wallet_id int,"
-                    " added_height int,"
                     " coin_spend blob)"
                 )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS singleton_id_index on unconfirmed_singletons(singleton_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_id_index on unconfirmed_singletons(wallet_id)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS added_height_index on unconfirmed_singletons(added_height)")
 
         return self
 
@@ -101,13 +99,13 @@ class WalletSingletonStore:
                 (singleton_id.hex(), record.wallet_id),
             )
 
-    async def add_unconfirmed_singleton(self, coin_spend: CoinSpend, wallet_id: uint32, height: uint32) -> None:
+    async def add_unconfirmed_singleton(self, coin_spend: CoinSpend, wallet_id: uint32) -> None:
         singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
         coin_id = get_most_recent_singleton_coin_from_coin_spend(coin_spend).name()
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                f"INSERT or REPLACE INTO unconfirmed_singletons ({UNCONFIRMED_COLS}) VALUES(?, ?, ?, ?, ?)",
-                (coin_id.hex(), singleton_id.hex(), wallet_id, height, bytes(coin_spend))
+                f"INSERT or REPLACE INTO unconfirmed_singletons ({UNCONFIRMED_COLS}) VALUES(?, ?, ?, ?)",
+                (coin_id.hex(), singleton_id.hex(), wallet_id, bytes(coin_spend))
             )
 
     # TODO: replace with add_confirmed_singleton
@@ -168,7 +166,7 @@ class WalletSingletonStore:
         unconfirmed_records = await self.get_unconfirmed_singletons_by_singleton_id(singleton_id)
         if not unconfirmed_records:
             raise ValueError(f"Unconfirmed singleton not found for singleton id: {singleton_id}")
-        coin_spend = unconfirmed_records[0][4]
+        coin_spend = unconfirmed_records[0][3]
         wallet_id = unconfirmed_records[0][2]
         record = self.create_singleton_record_from_coin_spend(coin_spend, wallet_id)
         await self.add_confirmed_singleton(record)
@@ -176,7 +174,7 @@ class WalletSingletonStore:
     async def get_unconfirmed_singleton_by_coin_id(self, coin_id: bytes32) -> List:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM unconfirmed_singletons WHERE coin_id = ? ORDER BY added_height DESC",
+                "SELECT * FROM unconfirmed_singletons WHERE coin_id = ?",
                 (coin_id.hex(),),
             )
         if rows:
@@ -185,14 +183,13 @@ class WalletSingletonStore:
                 bytes32.from_hexstr(row[0]),
                 bytes32.from_hexstr(row[1]),
                 row[2],
-                row[3],
-                CoinSpend.from_bytes(row[4])
+                CoinSpend.from_bytes(row[3])
             ]
 
     async def get_unconfirmed_singletons_by_singleton_id(self, singleton_id: bytes32) -> List:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM unconfirmed_singletons WHERE singleton_id = ? ORDER BY added_height DESC",
+                "SELECT * FROM unconfirmed_singletons WHERE singleton_id = ?",
                 (singleton_id.hex(),),
             )
         if rows:
@@ -201,8 +198,7 @@ class WalletSingletonStore:
                  bytes32.from_hexstr(row[0]),
                  bytes32.from_hexstr(row[1]),
                  row[2],
-                 row[3],
-                 CoinSpend.from_bytes(row[4])
+                 CoinSpend.from_bytes(row[3])
                 ] for row in rows
             ]
 
