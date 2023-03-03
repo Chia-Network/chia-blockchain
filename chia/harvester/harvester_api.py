@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -14,7 +14,7 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
@@ -37,7 +37,7 @@ class HarvesterAPI:
     @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
@@ -53,7 +53,7 @@ class HarvesterAPI:
     @api_request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
         The harvester does a few things:
@@ -246,7 +246,7 @@ class HarvesterAPI:
         )
 
     @api_request()
-    async def request_signatures(self, request: harvester_protocol.RequestSignatures):
+    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the harvester private key. This can also
@@ -295,7 +295,7 @@ class HarvesterAPI:
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
     @api_request()
-    async def request_plots(self, _: harvester_protocol.RequestPlots):
+    async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         for plot in plots:
@@ -316,5 +316,5 @@ class HarvesterAPI:
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
     @api_request()
-    async def plot_sync_response(self, response: PlotSyncResponse):
+    async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         self.harvester.plot_sync_sender.set_response(response)

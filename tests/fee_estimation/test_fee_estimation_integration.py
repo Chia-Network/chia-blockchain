@@ -43,7 +43,7 @@ def make_mempoolitem() -> MempoolItem:
 
     fee = uint64(10000000)
     spends: List[Spend] = []
-    conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost)
+    conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost, 0, 0)
     mempool_item = MempoolItem(
         spend_bundle,
         fee,
@@ -120,7 +120,8 @@ def test_item_not_removed_if_not_added() -> None:
         fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
         mempool = Mempool(test_mempool_info, fee_estimator)
         item = make_mempoolitem()
-        mempool.remove_from_pool([item.name], reason)
+        with pytest.raises(KeyError):
+            mempool.remove_from_pool([item.name], reason)
         assert mempool.fee_estimator.remove_mempool_item_called_count == 0  # type: ignore[attr-defined]
 
 

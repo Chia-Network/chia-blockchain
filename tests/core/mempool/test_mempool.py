@@ -94,7 +94,7 @@ def make_item(idx: int, cost: uint64 = uint64(80), assert_height=100) -> Mempool
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),
-        NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost), cost),
+        NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0), cost),
         spend_bundle_name,
         uint32(0),
         assert_height,
@@ -342,6 +342,10 @@ async def next_block(full_node_1, wallet_a, bt) -> Coin:
     return list(blocks[-1].get_included_reward_coins())[0]
 
 
+co = ConditionOpcode
+mis = MempoolInclusionStatus
+
+
 class TestMempoolManager:
     @pytest.mark.asyncio
     async def test_basic_mempool_manager(self, two_nodes_one_block, wallet_a, self_hostname):
@@ -367,34 +371,41 @@ class TestMempoolManager:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING),
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 5, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 6, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10049, mis.FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10050, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10051, mis.FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING),
             # the absolute height and seconds tests require fresh full nodes to
             # run the test on. The fixture (one_node_one_block) creates a block,
             # then condition_tester2 creates another 3 blocks
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 6, MempoolInclusionStatus.PENDING),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 7, MempoolInclusionStatus.PENDING),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 6, mis.PENDING),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 7, mis.PENDING),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10050, MempoolInclusionStatus.SUCCESS),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10051, MempoolInclusionStatus.FAILED),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10052, MempoolInclusionStatus.FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10049, mis.SUCCESS),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10050, mis.SUCCESS),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10051, mis.FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED),
         ],
     )
     async def test_ephemeral_timelock(self, one_node_one_block, wallet_a, opcode, lock_value, expected):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
-            tx1 = wallet_a.generate_signed_transaction(
-                uint64(1000000), wallet_a.get_new_puzzlehash(), coin_2, conditions.copy(), uint64(0)
-            )
+            tx1 = wallet_a.generate_signed_transaction(uint64(1000000), wallet_a.get_new_puzzlehash(), coin_2)
 
             ephemeral_coin: Coin = tx1.additions()[0]
             tx2 = wallet_a.generate_signed_transaction(
@@ -2514,15 +2525,15 @@ class TestPkmPairs:
     pk2 = G1Element.generator()
 
     def test_empty_list(self, softfork):
-        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0)
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
         assert pks == []
         assert msgs == []
 
     def test_no_agg_sigs(self, softfork):
         # one create coin: h1 amount: 1 and not hint
-        spends = [Spend(self.h3, self.h4, None, 0, None, None, [(self.h1, 1, b"")], [], 0)]
-        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0)
+        spends = [Spend(self.h3, self.h4, None, 0, None, None, None, None, [(self.h1, 1, b"")], [], 0)]
+        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
         assert pks == []
         assert msgs == []
@@ -2536,34 +2547,36 @@ class TestPkmPairs:
                 0,
                 None,
                 None,
+                None,
+                None,
                 [],
                 [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")],
                 0,
             )
         ]
-        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0)
+        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe(self, softfork):
         conds = SpendBundleConditions(
-            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0
+            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0, 0, 0
         )
         pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self, softfork):
-        spends = [Spend(self.h1, self.h2, None, 0, None, None, [], [(bytes48(self.pk1), b"msg1")], 0)]
-        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [(bytes48(self.pk2), b"msg2")], 0)
+        spends = [Spend(self.h1, self.h2, None, 0, None, None, None, None, [], [(bytes48(self.pk1), b"msg1")], 0)]
+        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [(bytes48(self.pk2), b"msg2")], 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
         assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe_restriction(self) -> None:
         conds = SpendBundleConditions(
-            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0
+            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0, 0, 0
         )
         pks, msgs = pkm_pairs(conds, b"msg1", soft_fork=False)
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]

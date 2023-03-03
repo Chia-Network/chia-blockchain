@@ -892,9 +892,9 @@ class PoolWallet:
 
         if self.target_state is None:
             return
-        if self.target_state == pool_wallet_info.current.state:
+        if self.target_state == pool_wallet_info.current:
             self.target_state = None
-            raise ValueError("Internal error")
+            raise ValueError(f"Internal error. Pool wallet {self.wallet_id} state: {pool_wallet_info.current}")
 
         if (
             self.target_state.state in [FARMING_TO_POOL, SELF_POOLING]

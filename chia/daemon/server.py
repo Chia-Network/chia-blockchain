@@ -13,9 +13,10 @@ import time
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
@@ -128,7 +129,6 @@ class WebSocketServer:
         ca_key_path: Path,
         crt_path: Path,
         key_path: Path,
-        shutdown_event: asyncio.Event,
         run_check_keys_on_unlock: bool = False,
     ):
         self.root_path = root_path
@@ -147,9 +147,10 @@ class WebSocketServer:
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
-        self.shutdown_event = shutdown_event
+        self.shutdown_event = asyncio.Event()
 
-    async def start(self) -> None:
+    @asynccontextmanager
+    async def run(self) -> AsyncIterator[None]:
         self.log.info("Starting Daemon Server")
 
         # Note: the minimum_version has been already set to TLSv1_2
@@ -180,6 +181,12 @@ class WebSocketServer:
             ssl_context=self.ssl_context,
             logger=self.log,
         )
+        try:
+            yield
+        finally:
+            if not self.shutdown_event.is_set():
+                await self.stop()
+            await self.exit()
 
     async def setup_process_global_state(self) -> None:
         try:
@@ -213,7 +220,7 @@ class WebSocketServer:
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()
-        asyncio.create_task(self.exit())
+        self.shutdown_event.set()
         log.info(f"Daemon Server stopping, Services stopped: {service_names}")
         return {"success": True, "services_stopped": service_names}
 
@@ -1123,7 +1130,6 @@ class WebSocketServer:
         if self.webserver is not None:
             self.webserver.close()
             await self.webserver.await_closed()
-        self.shutdown_event.set()
         log.info("chia daemon exiting")
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -1350,20 +1356,17 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 beta_metrics = BetaMetricsLogger(root_path)
                 beta_metrics.start_logging()
 
-            shutdown_event = asyncio.Event()
-
             ws_server = WebSocketServer(
                 root_path,
                 ca_crt_path,
                 ca_key_path,
                 crt_path,
                 key_path,
-                shutdown_event,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
             await ws_server.setup_process_global_state()
-            await ws_server.start()
-            await shutdown_event.wait()
+            async with ws_server.run():
+                await ws_server.shutdown_event.wait()
 
             if beta_metrics is not None:
                 await beta_metrics.stop_logging()
