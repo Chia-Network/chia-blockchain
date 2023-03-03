@@ -150,119 +150,34 @@ class TestCheckTimeLocks:
     REMOVALS: Dict[bytes32, CoinRecord] = {TEST_COIN.name(): COIN_RECORD}
 
     @pytest.mark.parametrize(
-        "value,expected_error",
+        "conds,expected",
         [
-            # the coin is 5 blocks old in this test
-            (5, None),
-            (6, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(height_relative=5), None),
+            (make_test_conds(height_relative=6), Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(height_absolute=15), None),
+            (make_test_conds(height_absolute=16), Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (make_test_conds(seconds_relative=150), None),
+            (make_test_conds(seconds_relative=151), Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (make_test_conds(seconds_absolute=10150), None),
+            (make_test_conds(seconds_absolute=10151), Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            # the coin's confirmed height is 10
+            (make_test_conds(birth_height=9), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (make_test_conds(birth_height=10), None),
+            (make_test_conds(birth_height=11), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            # coin timestamp is 10000
+            (make_test_conds(birth_seconds=9999), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (make_test_conds(birth_seconds=10000), None),
+            (make_test_conds(birth_seconds=10001), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
         ],
     )
-    def test_height_relative(
+    def test_conditions(
         self,
-        value: uint32,
-        expected_error: Optional[Err],
+        conds: SpendBundleConditions,
+        expected: Optional[Err],
     ) -> None:
-        conds = make_test_conds(height_relative=value)
         assert (
             mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # The block height is 15
-            (15, None),
-            (16, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-        ],
-    )
-    def test_height_absolute(
-        self,
-        value: uint32,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(height_absolute=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin is 150 seconds old in this test
-            (150, None),
-            (151, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        ],
-    )
-    def test_seconds_relative(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(seconds_relative=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # The block timestamp is 10150
-            (10150, None),
-            (10151, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-        ],
-    )
-    def test_seconds_absolute(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(seconds_absolute=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin's birth height is
-            (9, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-            (10, None),
-            (11, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-        ],
-    )
-    def test_assert_my_birth_height(
-        self,
-        value: uint32,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(birth_height=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin's birth timestamp is
-            (9999, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            (10000, None),
-            (10001, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-        ],
-    )
-    def test_assert_my_birth_seconds(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(birth_seconds=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
+            == expected
         )
 
 
