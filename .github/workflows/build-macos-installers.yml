@@ -116,8 +116,10 @@ jobs:
         run: |
           LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE/madmax"
-          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-*-macos-${{ matrix.os.name }}' -O $GITHUB_WORKSPACE/madmax/chia_plot
-          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-*-macos-${{ matrix.os.name }}' -O $GITHUB_WORKSPACE/madmax/chia_plot_k34
+          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-*-macos-${{ matrix.os.name }}'
+          mv chia_plot-*-macos* $GITHUB_WORKSPACE/madmax/chia_plot
+          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-*-macos-${{ matrix.os.name }}
+          mv chia_plot_k34-*-macos-* '$GITHUB_WORKSPACE/madmax/chia_plot_k34
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
@@ -128,7 +130,8 @@ jobs:
         run: |
           LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*${{ matrix.os.bladebit-suffix }}.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
+          gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*${{ matrix.os.bladebit-suffix }}.tar.gz'
+          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}.tar.gz
           chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - name: Get latest prerelease bladebit plotter
@@ -138,7 +141,8 @@ jobs:
         run: |
           LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*${{ matrix.os.bladebit-suffix }}.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
+          gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*${{ matrix.os.bladebit-suffix }}.tar.gz'
+          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}.tar.gz
           chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - uses: ./.github/actions/install
