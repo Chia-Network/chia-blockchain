@@ -93,7 +93,7 @@ class DNSServer:
         # One protocol instance will be created to serve all
         # client requests.
         self.transport, self.protocol = await loop.create_datagram_endpoint(
-            lambda: EchoServerProtocol(self.dns_response), local_addr=("0.0.0.0", 53)
+            lambda: EchoServerProtocol(self.dns_response), local_addr=("::0", 53)
         )
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
 
