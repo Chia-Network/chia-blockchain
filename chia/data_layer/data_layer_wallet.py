@@ -1684,7 +1684,7 @@ class UpdateMetadataDL(UpdateMetadata):
     for use in the context of a data layer singleton
     """
 
-    metadata_updater: Program = ACS_MU
+    metadata_updater: Program = dataclasses.field(default_factory=lambda: ACS_MU)
 
     @classmethod
     def from_solver(cls: Type[_T_UpdateMetadataDL], solver: Solver) -> _T_UpdateMetadataDL:
