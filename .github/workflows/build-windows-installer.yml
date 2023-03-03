@@ -129,7 +129,7 @@ jobs:
       shell: bash
       run: |
         LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-        mkdir $GITHUB_WORKSPACE\\madmax"
+        mkdir $GITHUB_WORKSPACE\\madmax
         gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-*.exe' -O $GITHUB_WORKSPACE\\madmax\\chia_plot.exe
         gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-*.exe' -O $GITHUB_WORKSPACE\\madmax\\chia_plot_k34.exe
 
