@@ -69,6 +69,7 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
@@ -1590,25 +1591,36 @@ class WalletStateManager:
         error: Optional[Err],
     ):
         """
-        Full node received our transaction, no need to keep it in queue anymore
+        Full node received our transaction, no need to keep it in queue anymore, unless there was an error
         """
 
         updated = await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         if updated:
             tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
             if tx is not None:
+                # we're only interested in errors that are not temporary
                 if send_status and error and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO):
                     if tx.spend_bundle is not None:
                         coins_removed = tx.spend_bundle.removals()
+                        trade_coins_removed = set([])
                         for removed_coin in coins_removed:
                             trade = await self.trade_manager.get_trade_by_coin(removed_coin)
-                            if trade is not None:
+                            if trade is not None and trade.status in (
+                                TradeStatus.PENDING_CONFIRM.value,
+                                TradeStatus.PENDING_ACCEPT.value,
+                                TradeStatus.PENDING_CANCEL.value,
+                            ):
                                 # offer was tied to these coins, lets subscribe to them to get a confirmation to
                                 # cancel it if it's confirmed
                                 # we send transactions to multiple peers, and in cases when mempool gets
                                 # fragmented, it's safest to wait for confirmation from blockchain before setting
                                 # offer to failed
-                                await self.add_interested_coin_ids([removed_coin.name()])
+                                trade_coins_removed.add(removed_coin.name())
+                        if trade_coins_removed:
+                            self.log.info(
+                                "Subscribing to unspendable offer coins: %s", [x.hex() for x in trade_coins_removed]
+                            )
+                            await self.add_interested_coin_ids(list(trade_coins_removed))
 
                     self.state_changed(
                         "tx_update", tx.wallet_id, {"transaction": tx, "error": error.name, "status": send_status.value}
