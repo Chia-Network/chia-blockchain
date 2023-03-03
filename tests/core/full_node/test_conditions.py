@@ -131,9 +131,19 @@ class TestConditions:
         "opcode,value,expected",
         [
             # the chain has 4 blocks, the spend is happening in the 5th block
-            # the coin being spent was created in the 3rd block
+            # the coin being spent was created in the 3rd block (i.e. block 2)
             # ensure invalid heights fail and pass correctly, depending on
             # which end of the range they exceed
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 3, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 2, None),
+            # genesis timestamp is 10000 and each block is 10 seconds
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10019, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10020, None),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10021, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (co.ASSERT_HEIGHT_RELATIVE, -1, None),
             (co.ASSERT_HEIGHT_RELATIVE, 0, None),
             (co.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
@@ -160,6 +170,15 @@ class TestConditions:
     )
     async def test_condition(self, opcode, value, expected, bt, softfork2):
         conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
+
+        # when soft fork 2 is not active, these conditions are also not active,
+        # and never constrain the block
+        if not softfork2 and opcode in [
+            co.ASSERT_MY_BIRTH_HEIGHT,
+            co.ASSERT_MY_BIRTH_SECONDS,
+        ]:
+            expected = None
+
         await check_conditions(bt, conditions, expected_err=expected, softfork2=softfork2)
 
     @pytest.mark.asyncio

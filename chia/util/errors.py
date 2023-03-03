@@ -170,6 +170,9 @@ class Err(Enum):
     IMPOSSIBLE_HEIGHT_RELATIVE_CONSTRAINTS = 136
     IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS = 137
 
+    ASSERT_MY_BIRTH_SECONDS_FAILED = 138
+    ASSERT_MY_BIRTH_HEIGHT_FAILED = 139
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

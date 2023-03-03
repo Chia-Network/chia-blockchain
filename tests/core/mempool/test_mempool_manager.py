@@ -99,19 +99,37 @@ async def instantiate_mempool_manager(
 
 def make_test_conds(
     *,
+    birth_height: Optional[uint32] = None,
+    birth_seconds: Optional[uint64] = None,
     height_relative: Optional[uint32] = None,
     height_absolute: uint32 = uint32(0),
     seconds_relative: uint64 = uint64(0),
     seconds_absolute: uint64 = uint64(0),
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
-        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, None, None, [], [], 0)],
+        [
+            Spend(
+                TEST_COIN.name(),
+                IDENTITY_PUZZLE_HASH,
+                height_relative,
+                seconds_relative,
+                None,
+                None,
+                birth_height,
+                birth_seconds,
+                [],
+                [],
+                0,
+            )
+        ],
         0,
         height_absolute,
         seconds_absolute,
         None,
         None,
         [],
+        0,
+        0,
         0,
     )
 
@@ -207,6 +225,46 @@ class TestCheckTimeLocks:
             == expected_error
         )
 
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # the coin's birth height is
+            (9, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (10, None),
+            (11, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+        ],
+    )
+    def test_assert_my_birth_height(
+        self,
+        value: uint32,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(birth_height=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
+    @pytest.mark.parametrize(
+        "value,expected_error",
+        [
+            # the coin's birth timestamp is
+            (9999, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (10000, None),
+            (10001, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+        ],
+    )
+    def test_assert_my_birth_seconds(
+        self,
+        value: uint64,
+        expected_error: Optional[Err],
+    ) -> None:
+        conds = make_test_conds(birth_seconds=value)
+        assert (
+            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
+            == expected_error
+        )
+
 
 def test_compute_assert_height() -> None:
     c1 = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 1337)
@@ -216,27 +274,54 @@ def test_compute_assert_height() -> None:
 
     # 42 is the absolute height condition
     conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, None, None, [], [], 0)],
+        0,
+        42,
+        0,
+        None,
+        None,
+        [],
+        0,
+        0,
+        0,
     )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 1 is a relative height, but that only amounts to 13, so the absolute
     # height is more restrictive
     conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0, 0, 0
     )
     assert compute_assert_height(coin_records, conds) == 42
 
     # 100 is a relative height, and sinec the coin was confirmed at height 12,
     # that's 112
     conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, None, None, [], [], 0)],
+        0,
+        42,
+        0,
+        None,
+        None,
+        [],
+        0,
+        0,
+        0,
     )
     assert compute_assert_height(coin_records, conds) == 112
 
     # Same thing but without the absolute height
     conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
+        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, None, None, [], [], 0)],
+        0,
+        0,
+        0,
+        None,
+        None,
+        [],
+        0,
+        0,
+        0,
     )
     assert compute_assert_height(coin_records, conds) == 112
 
