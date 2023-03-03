@@ -651,6 +651,58 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
+    """
+    Sets up the node with 10 blocks, and returns a payer and payee wallet.
+    """
+    farm_blocks = 3
+    buffer = 1
+    full_nodes, wallets, _ = three_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, wallet_server_0 = wallets[0]
+    wallet_node_1, wallet_server_1 = wallets[1]
+    wallet_node_2, wallet_server_2 = wallets[2]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+    wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
+
+    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+    wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
+    wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
+    wallet_2_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_2)
+    await full_node_api.farm_blocks_to_puzzlehash(count=buffer, guarantee_transaction_blocks=True)
+
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+
+    assert await wallet_0.get_confirmed_balance() == wallet_0_rewards
+    assert await wallet_0.get_unconfirmed_balance() == wallet_0_rewards
+    assert await wallet_1.get_confirmed_balance() == wallet_1_rewards
+    assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
+    assert await wallet_2.get_confirmed_balance() == wallet_2_rewards
+    assert await wallet_2.get_unconfirmed_balance() == wallet_2_rewards
+
+    return (
+        (wallet_node_0, wallet_0_rewards),
+        (wallet_node_1, wallet_1_rewards),
+        (wallet_node_2, wallet_2_rewards),
+        full_node_api,
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
 async def introducer(bt):
     async for service in setup_introducer(bt, 0):
         yield service._api, service._node.server
