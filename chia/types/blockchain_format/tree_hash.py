@@ -15,7 +15,7 @@ from clvm import CLVMObject
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
-Op = Callable[[List[CLVMObject], List["Op"], Set[bytes32]], None]
+Op = Callable[[List["CLVMObject"], List["Op"], Set[bytes32]], None]
 
 
 def sha256_treehash(sexp: CLVMObject, precalculated: Optional[Set[bytes32]] = None) -> bytes32:
