@@ -8,7 +8,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.int import uint128
+from chia.util.ints import uint128
 from chia.util.streamable import Streamable, streamable
 
 
