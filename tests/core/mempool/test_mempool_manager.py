@@ -99,32 +99,32 @@ async def instantiate_mempool_manager(
 
 def make_test_conds(
     *,
-    birth_height: Optional[uint32] = None,
-    birth_seconds: Optional[uint64] = None,
-    height_relative: Optional[uint32] = None,
-    height_absolute: uint32 = uint32(0),
-    seconds_relative: uint64 = uint64(0),
-    seconds_absolute: uint64 = uint64(0),
+    birth_height: Optional[int] = None,
+    birth_seconds: Optional[int] = None,
+    height_relative: Optional[int] = None,
+    height_absolute: int = 0,
+    seconds_relative: int = 0,
+    seconds_absolute: int = 0,
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
         [
             Spend(
                 TEST_COIN.name(),
                 IDENTITY_PUZZLE_HASH,
-                height_relative,
-                seconds_relative,
+                uint32(height_relative) if height_relative else None,
+                uint64(seconds_relative),
                 None,
                 None,
-                birth_height,
-                birth_seconds,
+                uint32(birth_height) if birth_height else None,
+                uint64(birth_seconds) if birth_seconds else None,
                 [],
                 [],
                 0,
             )
         ],
         0,
-        height_absolute,
-        seconds_absolute,
+        uint32(height_absolute),
+        uint64(seconds_absolute),
         None,
         None,
         [],
@@ -150,180 +150,63 @@ class TestCheckTimeLocks:
     REMOVALS: Dict[bytes32, CoinRecord] = {TEST_COIN.name(): COIN_RECORD}
 
     @pytest.mark.parametrize(
-        "value,expected_error",
+        "conds,expected",
         [
-            # the coin is 5 blocks old in this test
-            (5, None),
-            (6, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(height_relative=5), None),
+            (make_test_conds(height_relative=6), Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(height_absolute=15), None),
+            (make_test_conds(height_absolute=16), Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (make_test_conds(seconds_relative=150), None),
+            (make_test_conds(seconds_relative=151), Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (make_test_conds(seconds_absolute=10150), None),
+            (make_test_conds(seconds_absolute=10151), Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            # the coin's confirmed height is 10
+            (make_test_conds(birth_height=9), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (make_test_conds(birth_height=10), None),
+            (make_test_conds(birth_height=11), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            # coin timestamp is 10000
+            (make_test_conds(birth_seconds=9999), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (make_test_conds(birth_seconds=10000), None),
+            (make_test_conds(birth_seconds=10001), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
         ],
     )
-    def test_height_relative(
+    def test_conditions(
         self,
-        value: uint32,
-        expected_error: Optional[Err],
+        conds: SpendBundleConditions,
+        expected: Optional[Err],
     ) -> None:
-        conds = make_test_conds(height_relative=value)
         assert (
             mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # The block height is 15
-            (15, None),
-            (16, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-        ],
-    )
-    def test_height_absolute(
-        self,
-        value: uint32,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(height_absolute=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin is 150 seconds old in this test
-            (150, None),
-            (151, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        ],
-    )
-    def test_seconds_relative(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(seconds_relative=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # The block timestamp is 10150
-            (10150, None),
-            (10151, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-        ],
-    )
-    def test_seconds_absolute(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(seconds_absolute=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin's birth height is
-            (9, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-            (10, None),
-            (11, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-        ],
-    )
-    def test_assert_my_birth_height(
-        self,
-        value: uint32,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(birth_height=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin's birth timestamp is
-            (9999, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            (10000, None),
-            (10001, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-        ],
-    )
-    def test_assert_my_birth_seconds(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(birth_seconds=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
+            == expected
         )
 
 
-def test_compute_assert_height() -> None:
-    c1 = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 1337)
-    coin_id = c1.name()
+def expect(*, height: int = 0) -> uint32:
+    return uint32(height)
+
+
+@pytest.mark.parametrize(
+    "conds,expected",
+    [
+        # coin birth height is 12
+        (make_test_conds(), expect()),
+        (make_test_conds(height_absolute=42), expect(height=42)),
+        # 1 is a relative height, but that only amounts to 13, so the absolute
+        # height is more restrictive
+        (make_test_conds(height_relative=1), expect(height=13)),
+        # 100 is a relative height, and sinec the coin was confirmed at height 12,
+        # that's 112
+        (make_test_conds(height_absolute=42, height_relative=100), expect(height=112)),
+        # Same thing but without the absolute height
+        (make_test_conds(height_relative=100), expect(height=112)),
+    ],
+)
+def test_compute_assert_height(conds: SpendBundleConditions, expected: uint32) -> None:
+    coin_id = TEST_COIN.name()
     confirmed_height = uint32(12)
-    coin_records = {coin_id: CoinRecord(c1, confirmed_height, uint32(0), False, uint64(10000))}
+    coin_records = {coin_id: CoinRecord(TEST_COIN, confirmed_height, uint32(0), False, uint64(10000))}
 
-    # 42 is the absolute height condition
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, None, None, [], [], 0)],
-        0,
-        42,
-        0,
-        None,
-        None,
-        [],
-        0,
-        0,
-        0,
-    )
-    assert compute_assert_height(coin_records, conds) == 42
-
-    # 1 is a relative height, but that only amounts to 13, so the absolute
-    # height is more restrictive
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0, 0, 0
-    )
-    assert compute_assert_height(coin_records, conds) == 42
-
-    # 100 is a relative height, and sinec the coin was confirmed at height 12,
-    # that's 112
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, None, None, [], [], 0)],
-        0,
-        42,
-        0,
-        None,
-        None,
-        [],
-        0,
-        0,
-        0,
-    )
-    assert compute_assert_height(coin_records, conds) == 112
-
-    # Same thing but without the absolute height
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, None, None, [], [], 0)],
-        0,
-        0,
-        0,
-        None,
-        None,
-        [],
-        0,
-        0,
-        0,
-    )
-    assert compute_assert_height(coin_records, conds) == 112
+    assert compute_assert_height(coin_records, conds) == expected
 
 
 def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_COIN) -> SpendBundle:
