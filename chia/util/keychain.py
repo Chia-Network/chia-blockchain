@@ -545,7 +545,7 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().has_cached_master_passphrase()
 
     @staticmethod
-    def get_cached_master_passphrase() -> str:
+    def get_cached_master_passphrase() -> Optional[str]:
         """
         Returns the cached master passphrase
         """
