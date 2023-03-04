@@ -1409,7 +1409,6 @@ def finish_block(
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
-        # TODO: review
         new_ip_iters = uint64(unfinished_block.total_iters - latest_block.total_iters)
         cc_vdf_input = latest_block.challenge_vdf_output
         rc_vdf_challenge = latest_block.reward_infusion_new_challenge
