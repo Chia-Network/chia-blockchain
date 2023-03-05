@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 import click
 
+from chia.cmds.check_wallet_db import help_text as check_help_text
 from chia.cmds.cmds_util import execute_with_wallet
-
-# from chia.cmds.coins import coins_cmd
+from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
@@ -383,7 +383,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
 
 
-@wallet_cmd.command("make_offer", short_help="Create an offer of XCH/CATs for XCH/CATs")
+@wallet_cmd.command("make_offer", short_help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -407,7 +407,9 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     multiple=True,
 )
 @click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
-@click.option("-m", "--fee", help="A fee to add to the offer when it gets taken", default="0")
+@click.option(
+    "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
+)
 def make_offer_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
 ) -> None:
@@ -477,7 +479,9 @@ def get_offers_cmd(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
-@click.option("-m", "--fee", help="The fee to use when pushing the completed offer", default="0")
+@click.option(
+    "-m", "--fee", help="The fee to use when pushing the completed offer, in XCH", default="0", show_default=True
+)
 def take_offer_cmd(
     path_or_hex: str, wallet_rpc_port: Optional[int], fingerprint: int, examine_only: bool, fee: str
 ) -> None:
@@ -498,9 +502,11 @@ def take_offer_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-id", "--id", help="The offer ID that you wish to cancel")
+@click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True)
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
-@click.option("-m", "--fee", help="The fee to use when cancelling the offer securely", default="0")
+@click.option(
+    "-m", "--fee", help="The fee to use when cancelling the offer securely, in XCH", default="0", show_default=True
+)
 def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
     extra_params = {"id": id, "insecure": insecure, "fee": fee}
     import asyncio
@@ -508,6 +514,21 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     from .wallet_funcs import cancel_offer
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
+
+
+@wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
+@click.option("-v", "--verbose", help="Print more information", is_flag=True)
+@click.option("--db-path", help="The path to a wallet DB. Default is to scan all active wallet DBs.")
+@click.pass_context
+# TODO: accept multiple dbs on commandline
+# TODO: Convert to Path earlier
+def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
+    """check, scan, diagnose, fsck Chia Wallet DBs"""
+    import asyncio
+
+    from chia.cmds.check_wallet_db import scan
+
+    asyncio.run(scan(ctx.obj["root_path"], db_path, verbose=verbose))
 
 
 @wallet_cmd.group("did", short_help="DID related actions")
@@ -983,8 +1004,7 @@ def dump_transactions_csv_cmd(
 
 
 # Keep at bottom.
-# Remove coins subcommand from wallet for now pending further testing
-# wallet_cmd.add_command(coins_cmd)
+wallet_cmd.add_command(coins_cmd)
 
 
 @wallet_cmd.group("notifications", short_help="Send/Manage notifications")

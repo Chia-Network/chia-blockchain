@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import AsyncIterator, List, Tuple
+from typing import List, Tuple
 
 import pytest
 import pytest_asyncio
 
 from chia.cmds.units import units
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
@@ -14,10 +15,11 @@ from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_full_system, setup_simulators_and_wallets
+from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_full_system
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
@@ -59,12 +61,6 @@ async def extra_node(self_hostname):
 @pytest_asyncio.fixture(scope="function")
 async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def one_wallet_node() -> AsyncIterator[SimulatorsAndWallets]:
-    async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
         yield _
 
 
@@ -212,9 +208,9 @@ class TestSimulation:
     async def test_simulation_farm_blocks_to_puzzlehash(
         self,
         count,
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
     ):
-        [[full_node_api], _, _] = one_wallet_node
+        [[full_node_api], _, _] = simulator_and_wallet
 
         # Starting at the beginning.
         assert full_node_api.full_node.blockchain.get_peak_height() is None
@@ -231,9 +227,9 @@ class TestSimulation:
         self,
         self_hostname: str,
         count,
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
     ):
-        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
@@ -264,6 +260,21 @@ class TestSimulation:
         confirmed_balance = await wallet.get_confirmed_balance()
         assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
 
+        # Test that we can change the time per block
+        new_time_per_block = uint64(1000)
+        full_node_api.time_per_block = new_time_per_block
+        if count > 0:
+            peak = full_node_api.full_node.blockchain.get_peak()
+            assert isinstance(peak, BlockRecord)
+            start_time = peak.timestamp
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            peak = full_node_api.full_node.blockchain.get_peak()
+            assert isinstance(peak, BlockRecord)
+            end_time = peak.timestamp
+            assert isinstance(start_time, uint64)
+            assert isinstance(end_time, uint64)
+            assert end_time - start_time >= new_time_per_block
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         argnames=["amount", "coin_count"],
@@ -282,9 +293,9 @@ class TestSimulation:
         self_hostname: str,
         amount: int,
         coin_count: int,
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
     ):
-        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
@@ -311,11 +322,11 @@ class TestSimulation:
     async def test_wait_transaction_records_entered_mempool(
         self,
         self_hostname: str,
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
     ) -> None:
         repeats = 50
         tx_amount = uint64(1)
-        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
@@ -349,13 +360,13 @@ class TestSimulation:
     async def test_process_transactions(
         self,
         self_hostname: str,
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
         records_or_bundles_or_coins: str,
     ) -> None:
         repeats = 20
         tx_amount = uint64(1)
         tx_per_repeat = 2
-        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
@@ -423,9 +434,9 @@ class TestSimulation:
         self,
         self_hostname: str,
         amounts: List[uint64],
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
     ) -> None:
-        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 
@@ -457,9 +468,9 @@ class TestSimulation:
         self,
         self_hostname: str,
         amounts: List[uint64],
-        one_wallet_node: SimulatorsAndWallets,
+        simulator_and_wallet: SimulatorsAndWallets,
     ) -> None:
-        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
 

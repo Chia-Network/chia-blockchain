@@ -20,7 +20,6 @@ import zstd
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
-from chia.protocols import full_node_protocol
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
@@ -59,10 +58,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 
 class FakeServer:
-    async def send_to_all(self, messages: List[Message], node_type: NodeType):
-        pass
-
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
+    async def send_to_all(self, messages: List[Message], node_type: NodeType, exclude: Optional[bytes32] = None):
         pass
 
     def set_received_message_callback(self, callback: Callable):
@@ -111,7 +107,6 @@ async def run_sync_test(
     node_profiler: bool,
     start_at_checkpoint: Optional[str],
 ) -> None:
-
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler("test-full-sync.log")
@@ -126,7 +121,6 @@ async def run_sync_test(
     logger.addHandler(check_log)
 
     with tempfile.TemporaryDirectory() as root_dir:
-
         root_path = Path(root_dir)
         if start_at_checkpoint is not None:
             shutil.copytree(Path(start_at_checkpoint) / ".", root_path, dirs_exist_ok=True)
@@ -195,12 +189,10 @@ async def run_sync_test(
 
                         if keep_up:
                             for b in block_batch:
-                                await full_node.respond_unfinished_block(
-                                    full_node_protocol.RespondUnfinishedBlock(make_unfinished_block(b, constants)), peer
-                                )
-                                await full_node.respond_block(full_node_protocol.RespondBlock(b))
+                                await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
+                                await full_node.add_block(b)
                         else:
-                            success, summary = await full_node.receive_block_batch(block_batch, peer, None)
+                            success, summary = await full_node.add_block_batch(block_batch, peer, None)
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -338,7 +330,6 @@ async def run_sync_checkpoint(
     root_path: Path,
     max_height: int,
 ) -> None:
-
     root_path.mkdir(parents=True, exist_ok=True)
 
     chia_init(root_path, should_check_keys=False, v1_db=False)
@@ -376,7 +367,7 @@ async def run_sync_checkpoint(
                 if len(block_batch) < 32:
                     continue
 
-                success, _ = await full_node.receive_block_batch(block_batch, peer, None)
+                success, _ = await full_node.add_block_batch(block_batch, peer, None)
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -388,7 +379,7 @@ async def run_sync_checkpoint(
                 block_batch = []
 
             if len(block_batch) > 0:
-                success, _ = await full_node.receive_block_batch(block_batch, peer, None)
+                success, _ = await full_node.add_block_batch(block_batch, peer, None)
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
 

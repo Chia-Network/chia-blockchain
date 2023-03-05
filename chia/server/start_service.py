@@ -11,27 +11,21 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
-from chia.daemon.server import service_launch_lock_path
-from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from chia.server.ws_connection import WSChiaConnection
-from chia.util.lock import Lockfile, LockfileError
-
-from ..protocols.shared_protocol import capabilities
-
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
 from chia.cmds.init_funcs import chia_full_version_str
+from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
+from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.util.lock import Lockfile, LockfileError
 from chia.util.setproctitle import setproctitle
 
+from ..protocols.shared_protocol import capabilities
 from .reconnect_task import start_reconnect_task
 
 # this is used to detect whether we are running in the main process or not, in
@@ -84,6 +78,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self.max_request_body_size = max_request_body_size
 
         self._log = logging.getLogger(service_name)
+        self._log.warning(f"Starting service {self._service_name} ...")
         self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
         self.service_config = self.config[service_name]
@@ -162,7 +157,10 @@ class Service(Generic[_T_RpcServiceProtocol]):
         for peer in self._reconnect_tasks.keys():
             self.add_peer(peer)
 
-        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
+        self._log.warning(
+            f"Started {self._service_name} service on network_id: {self._network_id} "
+            f"at port {self._advertised_port}"
+        )
 
         self._rpc_close_task = None
         if self._rpc_info:
@@ -232,6 +230,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
     def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
+            self._log.warning(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
 
             # start with UPnP, since this can take a while, we want it to happen
             # in the background while shutting down everything else
@@ -275,10 +274,10 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         self._did_start = False
         self._is_stopping.clear()
-        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
+        self._log.warning(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
 
-def async_run(coro: Coroutine[object, object, T]) -> T:
-    if uvloop is not None:
-        uvloop.install()
+def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
+    if connection_limit is not None:
+        set_chia_policy(connection_limit)
     return asyncio.run(coro)

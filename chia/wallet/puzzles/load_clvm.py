@@ -11,7 +11,8 @@ from typing import List
 import pkg_resources
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.lock import Lockfile
 
 compile_clvm_py = None

@@ -6,9 +6,10 @@ import logging
 import multiprocessing.context
 import time
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -22,6 +23,7 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_st
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -29,7 +31,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
@@ -54,7 +56,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
+from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
@@ -65,7 +67,9 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
+from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
@@ -107,11 +111,10 @@ class WalletStateManager:
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
-    sync_mode: bool
-    sync_target: uint32
+    _sync_target: Optional[uint32]
     genesis: FullBlock
 
-    state_changed_callback: Optional[Callable]
+    state_changed_callback: Optional[StateChangedProtocol] = None
     pending_tx_callback: Optional[Callable]
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
@@ -193,8 +196,7 @@ class WalletStateManager:
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
-        self.sync_mode = False
-        self.sync_target = uint32(0)
+        self._sync_target = None
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
         self.state_changed_callback = None
         self.pending_tx_callback = None
@@ -383,11 +385,10 @@ class WalletStateManager:
                     )
                 self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
-            await self.add_interested_puzzle_hashes(
-                [record.puzzle_hash for record in derivation_paths],
-                [record.wallet_id for record in derivation_paths],
-            )
             if len(derivation_paths) > 0:
+                await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+                    [record.puzzle_hash for record in derivation_paths]
+                )
                 self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
         # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
         if mark_existing_as_used and unused > 0 and new_paths:
@@ -507,7 +508,7 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
-    async def synced(self):
+    async def synced(self) -> bool:
         if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
@@ -515,7 +516,7 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if "simulator" in self.config.get("selected_network"):
+        if "simulator" in self.config.get("selected_network", ""):
             return True  # sim is always synced if we have a genesis block.
 
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
@@ -528,13 +529,39 @@ class WalletStateManager:
             return True
         return False
 
-    def set_sync_mode(self, mode: bool, sync_height: uint32 = uint32(0)):
-        """
-        Sets the sync mode. This changes the behavior of the wallet node.
-        """
-        self.sync_mode = mode
-        self.sync_target = sync_height
-        self.state_changed("sync_changed")
+    @property
+    def sync_mode(self) -> bool:
+        return self._sync_target is not None
+
+    @property
+    def sync_target(self) -> Optional[uint32]:
+        return self._sync_target
+
+    @asynccontextmanager
+    async def set_sync_mode(self, target_height: uint32) -> AsyncIterator[uint32]:
+        if self.log.level == logging.DEBUG:
+            self.log.debug(f"set_sync_mode enter {await self.blockchain.get_finished_sync_up_to()}-{target_height}")
+        async with self.lock:
+            start_time = time.time()
+            start_height = await self.blockchain.get_finished_sync_up_to()
+            self._sync_target = target_height
+            self.log.info(f"set_sync_mode syncing - range: {start_height}-{target_height}")
+            self.state_changed("sync_changed")
+            try:
+                yield start_height
+            except Exception:
+                self.log.exception(
+                    f"set_sync_mode failed - range: {start_height}-{target_height}, seconds: {time.time() - start_time}"
+                )
+            finally:
+                self._sync_target = None
+                self.state_changed("sync_changed")
+                if self.log.level == logging.DEBUG:
+                    self.log.debug(
+                        f"set_sync_mode exit - range: {start_height}-{target_height}, "
+                        f"get_finished_sync_up_to: {await self.blockchain.get_finished_sync_up_to()}, "
+                        f"seconds: {time.time() - start_time}"
+                    )
 
     async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint128:
         """
@@ -802,6 +829,7 @@ class WalletStateManager:
             for remove_id in removed_wallet_ids:
                 self.wallets.pop(remove_id)
                 self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
+                self.state_changed("wallet_removed", remove_id)
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
@@ -1012,8 +1040,10 @@ class WalletStateManager:
 
         assert len(local_records) == len(coin_states)
         for coin_state, local_record in zip(coin_states, local_records):
+            rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
+                    rollback_wallets = self.wallets.copy()  # Shallow copy of wallets if writer rolls back the db
                     # This only succeeds if we don't raise out of the transaction
                     await self.retry_store.remove_state(coin_state)
 
@@ -1035,6 +1065,8 @@ class WalletStateManager:
                         ):
                             continue
 
+                    if coin_state.spent_height is not None and coin_name in trade_removals:
+                        trade_coin_removed.append(coin_state)
                     wallet_id: Optional[uint32] = None
                     wallet_type: Optional[WalletType] = None
                     if wallet_info is not None:
@@ -1087,8 +1119,6 @@ class WalletStateManager:
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
                         self.log.debug("Coin Removed: %s", coin_state)
-                        if coin_name in trade_removals:
-                            trade_coin_removed.append(coin_state)
                         children: Optional[List[CoinState]] = None
                         record = local_record
                         if record is None:
@@ -1342,7 +1372,7 @@ class WalletStateManager:
                                 uint32(child.spent_height),
                                 name="pool_wallet",
                             )
-                            launcher_spend_additions = launcher_spend.additions()
+                            launcher_spend_additions = compute_additions(launcher_spend)
                             assert len(launcher_spend_additions) == 1
                             coin_added = launcher_spend_additions[0]
                             coin_name = coin_added.name()
@@ -1363,6 +1393,8 @@ class WalletStateManager:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
                 self.log.exception(f"Error adding state... {e}")
+                if rollback_wallets is not None:
+                    self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
@@ -1559,13 +1591,42 @@ class WalletStateManager:
         error: Optional[Err],
     ):
         """
-        Full node received our transaction, no need to keep it in queue anymore
+        Full node received our transaction, no need to keep it in queue anymore, unless there was an error
         """
+
         updated = await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         if updated:
             tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
             if tx is not None:
-                self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
+                # we're only interested in errors that are not temporary
+                if send_status and error and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO):
+                    if tx.spend_bundle is not None:
+                        coins_removed = tx.spend_bundle.removals()
+                        trade_coins_removed = set([])
+                        for removed_coin in coins_removed:
+                            trade = await self.trade_manager.get_trade_by_coin(removed_coin)
+                            if trade is not None and trade.status in (
+                                TradeStatus.PENDING_CONFIRM.value,
+                                TradeStatus.PENDING_ACCEPT.value,
+                                TradeStatus.PENDING_CANCEL.value,
+                            ):
+                                # offer was tied to these coins, lets subscribe to them to get a confirmation to
+                                # cancel it if it's confirmed
+                                # we send transactions to multiple peers, and in cases when mempool gets
+                                # fragmented, it's safest to wait for confirmation from blockchain before setting
+                                # offer to failed
+                                trade_coins_removed.add(removed_coin.name())
+                        if trade_coins_removed:
+                            self.log.info(
+                                "Subscribing to unspendable offer coins: %s", [x.hex() for x in trade_coins_removed]
+                            )
+                            await self.add_interested_coin_ids(list(trade_coins_removed))
+
+                    self.state_changed(
+                        "tx_update", tx.wallet_id, {"transaction": tx, "error": error.name, "status": send_status.value}
+                    )
+                else:
+                    self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
     async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
         """
@@ -1635,6 +1696,7 @@ class WalletStateManager:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
+            self.state_changed("wallet_removed", wallet_id)
 
         return remove_ids
 

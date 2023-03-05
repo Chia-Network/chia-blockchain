@@ -7,7 +7,7 @@ import time
 import traceback
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiosqlite
 
@@ -15,7 +15,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import NodeType
@@ -23,6 +23,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64
+from chia.util.network import get_host_addr
 from chia.util.path import path_from_root
 
 log = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ class Crawler:
         self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
-        self.state_changed_callback: Optional[Callable] = None
+        self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.crawl_store = None
         self.log = log
         self.peer_count = 0
@@ -89,7 +90,7 @@ class Crawler:
                 f"{self.minimum_version_count!r}"
             )
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -100,7 +101,6 @@ class Crawler:
 
     async def connect_task(self, peer):
         async def peer_action(peer: WSChiaConnection):
-
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:
@@ -126,7 +126,12 @@ class Crawler:
             await peer.close()
 
         try:
-            connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+            connected = await self.create_client(
+                PeerInfo(
+                    str(get_host_addr(peer.ip_address, prefer_ipv6=self.config.get("prefer_ipv6", False))), peer.port
+                ),
+                peer_action,
+            )
             if not connected:
                 await self.crawl_store.peer_failed_to_connect(peer)
         except Exception as e:

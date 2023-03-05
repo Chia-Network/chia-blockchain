@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 
 class WalletProtocol(Protocol):
-
     # TODO: it seems like this should return WalletType instead
     @classmethod
     def type(cls) -> uint8:

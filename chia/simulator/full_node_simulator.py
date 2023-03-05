@@ -12,7 +12,6 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
@@ -28,6 +27,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class _Default:
@@ -129,7 +130,7 @@ class FullNodeSimulator(FullNodeAPI):
                     config["simulator"]["auto_farm"] = self.auto_farm
                 save_config(self.bt.root_path, "config.yaml", config)
             self.config = config
-            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost > 0:
+            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost() > 0:
                 # if mempool is not empty and auto farm was just enabled, farm a block
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
@@ -204,7 +205,6 @@ class FullNodeSimulator(FullNodeAPI):
                     await asyncio.sleep(1)
                 else:
                     current_time = False
-                    time_per_block = 1
             mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
@@ -224,8 +224,7 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=current_time,
                 previous_generator=self.full_node.full_node_store.previous_generator,
             )
-            rr = RespondBlock(more[-1])
-        await self.full_node.respond_block(rr)
+        await self.full_node.add_block(more[-1])
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
@@ -255,7 +254,6 @@ class FullNodeSimulator(FullNodeAPI):
                     await asyncio.sleep(1)
                 else:
                     current_time = False
-                    time_per_block = 1
             mempool_bundle = self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
@@ -272,8 +270,7 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=current_time,
                 time_per_block=time_per_block,
             )
-            rr: RespondBlock = RespondBlock(more[-1])
-        await self.full_node.respond_block(rr)
+        await self.full_node.add_block(more[-1])
 
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
         new_index = request.new_index
@@ -297,7 +294,7 @@ class FullNodeSimulator(FullNodeAPI):
         )
 
         for block in more_blocks:
-            await self.full_node.respond_block(RespondBlock(block))
+            await self.full_node.add_block(block)
 
     async def farm_blocks_to_puzzlehash(
         self,
@@ -549,6 +546,28 @@ class FullNodeSimulator(FullNodeAPI):
                 if len(coin_set) == 0:
                     return
 
+    async def process_all_wallet_transactions(self, wallet: Wallet, timeout: Optional[float] = 5) -> None:
+        # TODO: Maybe something could be done around waiting for the tx to enter the
+        #       mempool.  Maybe not, might be too many races or such.
+        wallet_state_manager: Optional[WalletStateManager] = wallet.wallet_state_manager
+        assert wallet_state_manager is not None
+
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff in backoff_times():
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
+
+                wallet_ids = wallet_state_manager.wallets.keys()
+                for wallet_id in wallet_ids:
+                    unconfirmed = await wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_id=wallet_id)
+                    if len(unconfirmed) > 0:
+                        break
+                else:
+                    # all wallets have zero unconfirmed transactions
+                    break
+
+                # at least one wallet has unconfirmed transactions
+                await asyncio.sleep(backoff)
+
     async def create_coins_with_amounts(
         self,
         amounts: List[uint64],
@@ -619,3 +638,34 @@ class FullNodeSimulator(FullNodeAPI):
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
         return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
+
+    async def wallet_is_synced(self, wallet_node: WalletNode) -> bool:
+        wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        full_node_height = self.full_node.blockchain.get_peak_height()
+        has_pending_queue_items = wallet_node.new_peak_queue.has_pending_data_process_items()
+        return wallet_height == full_node_height and not has_pending_queue_items
+
+    async def wait_for_wallet_synced(
+        self,
+        wallet_node: WalletNode,
+        timeout: Optional[float] = 5,
+    ) -> None:
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff_time in backoff_times():
+                if await self.wallet_is_synced(wallet_node=wallet_node):
+                    break
+                await asyncio.sleep(backoff_time)
+
+    async def wallets_are_synced(self, wallet_nodes: List[WalletNode]) -> bool:
+        return all([await self.wallet_is_synced(wallet_node=wallet_node) for wallet_node in wallet_nodes])
+
+    async def wait_for_wallets_synced(
+        self,
+        wallet_nodes: List[WalletNode],
+        timeout: Optional[float] = 5,
+    ) -> None:
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff_time in backoff_times():
+                if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
+                    break
+                await asyncio.sleep(backoff_time)

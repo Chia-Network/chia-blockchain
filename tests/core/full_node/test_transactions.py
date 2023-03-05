@@ -9,7 +9,6 @@ import pytest
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
@@ -18,9 +17,9 @@ from chia.util.ints import uint16, uint32
 
 class TestTransactions:
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node_sim_and_wallet, self_hostname):
+    async def test_wallet_coinbase(self, simulator_and_wallet, self_hostname):
         num_blocks = 5
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -147,7 +146,7 @@ class TestTransactions:
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
         for block in all_blocks:
-            await full_node_api_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_2.full_node.add_block(block)
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]

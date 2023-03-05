@@ -96,10 +96,11 @@ def do_test_spend(
 def default_payments_and_conditions(
     initial_index: int, key_lookup: KeyTool
 ) -> Tuple[List[Tuple[bytes32, int]], Program]:
-
+    # the coin we get from coin_db.farm_coin only has amount 1024, so we can
+    # only make small payments to avoid failing with MINTING_COIN
     payments = [
-        (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 1000),
-        (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 1000),
+        (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 10),
+        (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 10),
     ]
     conditions = Program.to([make_create_coin_condition(ph, amount) for ph, amount in payments])
     return payments, conditions

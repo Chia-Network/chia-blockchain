@@ -48,7 +48,7 @@ from clvm.casts import int_from_bytes
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -103,7 +103,6 @@ def npc_to_dict(npc: NPC):
 
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
-
     block_args = [bytes(a) for a in block_generator.generator_refs]
     cost, block_result = block_generator.program.run_with_cost(max_cost, DESERIALIZE_MOD, block_args)
 
@@ -111,7 +110,6 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
 
     cat_list: List[CAT] = []
     for spend in coin_spends.as_iter():
-
         parent, puzzle, amount, solution = spend.as_iter()
         args = match_cat_puzzle(uncurry_puzzle(puzzle))
 

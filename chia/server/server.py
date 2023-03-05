@@ -6,7 +6,7 @@ import ssl
 import time
 import traceback
 from dataclasses import dataclass, field
-from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
+from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -160,7 +160,6 @@ class ChiaServer:
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = __name__,
     ) -> ChiaServer:
-
         log = logging.getLogger(name)
         log.info("Service capabilities: %s", capabilities)
 
@@ -419,14 +418,8 @@ class ChiaServer:
             timeout_value = float(self.config.get("peer_connect_timeout", 30))
             timeout = ClientTimeout(total=timeout_value)
             session = ClientSession(timeout=timeout)
-
-            try:
-                if type(ip_address(target_node.host)) is IPv6Address:
-                    target_node = PeerInfo(f"[{target_node.host}]", target_node.port)
-            except ValueError:
-                pass
-
-            url = f"wss://{target_node.host}:{target_node.port}/ws"
+            ip = f"[{target_node.ip}]" if target_node.ip.is_v6 else f"{target_node.ip}"
+            url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
@@ -573,14 +566,12 @@ class ChiaServer:
                         )
                 raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
 
-    async def send_to_all(self, messages: List[Message], node_type: NodeType) -> None:
-        await self.validate_broadcast_message_type(messages, node_type)
-        for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type:
-                for message in messages:
-                    await connection.send_message(message)
-
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32) -> None:
+    async def send_to_all(
+        self,
+        messages: List[Message],
+        node_type: NodeType,
+        exclude: Optional[bytes32] = None,
+    ) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
@@ -658,10 +649,10 @@ class ChiaServer:
                 ip = None
         if ip is None:
             return None
-        peer = PeerInfo(ip, uint16(port))
-        if not peer.is_valid():
+        try:
+            return PeerInfo(ip, uint16(port))
+        except ValueError:
             return None
-        return peer
 
     def get_port(self) -> uint16:
         return uint16(self._port)
@@ -685,7 +676,7 @@ class ChiaServer:
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
         if trusted_peers is None:
             return False
-        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
+        if not self.config.get("testing", False) and peer.peer_host == "127.0.0.1":
             return True
         if peer.peer_node_id.hex() not in trusted_peers:
             return False
