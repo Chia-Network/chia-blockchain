@@ -20,15 +20,19 @@ P2_CURRIED_PUZZLE_HASH = load_clvm_maybe_recompile("p2_puzzle_hash.clvm")
 AUGMENTED_CONDITION = load_clvm_maybe_recompile("augmented_condition.clvm")
 
 
-def create_augmented_cond_puzzle(condition: List[Any], puzzle_hash: bytes32) -> Any:
-    return AUGMENTED_CONDITION.curry(condition, puzzle_hash)
+def create_augmented_cond_puzzle(condition: List[Any], puzzle: Program) -> Program:
+    return AUGMENTED_CONDITION.curry(condition, puzzle)
 
 
-def create_augmented_cond_solution(inner_puzzle: Program, inner_solution: Program) -> Any:
-    return Program.to([inner_puzzle, inner_solution])
+def create_augmented_cond_puzzle_hash(condition: List[Any], puzzle_hash: bytes32) -> bytes32:
+    return AUGMENTED_CONDITION.curry(condition, puzzle_hash).get_tree_hash_precalc(puzzle_hash)
 
 
-def create_p2_puzzle_hash_puzzle(puzzle_hash: bytes32) -> Any:
+def create_augmented_cond_solution(inner_solution: Program) -> Any:
+    return Program.to([inner_solution])
+
+
+def create_p2_puzzle_hash_puzzle(puzzle_hash: bytes32) -> Program:
     return P2_CURRIED_PUZZLE_HASH.curry(puzzle_hash)
 
 
@@ -40,9 +44,9 @@ def create_clawback_merkle_tree(
     timelock: uint64, sender_ph: bytes32, recipient_ph: bytes32
 ) -> Tuple[bytes32, Dict[bytes32, Tuple[int, List[bytes32]]]]:
     timelock_condition = [80, timelock]
-    augmented_cond_puz = create_augmented_cond_puzzle(timelock_condition, recipient_ph)
+    augmented_cond_puz_hash = create_augmented_cond_puzzle_hash(timelock_condition, recipient_ph)
     p2_puzzle_hash_puz = create_p2_puzzle_hash_puzzle(sender_ph)
-    merkle_tree = build_merkle_tree([augmented_cond_puz.get_tree_hash(), p2_puzzle_hash_puz.get_tree_hash()])
+    merkle_tree = build_merkle_tree([augmented_cond_puz_hash, p2_puzzle_hash_puz.get_tree_hash()])
     return merkle_tree
 
 
@@ -71,9 +75,9 @@ def create_merkle_solution(
         cb_inner_solution = create_p2_puzzle_hash_solution(inner_puzzle, inner_solution)
     elif inner_puzzle.get_tree_hash() == recipient_ph:
         condition = [80, timelock]
-        cb_inner_puz = create_augmented_cond_puzzle(condition, recipient_ph)
+        cb_inner_puz = create_augmented_cond_puzzle(condition, inner_puzzle)
         merkle_proof = create_merkle_proof(merkle_tree, cb_inner_puz.get_tree_hash())
-        cb_inner_solution = create_augmented_cond_solution(inner_puzzle, inner_solution)
+        cb_inner_solution = create_augmented_cond_solution(inner_solution)
     else:
         raise ValueError("Invalid Clawback inner puzzle.")
     return Program.to([merkle_proof, cb_inner_puz, cb_inner_solution])
