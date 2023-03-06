@@ -19,7 +19,7 @@ P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_treasury.clvm")
-DAO_SPEND_PROPOSAL: Program = load_clvm("dao_spend_proposal.clvm")
+P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clvm")
 
 
 def test_proposal() -> None:
@@ -39,7 +39,6 @@ def test_proposal() -> None:
     proposal_pass_percentage: uint64 = uint64(5100)
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
@@ -58,15 +57,6 @@ def test_proposal() -> None:
         's',
         Program.to(1).get_tree_hash(),
     )
-    # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-    # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-    # vote_coin_id_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
-    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-    #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-    #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-    # innerpuz_reveal  ; this is only added during the first vote
-    # soft_close_length  ; revealed by the treasury
 
     # Test Voting
     solution: Program = Program.to(
@@ -402,119 +392,122 @@ def test_lockup() -> None:
     assert len(conds.as_python()) == 3
 
 
-# def test_proposal_innerpuz() -> None:
-#     current_cat_issuance: uint64 = uint64(200)
-#     proposal_pass_percentage: uint64 = uint64(15)
-#     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-#     LOCKUP_TIME: uint64 = uint64(200)
-#     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
-#     singleton_struct: Program = Program.to(
-#         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
-#     )
-#
-#     new_puzhash = Program.to("new_puzhash").get_tree_hash()
-#     old_amount = 200
-#     spend_amount = 50
-#     new_amount_change = old_amount - spend_amount
-#     pass_margin = 5100
-#
-#     # Setup Proposal
-#     P2_PH = Program.to("p2_ph").get_tree_hash()
-#     P2_CONDS = [[51, P2_PH, spend_amount]]
-#
-#     proposal_innerpuz = DAO_SPEND_PROPOSAL.curry(P2_CONDS, new_puzhash, new_amount_change)
-#
-#     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
-#         singleton_struct,
-#         DAO_PROPOSAL_MOD.get_tree_hash(),
-#         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-#         CAT_MOD.get_tree_hash(),
-#         DAO_TREASURY_MOD.get_tree_hash(),
-#         DAO_LOCKUP_MOD.get_tree_hash(),
-#         CAT_TAIL_HASH,
-#         singleton_id,
-#         200,
-#         350,
-#         proposal_innerpuz,
-#     )
-#
-#     # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-#     # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-#     # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
-#     #                                       ; the total number of CATs in circulation according to the treasury
-#     # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-#     #                                ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-#     # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-#     #                                             ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-#     # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
-#     #                    ; set this to 0 and we will do the vote spend case
-#
-#     solution: Program = Program.to(
-#         [
-#             [],
-#             P2_SINGLETON_MOD.get_tree_hash(),
-#             current_cat_issuance,
-#             pass_margin,
-#             proposal_pass_percentage,
-#             LOCKUP_TIME,
-#         ]
-#     )
-#
-#     full_prop_ph: bytes32 = SINGLETON_MOD.curry(singleton_struct, full_proposal).get_tree_hash()
-#
-#     # Setup the treasury
-#     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
-#         [
-#             singleton_struct,
-#             DAO_TREASURY_MOD.get_tree_hash(),
-#             DAO_PROPOSAL_MOD.get_tree_hash(),
-#             DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-#             DAO_LOCKUP_MOD.get_tree_hash(),
-#             CAT_MOD.get_tree_hash(),
-#             CAT_TAIL_HASH,
-#             current_cat_issuance,
-#             proposal_pass_percentage,
-#             pass_margin,
-#             LOCKUP_TIME,
-#         ]
-#     )
-#     # my_amount         ; current amount
-#     # new_amount_change ; may be negative or positive. Is zero during eve spend
-#     # my_puzhash_or_proposal_id ; either the current treasury singleton puzzlehash OR proposal ID
-#     # announcement_messages_list_or_payment_nonce  ; this is a list of messages which the treasury will parrot - assert from the proposal and also create
-#     # new_puzhash  ; if this variable is 0 then we do the "add_money" spend case and all variables below are not needed
-#     # proposal_innerpuz
-#     # proposal_current_votes ; tally of yes votes
-#     # proposal_total_votes   ; total votes cast (by number of cat-mojos)
-#     # type  ; this is used for the recreating self type
-#     # extra_value  ; this is used for recreating self
-#
-#     treasury_solution: Program = Program.to(
-#         [
-#             old_amount,  # old_amount
-#             new_amount_change,  # new_amount_change
-#             singleton_id,  # my_puzhash_or_proposal_id
-#             [],  # announcement_messages_list_or_payment_nonce
-#             new_puzhash,  # amount_or_new_puzhash
-#             proposal_innerpuz,  # proposal_innerpuz
-#             200,  # current_votes
-#             350,  # total_votes
-#             "u",  # recreation type
-#             0,  # extra_value for recreation
-#         ]
-#     )
-#
-#     # Run the puzzles
-#     treasury_conds: Program = full_treasury_puz.run(treasury_solution)
-#     proposal_conds: Program = full_proposal.run(solution)
-#
-#     # Check the A_P_As from treasury match the C_P_As from the proposal
-#     cpa = b">"
-#     apa = b"?"
-#     cpas = []
-#     for cond in proposal_conds.as_python():
-#         if cond[0] == cpa:
-#             cpas.append(std_hash(full_prop_ph + bytes32(cond[1])))
-#     for cond in treasury_conds.as_python():
-#         if cond[0] == apa:
-#             assert bytes32(cond[1]) in cpas
+def test_proposal_innerpuz() -> None:
+    proposal_pass_percentage: uint64 = uint64(5100)
+    attendance_required: uint64 = uint64(1000)
+    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    LOCKUP_TIME: uint64 = uint64(200)
+
+    # Setup the treasury
+    treasury_singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    treasury_singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (treasury_singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+
+    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
+        treasury_singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        attendance_required,
+        proposal_pass_percentage,
+    )
+    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, treasury_singleton_struct)
+    # PROPOSAL_VALIDATOR
+    # MONEY_RECEIVER
+    # PROPOSAL_LENGTH
+    # PROPOSAL_SOFTCLOSE_LENGTH
+    treasury_puz: Program = DAO_TREASURY_MOD.curry(
+        proposal_validator,
+        money_receiver,
+        40,
+        5,
+    )
+
+    full_treasury_puz = SINGLETON_MOD.curry(treasury_singleton_struct, treasury_puz)
+
+    # Setup Proposal
+    proposal_singleton_id: Program = Program.to("p_singleton_id").get_tree_hash()
+    proposal_singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (proposal_singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+
+    P2_PH = Program.to("p2_ph").get_tree_hash()
+    P2_CONDS = [[51, P2_PH, 200], [51, treasury_puz, 201]]
+
+    proposed_innerpuz = P2_CONDITIONS_MOD.curry(P2_CONDS)
+
+    proposal: Program = DAO_PROPOSAL_MOD.curry(
+        proposal_singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        treasury_singleton_id,
+        950,
+        1200,
+        's',
+        proposed_innerpuz.get_tree_hash(),
+    )
+    full_proposal = SINGLETON_MOD.curry(proposal_singleton_struct, proposal)
+
+    full_prop_ph: bytes32 = full_proposal.get_tree_hash()
+
+    # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
+    # proposal_validator_solution
+    # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+    # delegated_solution  ; this is not secure unless the delegated puzzle secures it
+    treasury_solution: Program = Program.to(
+        [
+            [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 's'],
+            [proposal_singleton_id, 1200, 950],
+            proposed_innerpuz,
+            0,
+        ]
+    )
+
+    # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+    # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+    # vote_coin_id_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
+    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+    #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+    # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+    #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+    # innerpuz_reveal  ; this is only added during the first vote
+    # soft_close_length  ; revealed by the treasury
+
+    proposal_solution = Program.to(
+        [
+            proposal_validator.get_tree_hash(),
+            money_receiver.get_tree_hash(),
+            40,
+            proposal_pass_percentage,
+            1000,
+            0,
+            5,
+        ]
+    )
+    # lineage_proof my_amount inner_solution
+    lineage_proof = [Program.to("fake_parent_parent"), Program.to("fake_parent_inner"), 201]
+    full_treasury_solution = Program.to([lineage_proof, 401, treasury_solution])
+    full_proposal_solution = Program.to([lineage_proof, 1, proposal_solution])
+
+    # Run the puzzles
+    treasury_conds: Program = full_treasury_puz.run(full_treasury_solution)
+    proposal_conds: Program = full_proposal.run(full_proposal_solution)
+    breakpoint()
+    # Check the A_P_As from treasury match the C_P_As from the proposal
+    cpa = b">"
+    apa = b"?"
+    cpas = []
+    for cond in proposal_conds.as_python():
+        if cond[0] == cpa:
+            cpas.append(std_hash(full_prop_ph + bytes32(cond[1])))
+    for cond in treasury_conds.as_python():
+        if cond[0] == apa:
+            assert bytes32(cond[1]) in cpas
