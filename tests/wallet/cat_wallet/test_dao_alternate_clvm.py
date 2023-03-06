@@ -436,7 +436,7 @@ def test_proposal_innerpuz() -> None:
     )
 
     P2_PH = Program.to("p2_ph").get_tree_hash()
-    P2_CONDS = [[51, P2_PH, 200], [51, treasury_puz, 201]]
+    P2_CONDS = [[51, P2_PH, 200], [51, treasury_puz.get_tree_hash(), 201]]
 
     proposed_innerpuz = P2_CONDITIONS_MOD.curry(P2_CONDS)
 
@@ -464,7 +464,7 @@ def test_proposal_innerpuz() -> None:
     # delegated_solution  ; this is not secure unless the delegated puzzle secures it
     treasury_solution: Program = Program.to(
         [
-            [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 's'],
+            [full_proposal.get_tree_hash(), proposed_innerpuz.get_tree_hash(), 0, 's'],
             [proposal_singleton_id, 1200, 950],
             proposed_innerpuz,
             0,
@@ -493,21 +493,21 @@ def test_proposal_innerpuz() -> None:
         ]
     )
     # lineage_proof my_amount inner_solution
-    lineage_proof = [Program.to("fake_parent_parent"), Program.to("fake_parent_inner"), 201]
+    lineage_proof = [treasury_singleton_id, treasury_puz.get_tree_hash(), 201]
     full_treasury_solution = Program.to([lineage_proof, 401, treasury_solution])
     full_proposal_solution = Program.to([lineage_proof, 1, proposal_solution])
 
     # Run the puzzles
     treasury_conds: Program = full_treasury_puz.run(full_treasury_solution)
     proposal_conds: Program = full_proposal.run(full_proposal_solution)
-    breakpoint()
+    # breakpoint()
     # Check the A_P_As from treasury match the C_P_As from the proposal
     cpa = b">"
     apa = b"?"
     cpas = []
     for cond in proposal_conds.as_python():
         if cond[0] == cpa:
-            cpas.append(std_hash(full_prop_ph + bytes32(cond[1])))
+            cpas.append(std_hash(full_prop_ph + cond[1]))
     for cond in treasury_conds.as_python():
         if cond[0] == apa:
             assert bytes32(cond[1]) in cpas
