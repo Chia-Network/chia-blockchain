@@ -103,7 +103,7 @@ def make_test_conds(
     birth_seconds: Optional[int] = None,
     height_relative: Optional[int] = None,
     height_absolute: int = 0,
-    seconds_relative: int = 0,
+    seconds_relative: Optional[int] = None,
     seconds_absolute: int = 0,
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
@@ -112,7 +112,7 @@ def make_test_conds(
                 TEST_COIN.name(),
                 IDENTITY_PUZZLE_HASH,
                 None if height_relative is None else uint32(height_relative),
-                uint64(seconds_relative),
+                None if seconds_relative is None else uint64(seconds_relative),
                 None,
                 None,
                 None if birth_height is None else uint32(birth_height),

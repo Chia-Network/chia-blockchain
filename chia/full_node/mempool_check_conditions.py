@@ -144,6 +144,7 @@ def mempool_check_time_locks(
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED
-        if timestamp < unspent.timestamp + spend.seconds_relative:
-            return Err.ASSERT_SECONDS_RELATIVE_FAILED
+        if spend.seconds_relative is not None:
+            if timestamp < unspent.timestamp + spend.seconds_relative:
+                return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None
