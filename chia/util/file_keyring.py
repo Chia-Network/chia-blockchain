@@ -171,7 +171,7 @@ class FileKeyringContent:
 
 @final
 @dataclass
-class FileKeyring(FileSystemEventHandler):  # type: ignore[misc]
+class FileKeyring(FileSystemEventHandler):
     """
     FileKeyring provides a file-based keyring store to manage a FileKeyringContent .The public interface is intended
     to align with the API provided by the keyring module such that the KeyringWrapper class can pick an appropriate
