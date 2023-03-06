@@ -2,7 +2,7 @@
   (
     BACKDOOR_SINGLETON_STRUCT
     BRICK_CONDITIONS
-    did_innerpuz
+    did_innerpuzhash
     my_coin_id
   )
 
@@ -11,12 +11,12 @@
   (defun-inline create_did_puzhash
     (
         BACKDOOR_SINGLETON_STRUCT
-        provider_innerpuz
+        did_innerpuzhash
     )
 
     (curry_hashes_inline (f BACKDOOR_SINGLETON_STRUCT)
       (sha256tree BACKDOOR_SINGLETON_STRUCT)
-      provider_innerpuz
+      did_innerpuzhash
     )
   )
 
@@ -25,7 +25,7 @@
     (c
       (list ASSERT_PUZZLE_ANNOUNCEMENT
         (sha256
-          (create_did_puzhash BACKDOOR_SINGLETON_STRUCT did_innerpuz)
+          (create_did_puzhash BACKDOOR_SINGLETON_STRUCT did_innerpuzhash)
           (sha256 "brick" my_coin_id)
         )
       )
