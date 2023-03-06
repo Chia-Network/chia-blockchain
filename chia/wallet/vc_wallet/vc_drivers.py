@@ -75,15 +75,19 @@ def solve_tp_covenant_adapter(
 ##################################
 # Update w/ DID Transfer Program #
 ##################################
-def create_did_tp(did_id: bytes32) -> Program:
+def create_did_tp(
+    did_id: bytes32,
+    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
+    singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
+) -> Program:
     return NFT_DID_TP.curry(
-        (SINGLETON_MOD_HASH, (did_id, SINGLETON_LAUNCHER_HASH)),
+        (singleton_mod_hash, (did_id, singleton_launcher_hash)),
     )
 
 
 def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32]]:
     if uncurried_puzzle.mod == NFT_DID_TP:
-        return bytes32(uncurried_puzzle.args.at("frf").as_python()),
+        return (bytes32(uncurried_puzzle.args.at("frf").as_python()),)
     else:
         return None
 
@@ -103,9 +107,14 @@ def solve_did_tp(
 ################
 # DID Backdoor #
 ################
-def create_did_backdoor(did_id: bytes32, brick_conditions: List[Program]) -> Program:
+def create_did_backdoor(
+    did_id: bytes32,
+    brick_conditions: List[Program],
+    singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
+    singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
+) -> Program:
     return DID_BACKDOOR.curry(
-        (SINGLETON_MOD_HASH, (did_id, SINGLETON_LAUNCHER_HASH)),
+        (singleton_mod_hash, (did_id, singleton_launcher_hash)),
         brick_conditions,
     )
 
