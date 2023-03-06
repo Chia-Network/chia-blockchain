@@ -37,6 +37,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint64
+from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
@@ -597,7 +598,9 @@ async def get_b_tools(get_temp_keyring):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def daemon_connection_and_temp_keychain(get_b_tools):
+async def daemon_connection_and_temp_keychain(
+    get_b_tools: BlockTools,
+) -> AsyncIterator[Tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
     async for daemon in setup_daemon(btools=get_b_tools):
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:
