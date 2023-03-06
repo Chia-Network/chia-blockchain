@@ -90,4 +90,6 @@ class TestSingletonStore:
             unconfirmed_record_1 = await db.get_unconfirmed_singleton_by_coin_id(record_1_coin.name())
             unconfirmed_record_2 = await db.get_unconfirmed_singletons_by_singleton_id(record_1.singleton_id)
             assert unconfirmed_record_1 == unconfirmed_record_2[0]
-            await db.confirm_unconfirmed_singleton(record_1.singleton_id)
+            await db.confirm_unconfirmed_singleton(unconfirmed_record_1[0])
+            confs = await db.get_records_by_singleton_id(record_1.singleton_id)
+            assert confs[0].singleton_id == unconfirmed_record_1[1]

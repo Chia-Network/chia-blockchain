@@ -71,10 +71,10 @@ class WalletSingletonStore:
 
         return self
 
-    # rename from save_singleton
     async def add_confirmed_singleton(
         self,
-        record: SingletonRecord
+        record: SingletonRecord,
+        block_height: uint32
     ) -> None:
         singleton_id = get_singleton_id_from_puzzle(record.parent_coinspend.puzzle_reveal)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -95,8 +95,15 @@ class WalletSingletonStore:
 
             # Find and delete matching unconfirmed singleton
             await conn.execute(
-                f"DELETE FROM unconfirmed_singletons WHERE singleton_id = ? AND wallet_id = ?",
+                f"DELETE FROM unconfirmed_singletons WHERE singleton_id=? AND wallet_id=?",
                 (singleton_id.hex(), record.wallet_id),
+            )
+
+            # Update previous confirmed singleton removed height
+            last_coin = record.parent_coinspend.coin.name().hex()
+            await conn.execute(
+                f"UPDATE confirmed_singletons SET removed_height=? WHERE coin_id=?",
+                (block_height, last_coin)
             )
 
     async def add_unconfirmed_singleton(self, coin_spend: CoinSpend, wallet_id: uint32) -> None:
@@ -108,40 +115,6 @@ class WalletSingletonStore:
                 (coin_id.hex(), singleton_id.hex(), wallet_id, bytes(coin_spend))
             )
 
-    # TODO: replace with add_confirmed_singleton
-    async def add_spend(self, wallet_id: uint32, coin_spend: CoinSpend, block_height: uint32) -> None:
-        """Given a coin spend of a singleton, attempt to calculate the child coin and details
-        for the new singleton record. Add the new record to the store and remove the old record
-        if it exists
-        """
-        # get singleton_id from puzzle_reveal
-        singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
-        if not singleton_id:
-            raise ValueError("Coin to add is not a valid singleton")
-
-        coin = get_most_recent_singleton_coin_from_coin_spend(coin_spend)
-        inner_puz = get_innerpuzzle_from_puzzle(coin_spend.puzzle_reveal)
-        lineage_bytes = coin_spend.solution.to_program().first().as_atom_list()
-        lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
-        # Create and save the new singleton record
-        # Remove pending from record table, and create new one for pending coins: coin_id, singleton_id, coin_spend
-        new_record = SingletonRecord(
-            coin=coin,
-            singleton_id=singleton_id,
-            wallet_id=wallet_id,
-            parent_coinspend=coin_spend,
-            inner_puzzle_hash=inner_puz.get_tree_hash(),
-            removed_height=0,
-            lineage_proof=lineage_proof,
-            custom_data=None
-        )
-        await self.add_confirmed_singleton(new_record)
-        # check if coin is in DB and mark deleted if found
-        current_record = await self.get_record_by_coin_id(coin_spend.coin.name())
-        if current_record:
-            self.delete_singleton_by_coin_id(coin_spend.coin.name(), block_height)
-        return
-
     def create_singleton_record_from_coin_spend(self, coin_spend: CoinSpend, wallet_id: uint32) -> SingletonRecord:
         singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
         if not singleton_id:
@@ -150,7 +123,10 @@ class WalletSingletonStore:
         coin = get_most_recent_singleton_coin_from_coin_spend(coin_spend)
         inner_puz = get_innerpuzzle_from_puzzle(coin_spend.puzzle_reveal)
         lineage_bytes = coin_spend.solution.to_program().first().as_atom_list()
-        lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
+        if len(lineage_bytes) == 2:
+            lineage_proof = LineageProof(lineage_bytes[0], None, int_from_bytes(lineage_bytes[1]))
+        else:
+            lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
         return SingletonRecord(
             coin=coin,
             singleton_id=singleton_id,
@@ -162,19 +138,19 @@ class WalletSingletonStore:
             custom_data=None
         )
 
-    async def confirm_unconfirmed_singleton(self, singleton_id: bytes32) -> None:
-        unconfirmed_records = await self.get_unconfirmed_singletons_by_singleton_id(singleton_id)
-        if not unconfirmed_records:
-            raise ValueError(f"Unconfirmed singleton not found for singleton id: {singleton_id}")
-        coin_spend = unconfirmed_records[0][3]
-        wallet_id = unconfirmed_records[0][2]
+    async def confirm_unconfirmed_singleton(self, coin_id: bytes32, block_height: uint32) -> None:
+        unconfirmed_record = await self.get_unconfirmed_singleton_by_coin_id(coin_id)
+        if not unconfirmed_record:
+            raise ValueError(f"Unconfirmed singleton not found for coin id: {coin_id}")
+        coin_spend = unconfirmed_record[3]
+        wallet_id = unconfirmed_record[2]
         record = self.create_singleton_record_from_coin_spend(coin_spend, wallet_id)
-        await self.add_confirmed_singleton(record)
+        await self.add_confirmed_singleton(record, block_height)
 
     async def get_unconfirmed_singleton_by_coin_id(self, coin_id: bytes32) -> List:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM unconfirmed_singletons WHERE coin_id = ?",
+                "SELECT * FROM unconfirmed_singletons WHERE coin_id=?",
                 (coin_id.hex(),),
             )
         if rows:
@@ -189,7 +165,7 @@ class WalletSingletonStore:
     async def get_unconfirmed_singletons_by_singleton_id(self, singleton_id: bytes32) -> List:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM unconfirmed_singletons WHERE singleton_id = ?",
+                "SELECT * FROM unconfirmed_singletons WHERE singleton_id=?",
                 (singleton_id.hex(),),
             )
         if rows:
@@ -250,7 +226,7 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM confirmed_singletons WHERE wallet_id = ? ORDER BY removed_height",
+                "SELECT * FROM confirmed_singletons WHERE wallet_id=? ORDER BY removed_height",
                 (wallet_id,),
             )
         return [self._to_singleton_record(row) for row in rows]
@@ -262,7 +238,7 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM confirmed_singletons WHERE coin_id = ?",
+                "SELECT * FROM confirmed_singletons WHERE coin_id=?",
                 (coin_id.hex(),),
             )
         if rows:
@@ -277,7 +253,7 @@ class WalletSingletonStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM confirmed_singletons WHERE singleton_id = ? ORDER BY removed_height",
+                "SELECT * FROM confirmed_singletons WHERE singleton_id=? ORDER BY removed_height",
                 (singleton_id.hex(),),
             )
         return [self._to_singleton_record(row) for row in rows]

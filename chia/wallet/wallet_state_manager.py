@@ -1623,6 +1623,13 @@ class WalletStateManager:
 
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
         if wallet_type == WalletType.DAO:
+            # Get coin_spend for the received coin
+            coin_states = await self.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
+            assert coin_states
+            cs = coin_states[0]
+            coin_spend = await self.wallet_node.fetch_puzzle_solution(cs.spent_height, cs.coin, peer)
+            assert coin_spend
+            applied = await self.wallets[wallet_id].apply_state_transition(coin_spend, height)
             return
         await self.wallets[wallet_id].coin_added(coin, height, peer)
 

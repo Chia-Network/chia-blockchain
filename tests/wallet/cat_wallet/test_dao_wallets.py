@@ -82,8 +82,9 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # Check the spend was successful
     treasury_id = dao_wallet_0.dao_info.treasury_id
+
+    # Check the spend was successful
     await time_out_assert(
         60,
         dao_wallet_0.is_spend_retrievable,
@@ -148,7 +149,8 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     cat_wallet_1_bal = await cat_wallet_1.get_confirmed_balance()
     assert cat_wallet_1_bal == cat_amt
 
-    assert dao_wallet_0.apply_state_transition_call_count == 0
+    # We used apply_state_transition 1 time so far (creating the treasury coin)
+    assert dao_wallet_0.apply_state_transition_call_count == 1
     # Add money to the Treasury -- see dao_treasury.clvm, add money spend case
 
     funding_amt = 10000000000
@@ -163,7 +165,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     if not trusted:
         await asyncio.sleep(1)
     # Verify apply_state_transition is called after a spend to the Treasury Singleton
-    assert dao_wallet_0.apply_state_transition_call_count == 1
+    assert dao_wallet_0.apply_state_transition_call_count == 2
 
     # verify New Peak callback is working
     assert dao_wallet_0.new_peak_call_count > 0
@@ -173,6 +175,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     dao_tsy_coin = dao_wallet_0.dao_info.current_treasury_coin
     assert dao_tsy_coin.amount == funding_amt + 1
 
+    # Fetch the confirmed singleton records and make sure that one is removed, and the other matches our newly funded coin
+    records = await wallet_node_0.wallet_state_manager.singleton_store.get_records_by_singleton_id(treasury_id)
+    assert len(records) == 2
+    assert records[0].removed_height == 0
+    assert records[0].coin == dao_tsy_coin
+    assert records[1].removed_height > 0
 
 def test_dao_singleton_update():
     pass
