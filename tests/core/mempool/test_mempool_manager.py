@@ -7,6 +7,7 @@ import pytest
 from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
@@ -88,11 +89,12 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 
 async def instantiate_mempool_manager(
     get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
     *,
-    current_block_height: uint32 = TEST_HEIGHT,
-    current_block_timestamp: uint64 = TEST_TIMESTAMP,
+    block_height: uint32 = TEST_HEIGHT,
+    block_timestamp: uint64 = TEST_TIMESTAMP,
+    constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
-    test_block_record = create_test_block_record(height=current_block_height, timestamp=current_block_timestamp)
+    mempool_manager = MempoolManager(get_coin_record, constants)
+    test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
@@ -404,6 +406,7 @@ mis = MempoolInclusionStatus
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("softfork2", [False, True])
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
@@ -435,12 +438,28 @@ async def test_ephemeral_timelock(
     lock_value: int,
     expected_status: MempoolInclusionStatus,
     expected_error: Optional[Err],
+    softfork2: bool,
 ) -> None:
+    if softfork2:
+        constants = DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0)
+    else:
+        constants = DEFAULT_CONSTANTS
+
     mempool_manager = await instantiate_mempool_manager(
         get_coin_record=get_coin_record_for_test_coins,
-        current_block_height=uint32(5),
-        current_block_timestamp=uint64(10050),
+        block_height=uint32(5),
+        block_timestamp=uint64(10050),
+        constants=constants,
     )
+
+    if not softfork2 and opcode in [
+        co.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
+        co.ASSERT_BEFORE_HEIGHT_RELATIVE,
+        co.ASSERT_BEFORE_SECONDS_ABSOLUTE,
+        co.ASSERT_BEFORE_SECONDS_RELATIVE,
+    ]:
+        expected_error = Err.INVALID_CONDITION
+
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1], [opcode, lock_value]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
     sb1 = spend_bundle_from_conditions(conditions)

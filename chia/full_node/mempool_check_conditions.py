@@ -48,12 +48,13 @@ def get_name_puzzle_conditions(
 
     if mempool_mode:
         flags = MEMPOOL_MODE
-    elif height is not None and height >= constants.SOFT_FORK2_HEIGHT:
-        flags = LIMIT_STACK | ENABLE_ASSERT_BEFORE
     elif height is not None and height >= constants.SOFT_FORK_HEIGHT:
         flags = LIMIT_STACK
     else:
         flags = 0
+
+    if height is not None and height >= constants.SOFT_FORK2_HEIGHT:
+        flags = flags | ENABLE_ASSERT_BEFORE
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]
