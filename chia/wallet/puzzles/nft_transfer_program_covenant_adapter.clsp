@@ -1,0 +1,22 @@
+(mod
+  (
+    COVENANT_LAYER
+    Current_Owner  ; Truth
+    conditions  ; Truth
+    (
+      covenant_solutions
+      lineage_proof
+      inner_solution
+    )
+  )
+
+  (a
+    COVENANT_LAYER
+    (list
+      Current_Owner
+      covenant_solutions
+      lineage_proof
+      (c Current_Owner (c conditions inner_solution))
+    )
+  )
+)

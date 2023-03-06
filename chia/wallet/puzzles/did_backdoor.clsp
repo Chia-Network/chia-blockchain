@@ -1,0 +1,35 @@
+(mod
+  (
+    BACKDOOR_SINGLETON_STRUCT
+    BRICK_CONDITIONS
+    did_innerpuz
+    my_coin_id
+  )
+
+  (include curry.clib)
+
+  (defun-inline create_did_puzhash
+    (
+        BACKDOOR_SINGLETON_STRUCT
+        provider_innerpuz
+    )
+
+    (curry_hashes_inline (f BACKDOOR_SINGLETON_STRUCT)
+      (sha256tree BACKDOOR_SINGLETON_STRUCT)
+      provider_innerpuz
+    )
+  )
+
+  (c
+    (list ASSERT_MY_COIN_ID my_coin_id)
+    (c
+      (list ASSERT_PUZZLE_ANNOUNCEMENT
+        (sha256
+          (create_did_puzhash BACKDOOR_SINGLETON_STRUCT did_innerpuz)
+          (sha256 "brick" my_coin_id)
+        )
+      )
+      BRICK_CONDITIONS
+    )
+  )
+)

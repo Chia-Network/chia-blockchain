@@ -1,0 +1,43 @@
+(mod
+  (
+    PROVIDER_SINGLETON_STRUCT
+    Current_Owner  ; Truth
+    conditions  ; Truth
+    (
+      provider_innerpuz
+      my_coin_id
+      new_metadata
+      new_transfer_program
+    )
+  )
+
+  (include condition_codes.clvm)
+  (include curry.clib)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline create_did_puzhash
+    (
+        PROVIDER_SINGLETON_STRUCT
+        provider_innerpuz
+    )
+
+    (curry_hashes_inline (f PROVIDER_SINGLETON_STRUCT)
+      (sha256tree PROVIDER_SINGLETON_STRUCT)
+      provider_innerpuz
+    )
+  )
+
+  (list
+    (list ASSERT_MY_COIN_ID my_coin_id)
+    (list ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+        (create_did_puzhash PROVIDER_SINGLETON_STRUCT provider_innerpuz)
+        (sha256
+          my_coin_id
+          (sha256tree new_metadata)
+          (sha256tree new_transfer_program)
+        )
+      )
+    )
+  )
+)
