@@ -20,9 +20,15 @@
     conditions
   )
 
-  (include utility_macros.clib)
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+
+  (defmacro assert_or_nil items
+      (if (r items)
+          (list if (f items) (c assert (r items)) (q . ()))
+          (f items)
+      )
+  )
 
   (defconstant TEN_THOUSAND 10000)
 
@@ -70,44 +76,45 @@
 
   (defun check_spend_conditions (SINGLETON_STRUCT conditions treasury_puzzle_hash treasury_amount spend_amount)
     (if conditions
-      (c (f conditions)
-	(check_spend_conditions SINGLETON_STRUCT (r conditions) treasury_puzzle_hash treasury_amount
-	  (if (= (f (f conditions)) CREATE_COIN)
-	    (+ spend_amount (f (r (r (f conditions)))))
-	    spend_amount
-	  )
-	)
+      (c
+        (f conditions)
+      	(check_spend_conditions SINGLETON_STRUCT (r conditions) treasury_puzzle_hash treasury_amount
+      	  (if (= (f (f conditions)) CREATE_COIN)
+      	    (+ spend_amount (f (r (r (f conditions)))))
+      	    spend_amount
+      	  )
+      	)
       )
       (c
         (list ASSERT_MY_AMOUNT treasury_amount)
-	(c
-	  (list CREATE_COIN treasury_puzzle_hash (- treasury_amount spend_amount))
-	  (c
-	    (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT treasury_puzzle_hash))
-	    ()
-	  )
-	)
+      	(c
+      	  (list CREATE_COIN treasury_puzzle_hash (- treasury_amount spend_amount))
+      	  (c
+      	    (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT treasury_puzzle_hash))
+      	    ()
+      	  )
+      	)
       )
     )
   )
 
-  (defun check_update_conditions (SINGLETON_STRUCT conditions seen_flag)
+  (defun check_update_conditions (SINGLETON_STRUCT conditions seen_flag output)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (c
-	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
-	  (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions) 1))
-	)
-	(if
-	  (any ; block both types of announcement in the update case
-	    (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
-	    (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
-	  )
-	  (x)
-	  (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
-	)
+      	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
+      	  (check_update_conditions SINGLETON_STRUCT (r conditions) 1 (c (f conditions) output))
+      	)
+      	(if
+      	  (any ; block both types of announcement in the update case
+      	    (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
+      	    (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+      	  )
+      	  ()  ; fail
+      	  (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag (c (f conditions) output))
+      	)
       )
-      (assert seen_flag ())
+      (assert_or_nil seen_flag output)
     )
   )
 
@@ -115,7 +122,7 @@
      conditions
   )
 
-  (assert
+  (assert_or_nil
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
     (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
     (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
@@ -144,10 +151,10 @@
       (check_spend_conditions SINGLETON_STRUCT conditions treasury_puzzle_hash treasury_amount 0)
       (if (= spend_or_update_flag "u")
         (check_update_conditions SINGLETON_STRUCT conditions 0)
-	(if (= spend_or_update_flag "d")
-	  (check_dangerous_conditions SINGLETON_STRUCT conditions)
-	  (x)
-	)
+      	(if (= spend_or_update_flag "d")
+      	  (check_dangerous_conditions SINGLETON_STRUCT conditions)
+      	  ()
+      	)
       )
     )
   )

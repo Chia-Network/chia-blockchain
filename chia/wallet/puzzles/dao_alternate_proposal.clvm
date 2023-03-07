@@ -226,7 +226,7 @@
   )
 
   (if soft_close_length
-    ; we have passed
+    ; we are trying to close
     (list
       (list CREATE_COIN dao_finished_state ONE)
       (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
