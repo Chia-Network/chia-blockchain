@@ -30,12 +30,12 @@ def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -
     Formats the response into standard format.
     """
     response = {
-        "command": incoming_msg["command"],
+        "command": incoming_msg.get("command", ""),
         "ack": True,
         "data": response_data,
-        "request_id": incoming_msg["request_id"],
-        "destination": incoming_msg["origin"],
-        "origin": incoming_msg["destination"],
+        "request_id": incoming_msg.get("request_id", ""),
+        "destination": incoming_msg.get("origin", ""),
+        "origin": incoming_msg.get("destination", ""),
     }
 
     json_str = dict_to_json_str(response)

@@ -10,7 +10,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint128
 from chia.util.streamable import Streamable, streamable
 
 
@@ -42,11 +42,11 @@ class FullBlock(Streamable):
         return self.reward_chain_block.height
 
     @property
-    def weight(self):
+    def weight(self) -> uint128:
         return self.reward_chain_block.weight
 
     @property
-    def total_iters(self):
+    def total_iters(self) -> uint128:
         return self.reward_chain_block.total_iters
 
     @property

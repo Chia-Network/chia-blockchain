@@ -894,7 +894,7 @@ def validate_finished_header_block(
         # 27b. Check genesis block height, weight, and prev block hash
         if header_block.height != uint32(0):
             return None, ValidationError(Err.INVALID_HEIGHT)
-        if header_block.weight != constants.DIFFICULTY_STARTING:
+        if header_block.weight != uint128(constants.DIFFICULTY_STARTING):
             return None, ValidationError(Err.INVALID_WEIGHT)
         if header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
             return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)

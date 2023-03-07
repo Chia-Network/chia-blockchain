@@ -1892,6 +1892,15 @@ class TestBodyValidation:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected,with_garbage",
         [
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 2, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 3, rbr.NEW_PEAK, False),
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10029, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.NEW_PEAK, False),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10031, rbr.INVALID_BLOCK, False),
             (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK, False),
             (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK, False),
             (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK, False),
@@ -1921,6 +1930,14 @@ class TestBodyValidation:
             constants = test_constants.replace(SOFT_FORK2_HEIGHT=0)
         else:
             constants = test_constants
+
+            # if the softfork is not active in this test, fixup all the
+            # tests to instead expect NEW_PEAK unconditionally
+            if opcode in [
+                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+            ]:
+                expected = ReceiveBlockResult.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
 
