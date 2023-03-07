@@ -912,7 +912,7 @@ class NFTWallet:
                 [
                     Announcement(royalty_ph, Program.to((launcher_id, [p.as_condition_args()])).get_tree_hash())
                     for launcher_id, p in payments
-                    if p.amount > 0
+                    if p.amount > 0 or old
                 ]
             )
 
@@ -944,7 +944,7 @@ class NFTWallet:
                                 }
                             )
                         ]
-                        if payment_sum > 0
+                        if payment_sum > 0 or old
                         else [],
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
@@ -962,7 +962,7 @@ class NFTWallet:
                         trade_prices_list=[
                             list(price)
                             for price in trade_prices
-                            if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0
+                            if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0 or old
                         ],
                     )
                 else:
@@ -983,7 +983,7 @@ class NFTWallet:
 
                     # Skip it if we're paying 0 royalties
                     payments = royalty_payments[asset] if asset in royalty_payments else []
-                    if sum(p.amount for _, p in payments) == 0:
+                    if not old and sum(p.amount for _, p in payments) == 0:
                         continue
 
                     # We cannot create coins with the same puzzle hash and amount

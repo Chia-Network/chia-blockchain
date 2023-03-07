@@ -4,7 +4,7 @@ import asyncio
 import logging
 import sys
 from secrets import token_bytes
-from typing import Any, Callable, Coroutine, Tuple, Optional
+from typing import Any, Callable, Coroutine, Optional, Tuple
 
 import pytest
 
@@ -55,16 +55,14 @@ async def get_nft_count(wallet: NFTWallet) -> int:
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat_and_zero",
+    "forwards_compat,zero_royalties",
     [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat_and_zero: Tuple[bool, bool]
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
-    forwards_compat, zero_royalties = forwards_compat_and_zero
-
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -234,16 +232,14 @@ async def test_nft_offer_sell_nft(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat_and_zero",
+    "forwards_compat,zero_royalties",
     [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_request_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat_and_zero: Tuple[bool, bool]
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
-    forwards_compat, zero_royalties = forwards_compat_and_zero
-
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -411,16 +407,14 @@ async def test_nft_offer_request_nft(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat_and_zero",
+    "forwards_compat,zero_royalties",
     [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_did_to_did(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat_and_zero: Tuple[bool, bool]
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
-    forwards_compat, zero_royalties = forwards_compat_and_zero
-
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -611,16 +605,14 @@ async def test_nft_offer_sell_did_to_did(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat_and_zero",
+    "forwards_compat,zero_royalties",
     [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat_and_zero: Tuple[bool, bool]
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
-    forwards_compat, zero_royalties = forwards_compat_and_zero
-
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -1279,19 +1271,17 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat_and_zero",
-    [(True, False), (False, False), (False, True)],
+    "forwards_compat,royalty_pts",
+    [(True, (200, 500, 500)), (False, (200, 500, 500)), (False, (0, 0, 0))],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_complex_nft_offer(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat_and_zero: Tuple[bool, bool]
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, royalty_pts: Tuple[int, int, int]
 ) -> None:
     """
     This test is going to create an offer where the maker offers 1 NFT and 1 CAT for 2 NFTs, an XCH and a CAT
     """
-    forwards_compat, zero_royalties = forwards_compat_and_zero
-
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -1400,9 +1390,7 @@ async def test_complex_nft_offer(
     target_puzhash_taker = ph_taker
     royalty_puzhash_maker = ph_maker
     royalty_puzhash_taker = ph_taker
-    royalty_basis_pts_maker = uint16(0 if zero_royalties else 200)
-    royalty_basis_pts_taker_1 = uint16(0 if zero_royalties else 500)
-    royalty_basis_pts_taker_2 = uint16(0 if zero_royalties else 500)
+    royalty_basis_pts_maker, royalty_basis_pts_taker_1, royalty_basis_pts_taker_2 = royalty_pts
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
