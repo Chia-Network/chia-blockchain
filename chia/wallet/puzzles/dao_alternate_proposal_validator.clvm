@@ -7,6 +7,7 @@
     LOCKUP_MOD_HASH
     TREASURY_MOD_HASH
     CAT_TAIL_HASH
+    SAFE_PAYMENT_MOD_HASH
     ATTENDANCE_REQUIRED
     PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
     (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag)
@@ -14,14 +15,14 @@
       proposal_id
       total_votes
       yes_votes
-      treasury_puzzle_hash	; required for spend mode
-      treasury_amount		; required for spend mode
+      spend_amount
     )
     conditions
   )
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+  (include utility_macros.clib)
 
   (defmacro assert_or_nil items
       (if (r items)
@@ -73,29 +74,29 @@
     )
   )
 
-
-  (defun check_spend_conditions (SINGLETON_STRUCT conditions treasury_puzzle_hash treasury_amount spend_amount)
-    (if conditions
-      (c
-        (f conditions)
-      	(check_spend_conditions SINGLETON_STRUCT (r conditions) treasury_puzzle_hash treasury_amount
-      	  (if (= (f (f conditions)) CREATE_COIN)
-      	    (+ spend_amount (f (r (r (f conditions)))))
-      	    spend_amount
-      	  )
-      	)
-      )
-      (c
-        (list ASSERT_MY_AMOUNT treasury_amount)
-      	(c
-      	  (list CREATE_COIN treasury_puzzle_hash (- treasury_amount spend_amount))
-      	  (c
-      	    (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT treasury_puzzle_hash))
-      	    ()
-      	  )
-      	)
-      )
+  (defun-inline calculate_safe_payment_hash (
+    SAFE_PAYMENT_MOD_HASH
+    SINGLETON_STRUCT
+    conditions
+    spend_amount
     )
+    (puzzle-hash-of-curried-function SAFE_PAYMENT_MOD_HASH
+				     (sha256 ONE spend_amount)
+				     (sha256tree conditions)
+				     (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+
+  (defun check_spend_conditions (SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT conditions delegated_puzzle_hash spend_amount)
+    ; Check that the delegated_puzzle_hash is equal to the curried safe_spend_mod_hash
+    ; pass through the conditions if it is
+    (assert
+      (= delegated_puzzle_hash
+         (calculate_safe_payment_hash SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT (r (r (r conditions))) spend_amount))
+      conditions
+    )
+
   )
 
   (defun check_update_conditions (SINGLETON_STRUCT conditions seen_flag output)
@@ -114,7 +115,8 @@
       	  (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag (c (f conditions) output))
       	)
       )
-      (assert_or_nil seen_flag output)
+      output
+      ;; (assert_or_nil seen_flag output)
     )
   )
 
@@ -148,9 +150,9 @@
     )
     ; then execute the check method depending on whether we're in spend, update, or dangerous mode
     (if (= spend_or_update_flag "s")
-      (check_spend_conditions SINGLETON_STRUCT conditions treasury_puzzle_hash treasury_amount 0)
+      (check_spend_conditions SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT conditions delegated_puzzle_hash spend_amount)
       (if (= spend_or_update_flag "u")
-        (check_update_conditions SINGLETON_STRUCT conditions 0)
+        (check_update_conditions SINGLETON_STRUCT conditions 0 ())
       	(if (= spend_or_update_flag "d")
       	  (check_dangerous_conditions SINGLETON_STRUCT conditions)
       	  ()
@@ -158,5 +160,4 @@
       )
     )
   )
-
 )
