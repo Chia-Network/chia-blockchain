@@ -1390,7 +1390,11 @@ async def test_complex_nft_offer(
     target_puzhash_taker = ph_taker
     royalty_puzhash_maker = ph_maker
     royalty_puzhash_taker = ph_taker
-    royalty_basis_pts_maker, royalty_basis_pts_taker_1, royalty_basis_pts_taker_2 = royalty_pts
+    royalty_basis_pts_maker, royalty_basis_pts_taker_1, royalty_basis_pts_taker_2 = (
+        uint16(royalty_pts[0]),
+        uint16(royalty_pts[1]),
+        uint16(royalty_pts[2]),
+    )
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
