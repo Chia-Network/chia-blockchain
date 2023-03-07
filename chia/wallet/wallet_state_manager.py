@@ -785,6 +785,7 @@ class WalletStateManager:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
                 fee, Announcement(coin_spends[0].coin.name(), message)
             )
+            assert chia_tx.spend_bundle is not None
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             await self.add_pending_transaction(chia_tx)
