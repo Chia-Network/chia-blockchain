@@ -413,8 +413,13 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    if reuse_puzhash and newpuzzlehash != coin.puzzle_hash:
+                    if reuse_puzhash:
                         change_puzzle_hash: bytes32 = coin.puzzle_hash
+                        for primary in primaries:
+                            if change_puzzle_hash == primary["puzzlehash"] and change == primary["amount"]:
+                                # We cannot create two coins has same id, create a new puzhash for the change:
+                                change_puzzle_hash = await self.get_new_puzzlehash()
+                                break
                     else:
                         change_puzzle_hash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})

@@ -395,13 +395,20 @@ class TradeManager:
         validate_only: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
         if solver is None:
             solver = Solver({})
         result = await self._create_offer_for_ids(
-            offer, driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount
+            offer,
+            driver_dict,
+            solver,
+            fee=fee,
+            min_coin_amount=min_coin_amount,
+            max_coin_amount=max_coin_amount,
+            reuse_puzhash=reuse_puzhash,
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -553,6 +560,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -566,6 +574,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.extend(txs)
                 else:
@@ -576,6 +585,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.extend(txs)
 
@@ -712,6 +722,7 @@ class TradeManager:
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[TradeRecord, List[TransactionRecord]]:
         if solver is None:
             solver = Solver({})
@@ -745,6 +756,7 @@ class TradeManager:
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             old=offer.old,
+            reuse_puzhash=reuse_puzhash,
         )
         if not result[0] or result[1] is None:
             raise ValueError(result[2])

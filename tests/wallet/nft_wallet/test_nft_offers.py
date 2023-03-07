@@ -37,9 +37,13 @@ async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ig
     "forwards_compat",
     [True, False],
 )
+@pytest.mark.parametrize(
+    "reuse_puzhash",
+    [True, False],
+)
 @pytest.mark.asyncio
 async def test_nft_offer_with_fee(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, reuse_puzhash: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -122,6 +126,12 @@ async def test_nft_offer_with_fee(
     xch_request = 100
     maker_fee = uint64(10)
     offer_nft_for_xch = {wallet_maker.id(): xch_request, nft_asset_id: -1}
+    maker_unused_index = (
+        await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+    ).index
+    taker_unused_index = (
+        await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+    ).index
 
     if forwards_compat:
         if sys.version_info < (3, 8):
@@ -138,7 +148,7 @@ async def test_nft_offer_with_fee(
             )
     else:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_nft_for_xch, driver_dict, fee=maker_fee
+            offer_nft_for_xch, driver_dict, fee=maker_fee, reuse_puzhash=reuse_puzhash
         )
         assert success is True
         assert error is None
@@ -149,12 +159,28 @@ async def test_nft_offer_with_fee(
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
+        old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+        peer,
+        fee=taker_fee,
+        reuse_puzhash=reuse_puzhash and not forwards_compat,
     )
 
     assert trade_take is not None
     assert tx_records is not None
-
+    if reuse_puzhash and not forwards_compat:
+        # Check if unused index changed
+        assert (
+            maker_unused_index
+            == (
+                await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+            ).index
+        )
+        assert (
+            taker_unused_index
+            == (
+                await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+            ).index
+        )
     await full_node_api.process_transaction_records(records=tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
@@ -168,7 +194,20 @@ async def test_nft_offer_with_fee(
     coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 0
     assert len(coins_taker) == 1
-
+    if reuse_puzhash and not forwards_compat:
+        # Check if unused index changed
+        assert (
+            maker_unused_index
+            == (
+                await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+            ).index
+        )
+        assert (
+            taker_unused_index
+            == (
+                await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+            ).index
+        )
     # MAKE SECOND TRADE: 100 xch for 1 NFT
 
     maker_balance_pre = await wallet_maker.get_confirmed_balance()

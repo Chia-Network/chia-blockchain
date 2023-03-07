@@ -555,6 +555,7 @@ class CATWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[TransactionRecord, Optional[Announcement]]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -572,12 +573,13 @@ class CATWallet:
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
-                (await self.standard_wallet.get_new_puzzlehash()),
+                (await self.standard_wallet.get_puzzle_hash(True)),
                 fee=uint64(fee - amount_to_claim),
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
                 negative_change_allowed=False,
                 coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                reuse_puzhash=reuse_puzhash,
             )
             assert chia_tx.spend_bundle is not None
 
@@ -601,10 +603,11 @@ class CATWallet:
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_new_puzzlehash()),
+                (await self.standard_wallet.get_puzzle_hash(True)),
                 coins=chia_coins,
                 negative_change_allowed=True,
                 coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                reuse_puzhash=reuse_puzhash,
             )
             assert chia_tx.spend_bundle is not None
 
@@ -687,9 +690,11 @@ class CATWallet:
             )
             if derivation_record is not None and reuse_puzhash:
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
-                if change_puzhash in set([p.puzzle_hash for p in payments]):
-                    # We cannot create two coins for one puzzle at the same time, create a new puzhash for the change
-                    change_puzhash = await self.get_new_inner_hash()
+                for payment in payments:
+                    if change_puzhash == payment.puzzle_hash and change == payment.amount:
+                        # We cannot create two coins has same id, create a new puzhash for the change
+                        change_puzhash = await self.get_new_inner_hash()
+                        break
             else:
                 change_puzhash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": change_puzhash, "amount": uint64(change), "memos": []})
@@ -718,6 +723,7 @@ class CATWallet:
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
                             exclude_coin_amounts=exclude_coin_amounts,
+                            reuse_puzhash=reuse_puzhash,
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
@@ -732,6 +738,7 @@ class CATWallet:
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
                             exclude_coin_amounts=exclude_coin_amounts,
+                            reuse_puzhash=reuse_puzhash,
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
