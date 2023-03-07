@@ -43,6 +43,10 @@ from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
+# mempool items replacing existing ones must increase the total fee at least by
+# this amount. 0.00001 XCH
+MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
+
 
 # TODO: once the 1.8.0 soft-fork has activated, we don't really need to pass
 # the constants through here
@@ -270,11 +274,6 @@ class MempoolManager:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
-    @staticmethod
-    def get_min_fee_increase() -> int:
-        # 0.00001 XCH
-        return 10000000
-
     def can_replace(
         self,
         conflicting_items: Dict[bytes32, MempoolItem],
@@ -282,6 +281,7 @@ class MempoolManager:
         fees: uint64,
         fees_per_cost: float,
     ) -> bool:
+
         conflicting_fees = 0
         conflicting_cost = 0
         for item in conflicting_items.values():
@@ -309,7 +309,7 @@ class MempoolManager:
 
         # New item must increase the total fee at least by a certain amount
         fee_increase = fees - conflicting_fees
-        if fee_increase < self.get_min_fee_increase():
+        if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
             log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
             return False
 
