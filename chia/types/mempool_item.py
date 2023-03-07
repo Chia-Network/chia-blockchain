@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
@@ -27,6 +27,9 @@ class MempoolItem:
     # the specified height
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
+
+    # Map of coin ID to coin spend cost and additions
+    dedup_spend_info: Dict[bytes32, Tuple[uint64, List[Coin]]] = field(default_factory=dict)
 
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost

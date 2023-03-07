@@ -9,7 +9,7 @@ from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 from chia_rs import ELIGIBLE_FOR_DEDUP, Coin
-from clvm.casts import int_from_bytes
+
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
@@ -49,6 +49,8 @@ class InternalMempoolItem:
     spend_bundle: SpendBundle
     npc_result: NPCResult
     height_added_to_mempool: uint32
+    # Map of coin ID to coin spend cost and additions
+    dedup_spend_info: Dict[bytes32, Tuple[uint64, List[Coin]]]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -127,9 +129,20 @@ def find_duplicate_spends(
         if duplicate_cost is None:
             # If we never ran this before, additions should be empty
             assert len(duplicate_additions) == 0
-            spend_cost, created_coins = run_for_cost_and_additions(
-                coin_id, coin_spend_in_bundle.puzzle_reveal, coin_spend_in_bundle.solution, item.npc_result
-            )
+            # See first if this mempool item had this cost computed before
+            # This can happen if this item didn't get included in the previous block
+            if coin_id in item.dedup_spend_info:
+                spend_cost = item.dedup_spend_info[coin_id][0]
+                created_coins = item.dedup_spend_info[coin_id][1]
+            else:
+                spend_cost, created_coins = run_for_cost_and_additions(
+                    coin_id,
+                    coin_spend_in_bundle.puzzle_reveal,
+                    current_solution,
+                    item.npc_result,
+                )
+                # Update this mempool item's deduplicated coin spends map
+                item.dedup_spend_info[coin_id] = (spend_cost, created_coins)
             duplicate_cost = spend_cost
             duplicate_additions.update(created_coins)
             # If we end up including this item, update this entry's cost and additions
@@ -220,6 +233,7 @@ class Mempool:
             assert_height,
             assert_before_height,
             assert_before_seconds,
+            dedup_spend_info=item.dedup_spend_info,
         )
 
     def total_mempool_fees(self) -> int:
@@ -465,7 +479,7 @@ class Mempool:
             self._db_conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
 
             self._items[item.name] = InternalMempoolItem(
-                item.spend_bundle, item.npc_result, item.height_added_to_mempool
+                item.spend_bundle, item.npc_result, item.height_added_to_mempool, item.dedup_spend_info
             )
 
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
