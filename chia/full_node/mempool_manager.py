@@ -274,48 +274,6 @@ class MempoolManager:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
-    def can_replace(
-        self,
-        conflicting_items: Dict[bytes32, MempoolItem],
-        removals: Dict[bytes32, CoinRecord],
-        fees: uint64,
-        fees_per_cost: float,
-    ) -> bool:
-
-        conflicting_fees = 0
-        conflicting_cost = 0
-        for item in conflicting_items.values():
-            conflicting_fees += item.fee
-            conflicting_cost += item.cost
-
-            # All coins spent in all conflicting items must also be spent in the new item. (superset rule). This is
-            # important because otherwise there exists an attack. A user spends coin A. An attacker replaces the
-            # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
-            # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
-            # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-            for coin in item.removals:
-                if coin.name() not in removals:
-                    log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
-                    return False
-
-        # New item must have higher fee per cost
-        conflicting_fees_per_cost = conflicting_fees / conflicting_cost
-        if fees_per_cost <= conflicting_fees_per_cost:
-            log.debug(
-                f"Rejecting conflicting tx due to not increasing fees per cost "
-                f"({fees_per_cost} <= {conflicting_fees_per_cost})"
-            )
-            return False
-
-        # New item must increase the total fee at least by a certain amount
-        fee_increase = fees - conflicting_fees
-        if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
-            log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
-            return False
-
-        log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
-        return True
-
     async def pre_validate_spendbundle(
         self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
     ) -> NPCResult:
@@ -545,7 +503,7 @@ class MempoolManager:
                 for item in self.mempool.get_spends_by_coin_id(conflicting.name()):
                     conflicting_pool_items[item.name] = item
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
-            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+            if not can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
@@ -689,3 +647,45 @@ class MempoolManager:
             items.append(item.spend_bundle)
 
         return items
+
+
+def can_replace(
+    conflicting_items: Dict[bytes32, MempoolItem],
+    removals: Dict[bytes32, CoinRecord],
+    fees: uint64,
+    fees_per_cost: float,
+) -> bool:
+
+    conflicting_fees = 0
+    conflicting_cost = 0
+    for item in conflicting_items.values():
+        conflicting_fees += item.fee
+        conflicting_cost += item.cost
+
+        # All coins spent in all conflicting items must also be spent in the new item. (superset rule). This is
+        # important because otherwise there exists an attack. A user spends coin A. An attacker replaces the
+        # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
+        # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
+        # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
+        for coin in item.removals:
+            if coin.name() not in removals:
+                log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
+                return False
+
+    # New item must have higher fee per cost
+    conflicting_fees_per_cost = conflicting_fees / conflicting_cost
+    if fees_per_cost <= conflicting_fees_per_cost:
+        log.debug(
+            f"Rejecting conflicting tx due to not increasing fees per cost "
+            f"({fees_per_cost} <= {conflicting_fees_per_cost})"
+        )
+        return False
+
+    # New item must increase the total fee at least by a certain amount
+    fee_increase = fees - conflicting_fees
+    if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
+        log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
+        return False
+
+    log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
+    return True
