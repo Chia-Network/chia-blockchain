@@ -7,42 +7,62 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-COVENANT_LAYER: Program = load_clvm_maybe_recompile("covenant_layer.clsp")
-NFT_TP_COVENANT_ADAPTER: Program = load_clvm_maybe_recompile("nft_transfer_program_covenant_adapter.clsp")
-NFT_DID_TP: Program = load_clvm_maybe_recompile("nft_update_metadata_with_DID.clsp")
-DID_BACKDOOR: Program = load_clvm_maybe_recompile("did_backdoor.clsp")
-P2_PUZZLE_OR_HIDDEN_PUZZLE: Program = load_clvm_maybe_recompile("p2_puzzle_or_hidden_puzzle.clsp")
+COVENANT_LAYER: Program = load_clvm_maybe_recompile("covenant_layer.clsp", package_or_requirement="chia.wallet.puzzles")
+COVENANT_LAYER_HASH: bytes32 = COVENANT_LAYER.get_tree_hash()
+STD_COVENANT_PARENT_MORPHER: Program = load_clvm_maybe_recompile(
+    "std_parent_morpher.clsp", package_or_requirement="chia.wallet.puzzles"
+)
+STD_COVENANT_PARENT_MORPHER_HASH: bytes32 = STD_COVENANT_PARENT_MORPHER.get_tree_hash()
+NFT_TP_COVENANT_ADAPTER: Program = load_clvm_maybe_recompile(
+    "nft_transfer_program_covenant_adapter.clsp", package_or_requirement="chia.wallet.puzzles"
+)
+NFT_DID_TP: Program = load_clvm_maybe_recompile(
+    "nft_update_metadata_with_DID.clsp", package_or_requirement="chia.wallet.puzzles"
+)
+DID_BACKDOOR: Program = load_clvm_maybe_recompile("did_backdoor.clsp", package_or_requirement="chia.wallet.puzzles")
+P2_PUZZLE_OR_HIDDEN_PUZZLE: Program = load_clvm_maybe_recompile(
+    "p2_puzzle_or_hidden_puzzle.clsp", package_or_requirement="chia.wallet.puzzles"
+)
 
 
 ##################
 # Covenant Layer #
 ##################
-def create_covenant_layer(covenants: List[Program], inner_puzzle: Program) -> Program:
+def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program, inner_puzzle: Program) -> Program:
     return COVENANT_LAYER.curry(
-        covenants,
+        initial_puzzle_hash,
+        parent_morpher,
         inner_puzzle,
     )
 
 
-def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[List[Program], Program]]:
+def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, Program, Program]]:
     if uncurried_puzzle.mod == COVENANT_LAYER:
-        return list(uncurried_puzzle.args.at("f").as_iter()), uncurried_puzzle.args.at("rf")
+        return (
+            bytes32(uncurried_puzzle.args.at("f").as_python()),
+            uncurried_puzzle.args.at("rf"),
+            uncurried_puzzle.args.at("rrf"),
+        )
     else:
         return None
 
 
-def solve_covenant_layer(
-    enforce: bool, covenant_solutions: List[Program], lineage_proof: LineageProof, inner_solution: Program
-) -> Program:
+def solve_covenant_layer(lineage_proof: LineageProof, inner_solution: Program) -> Program:
     solution: Program = Program.to(
         [
-            enforce,
-            covenant_solutions,
             lineage_proof.to_program(),
             inner_solution,
         ]
     )
     return solution
+
+
+def create_std_parent_morpher(initial_puzzle_hash: bytes32) -> Program:
+    return STD_COVENANT_PARENT_MORPHER.curry(
+        STD_COVENANT_PARENT_MORPHER_HASH,
+        COVENANT_LAYER_HASH,
+        initial_puzzle_hash,
+    )
 
 
 ####################

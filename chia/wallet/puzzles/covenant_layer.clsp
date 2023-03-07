@@ -1,41 +1,28 @@
 (mod
   (
-    COVENANTS
+    ; curried first
+    INITIAL_PUZZLE_HASH
+    PARENT_MORPHER
     INNER_PUZZLE
-    enforce
-    covenant_solutions
     lineage_proof
     inner_solution
   )
 
   (include condition_codes.clvm)
 
-  (defun morph_inner_puzhash
-    (
-        COVENANTS
-        covenant_solutions
-        inner_puzhash
-    )
-
-    (if COVENANTS
-        (a
-          (f COVENANTS)
-          (c (morph_inner_puzhash (r COVENANTS) (r covenant_solutions) inner_puzhash) (f covenant_solutions))
-        )
-        inner_puzhash
-    )
-  )
-
   (c
-    (if enforce
-        (list ASSERT_MY_PARENT_ID
-          (sha256
-            (f lineage_proof)
-            (morph_inner_puzhash COVENANTS covenant_solutions (f (r lineage_proof)))
-            (f (r (r lineage_proof)))
-          )
+    (list ASSERT_MY_PARENT_ID
+      (sha256
+        (f lineage_proof)
+        (if (r (r lineage_proof))
+            (a PARENT_MORPHER (f (r lineage_proof)))
+            INITIAL_PUZZLE_HASH
         )
-        (list REMARK)
+        (if (r (r lineage_proof))
+            (f (r (r lineage_proof)))
+            (f (r lineage_proof))
+        )
+      )
     )
     (a INNER_PUZZLE inner_solution)
   )

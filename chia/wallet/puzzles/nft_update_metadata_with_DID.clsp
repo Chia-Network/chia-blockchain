@@ -13,7 +13,12 @@
 
   (include condition_codes.clvm)
   (include curry.clib)
-  (include curry-and-treehash.clinc)
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+            (sha256 1 TREE)))
 
   (defun-inline create_did_puzhash
     (
