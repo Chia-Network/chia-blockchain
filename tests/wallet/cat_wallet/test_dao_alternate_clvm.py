@@ -7,6 +7,8 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 
+from clvm.casts import int_from_bytes
+
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
@@ -188,9 +190,13 @@ def test_validator() -> None:
     #   proposal_id
     #   total_votes
     #   yes_votes
+    #   treasury_puzzle_hash
+    #   treasury_amount
     # )
     # spend_or_update_flag
     # conditions
+    treasury_puzzle_hash = Program.to("treasury").get_tree_hash()
+    treasury_amount = 401
     proposal: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -208,11 +214,36 @@ def test_validator() -> None:
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
     solution = Program.to([
         [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 's'],
-        [singleton_id, 1200, 950],
-        [[51, proposal_validator.get_tree_hash(), 201], [51, 0xcafe00d, 40]]
+        [singleton_id, 1200, 950, treasury_puzzle_hash, treasury_amount],
+        [[51, 0xcafe00d, 40]]
     ])
     conds: Program = proposal_validator.run(solution)
     assert len(conds.as_python()) == 4
+
+    # test update
+    proposal: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        singleton_id,
+        950,
+        1200,
+        'u',
+        Program.to(1).get_tree_hash(),
+    )
+    full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
+    solution = Program.to([
+        [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 'u'],
+        [singleton_id, 1200, 950],
+        [[51, 0xcafe00d, 40]]
+    ])
+    conds: Program = proposal_validator.run(solution)
+    assert len(conds.as_python()) == 2
+
     return
 
 
@@ -300,9 +331,9 @@ def test_treasury() -> None:
     solution: Program = Program.to(
         [
             [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 's'],
-            [singleton_id, 1200, 950],
+            [singleton_id, 1200, 950, full_treasury_puz.get_tree_hash(), 201],
             1,
-            [[51, proposal_validator.get_tree_hash(), 201], [51, 0xcafe00d, 40]]
+            [[51, 0xcafe00d, 40]]
         ]
     )
     conds = full_treasury_puz.run(solution)
@@ -436,7 +467,7 @@ def test_proposal_innerpuz() -> None:
     )
 
     P2_PH = Program.to("p2_ph").get_tree_hash()
-    P2_CONDS = [[51, P2_PH, 200], [51, treasury_puz.get_tree_hash(), 201]]
+    P2_CONDS = [[51, P2_PH, 200]]
 
     proposed_innerpuz = P2_CONDITIONS_MOD.curry(P2_CONDS)
 
@@ -465,7 +496,7 @@ def test_proposal_innerpuz() -> None:
     treasury_solution: Program = Program.to(
         [
             [full_proposal.get_tree_hash(), proposed_innerpuz.get_tree_hash(), 0, 's'],
-            [proposal_singleton_id, 1200, 950],
+            [proposal_singleton_id, 1200, 950, treasury_puz.get_tree_hash(), 401],
             proposed_innerpuz,
             0,
         ]
@@ -511,3 +542,15 @@ def test_proposal_innerpuz() -> None:
     for cond in treasury_conds.as_python():
         if cond[0] == apa:
             assert bytes32(cond[1]) in cpas
+
+    amps = []
+    for cond in treasury_conds.as_python():
+        if cond[0] == b"3":
+            if int_from_bytes(cond[2]) == 201:
+                assert cond[1] == full_treasury_puz.get_tree_hash()
+            else:
+                assert cond[1] == P2_PH
+        if cond[0] == b"H":
+            amps.append(cond[1])
+    assert len(amps) == 1
+    assert amps[0] == full_treasury_puz.get_tree_hash()

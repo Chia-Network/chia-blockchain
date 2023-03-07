@@ -14,6 +14,8 @@
       proposal_id
       total_votes
       yes_votes
+      treasury_puzzle_hash	; required for spend mode
+      treasury_amount		; required for spend mode
     )
     conditions
   )
@@ -65,36 +67,52 @@
     )
   )
 
-  (defun check_conditions (SINGLETON_STRUCT conditions spend_or_update_flag seen_flag)
+
+  (defun check_spend_conditions (SINGLETON_STRUCT conditions treasury_puzzle_hash treasury_amount spend_amount)
+    (if conditions
+      (c (f conditions)
+	(check_spend_conditions SINGLETON_STRUCT (r conditions) treasury_puzzle_hash treasury_amount
+	  (if (= (f (f conditions)) CREATE_COIN)
+	    (+ spend_amount (f (r (r (f conditions)))))
+	    spend_amount
+	  )
+	)
+      )
+      (c
+        (list ASSERT_MY_AMOUNT treasury_amount)
+	(c
+	  (list CREATE_COIN treasury_puzzle_hash (- treasury_amount spend_amount))
+	  (c
+	    (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT treasury_puzzle_hash))
+	    ()
+	  )
+	)
+      )
+    )
+  )
+
+  (defun check_update_conditions (SINGLETON_STRUCT conditions seen_flag)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
-          (if (= spend_or_update_flag 's')  ; we must recreate ourselves - singleton layer will prevent shenanigans
-            (c
-              (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r (f conditions)))))
-              (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
-            )
-            (if (= spend_or_update_flag 'u')
-              (c
-                (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
-                (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag 1))
-              )
-              (x)  ; proposal not recognised (TODO: add dangerous as an option here)
-            )
-          )
-          (if
-            (all  ; block both types of announcement in the update case
-              (= spend_or_update_flag 'u')
-              (any
-                (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
-                (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
-              )
-            )
-            (x)
-            (c (f conditions) (check_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
-          )
+        (c
+	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
+	  (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions) 1))
+	)
+	(if
+	  (any ; block both types of announcement in the update case
+	    (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
+	    (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+	  )
+	  (x)
+	  (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag))
+	)
       )
-      (assert seen_flag ())  ; check we've seen something matching the flag and then return empty list
+      (assert seen_flag ())
     )
+  )
+
+  (defun check_dangerous_conditions (SINGLETON_STRUCT conditions)
+     conditions
   )
 
   (assert
@@ -121,7 +139,17 @@
         )
       )
     )
-    ; then
-    (check_conditions SINGLETON_STRUCT conditions spend_or_update_flag 0)
+    ; then execute the check method depending on whether we're in spend, update, or dangerous mode
+    (if (= spend_or_update_flag "s")
+      (check_spend_conditions SINGLETON_STRUCT conditions treasury_puzzle_hash treasury_amount 0)
+      (if (= spend_or_update_flag "u")
+        (check_update_conditions SINGLETON_STRUCT conditions 0)
+	(if (= spend_or_update_flag "d")
+	  (check_dangerous_conditions SINGLETON_STRUCT conditions)
+	  (x)
+	)
+      )
+    )
   )
+
 )
