@@ -503,7 +503,7 @@ class MempoolManager:
                 for item in self.mempool.get_spends_by_coin_id(conflicting.name()):
                     conflicting_pool_items[item.name] = item
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
-            if not can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+            if not can_replace(conflicting_pool_items, removal_record_dict, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
@@ -652,8 +652,7 @@ class MempoolManager:
 def can_replace(
     conflicting_items: Dict[bytes32, MempoolItem],
     removals: Dict[bytes32, CoinRecord],
-    fees: uint64,
-    fees_per_cost: float,
+    new_item: MempoolItem,
 ) -> bool:
 
     conflicting_fees = 0
@@ -674,18 +673,18 @@ def can_replace(
 
     # New item must have higher fee per cost
     conflicting_fees_per_cost = conflicting_fees / conflicting_cost
-    if fees_per_cost <= conflicting_fees_per_cost:
+    if new_item.fee_per_cost <= conflicting_fees_per_cost:
         log.debug(
             f"Rejecting conflicting tx due to not increasing fees per cost "
-            f"({fees_per_cost} <= {conflicting_fees_per_cost})"
+            f"({new_item.fee_per_cost} <= {conflicting_fees_per_cost})"
         )
         return False
 
     # New item must increase the total fee at least by a certain amount
-    fee_increase = fees - conflicting_fees
+    fee_increase = new_item.fee - conflicting_fees
     if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
         log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
         return False
 
-    log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
+    log.info(f"Replacing conflicting tx in mempool. New tx fee: {new_item.fee}, old tx fees: {conflicting_fees}")
     return True
