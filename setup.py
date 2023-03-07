@@ -30,7 +30,8 @@ dependencies = [
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
     "dnspython==2.3.0",  # Query DNS seeds
-    "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
+    # Filesystem event watching - watches keyring.yaml
+    "watchdog @ git+https://github.com/kurtmckee/watchdog@d03274df5777bc6c3025de4be7557f43175b9861",
     "dnslib==0.9.23",  # dns lib
     "typing-extensions==4.5.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.4.0",
