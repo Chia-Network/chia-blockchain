@@ -402,7 +402,9 @@ class TestMempoolManager:
             (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED),
         ],
     )
-    async def test_ephemeral_timelock(self, one_node_one_block, wallet_a, opcode, lock_value, expected):
+    async def test_ephemeral_timelock(
+        self, one_node_one_block_with_softfork2, enable_softfork2, wallet_a, opcode, lock_value, expected
+    ):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
             tx1 = wallet_a.generate_signed_transaction(uint64(1000000), wallet_a.get_new_puzzlehash(), coin_2)
@@ -415,12 +417,18 @@ class TestMempoolManager:
             bundle = SpendBundle.aggregate([tx1, tx2])
             return bundle
 
-        full_node_1, server_1, bt = one_node_one_block
+        if not enable_softfork2 and opcode in [co.ASSERT_MY_BIRTH_HEIGHT, co.ASSERT_MY_BIRTH_SECONDS]:
+            expected = MempoolInclusionStatus.FAILED
+
+        full_node_1, server_1, bt = one_node_one_block_with_softfork2
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
-        blocks, bundle, status, err = await self.condition_tester2(one_node_one_block, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(
+            one_node_one_block_with_softfork2, wallet_a, test_fun
+        )
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        print(f"opcode={opcode} timelock_value={lock_value} expected={expected} status={status}")
         print(f"status: {status}")
         print(f"error: {err}")
 
@@ -694,9 +702,9 @@ class TestMempoolManager:
         return blocks, spend_bundle1, dummy_peer, status, err
 
     @pytest.mark.asyncio
-    async def condition_tester2(self, one_node_one_block, wallet_a, test_fun: Callable[[Coin, Coin], SpendBundle]):
+    async def condition_tester2(self, node_server_bt, wallet_a, test_fun: Callable[[Coin, Coin], SpendBundle]):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, server_1, bt = one_node_one_block
+        full_node_1, server_1, bt = node_server_bt
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
