@@ -1,6 +1,6 @@
 import pytest
 
-from dataclasses import replace
+from typing import Optional, Tuple
 
 from blspy import G2Element
 
@@ -12,9 +12,9 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
+from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.vc_wallet.vc_drivers import (
-    COVENANT_LAYER,
     create_covenant_layer,
     solve_covenant_layer,
     create_std_parent_morpher,
@@ -57,12 +57,12 @@ async def test_covenant_layer() -> None:
                     CoinSpend(
                         fake_acs_coin,
                         FAKE_ACS,
-                        Program.to([[51, covenant_puzzle.get_tree_hash(), fake_acs_coin.amount]]),
+                        Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]]),
                     ),
                     CoinSpend(
                         acs_coin,
                         ACS,
-                        Program.to([[51, covenant_puzzle.get_tree_hash(), acs_coin.amount]]),
+                        Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
                     ),
                 ],
                 G2Element(),
@@ -79,19 +79,25 @@ async def test_covenant_layer() -> None:
         ].coin
 
         # With the honest coin, attempt to spend the non-eve case too soon
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(SpendBundle(
-            [
-                CoinSpend(
-                    acs_cov,
-                    covenant_puzzle,
-                    solve_covenant_layer(
-                        LineageProof(parent_name=acs_coin.parent_coin_info, inner_puzzle_hash=ACS_PH, amount=acs_coin.amount),
-                        Program.to([[51, covenant_puzzle.get_tree_hash(), acs_coin.amount]]),
+        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        acs_cov,
+                        covenant_puzzle,
+                        solve_covenant_layer(
+                            LineageProof(
+                                parent_name=acs_coin.parent_coin_info,
+                                inner_puzzle_hash=ACS_PH,
+                                amount=uint64(acs_coin.amount),
+                            ),
+                            Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
+                        ),
                     ),
-                ),
-            ],
-            G2Element(),
-        ))
+                ],
+                G2Element(),
+            )
+        )
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_PARENT_ID_FAILED)
 
         # Try the initial spend, which the fake origin coin should fail
@@ -103,8 +109,8 @@ async def test_covenant_layer() -> None:
                             cov,
                             covenant_puzzle,
                             solve_covenant_layer(
-                                LineageProof(parent_name=parent.parent_coin_info, amount=parent.amount),
-                                Program.to([[51, covenant_puzzle.get_tree_hash(), cov.amount]]),
+                                LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
+                                Program.to([[51, covenant_puzzle_hash, cov.amount]]),
                             ),
                         ),
                     ],
@@ -122,19 +128,25 @@ async def test_covenant_layer() -> None:
             0
         ].coin
 
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(SpendBundle(
-            [
-                CoinSpend(
-                    new_acs_cov,
-                    covenant_puzzle,
-                    solve_covenant_layer(
-                        LineageProof(parent_name=acs_cov.parent_coin_info, inner_puzzle_hash=ACS_PH, amount=acs_cov.amount),
-                        Program.to([[51, covenant_puzzle.get_tree_hash(), new_acs_cov.amount]]),
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        new_acs_cov,
+                        covenant_puzzle,
+                        solve_covenant_layer(
+                            LineageProof(
+                                parent_name=acs_cov.parent_coin_info,
+                                inner_puzzle_hash=ACS_PH,
+                                amount=uint64(acs_cov.amount),
+                            ),
+                            Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
+                        ),
                     ),
-                ),
-            ],
-            G2Element(),
-        ))
+                ],
+                G2Element(),
+            )
+        )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
 
