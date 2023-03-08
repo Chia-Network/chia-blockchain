@@ -12,6 +12,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -19,6 +20,9 @@ from chia.wallet.vc_wallet.vc_drivers import (
     create_covenant_layer,
     match_covenant_layer,
     solve_covenant_layer,
+    create_did_tp,
+    match_did_tp,
+    solve_did_tp,
     create_std_parent_morpher,
 )
 
@@ -157,11 +161,124 @@ async def test_covenant_layer() -> None:
 async def test_did_tp() -> None:
     async with sim_and_client() as (sim, client):
         # Make a mock ownership layer
+        # Prepends new metadata and new transfer program as REMARK condition to conditions of TP
+        # (mod (METADATA TP solution) (a (q . (c (c (q . 1) (c 2 (c 5 ()))) 11)) (a TP (list METADATA () solution))))
+        # (a (q 4 (c (q . 1) (c 2 (c 5 ()))) 11) (a 5 (c 2 (c () (c 11 ())))))
+        MOCK_OWNERSHIP_LAYER: Program = Program.fromhex(
+            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"  # noqa: E501
+        )
         # Create it with mock singleton info
+        transfer_program: Program = create_did_tp(MOCK_LAUNCHER_ID, MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
+        assert match_did_tp(uncurry_puzzle(transfer_program)) == (MOCK_LAUNCHER_ID,)
+        ownership_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry(None, transfer_program)
+
+        await sim.farm_block(ownership_puzzle.get_tree_hash())
+        ownership_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes(
+                [ownership_puzzle.get_tree_hash()], include_spent_coins=False
+            )
+        )[0].coin
+
+        # Define parameters for next few spend attempts
+        provider_innerpuzhash: bytes32 = ACS_PH
+        my_coin_id: bytes32 = ownership_coin.name()
+        new_metadata: Program = Program.to("SUCCESS")
+        new_tp: Program = Program.to("NEW TP")
+        bad_data: bytes32 = bytes32([0] * 32)
+
         # Try to update metadata and tp without any announcement
-        # Try to pass the wrong coin idea
+        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        ownership_coin,
+                        ownership_puzzle,
+                        Program.to(
+                            [
+                                solve_did_tp(
+                                    bad_data,
+                                    my_coin_id,
+                                    new_metadata,
+                                    new_tp,
+                                )
+                            ]
+                        ),
+                    )
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+
+        # Create the "DID" now
+        await sim.farm_block(MOCK_SINGLETON.get_tree_hash())
+        did_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([MOCK_SINGLETON.get_tree_hash()], include_spent_coins=False)
+        )[0].coin
+        did_authorization_spend: CoinSpend = CoinSpend(
+            did_coin,
+            MOCK_SINGLETON,
+            Program.to([[[62, std_hash(my_coin_id + new_metadata.get_tree_hash() + new_tp.get_tree_hash())]]]),
+        )
+
+        # Try to pass the wrong coin id
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        ownership_coin,
+                        ownership_puzzle,
+                        Program.to(
+                            [
+                                solve_did_tp(
+                                    provider_innerpuzhash,
+                                    bad_data,
+                                    new_metadata,
+                                    new_tp,
+                                )
+                            ]
+                        ),
+                    ),
+                    did_authorization_spend,
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
+
         # Actually use announcement
-        pass
+        successful_spend: SpendBundle = SpendBundle(
+            [
+                CoinSpend(
+                    ownership_coin,
+                    ownership_puzzle,
+                    Program.to(
+                        [
+                            solve_did_tp(
+                                provider_innerpuzhash,
+                                my_coin_id,
+                                new_metadata,
+                                new_tp,
+                            )
+                        ]
+                    ),
+                ),
+                did_authorization_spend,
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(successful_spend)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        remark_condition: Program = next(
+            condition
+            for condition in successful_spend.coin_spends[0]
+            .puzzle_reveal.to_program()
+            .run(successful_spend.coin_spends[0].solution.to_program())
+            .as_iter()
+            if condition.first() == Program.to(1)
+        )
+        assert remark_condition == Program.to([1, new_metadata, new_tp])
 
 
 @pytest.mark.asyncio

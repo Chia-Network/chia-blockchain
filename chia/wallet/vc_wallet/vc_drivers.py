@@ -116,10 +116,12 @@ def solve_did_tp(
     provider_innerpuzhash: bytes32, my_coin_id: bytes32, new_metadata: Program, new_transfer_program: Program
 ) -> Program:
     solution: Program = Program.to(
-        provider_innerpuzhash,
-        my_coin_id,
-        new_metadata,
-        new_transfer_program,
+        [
+            provider_innerpuzhash,
+            my_coin_id,
+            new_metadata,
+            new_transfer_program,
+        ]
     )
     return solution
 
@@ -148,8 +150,10 @@ def match_did_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[byte
 
 def solve_did_backdoor(did_innerpuzhash: bytes32, my_coin_id: bytes32) -> Program:
     solution: Program = Program.to(
-        did_innerpuzhash,
-        my_coin_id,
+        [
+            did_innerpuzhash,
+            my_coin_id,
+        ]
     )
     return solution
 
@@ -173,7 +177,9 @@ def match_p2_puz_or_hidden_puz(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tu
 
 def solve_p2_puz_or_hidden_puz(inner_solution: Program, hidden_puzzle_reveal: Optional[Program] = None) -> Program:
     solution: Program = Program.to(
-        hidden_puzzle_reveal,
-        inner_solution,
+        [
+            hidden_puzzle_reveal,
+            inner_solution,
+        ]
     )
     return solution
