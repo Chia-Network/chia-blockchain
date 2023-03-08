@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+import re
 import statistics
 from pathlib import Path
 from random import Random
@@ -35,7 +36,7 @@ from chia.data_layer.download_data import (
     write_files_for_root,
 )
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.tree_hash import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
@@ -193,6 +194,15 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
         expected.append(expected_generation)
 
     assert generations == expected
+
+
+@pytest.mark.asyncio
+async def test_get_tree_generation_returns_none_when_none_available(
+    raw_data_store: DataStore,
+    tree_id: bytes32,
+) -> None:
+    with pytest.raises(Exception, match=re.escape(f"No generations found for tree ID: {tree_id.hex()}")):
+        await raw_data_store.get_tree_generation(tree_id=tree_id)
 
 
 @pytest.mark.asyncio

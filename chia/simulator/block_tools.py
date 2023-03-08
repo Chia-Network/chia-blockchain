@@ -21,7 +21,6 @@ from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from chia.cmds.init_funcs import create_default_chia_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -101,7 +100,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import config_path_for_filename, load_config, lock_config, override_config, save_config
+from chia.util.config import (
+    config_path_for_filename,
+    create_default_chia_config,
+    load_config,
+    lock_config,
+    override_config,
+    save_config,
+)
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -1403,7 +1409,7 @@ def finish_block(
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
-        new_ip_iters = unfinished_block.total_iters - latest_block.total_iters
+        new_ip_iters = uint64(unfinished_block.total_iters - latest_block.total_iters)
         cc_vdf_input = latest_block.challenge_vdf_output
         rc_vdf_challenge = latest_block.reward_infusion_new_challenge
     else:

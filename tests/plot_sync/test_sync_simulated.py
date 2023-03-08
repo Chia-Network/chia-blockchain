@@ -14,7 +14,7 @@ import pytest
 from blspy import G1Element
 
 from chia.farmer.farmer_api import Farmer
-from chia.harvester.harvester_api import Harvester
+from chia.harvester.harvester import Harvester
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -253,7 +253,7 @@ async def create_test_runner(
         receiver.simulate_error = 0  # type: ignore[attr-defined]
         receiver.message_counter = 0  # type: ignore[attr-defined]
         receiver.original_process = receiver._process  # type: ignore[attr-defined]
-        receiver._process = functools.partial(_testable_process, receiver)  # type: ignore[assignment]
+        receiver._process = functools.partial(_testable_process, receiver)  # type: ignore[method-assign]
     return TestRunner(harvesters, farmer, event_loop)
 
 

@@ -589,6 +589,7 @@ class PoolWallet:
         fee_tx: Optional[TransactionRecord] = None
         if fee > 0:
             fee_tx = await self.generate_fee_transaction(fee)
+            assert fee_tx.spend_bundle is not None
             signed_spend_bundle = SpendBundle.aggregate([signed_spend_bundle, fee_tx.spend_bundle])
 
         tx_record = TransactionRecord(
@@ -856,7 +857,9 @@ class PoolWallet:
         fee_tx = None
         if fee > 0:
             absorb_announce = Announcement(first_coin_record.coin.name(), b"$")
+            assert absorb_announce is not None
             fee_tx = await self.generate_fee_transaction(fee, coin_announcements=[absorb_announce])
+            assert fee_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
 
         assert full_spend.fees() == fee
@@ -892,9 +895,9 @@ class PoolWallet:
 
         if self.target_state is None:
             return
-        if self.target_state == pool_wallet_info.current.state:
+        if self.target_state == pool_wallet_info.current:
             self.target_state = None
-            raise ValueError("Internal error")
+            raise ValueError(f"Internal error. Pool wallet {self.wallet_id} state: {pool_wallet_info.current}")
 
         if (
             self.target_state.state in [FARMING_TO_POOL, SELF_POOLING]

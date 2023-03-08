@@ -7,6 +7,7 @@ import pytest
 from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
@@ -88,30 +89,49 @@ def create_test_block_record(*, height: uint32 = TEST_HEIGHT, timestamp: uint64 
 async def instantiate_mempool_manager(
     get_coin_record: Callable[[bytes32], Awaitable[Optional[CoinRecord]]],
     *,
-    current_block_height: uint32 = TEST_HEIGHT,
-    current_block_timestamp: uint64 = TEST_TIMESTAMP,
+    block_height: uint32 = TEST_HEIGHT,
+    block_timestamp: uint64 = TEST_TIMESTAMP,
+    constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> MempoolManager:
-    mempool_manager = MempoolManager(get_coin_record, DEFAULT_CONSTANTS)
-    test_block_record = create_test_block_record(height=current_block_height, timestamp=current_block_timestamp)
+    mempool_manager = MempoolManager(get_coin_record, constants)
+    test_block_record = create_test_block_record(height=block_height, timestamp=block_timestamp)
     await mempool_manager.new_peak(test_block_record, None)
     return mempool_manager
 
 
 def make_test_conds(
     *,
-    height_relative: Optional[uint32] = None,
-    height_absolute: uint32 = uint32(0),
-    seconds_relative: uint64 = uint64(0),
-    seconds_absolute: uint64 = uint64(0),
+    birth_height: Optional[int] = None,
+    birth_seconds: Optional[int] = None,
+    height_relative: Optional[int] = None,
+    height_absolute: int = 0,
+    seconds_relative: Optional[int] = None,
+    seconds_absolute: int = 0,
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
-        [Spend(TEST_COIN.name(), IDENTITY_PUZZLE_HASH, height_relative, seconds_relative, None, None, [], [], 0)],
+        [
+            Spend(
+                TEST_COIN.name(),
+                IDENTITY_PUZZLE_HASH,
+                None if height_relative is None else uint32(height_relative),
+                None if seconds_relative is None else uint64(seconds_relative),
+                None,
+                None,
+                None if birth_height is None else uint32(birth_height),
+                None if birth_seconds is None else uint64(birth_seconds),
+                [],
+                [],
+                0,
+            )
+        ],
         0,
-        height_absolute,
-        seconds_absolute,
+        uint32(height_absolute),
+        uint64(seconds_absolute),
         None,
         None,
         [],
+        0,
+        0,
         0,
     )
 
@@ -132,113 +152,63 @@ class TestCheckTimeLocks:
     REMOVALS: Dict[bytes32, CoinRecord] = {TEST_COIN.name(): COIN_RECORD}
 
     @pytest.mark.parametrize(
-        "value,expected_error",
+        "conds,expected",
         [
-            # the coin is 5 blocks old in this test
-            (5, None),
-            (6, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(height_relative=5), None),
+            (make_test_conds(height_relative=6), Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (make_test_conds(height_absolute=15), None),
+            (make_test_conds(height_absolute=16), Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (make_test_conds(seconds_relative=150), None),
+            (make_test_conds(seconds_relative=151), Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (make_test_conds(seconds_absolute=10150), None),
+            (make_test_conds(seconds_absolute=10151), Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            # the coin's confirmed height is 10
+            (make_test_conds(birth_height=9), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (make_test_conds(birth_height=10), None),
+            (make_test_conds(birth_height=11), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            # coin timestamp is 10000
+            (make_test_conds(birth_seconds=9999), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (make_test_conds(birth_seconds=10000), None),
+            (make_test_conds(birth_seconds=10001), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
         ],
     )
-    def test_height_relative(
+    def test_conditions(
         self,
-        value: uint32,
-        expected_error: Optional[Err],
+        conds: SpendBundleConditions,
+        expected: Optional[Err],
     ) -> None:
-        conds = make_test_conds(height_relative=value)
         assert (
             mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # The block height is 15
-            (15, None),
-            (16, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-        ],
-    )
-    def test_height_absolute(
-        self,
-        value: uint32,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(height_absolute=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # the coin is 150 seconds old in this test
-            (150, None),
-            (151, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        ],
-    )
-    def test_seconds_relative(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(seconds_relative=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
-        )
-
-    @pytest.mark.parametrize(
-        "value,expected_error",
-        [
-            # The block timestamp is 10150
-            (10150, None),
-            (10151, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-        ],
-    )
-    def test_seconds_absolute(
-        self,
-        value: uint64,
-        expected_error: Optional[Err],
-    ) -> None:
-        conds = make_test_conds(seconds_absolute=value)
-        assert (
-            mempool_check_time_locks(self.REMOVALS, conds, self.PREV_BLOCK_HEIGHT, self.PREV_BLOCK_TIMESTAMP)
-            == expected_error
+            == expected
         )
 
 
-def test_compute_assert_height() -> None:
-    c1 = Coin(bytes32(b"a" * 32), bytes32(b"b" * 32), 1337)
-    coin_id = c1.name()
+def expect(*, height: int = 0) -> uint32:
+    return uint32(height)
+
+
+@pytest.mark.parametrize(
+    "conds,expected",
+    [
+        # coin birth height is 12
+        (make_test_conds(), expect()),
+        (make_test_conds(height_absolute=42), expect(height=42)),
+        # 1 is a relative height, but that only amounts to 13, so the absolute
+        # height is more restrictive
+        (make_test_conds(height_relative=1), expect(height=13)),
+        # 100 is a relative height, and sinec the coin was confirmed at height 12,
+        # that's 112
+        (make_test_conds(height_absolute=42, height_relative=100), expect(height=112)),
+        # Same thing but without the absolute height
+        (make_test_conds(height_relative=100), expect(height=112)),
+    ],
+)
+def test_compute_assert_height(conds: SpendBundleConditions, expected: uint32) -> None:
+    coin_id = TEST_COIN.name()
     confirmed_height = uint32(12)
-    coin_records = {coin_id: CoinRecord(c1, confirmed_height, uint32(0), False, uint64(10000))}
+    coin_records = {coin_id: CoinRecord(TEST_COIN, confirmed_height, uint32(0), False, uint64(10000))}
 
-    # 42 is the absolute height condition
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), None, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
-    )
-    assert compute_assert_height(coin_records, conds) == 42
-
-    # 1 is a relative height, but that only amounts to 13, so the absolute
-    # height is more restrictive
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 1, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
-    )
-    assert compute_assert_height(coin_records, conds) == 42
-
-    # 100 is a relative height, and sinec the coin was confirmed at height 12,
-    # that's 112
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 42, 0, None, None, [], 0
-    )
-    assert compute_assert_height(coin_records, conds) == 112
-
-    # Same thing but without the absolute height
-    conds = SpendBundleConditions(
-        [Spend(coin_id, bytes32(b"c" * 32), 100, 0, None, None, [], [], 0)], 0, 0, 0, None, None, [], 0
-    )
-    assert compute_assert_height(coin_records, conds) == 112
+    assert compute_assert_height(coin_records, conds) == expected
 
 
 def spend_bundle_from_conditions(conditions: List[List[Any]], coin: Coin = TEST_COIN) -> SpendBundle:
@@ -431,41 +401,36 @@ async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
     assert mempool_manager.get_spendbundle(reordered_sb_name) is None
 
 
+co = ConditionOpcode
+mis = MempoolInclusionStatus
+
+
 @pytest.mark.asyncio
+@pytest.mark.parametrize("softfork2", [False, True])
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS, None),
         # The rules allow spending an ephemeral coin with an ASSERT_SECONDS_RELATIVE 0 condition
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS, None),
+        (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS, None),
         # Unlike ASSERT_SECONDS_RELATIVE, for ASSERT_HEIGHT_RELATIVE the block height
         # must be greater than the coin creation height + the argument, which means
         # the coin cannot be spent in the same block (where the height would be the same)
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 6, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 7, MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 6, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 7, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
         # Current block timestamp is 10050
-        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10049, MempoolInclusionStatus.SUCCESS, None),
-        (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10050, MempoolInclusionStatus.SUCCESS, None),
-        (
-            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
-            10051,
-            MempoolInclusionStatus.FAILED,
-            Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
-        ),
-        (
-            ConditionOpcode.ASSERT_SECONDS_ABSOLUTE,
-            10052,
-            MempoolInclusionStatus.FAILED,
-            Err.ASSERT_SECONDS_ABSOLUTE_FAILED,
-        ),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10049, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10050, mis.SUCCESS, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10051, mis.FAILED, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10052, mis.FAILED, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
     ],
 )
 async def test_ephemeral_timelock(
@@ -473,12 +438,28 @@ async def test_ephemeral_timelock(
     lock_value: int,
     expected_status: MempoolInclusionStatus,
     expected_error: Optional[Err],
+    softfork2: bool,
 ) -> None:
+    if softfork2:
+        constants = DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0)
+    else:
+        constants = DEFAULT_CONSTANTS
+
     mempool_manager = await instantiate_mempool_manager(
         get_coin_record=get_coin_record_for_test_coins,
-        current_block_height=uint32(5),
-        current_block_timestamp=uint64(10050),
+        block_height=uint32(5),
+        block_timestamp=uint64(10050),
+        constants=constants,
     )
+
+    if not softfork2 and opcode in [
+        co.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
+        co.ASSERT_BEFORE_HEIGHT_RELATIVE,
+        co.ASSERT_BEFORE_SECONDS_ABSOLUTE,
+        co.ASSERT_BEFORE_SECONDS_RELATIVE,
+    ]:
+        expected_error = Err.INVALID_CONDITION
+
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1], [opcode, lock_value]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
     sb1 = spend_bundle_from_conditions(conditions)
@@ -534,3 +515,36 @@ async def test_get_items_not_in_filter() -> None:
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
     assert result == [sb1]
+
+
+@pytest.mark.asyncio
+async def test_total_mempool_fees() -> None:
+
+    coin_records: Dict[bytes32, CoinRecord] = {}
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        return coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+
+    # the limit of total fees in the mempool is 2^63
+    # the limit per mempool item is 2^50, that lets us add 8192 items with the
+    # maximum amount of fee before reaching the total mempool limit
+    amount = uint64(2**50)
+    total_fee = 0
+    for i in range(8192):
+        coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, amount)
+        coin_records[coin.name()] = CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))
+        amount = uint64(amount - 1)
+        # the fee is 1 less than the amount because we create a coin of 1 mojo
+        total_fee += amount
+        _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin)
+        assert result[1] == MempoolInclusionStatus.SUCCESS
+        assert mempool_manager.mempool.total_mempool_fees() == total_fee
+
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, amount)
+    coin_records[coin.name()] = CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))
+    _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions, coin)
+    assert result[1] == MempoolInclusionStatus.FAILED
+    assert result[2] == Err.INVALID_BLOCK_FEE_AMOUNT

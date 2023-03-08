@@ -8,6 +8,7 @@ from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
 
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -33,7 +34,13 @@ log = logging.getLogger(__name__)
 
 
 def get_name_puzzle_conditions(
-    generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool, height: Optional[uint32] = None
+    generator: BlockGenerator,
+    max_cost: int,
+    *,
+    cost_per_byte: int,
+    mempool_mode: bool,
+    height: Optional[uint32] = None,
+    constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> NPCResult:
     # in mempool mode, the height doesn't matter, because it's always strict.
     # But otherwise, height must be specified to know which rules to apply
@@ -41,12 +48,13 @@ def get_name_puzzle_conditions(
 
     if mempool_mode:
         flags = MEMPOOL_MODE
-    elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT:
-        flags = LIMIT_STACK | ENABLE_ASSERT_BEFORE
-    elif height is not None and height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
+    elif height is not None and height >= constants.SOFT_FORK_HEIGHT:
         flags = LIMIT_STACK
     else:
         flags = 0
+
+    if height is not None and height >= constants.SOFT_FORK2_HEIGHT:
+        flags = flags | ENABLE_ASSERT_BEFORE
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]
@@ -128,9 +136,16 @@ def mempool_check_time_locks(
 
     for spend in bundle_conds.spends:
         unspent = removal_coin_records[bytes32(spend.coin_id)]
+        if spend.birth_height is not None:
+            if spend.birth_height != unspent.confirmed_block_index:
+                return Err.ASSERT_MY_BIRTH_HEIGHT_FAILED
+        if spend.birth_seconds is not None:
+            if spend.birth_seconds != unspent.timestamp:
+                return Err.ASSERT_MY_BIRTH_SECONDS_FAILED
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED
-        if timestamp < unspent.timestamp + spend.seconds_relative:
-            return Err.ASSERT_SECONDS_RELATIVE_FAILED
+        if spend.seconds_relative is not None:
+            if timestamp < unspent.timestamp + spend.seconds_relative:
+                return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None

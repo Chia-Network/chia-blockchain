@@ -5,8 +5,10 @@ from typing import List, Optional
 
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.util.ints import uint32, uint128
 from chia.util.streamable import Streamable, streamable
 
 
@@ -27,31 +29,31 @@ class HeaderBlock(Streamable):
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
 
     @property
-    def prev_header_hash(self):
+    def prev_header_hash(self) -> bytes32:
         return self.foliage.prev_block_hash
 
     @property
-    def prev_hash(self):
+    def prev_hash(self) -> bytes32:
         return self.foliage.prev_block_hash
 
     @property
-    def height(self):
+    def height(self) -> uint32:
         return self.reward_chain_block.height
 
     @property
-    def weight(self):
+    def weight(self) -> uint128:
         return self.reward_chain_block.weight
 
     @property
-    def header_hash(self):
+    def header_hash(self) -> bytes32:
         return self.foliage.get_hash()
 
     @property
-    def total_iters(self):
+    def total_iters(self) -> uint128:
         return self.reward_chain_block.total_iters
 
     @property
-    def log_string(self):
+    def log_string(self) -> str:
         return "block " + str(self.header_hash) + " sb_height " + str(self.height) + " "
 
     @property

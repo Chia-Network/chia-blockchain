@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
+from chia.cmds.check_wallet_db import help_text as check_help_text
 from chia.cmds.cmds_util import execute_with_wallet
 from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
@@ -515,7 +516,7 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
 
 
-@wallet_cmd.command("check", short_help="Check wallet DB integrity")
+@wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
 @click.option("-v", "--verbose", help="Print more information", is_flag=True)
 @click.option("--db-path", help="The path to a wallet DB. Default is to scan all active wallet DBs.")
 @click.pass_context

@@ -39,7 +39,7 @@ NUM_ITERS = 20000
 random.seed(123456789)
 
 
-async def run_add_block_benchmark(version: int):
+async def run_add_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
     db_wrapper: DBWrapper2 = await setup_db("block-store-benchmark.db", version)
 

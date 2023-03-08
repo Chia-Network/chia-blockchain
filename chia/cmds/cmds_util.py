@@ -4,7 +4,7 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiohttp import ClientConnectorError
 
@@ -30,6 +30,17 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "harvester": HarvesterRpcClient,
     "data_layer": DataLayerRpcClient,
 }
+
+node_config_section_names: Dict[Type[RpcClient], str] = {
+    FarmerRpcClient: "farmer",
+    WalletRpcClient: "wallet",
+    FullNodeRpcClient: "full_node",
+    HarvesterRpcClient: "harvester",
+    DataLayerRpcClient: "data_layer",
+}
+
+
+_T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)
 
 
 def transaction_submitted_msg(tx: TransactionRecord) -> str:
@@ -65,28 +76,29 @@ async def validate_client_connection(
 
 @asynccontextmanager
 async def get_any_service_client(
-    node_type: str,
+    client_type: Type[_T_RpcClient],
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     fingerprint: Optional[int] = None,
     login_to_wallet: bool = True,
-) -> AsyncIterator[Tuple[Optional[Any], Dict[str, Any], Optional[int]]]:
+) -> AsyncIterator[Tuple[Optional[_T_RpcClient], Dict[str, Any], Optional[int]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
     the RpcClient.
     """
 
-    if node_type not in NODE_TYPES.keys():
+    node_type = node_config_section_names.get(client_type)
+    if node_type is None:
         # Click already checks this, so this should never happen
-        raise ValueError(f"Invalid node type: {node_type}")
+        raise ValueError(f"Invalid client type requested: {client_type.__name__}")
     # load variables from config file
-    config = load_config(root_path, "config.yaml", fill_missing_services=node_type == "data_layer")
+    config = load_config(root_path, "config.yaml", fill_missing_services=issubclass(client_type, DataLayerRpcClient))
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
-    node_client = await NODE_TYPES[node_type].create(self_hostname, uint16(rpc_port), root_path, config)
+    node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
     try:
         # check if we can connect to node, and if we can then validate
         # fingerprint access, otherwise return fingerprint and shutdown client
@@ -204,8 +216,11 @@ async def execute_with_wallet(
     extra_params: Dict[str, Any],
     function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
 ) -> None:
-    wallet_client: Optional[WalletRpcClient]
-    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as (wallet_client, _, new_fp):
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, fingerprint=fingerprint) as (
+        wallet_client,
+        _,
+        new_fp,
+    ):
         if wallet_client is not None:
             assert new_fp is not None  # wallet only sanity check
             await function(extra_params, wallet_client, new_fp)
