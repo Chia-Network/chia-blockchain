@@ -460,10 +460,10 @@ async def test_ephemeral_timelock(
     ]:
         expected_error = Err.INVALID_CONDITION
 
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1], [opcode, lock_value]]
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
     sb1 = spend_bundle_from_conditions(conditions)
-    sb2 = spend_bundle_from_conditions(conditions, created_coin)
+    sb2 = spend_bundle_from_conditions([[opcode, lock_value]], created_coin)
     # sb spends TEST_COIN and creates created_coin which gets spent too
     sb = SpendBundle.aggregate([sb1, sb2])
     # We shouldn't have a record of this ephemeral coin
