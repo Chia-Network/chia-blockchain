@@ -99,10 +99,13 @@
 
   )
 
-  (defun check_update_conditions (SINGLETON_STRUCT conditions seen_flag output)
+  (defun check_update_conditions (SINGLETON_STRUCT conditions output)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (c
+	  ; Proposal updates should only have one CREATE_COIN condition with an even amount
+	  ; If there are > 1 CREATE_COIN conditions then ASSERT_MY_AMOUNT will fail
+	  ; If the amount is even then the singleton top layer will fail.
       	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
       	  (check_update_conditions SINGLETON_STRUCT (r conditions) 1 (c (f conditions) output))
       	)
@@ -115,8 +118,8 @@
       	  (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag (c (f conditions) output))
       	)
       )
+      ; success: return all the conditions
       output
-      ;; (assert_or_nil seen_flag output)
     )
   )
 
@@ -152,7 +155,7 @@
     (if (= spend_or_update_flag "s")
       (check_spend_conditions SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT conditions delegated_puzzle_hash spend_amount)
       (if (= spend_or_update_flag "u")
-        (check_update_conditions SINGLETON_STRUCT conditions 0 ())
+        (check_update_conditions SINGLETON_STRUCT conditions ())
       	(if (= spend_or_update_flag "d")
       	  (check_dangerous_conditions SINGLETON_STRUCT conditions)
       	  ()
