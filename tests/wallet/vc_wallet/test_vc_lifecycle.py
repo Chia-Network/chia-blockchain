@@ -14,8 +14,10 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
     create_covenant_layer,
+    match_covenant_layer,
     solve_covenant_layer,
     create_std_parent_morpher,
 )
@@ -40,6 +42,7 @@ async def test_covenant_layer() -> None:
         FAKE_ACS: Program = Program.to([3, None, None, 1])
         # The output puzzle will be the same for both
         covenant_puzzle: Program = create_covenant_layer(ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
+        assert match_covenant_layer(uncurry_puzzle(covenant_puzzle)) == (ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
         covenant_puzzle_hash: bytes32 = covenant_puzzle.get_tree_hash()
 
         # Farm both coins
@@ -153,6 +156,11 @@ async def test_covenant_layer() -> None:
 @pytest.mark.asyncio
 async def test_did_tp() -> None:
     async with sim_and_client() as (sim, client):
+        # Make a mock ownership layer
+        # Create it with mock singleton info
+        # Try to update metadata and tp without any announcement
+        # Try to pass the wrong coin idea
+        # Actually use announcement
         pass
 
 
