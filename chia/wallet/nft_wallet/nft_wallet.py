@@ -1294,7 +1294,7 @@ class NFTWallet:
         intermediate_coin_spends = []
         launcher_spends = []
         launcher_ids = []
-        eve_spends = []
+        eve_spends: List[SpendBundle] = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
@@ -1387,6 +1387,7 @@ class NFTWallet:
                 memos=[[target_ph]],
             )
             eve_sb = eve_txs[0].spend_bundle
+            assert eve_sb is not None
             eve_spends.append(eve_sb)
             # Extract Puzzle Announcement from eve spend
             assert isinstance(eve_sb, SpendBundle)  # mypy
@@ -1541,7 +1542,7 @@ class NFTWallet:
         intermediate_coin_spends = []
         launcher_spends = []
         launcher_ids = []
-        eve_spends = []
+        eve_spends: List[SpendBundle] = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
@@ -1633,6 +1634,7 @@ class NFTWallet:
                 memos=[[target_ph]],
             )
             eve_sb = eve_txs[0].spend_bundle
+            assert eve_sb is not None
             eve_spends.append(eve_sb)
             # Extract Puzzle Announcement from eve spend
             assert isinstance(eve_sb, SpendBundle)  # mypy

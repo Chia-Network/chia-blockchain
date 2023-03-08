@@ -36,19 +36,9 @@ jobs:
         submodules: recursive
 
     - name: Set Env
-      if: github.event_name == 'release' && github.event.action == 'published'
-      shell: bash
-      run: |
-        PRE_RELEASE=$(jq -r '.release.prerelease' "$GITHUB_EVENT_PATH")
-        RELEASE_TAG=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
-        echo "RELEASE=true" >>$GITHUB_ENV
-        echo "PRE_RELEASE=$PRE_RELEASE" >>$GITHUB_ENV
-        echo "RELEASE_TAG=$RELEASE_TAG" >>$GITHUB_ENV
-        if [ $PRE_RELEASE = false ]; then
-          echo "FULL_RELEASE=true" >>$GITHUB_ENV
-        else
-          echo "FULL_RELEASE=false" >>$GITHUB_ENV
-        fi
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set git urls to https instead of ssh
       run: |
@@ -133,46 +123,27 @@ jobs:
         echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >>$GITHUB_OUTPUT
         deactivate
 
-      # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v6
-      id: 'latest-madmax'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        result-encoding: string
-        script: |
-          const release = await github.rest.repos.getLatestRelease({
-            owner: 'Chia-Network',
-            repo: 'chia-plotter-madmax',
-          });
-          return release.data.tag_name;
-
     - name: Get latest madmax plotter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
       run: |
-        mkdir "$env:GITHUB_WORKSPACE\madmax"
-        Invoke-WebRequest https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\chia_plot.exe"
-        Invoke-WebRequest https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\chia_plot_k34.exe"
-
-      # Get the most recent release from bladebit
-    - uses: actions/github-script@v6
-      if: '!github.event.release.prerelease'
-      id: 'latest-bladebit'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        result-encoding: string
-        script: |
-          const release = await github.rest.repos.getLatestRelease({
-            owner: 'Chia-Network',
-            repo: 'bladebit',
-          });
-          return release.data.tag_name;
+        LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+        mkdir $GITHUB_WORKSPACE\\madmax
+        gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-*.exe' -O $GITHUB_WORKSPACE\\madmax\\chia_plot.exe
+        gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-*.exe' -O $GITHUB_WORKSPACE\\madmax\\chia_plot_k34.exe
 
     - name: Get latest bladebit plotter
       if: '!github.event.release.prerelease'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
       run: |
-        mkdir "$env:GITHUB_WORKSPACE\bladebit"
-        Invoke-WebRequest https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-windows-x86-64.zip -OutFile "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
-        Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
-        rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
+        LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+        mkdir $GITHUB_WORKSPACE\\bladebit
+        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*windows-x86-64.zip' -O $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
+        unzip $GITHUB_WORKSPACE\\bladebit\\bladebit.zip -d $GITHUB_WORKSPACE\\bladebit\\
+        rm $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
@@ -180,11 +151,9 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
       run: |
-        PRERELEASE_URL=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("windows-x86-64.zip")).browser_download_url')
+        LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
         mkdir $GITHUB_WORKSPACE\\bladebit
-        ls
-        echo $PRERELEASE_URL
-        curl -L "$PRERELEASE_URL" --output $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
+        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*windows-x86-64.zip' -O $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
         unzip $GITHUB_WORKSPACE\\bladebit\\bladebit.zip -d $GITHUB_WORKSPACE\\bladebit\\
         rm $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
 

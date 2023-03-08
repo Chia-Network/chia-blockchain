@@ -1245,7 +1245,7 @@ class WalletNode:
             fork_height = header_block.height - 1
 
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
-            request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
+            request_prev = wallet_protocol.RequestBlockHeader(uint32(top.height - 1))
             response_prev: Optional[RespondBlockHeader] = await peer.call_api(
                 FullNodeAPI.request_block_header, request_prev
             )
@@ -1509,7 +1509,7 @@ class WalletNode:
             return True
 
         # block is not included in wp recent chain
-        start = block.height + 1
+        start = uint32(block.height + 1)
         compare_to_recent = False
         inserted: int = 0
         first_height_recent = weight_proof.recent_chain_data[0].height
@@ -1522,13 +1522,13 @@ class WalletNode:
             start_height = block.height
             end_height = block.height + 32
             ses_start_height = 0
-            end = 0
+            end = uint32(0)
             for idx, ses in enumerate(weight_proof.sub_epochs):
                 if idx == len(weight_proof.sub_epochs) - 1:
                     break
-                next_ses_height = (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
-                    idx + 1
-                ].num_blocks_overflow
+                next_ses_height = uint32(
+                    (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[idx + 1].num_blocks_overflow
+                )
                 # start_ses_hash
                 if ses_start_height <= start_height < next_ses_height:
                     inserted = idx + 1
@@ -1539,9 +1539,10 @@ class WalletNode:
                         if idx > len(weight_proof.sub_epochs) - 3:
                             break
                         # else add extra ses as request start <-> end spans two ses
-                        end = (idx + 2) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
-                            idx + 2
-                        ].num_blocks_overflow
+                        end = uint32(
+                            (idx + 2) * self.constants.SUB_EPOCH_BLOCKS
+                            + weight_proof.sub_epochs[idx + 2].num_blocks_overflow
+                        )
                         inserted += 1
                         break
                 ses_start_height = next_ses_height

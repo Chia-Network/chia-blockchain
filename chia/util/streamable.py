@@ -23,12 +23,15 @@ from typing import (
 )
 
 from blspy import G1Element, G2Element, PrivateKey
-from typing_extensions import Literal, get_args, get_origin
+from typing_extensions import TYPE_CHECKING, Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
+
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -114,7 +117,7 @@ class Field:
 StreamableFields = Tuple[Field, ...]
 
 
-def create_fields(cls: Type[object]) -> StreamableFields:
+def create_fields(cls: Type[DataclassInstance]) -> StreamableFields:
     hints = get_type_hints(cls)
     fields = []
     for field in dataclasses.fields(cls):
@@ -559,7 +562,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
 
     cls._streamable_fields = create_fields(cls)
 
-    return cls
+    return cls  # type: ignore[return-value]
 
 
 class Streamable:

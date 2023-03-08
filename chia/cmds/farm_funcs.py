@@ -140,7 +140,7 @@ async def summary(
                     harvesters_remote[ip] = {}
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
-        def process_harvesters(harvester_peers_in: dict):
+        def process_harvesters(harvester_peers_in: Dict[str, Dict[str, Any]]) -> None:
             for harvester_peer_id, harvester_dict in harvester_peers_in.items():
                 syncing = harvester_dict["syncing"]
                 if syncing is not None and syncing["initial"]:
