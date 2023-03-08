@@ -6,6 +6,7 @@
     my_coin_id
   )
 
+  (include condition_codes.clvm)
   (include curry.clib)
 
   ; takes a lisp tree and returns the hash of it

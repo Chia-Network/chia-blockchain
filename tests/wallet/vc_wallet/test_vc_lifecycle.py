@@ -23,6 +23,9 @@ from chia.wallet.vc_wallet.vc_drivers import (
     create_did_tp,
     match_did_tp,
     solve_did_tp,
+    create_did_backdoor,
+    match_did_backdoor,
+    solve_did_backdoor,
     create_std_parent_morpher,
 )
 
@@ -284,7 +287,93 @@ async def test_did_tp() -> None:
 @pytest.mark.asyncio
 async def test_did_backdoor() -> None:
     async with sim_and_client() as (sim, client):
-        pass
+        # Create it with mock singleton info
+        brick_hash: bytes32 = bytes32([0] * 32)
+        brick_condition: Program = Program.to([51, brick_hash, 0])
+        yoink_puz: Program = create_did_backdoor(
+            MOCK_LAUNCHER_ID, [brick_condition], MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH
+        )
+        assert match_did_backdoor(uncurry_puzzle(yoink_puz)) == (MOCK_LAUNCHER_ID, [brick_condition])
+
+        await sim.farm_block(yoink_puz.get_tree_hash())
+        yoink_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([yoink_puz.get_tree_hash()], include_spent_coins=False)
+        )[0].coin
+
+        # Define parameters for next few spend attempts
+        provider_innerpuzhash: bytes32 = ACS_PH
+        my_coin_id: bytes32 = yoink_coin.name()
+        bad_data: bytes32 = bytes32([0] * 32)
+
+        # Try to yoink without any announcement
+        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        yoink_coin,
+                        yoink_puz,
+                        solve_did_backdoor(
+                            bad_data,
+                            my_coin_id,
+                        ),
+                    )
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+
+        # Create the "DID" now
+        await sim.farm_block(MOCK_SINGLETON.get_tree_hash())
+        did_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([MOCK_SINGLETON.get_tree_hash()], include_spent_coins=False)
+        )[0].coin
+        did_authorization_spend: CoinSpend = CoinSpend(
+            did_coin,
+            MOCK_SINGLETON,
+            Program.to([[[62, std_hash(b"brick" + my_coin_id)]]]),
+        )
+
+        # Try to pass the wrong coin id
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        yoink_coin,
+                        yoink_puz,
+                        solve_did_backdoor(
+                            provider_innerpuzhash,
+                            bad_data,
+                        ),
+                    ),
+                    did_authorization_spend,
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
+
+        # Actually use announcement
+        successful_spend: SpendBundle = SpendBundle(
+            [
+                CoinSpend(
+                    yoink_coin,
+                    yoink_puz,
+                    solve_did_backdoor(
+                        provider_innerpuzhash,
+                        my_coin_id,
+                    ),
+                ),
+                did_authorization_spend,
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(successful_spend)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        await sim.farm_block()
+
+        assert len(await client.get_coin_records_by_puzzle_hashes([brick_hash], include_spent_coins=False)) > 0
 
 
 @pytest.mark.asyncio
