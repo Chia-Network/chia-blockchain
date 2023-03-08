@@ -172,9 +172,11 @@ class DataStore:
 
         async with self.db_wrapper.writer() as writer:
             if generation is None:
-                existing_generation = await self.get_tree_generation(tree_id=tree_id)
-
-                if existing_generation is None:
+                try:
+                    existing_generation = await self.get_tree_generation(tree_id=tree_id)
+                except Exception as e:
+                    if not str(e).startswith("No generations found for tree ID:"):
+                        raise
                     generation = 0
                 else:
                     generation = existing_generation + 1
@@ -456,10 +458,13 @@ class DataStore:
             )
             row = await cursor.fetchone()
 
-        if row is None:
-            raise Exception(f"No generations found for tree ID: {tree_id.hex()}")
-        generation: int = row["MAX(generation)"]
-        return generation
+        if row is not None:
+            generation: Optional[int] = row["MAX(generation)"]
+
+            if generation is not None:
+                return generation
+
+        raise Exception(f"No generations found for tree ID: {tree_id.hex()}")
 
     async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None) -> Root:
         async with self.db_wrapper.reader() as reader:

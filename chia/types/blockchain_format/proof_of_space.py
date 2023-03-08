@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 from bitstring import BitArray
 from blspy import AugSchemeMPL, G1Element, PrivateKey
@@ -82,8 +82,9 @@ def passes_plot_filter(
     challenge_hash: bytes32,
     signage_point: bytes32,
 ) -> bool:
-    plot_filter: BitArray = BitArray(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
-    return plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
+    plot_filter = BitArray(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
+    # TODO: compensating for https://github.com/scott-griffiths/bitstring/issues/248
+    return cast(bool, plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0)
 
 
 def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
