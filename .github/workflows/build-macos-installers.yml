@@ -31,7 +31,7 @@ jobs:
         os:
           - runs-on: macos-10.14
             name: intel
-            file-suffix: ""
+            file-suffix: "-intel"
             mac-package-name: "Chia-darwin-x64"
             glue-name: "build-macos"
             bladebit-suffix: macos-x86-64.tar.gz
