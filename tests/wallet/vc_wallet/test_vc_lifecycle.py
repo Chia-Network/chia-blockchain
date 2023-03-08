@@ -23,9 +23,12 @@ from chia.wallet.vc_wallet.vc_drivers import (
     create_did_tp,
     match_did_tp,
     solve_did_tp,
-    create_did_backdoor,
-    match_did_backdoor,
-    solve_did_backdoor,
+    create_p2_puzzle_w_auth,
+    match_p2_puzzle_w_auth,
+    solve_p2_puzzle_w_auth,
+    create_did_puzzle_authorizer,
+    match_did_puzzle_authorizer,
+    solve_did_puzzle_authorizer,
     create_p2_puz_or_hidden_puz,
     match_p2_puz_or_hidden_puz,
     solve_p2_puz_or_hidden_puz,
@@ -288,15 +291,17 @@ async def test_did_tp() -> None:
 
 
 @pytest.mark.asyncio
-async def test_did_backdoor() -> None:
+async def test_p2_puzzle_w_auth() -> None:
     async with sim_and_client() as (sim, client):
         # Create it with mock singleton info
         brick_hash: bytes32 = bytes32([0] * 32)
-        brick_condition: Program = Program.to([51, brick_hash, 0])
-        yoink_puz: Program = create_did_backdoor(
-            MOCK_LAUNCHER_ID, [brick_condition], MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH
+        delegated_puzzle: Program = Program.to([4, [4, (1, 51), [4, 1, [1, None]]], None])  # return a CC with solved ph
+        did_auth_puz: Program = create_did_puzzle_authorizer(
+            MOCK_LAUNCHER_ID, MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH
         )
-        assert match_did_backdoor(uncurry_puzzle(yoink_puz)) == (MOCK_LAUNCHER_ID, [brick_condition])
+        assert match_did_puzzle_authorizer(uncurry_puzzle(did_auth_puz)) == (MOCK_LAUNCHER_ID,)
+        yoink_puz: Program = create_p2_puzzle_w_auth(did_auth_puz, delegated_puzzle)
+        assert match_p2_puzzle_w_auth(uncurry_puzzle(yoink_puz)) == (did_auth_puz, delegated_puzzle)
 
         await sim.farm_block(yoink_puz.get_tree_hash())
         yoink_coin: Coin = (
@@ -315,9 +320,12 @@ async def test_did_backdoor() -> None:
                     CoinSpend(
                         yoink_coin,
                         yoink_puz,
-                        solve_did_backdoor(
-                            bad_data,
-                            my_coin_id,
+                        solve_p2_puzzle_w_auth(
+                            solve_did_puzzle_authorizer(
+                                bad_data,
+                                my_coin_id,
+                            ),
+                            Program.to(brick_hash),
                         ),
                     )
                 ],
@@ -334,7 +342,7 @@ async def test_did_backdoor() -> None:
         did_authorization_spend: CoinSpend = CoinSpend(
             did_coin,
             MOCK_SINGLETON,
-            Program.to([[[62, std_hash(b"brick" + my_coin_id)]]]),
+            Program.to([[[62, std_hash(my_coin_id + delegated_puzzle.get_tree_hash())]]]),
         )
 
         # Try to pass the wrong coin id
@@ -344,9 +352,12 @@ async def test_did_backdoor() -> None:
                     CoinSpend(
                         yoink_coin,
                         yoink_puz,
-                        solve_did_backdoor(
-                            provider_innerpuzhash,
-                            bad_data,
+                        solve_p2_puzzle_w_auth(
+                            solve_did_puzzle_authorizer(
+                                provider_innerpuzhash,
+                                bad_data,
+                            ),
+                            Program.to(brick_hash),
                         ),
                     ),
                     did_authorization_spend,
@@ -362,9 +373,12 @@ async def test_did_backdoor() -> None:
                 CoinSpend(
                     yoink_coin,
                     yoink_puz,
-                    solve_did_backdoor(
-                        provider_innerpuzhash,
-                        my_coin_id,
+                    solve_p2_puzzle_w_auth(
+                        solve_did_puzzle_authorizer(
+                            provider_innerpuzhash,
+                            my_coin_id,
+                        ),
+                        Program.to(brick_hash),
                     ),
                 ),
                 did_authorization_spend,
