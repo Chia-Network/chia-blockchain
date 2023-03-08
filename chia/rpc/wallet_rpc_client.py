@@ -702,6 +702,7 @@ class WalletRpcClient(RpcClient):
         validate_only: bool = False,
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {str(key): value for key, value in offer_dict.items()}
 
@@ -711,6 +712,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "min_coin_amount": min_coin_amount,
             "max_coin_amount": max_coin_amount,
+            "reuse_puzhash": reuse_puzhash,
         }
         if driver_dict is not None:
             req["driver_dict"] = driver_dict
@@ -732,9 +734,19 @@ class WalletRpcClient(RpcClient):
         return bytes32.from_hexstr(res["id"]), res["valid"]
 
     async def take_offer(
-        self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint64 = uint64(0)
+        self,
+        offer: Offer,
+        solver: Dict[str, Any] = None,
+        fee=uint64(0),
+        min_coin_amount: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
     ) -> TradeRecord:
-        req = {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
+        req = {
+            "offer": offer.to_bech32(),
+            "fee": fee,
+            "min_coin_amount": min_coin_amount,
+            "reuse_puzhash": reuse_puzhash,
+        }
         if solver is not None:
             req["solver"] = solver
         res = await self.fetch("take_offer", req)

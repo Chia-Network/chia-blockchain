@@ -1591,6 +1591,7 @@ class WalletRpcApi:
                 validate_only=validate_only,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
         if result[0]:
             success, trade_record, error = result
@@ -1671,7 +1672,13 @@ class WalletRpcApi:
             if peer is None:
                 raise ValueError("No peer connected")
             trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
+                offer,
+                peer,
+                fee=fee,
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                solver=solver,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
