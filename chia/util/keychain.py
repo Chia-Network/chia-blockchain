@@ -482,10 +482,14 @@ class Keychain:
         or if a master passphrase is set and the cached passphrase is valid, the keyring is "unlocked"
         """
         # Unlocked: If a master passphrase isn't set, or if the cached passphrase is valid
-        if not Keychain.has_master_passphrase() or (
-            Keychain.has_cached_passphrase()
-            and Keychain.master_passphrase_is_valid(Keychain.get_cached_master_passphrase())
-        ):
+        if not Keychain.has_master_passphrase():
+            return False
+
+        passphrase = Keychain.get_cached_master_passphrase()
+        if passphrase is None:
+            return True
+
+        if Keychain.master_passphrase_is_valid(passphrase):
             return False
 
         # Locked: Everything else
