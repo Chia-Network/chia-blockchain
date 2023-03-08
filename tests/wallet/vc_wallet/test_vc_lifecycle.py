@@ -26,6 +26,9 @@ from chia.wallet.vc_wallet.vc_drivers import (
     create_did_backdoor,
     match_did_backdoor,
     solve_did_backdoor,
+    create_p2_puz_or_hidden_puz,
+    match_p2_puz_or_hidden_puz,
+    solve_p2_puz_or_hidden_puz,
     create_std_parent_morpher,
 )
 
@@ -379,7 +382,76 @@ async def test_did_backdoor() -> None:
 @pytest.mark.asyncio
 async def test_p2_puzzle_or_hidden_puzzle() -> None:
     async with sim_and_client() as (sim, client):
-        pass
+        # Setup and farm the puzzle
+        hidden_puzzle: Program = Program.to((1, [[61, 1]]))  # assert a coin announcement that the solution tells us
+        hidden_puzzle_hash: bytes32 = hidden_puzzle.get_tree_hash()
+        p2_either_puzzle: Program = create_p2_puz_or_hidden_puz(hidden_puzzle_hash, ACS)
+        assert match_p2_puz_or_hidden_puz(uncurry_puzzle(p2_either_puzzle)) == (hidden_puzzle_hash, ACS)
+
+        await sim.farm_block(p2_either_puzzle.get_tree_hash())
+        p2_either_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes(
+                [p2_either_puzzle.get_tree_hash()], include_spent_coins=False
+            )
+        )[0].coin
+
+        # Reveal the wrong puzzle
+        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        p2_either_coin,
+                        p2_either_puzzle,
+                        solve_p2_puz_or_hidden_puz(
+                            Program.to(None),
+                            hidden_puzzle_reveal=ACS,
+                        ),
+                    )
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # Spend the hidden puzzle (make announcement fail)
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        p2_either_coin,
+                        p2_either_puzzle,
+                        solve_p2_puz_or_hidden_puz(
+                            Program.to(bytes32([0] * 32)),
+                            hidden_puzzle_reveal=hidden_puzzle,
+                        ),
+                    )
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+
+        # Spend the inner puzzle
+        brick_hash: bytes32 = bytes32([0] * 32)
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        p2_either_coin,
+                        p2_either_puzzle,
+                        solve_p2_puz_or_hidden_puz(
+                            Program.to([[51, brick_hash, 0]]),
+                        ),
+                    )
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        await sim.farm_block()
+
+        assert len(await client.get_coin_records_by_puzzle_hashes([brick_hash], include_spent_coins=False)) > 0
 
 
 @pytest.mark.asyncio
