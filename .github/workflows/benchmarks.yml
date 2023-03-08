@@ -40,6 +40,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
@@ -77,4 +82,4 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark tests
+          eatmydata pytest -n 0 --capture no -m benchmark tests
