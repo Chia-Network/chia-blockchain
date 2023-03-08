@@ -44,20 +44,26 @@ from chia.util.setproctitle import getproctitle, setproctitle
 log = logging.getLogger(__name__)
 
 
+# TODO: once the 1.8.0 soft-fork has activated, we don't really need to pass
+# the constants through here
 def validate_clvm_and_signature(
-    spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
+    spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
 ) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes]]:
     """
     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
     in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
     the NPCResult and a cache of the new pairings validated (if not error)
     """
+
+    cost_per_byte = constants.COST_PER_BYTE
+    additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
+
     try:
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True, constants=constants, height=height
         )
 
         if result.error is not None:
@@ -324,13 +330,15 @@ class MempoolManager:
         if new_spend.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")
 
+        assert self.peak is not None
+
         err, cached_result_bytes, new_cache_entries = await asyncio.get_running_loop().run_in_executor(
             self.pool,
             validate_clvm_and_signature,
             new_spend_bytes,
             self.max_block_clvm_cost,
-            self.constants.COST_PER_BYTE,
-            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.constants,
+            self.peak.height,
         )
 
         if err is not None:

@@ -1221,7 +1221,7 @@ def validate_recent_blocks(
     ses_blocks, sub_slots, transaction_blocks = 0, 0, 0
     challenge, prev_challenge = recent_chain.recent_chain_data[0].reward_chain_block.pos_ss_cc_challenge_hash, None
     tip_height = recent_chain.recent_chain_data[-1].height
-    prev_block_record = None
+    prev_block_record: Optional[BlockRecord] = None
     deficit = uint8(0)
     adjusted = False
     for idx, block in enumerate(recent_chain.recent_chain_data):
@@ -1245,10 +1245,10 @@ def validate_recent_blocks(
         if (challenge is not None) and (prev_challenge is not None):
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
+                assert prev_block_record is not None
                 prev_block_record = dataclasses.replace(
                     prev_block_record, deficit=deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
                 )
-                assert prev_block_record is not None
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
