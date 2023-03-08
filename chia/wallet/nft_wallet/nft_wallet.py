@@ -5,7 +5,7 @@ import json
 import logging
 import math
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -825,7 +825,7 @@ class NFTWallet:
             elif amount < 0:
                 offer_side_royalty_split += 1
 
-        trade_prices: List[List[Union[uint64, bytes32]]] = []
+        trade_prices: List[Tuple[uint64, bytes32]] = []
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
             if amount > 0 and offer_side_royalty_split > 0:
                 settlement_ph: bytes32 = (
@@ -833,13 +833,14 @@ class NFTWallet:
                     if asset is None
                     else construct_puzzle(driver_dict[asset], DESIRED_OFFER_MOD).get_tree_hash()
                 )
-                trade_prices.append([uint64(math.floor(amount / offer_side_royalty_split)), settlement_ph])
+                trade_prices.append((uint64(math.floor(amount / offer_side_royalty_split)), settlement_ph))
 
-        required_royalty_info: List[Tuple[bytes32, bytes32, uint16]] = []  # [(address, percentage)]
-        for asset, amount in royalty_nft_asset_dict.items():  # requested royalty enabled NFTs
+        required_royalty_info: List[Tuple[bytes32, bytes32, uint16]] = []  # [(launcher_id, address, percentage)]
+        offered_royalty_percentages: Dict[bytes32, uint16] = {}
+        for asset, amount in royalty_nft_asset_dict.items():  # royalty enabled NFTs
+            transfer_info = driver_dict[asset].also().also()  # type: ignore
+            assert isinstance(transfer_info, PuzzleInfo)
             if amount > 0:
-                transfer_info = driver_dict[asset].also().also()  # type: ignore
-                assert isinstance(transfer_info, PuzzleInfo)
                 required_royalty_info.append(
                     (
                         asset,
@@ -847,6 +848,8 @@ class NFTWallet:
                         uint16(transfer_info["transfer_program"]["royalty_percentage"]),
                     )
                 )
+            else:
+                offered_royalty_percentages[asset] = uint16(transfer_info["transfer_program"]["royalty_percentage"])
 
         royalty_payments: Dict[Optional[bytes32], List[Tuple[bytes32, Payment]]] = {}
         for asset, amount in fungible_asset_dict.items():  # offered fungible items
@@ -909,6 +912,7 @@ class NFTWallet:
                 [
                     Announcement(royalty_ph, Program.to((launcher_id, [p.as_condition_args()])).get_tree_hash())
                     for launcher_id, p in payments
+                    if p.amount > 0 or old
                 ]
             )
 
@@ -927,31 +931,39 @@ class NFTWallet:
                 # First, sending all the coins to the OFFER_MOD
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
+                    payment_sum = sum(p.amount for _, p in payments)
                     tx = await wallet.generate_signed_transaction(
                         abs(amount),
                         DESIRED_OFFER_MOD_HASH,
                         primaries=[
                             AmountWithPuzzlehash(
                                 {
-                                    "amount": uint64(sum(p.amount for _, p in payments)),
+                                    "amount": uint64(payment_sum),
                                     "puzzlehash": DESIRED_OFFER_MOD_HASH,
                                     "memos": [],
                                 }
                             )
-                        ],
+                        ]
+                        if payment_sum > 0 or old
+                        else [],
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     txs = [tx]
                 elif asset not in fungible_asset_dict:
+                    assert asset is not None
                     txs = await wallet.generate_signed_transaction(
                         [abs(amount)],
                         [DESIRED_OFFER_MOD_HASH],
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
-                        trade_prices_list=trade_prices,
+                        trade_prices_list=[
+                            list(price)
+                            for price in trade_prices
+                            if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0 or old
+                        ],
                     )
                 else:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
@@ -968,6 +980,11 @@ class NFTWallet:
                 # Then, adding in the spends for the royalty offer mod
                 if asset in fungible_asset_dict:
                     # Create a coin_spend for the royalty payout from OFFER MOD
+
+                    # Skip it if we're paying 0 royalties
+                    payments = royalty_payments[asset] if asset in royalty_payments else []
+                    if not old and sum(p.amount for _, p in payments) == 0:
+                        continue
 
                     # We cannot create coins with the same puzzle hash and amount
                     # So if there's multiple NFTs with the same royalty puzhash/percentage, we must create multiple
