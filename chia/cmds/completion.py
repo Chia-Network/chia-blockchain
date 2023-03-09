@@ -43,4 +43,6 @@ def generate(shell: str) -> None:
     and source that file with:
         \033[3;33m. ~/.chia-complete-bash\033[0m
     """
-    subprocess.run(cmd, shell=True, check=True)
+    # Could consider calling directly in the future.
+    # https://github.com/pallets/click/blob/ef11be6e49e19a055fe7e5a89f0f1f4062c68dba/src/click/shell_completion.py#L17
+    subprocess.run([sys.executable, "-m", "chia"], check=True, env={**os.environ, "_CHIA_COMPLETE": f"{shell}_source")
