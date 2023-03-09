@@ -27,7 +27,7 @@ def completion() -> None:
     "--shell",
     type=click.Choice(SHELLS),
     default=shell,
-    show_default=False,
+    show_default=True,
     required=shell is None,
     help="Shell type to generate for",
 )
