@@ -392,18 +392,13 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
             # TODO, this prompts for the passphrase interactively, move this out
             passphrase = obtain_current_passphrase(use_passphrase_cache=True)
 
-        success = False
-        if passphrase is not None:
-            try:
-                self.cached_file_content.update_encrypted_data_dict(passphrase, self.cached_data_dict, fresh_salt)
-                self.cached_file_content.write_to_path(self.keyring_path)
-                # Cleanup the cached properties now that we wrote the new content to file
-                self.file_content_properties_for_next_write = {}
-                success = True
-            except Exception:
-                pass
-
-        if not success:
+        try:
+            assert passphrase is not None
+            self.cached_file_content.update_encrypted_data_dict(passphrase, self.cached_data_dict, fresh_salt)
+            self.cached_file_content.write_to_path(self.keyring_path)
+            # Cleanup the cached properties now that we wrote the new content to file
+            self.file_content_properties_for_next_write = {}
+        except Exception:
             # Restore the correct content if we failed to write the updated cache, let it re-raise if loading also fails
             self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
 
