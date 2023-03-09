@@ -22,6 +22,8 @@ from chia.util.ints import uint32, uint64
 # integers, which we rely on for computing fee per cost as well as the fee sum
 MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
+SQLITE_NO_GENERATED_COLUMNS: bool = sqlite3.sqlite_version_info < (3, 31, 0)
+
 
 class MempoolRemoveReason(Enum):
     CONFLICT = 1
@@ -49,13 +51,17 @@ class Mempool:
         with self._db_conn:
             # name means SpendBundle hash
             # assert_height may be NIL
+            generated = ""
+            if not SQLITE_NO_GENERATED_COLUMNS:
+                generated = " GENERATED ALWAYS AS (fee / cost) VIRTUAL"
+
             self._db_conn.execute(
-                """CREATE TABLE tx(
+                f"""CREATE TABLE tx(
                 name BLOB PRIMARY KEY,
                 cost INT NOT NULL,
                 fee INT NOT NULL,
                 assert_height INT,
-                fee_per_cost REAL GENERATED ALWAYS AS (fee / cost) VIRTUAL)
+                fee_per_cost REAL{generated})
                 """
             )
             self._db_conn.execute("CREATE INDEX fee_sum ON tx(fee)")
@@ -224,9 +230,15 @@ class Mempool:
                 name = bytes32(cursor.fetchone()[0])
                 self.remove_from_pool([name], MempoolRemoveReason.POOL_FULL)
 
-            self._db_conn.execute(
-                "INSERT INTO tx VALUES(?, ?, ?, ?)", (item.name, item.cost, item.fee, item.assert_height)
-            )
+            if SQLITE_NO_GENERATED_COLUMNS:
+                self._db_conn.execute(
+                    "INSERT INTO tx VALUES(?, ?, ?, ?, ?)",
+                    (item.name, item.cost, item.fee, item.assert_height, item.fee / item.cost),
+                )
+            else:
+                self._db_conn.execute(
+                    "INSERT INTO tx VALUES(?, ?, ?, ?)", (item.name, item.cost, item.fee, item.assert_height)
+                )
 
             all_coin_spends = [(s.coin_id, item.name) for s in item.npc_result.conds.spends]
             self._db_conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
