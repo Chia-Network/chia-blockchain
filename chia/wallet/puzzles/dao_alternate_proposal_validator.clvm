@@ -103,9 +103,9 @@
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (c
-	  ; Proposal updates should only have one CREATE_COIN condition with an even amount
-	  ; If there are > 1 CREATE_COIN conditions then ASSERT_MY_AMOUNT will fail
-	  ; If the amount is even then the singleton top layer will fail.
+      	  ; Proposal updates should only have one CREATE_COIN condition with an even amount
+      	  ; If there are > 1 CREATE_COIN conditions then ASSERT_MY_AMOUNT will fail
+      	  ; If the amount is even then the singleton top layer will fail.
       	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
       	  (check_update_conditions SINGLETON_STRUCT (r conditions) 1 (c (f conditions) output))
       	)

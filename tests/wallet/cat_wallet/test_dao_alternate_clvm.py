@@ -265,14 +265,14 @@ def test_receiver() -> None:
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
-    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct)
+    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct, 1)
     # my_amount
     # my_treasury_puzzle_hash
     # amount_change
     # input_coins
     solution = Program.to([201, 0xCAFEF00D, 20, [Program.to("coin_id").get_tree_hash()]])
     conds: Program = money_receiver.run(solution)
-    assert len(conds.as_python()) == 5
+    assert len(conds.as_python()) == 6
     return
 
 
@@ -294,7 +294,7 @@ def test_treasury() -> None:
         1000,
         5100,
     )
-    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct)
+    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct, 1)
     # PROPOSAL_VALIDATOR
     # MONEY_RECEIVER
     # PROPOSAL_LENGTH
@@ -343,7 +343,7 @@ def test_treasury() -> None:
         ]
     )
     conds: Program = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 5
+    assert len(conds.as_python()) == 6
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     # proposal_validator_solution
     # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
@@ -467,7 +467,7 @@ def test_proposal_innerpuz() -> None:
         attendance_required,
         proposal_pass_percentage,
     )
-    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, treasury_singleton_struct)
+    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, treasury_singleton_struct, 1)
     # PROPOSAL_VALIDATOR
     # MONEY_RECEIVER
     # PROPOSAL_LENGTH

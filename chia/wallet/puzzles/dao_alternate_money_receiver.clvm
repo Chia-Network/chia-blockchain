@@ -1,6 +1,7 @@
 (mod (
   MINIMUM_INPUT_AMOUNT  ; this is a minimum of -1 to prevent money being removed, but can be increased to prevent DoS/spam
   MY_SINGLETON_STRUCT
+  DOS_PROTECTION_BLOCK_HEIGHT  ; this is an adjustable parameter defining how often this code path can be run
   my_amount
   my_treasury_puzzle_hash
   amount_change
@@ -31,12 +32,15 @@
 
   (if (> amount_change MINIMUM_INPUT_AMOUNT)
     (c
-      (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash MY_SINGLETON_STRUCT my_treasury_puzzle_hash))
+      (list ASSERT_HEIGHT_RELATIVE DOS_PROTECTION_BLOCK_HEIGHT)
       (c
-        (list ASSERT_MY_AMOUNT my_amount)
+        (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash MY_SINGLETON_STRUCT my_treasury_puzzle_hash))
         (c
-          (list CREATE_COIN my_treasury_puzzle_hash (+ my_amount amount_change))
-          (create_announcements_for_payments input_coins)
+          (list ASSERT_MY_AMOUNT my_amount)
+          (c
+            (list CREATE_COIN my_treasury_puzzle_hash (+ my_amount amount_change))
+            (create_announcements_for_payments input_coins)
+          )
         )
       )
     )
