@@ -16,7 +16,7 @@ def completion() -> None:
 @click.option(
     "-s",
     "--shell",
-    type=click.Choice(["bash", "zsh", "fish"]),
+    type=click.Choice(SHELLS),
     default=os.environ.get('SHELL', '').split('/')[-1],
     show_default=False,
     required=True,
