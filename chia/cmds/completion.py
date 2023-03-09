@@ -12,7 +12,6 @@ if shell is not None:
     shell = Path(shell).name
     if shell not in SHELLS:
         shell = None
-cmd = f"_CHIA_COMPLETE={shell}_source chia"
 
 
 @click.group(
