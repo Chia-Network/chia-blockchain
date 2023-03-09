@@ -165,9 +165,9 @@ def mock_daemon_with_services():
     # Mock daemon server with a couple running services, a plotter, and one stopped service
     return Daemon(
         services={
-            "my_refrigerator": Service(True),
-            "the_river": Service(True),
-            "your_nose": Service(False),
+            "my_refrigerator": [Service(True)],
+            "the_river": [Service(True)],
+            "your_nose": [Service(False)],
             "chia_plotter": [Service(True), Service(True)],
         },
         connections={},
@@ -179,9 +179,9 @@ def mock_daemon_with_services_and_connections():
     # Mock daemon server with a couple running services, a plotter, and a couple active connections
     return Daemon(
         services={
-            "my_refrigerator": Service(True),
+            "my_refrigerator": [Service(True)],
             "chia_plotter": [Service(True), Service(True)],
-            "apple": Service(True),
+            "apple": [Service(True)],
         },
         connections={
             "apple": [1],
