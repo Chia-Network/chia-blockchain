@@ -299,6 +299,12 @@ class TestCATTrades:
         await time_out_assert(15, assert_trade_tx_number, True, wallet_node_taker, trade_take.trade_id, 2)
 
         # cat_for_cat
+        maker_unused_index = (
+            await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+        ).index
+        taker_unused_index = (
+            await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+        ).index
         if forwards_compat:
             if sys.version_info < (3, 8):
                 old_maker_offer = Offer.from_bytes(
@@ -314,7 +320,7 @@ class TestCATTrades:
                 )
         else:
             success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-                cat_for_cat,
+                cat_for_cat, reuse_puzhash=reuse_puzhash
             )
             await asyncio.sleep(1)
             assert error is None
@@ -323,6 +329,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
+            reuse_puzhash=reuse_puzhash and not forwards_compat,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -351,6 +358,41 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
         if not forwards_compat:
             await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
+            if reuse_puzhash:
+                # Check if unused index changed
+                assert (
+                    maker_unused_index
+                    == (
+                        await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
+                assert (
+                    taker_unused_index
+                    == (
+                        await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
+            else:
+                assert (
+                    maker_unused_index
+                    < (
+                        await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
+                assert (
+                    taker_unused_index
+                    < (
+                        await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
         # chia_for_multiple_cat

@@ -563,6 +563,14 @@ class CATWallet:
         wallet_state_manager lock
         """
         announcement = None
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         if fee > amount_to_claim:
             chia_coins = await self.standard_wallet.select_coins(
                 fee,
@@ -573,7 +581,7 @@ class CATWallet:
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
-                (await self.standard_wallet.get_puzzle_hash(False)),
+                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
                 fee=uint64(fee - amount_to_claim),
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
@@ -603,7 +611,7 @@ class CATWallet:
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(False)),
+                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
                 coins=chia_coins,
                 negative_change_allowed=True,
                 coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
