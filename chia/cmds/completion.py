@@ -1,6 +1,9 @@
-import click
+from __future__ import annotations
+
 import os
 import subprocess
+
+import click
 
 SHELLS = ['bash', 'zsh', 'fish']
 
