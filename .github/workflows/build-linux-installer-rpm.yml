@@ -119,6 +119,8 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - uses: chia-network/actions/report-python-information@add_report_python_information
+
     - name: Prepare GUI cache
       id: gui-ref
       run: |
