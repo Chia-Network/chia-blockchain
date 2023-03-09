@@ -5,9 +5,10 @@ import subprocess
 
 import click
 
-SHELLS = ['bash', 'zsh', 'fish']
-shell = os.environ.get('SHELL', '').split('/')[-1]
-cmd = f'_CHIA_COMPLETE={shell}_source chia'
+SHELLS = ["bash", "zsh", "fish"]
+shell = os.environ.get("SHELL", "").split("/")[-1]
+cmd = f"_CHIA_COMPLETE={shell}_source chia"
+
 
 @click.group(
     short_help="Generate shell completion",
@@ -16,9 +17,7 @@ def completion() -> None:
     pass
 
 
-@completion.command(
-    short_help='Generate shell completion code'
-)
+@completion.command(short_help="Generate shell completion code")
 @click.option(
     "-s",
     "--shell",

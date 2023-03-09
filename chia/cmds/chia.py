@@ -128,6 +128,7 @@ cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
 cli.add_command(completion)
 
+
 def main() -> None:
     cli()  # pylint: disable=no-value-for-parameter
 
