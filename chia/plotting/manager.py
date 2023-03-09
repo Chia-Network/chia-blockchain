@@ -1,4 +1,5 @@
 from __future__ import annotations
+import chiapos
 
 import logging
 import threading
@@ -9,7 +10,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
-from chiapos import DiskProver, decompresser_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
@@ -73,7 +73,8 @@ class PlotManager:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
 
-    def configure_decompresser(context_count: int, thread_count: int, disable_cpu_affinity: bool) -> None:
+    def configure_decompresser(self, context_count: int, thread_count: int, disable_cpu_affinity: bool) -> None:
+        decompresser_context_queue = getattr(chiapos, "decompresser_context_queue")
         decompresser_context_queue.init(context_count, thread_count, disable_cpu_affinity)
 
     def reset(self) -> None:
@@ -274,7 +275,7 @@ class PlotManager:
                 cache_entry = self.cache.get(file_path)
                 cache_hit = cache_entry is not None
                 if not cache_hit:
-                    prover = DiskProver(str(file_path))
+                    prover = chiapos.DiskProver(str(file_path))
 
                     log.debug(f"process_file {str(file_path)}")
 
