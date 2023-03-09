@@ -6,7 +6,12 @@ import subprocess
 import click
 
 SHELLS = ["bash", "zsh", "fish"]
-shell = os.environ.get("SHELL", "").split("/")[-1]
+shell = os.environ.get("SHELL")
+
+if shell is not None:
+    shell = Path(shell).name
+    if shell not in SHELLS:
+        shell = None
 cmd = f"_CHIA_COMPLETE={shell}_source chia"
 
 
