@@ -285,7 +285,7 @@ class PlotManager:
                             f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
                             f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                         )
-                        return None
+                        # return None
 
                     cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)
