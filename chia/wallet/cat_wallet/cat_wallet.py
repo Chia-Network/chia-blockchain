@@ -394,7 +394,7 @@ class CATWallet:
         else:
             record: Optional[
                 DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -573,7 +573,7 @@ class CATWallet:
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
-                (await self.standard_wallet.get_puzzle_hash(True)),
+                (await self.standard_wallet.get_puzzle_hash(False)),
                 fee=uint64(fee - amount_to_claim),
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
@@ -603,7 +603,7 @@ class CATWallet:
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(True)),
+                (await self.standard_wallet.get_puzzle_hash(False)),
                 coins=chia_coins,
                 negative_change_allowed=True,
                 coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,

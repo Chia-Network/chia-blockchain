@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from secrets import token_bytes
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import pytest
 
@@ -13,7 +13,8 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import INFINITE_COST
-from chia.util.ints import uint64
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -35,7 +36,11 @@ class TestCATTrades:
         "forwards_compat",
         [True, False],
     )
-    async def test_cat_trades(self, wallets_prefarm, forwards_compat):
+    @pytest.mark.parametrize(
+        "reuse_puzhash",
+        [True, False],
+    )
+    async def test_cat_trades(self, wallets_prefarm, forwards_compat: bool, reuse_puzhash: bool):
         (
             [wallet_node_maker, initial_maker_balance],
             [wallet_node_taker, initial_taker_balance],
@@ -58,7 +63,7 @@ class TestCATTrades:
             await asyncio.sleep(1)
 
         for i in range(1, buffer_blocks):
-            await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(token_bytes())))
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
         await time_out_assert(15, new_cat_wallet_taker.get_confirmed_balance, 100)
@@ -109,10 +114,10 @@ class TestCATTrades:
             new_cat_wallet_maker.id(): 15,
         }
 
-        driver_dict: Dict[str, Dict[str, Any]] = {}
+        driver_dict: Dict[str, PuzzleInfo] = {}
         for wallet in (cat_wallet_maker, new_cat_wallet_maker):
             asset_id: str = wallet.get_asset_id()
-            driver_dict[bytes.fromhex(asset_id)] = PuzzleInfo(
+            driver_dict[asset_id] = PuzzleInfo(
                 {
                     "type": AssetType.CAT.name,
                     "tail": "0x" + asset_id,
@@ -121,7 +126,12 @@ class TestCATTrades:
 
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
-
+        maker_unused_index = (
+            await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+        ).index
+        taker_unused_index = (
+            await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+        ).index
         # Execute all of the trades
         if forwards_compat:
             if sys.version_info < (3, 8):
@@ -138,7 +148,9 @@ class TestCATTrades:
                 )
         else:
             # chia_for_cat
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, fee=uint64(1))
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+                chia_for_cat, fee=uint64(1), reuse_puzhash=reuse_puzhash
+            )
             await asyncio.sleep(1)
             assert error is None
             assert success is True
@@ -147,7 +159,10 @@ class TestCATTrades:
         peer = wallet_node_taker.get_full_node_peer()
         assert peer is not None
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(1)
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            peer,
+            fee=uint64(1),
+            reuse_puzhash=reuse_puzhash and not forwards_compat,
         )
         assert trade_take is not None
         assert tx_records is not None
@@ -173,6 +188,42 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_confirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
+        if not forwards_compat:
+            if reuse_puzhash:
+                # Check if unused index changed
+                assert (
+                    maker_unused_index
+                    == (
+                        await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
+                assert (
+                    taker_unused_index
+                    == (
+                        await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
+            else:
+                assert (
+                    maker_unused_index
+                    < (
+                        await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
+                assert (
+                    taker_unused_index
+                    < (
+                        await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                            uint32(1)
+                        )
+                    ).index
+                )
 
         async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
@@ -211,7 +262,8 @@ class TestCATTrades:
             assert trade_make is not None
 
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            peer,
         )
         assert trade_take is not None
         assert tx_records is not None
@@ -261,13 +313,16 @@ class TestCATTrades:
                     )
                 )
         else:
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat)
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+                cat_for_cat,
+            )
             await asyncio.sleep(1)
             assert error is None
             assert success is True
             assert trade_make is not None
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            peer,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -314,7 +369,8 @@ class TestCATTrades:
                 )
         else:
             success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-                chia_for_multiple_cat, driver_dict=driver_dict
+                chia_for_multiple_cat,
+                driver_dict=driver_dict,
             )
             await asyncio.sleep(1)
             assert error is None
@@ -322,7 +378,8 @@ class TestCATTrades:
             assert trade_make is not None
 
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            peer,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -370,13 +427,16 @@ class TestCATTrades:
                     )
                 )
         else:
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(multiple_cat_for_chia)
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+                multiple_cat_for_chia,
+            )
             await asyncio.sleep(1)
             assert error is None
             assert success is True
             assert trade_make is not None
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            peer,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -424,14 +484,17 @@ class TestCATTrades:
                     )
                 )
         else:
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_and_cat_for_cat)
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+                chia_and_cat_for_cat,
+            )
             await asyncio.sleep(1)
             assert error is None
             assert success is True
             assert trade_make is not None
 
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            peer,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None

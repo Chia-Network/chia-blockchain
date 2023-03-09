@@ -164,23 +164,9 @@ async def test_nft_offer_with_fee(
         fee=taker_fee,
         reuse_puzhash=reuse_puzhash and not forwards_compat,
     )
-
     assert trade_take is not None
     assert tx_records is not None
-    if reuse_puzhash and not forwards_compat:
-        # Check if unused index changed
-        assert (
-            maker_unused_index
-            == (
-                await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
-            ).index
-        )
-        assert (
-            taker_unused_index
-            == (
-                await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
-            ).index
-        )
+
     await full_node_api.process_transaction_records(records=tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
@@ -194,20 +180,42 @@ async def test_nft_offer_with_fee(
     coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 0
     assert len(coins_taker) == 1
-    if reuse_puzhash and not forwards_compat:
-        # Check if unused index changed
-        assert (
-            maker_unused_index
-            == (
-                await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
-            ).index
-        )
-        assert (
-            taker_unused_index
-            == (
-                await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
-            ).index
-        )
+    if not forwards_compat:
+        if reuse_puzhash:
+            # Check if unused index changed
+            assert (
+                maker_unused_index
+                == (
+                    await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
+            assert (
+                taker_unused_index
+                == (
+                    await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
+        else:
+            assert (
+                maker_unused_index
+                < (
+                    await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
+            assert (
+                taker_unused_index
+                < (
+                    await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
     # MAKE SECOND TRADE: 100 xch for 1 NFT
 
     maker_balance_pre = await wallet_maker.get_confirmed_balance()
@@ -550,9 +558,17 @@ async def test_nft_offer_with_metadata_update(
     "forwards_compat",
     [True, False],
 )
+@pytest.mark.parametrize(
+    "reuse_puzhash",
+    [True, False],
+)
 @pytest.mark.asyncio
 async def test_nft_offer_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str,
+    two_wallet_nodes: Any,
+    trusted: Any,
+    forwards_compat: bool,
+    reuse_puzhash: bool,
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -670,6 +686,12 @@ async def test_nft_offer_nft_for_cat(
     maker_fee = uint64(10)
     taker_cat_offered = 2500
     offer_nft_for_cat = {nft_asset_id: -1, wallet_maker_for_taker_cat.id(): taker_cat_offered}
+    maker_unused_index = (
+        await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+    ).index
+    taker_unused_index = (
+        await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
+    ).index
 
     if forwards_compat:
         if sys.version_info < (3, 8):
@@ -686,7 +708,7 @@ async def test_nft_offer_nft_for_cat(
             )
     else:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_nft_for_cat, driver_dict, fee=maker_fee
+            offer_nft_for_cat, driver_dict, fee=maker_fee, reuse_puzhash=reuse_puzhash
         )
         assert success is True
         assert error is None
@@ -697,7 +719,10 @@ async def test_nft_offer_nft_for_cat(
     peer = wallet_node_1.get_full_node_peer()
     assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
+        old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+        peer,
+        fee=taker_fee,
+        reuse_puzhash=reuse_puzhash and not forwards_compat,
     )
 
     assert trade_take is not None
@@ -722,7 +747,42 @@ async def test_nft_offer_nft_for_cat(
     coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 0
     assert len(coins_taker) == 1
-
+    if not forwards_compat:
+        if reuse_puzhash:
+            # Check if unused index changed
+            assert (
+                maker_unused_index
+                == (
+                    await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
+            assert (
+                taker_unused_index
+                == (
+                    await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
+        else:
+            assert (
+                maker_unused_index
+                < (
+                    await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
+            assert (
+                taker_unused_index
+                < (
+                    await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+                        uint32(1)
+                    )
+                ).index
+            )
     # Make an offer for taker NFT for multiple cats
     maker_cat_amount = 400
     taker_cat_amount = 500

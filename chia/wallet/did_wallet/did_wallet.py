@@ -528,7 +528,7 @@ class DIDWallet:
         chia_coins = await self.standard_wallet.select_coins(fee)
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             uint64(0),
-            (await self.standard_wallet.get_puzzle_hash(True)),
+            (await self.standard_wallet.get_puzzle_hash(False)),
             fee=fee,
             coins=chia_coins,
             coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
