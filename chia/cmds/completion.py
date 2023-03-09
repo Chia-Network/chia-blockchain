@@ -33,6 +33,3 @@ def generate(shell: str) -> None:
     cmd = f'_CHIA_COMPLETE={shell}_source chia'
     print("Save the following output as '~/.chia-completion."+shell+"' and source it according to your shell:\n")
     subprocess.run(cmd, shell=True, check=True)
-
-if __name__ == '__main__':
-    completion()
