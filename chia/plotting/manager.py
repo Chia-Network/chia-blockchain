@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
-from chiapos import DiskProver
+from chiapos import DiskProver, decompresser_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
@@ -72,6 +72,9 @@ class PlotManager:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
+
+    def configure_decompresser(context_count: int, thread_count: int, disable_cpu_affinity: bool) -> None:
+        decompresser_context_queue.init(context_count, thread_count, disable_cpu_affinity)
 
     def reset(self) -> None:
         with self:
