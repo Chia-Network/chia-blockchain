@@ -33,6 +33,9 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
+        sudo add-apt-repository ppa:deadsnakes/ppa -y
+        sudo apt update -y
+        sudo apt install python3.11 -y
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
 
     - name: Run install script (Windows)
