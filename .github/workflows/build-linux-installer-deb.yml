@@ -120,7 +120,7 @@ jobs:
 
     - name: Setup Python
 #      uses: actions/setup-python@v4
-      rum: |
+      run: |
         sudo apt update -y
         sudo apt install python3.11 -y
 
