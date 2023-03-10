@@ -137,7 +137,7 @@ jobs:
       run: |
         pip --version
         pip install chiapos --pre
-        bash install.sh
+        bash install.sh -d
 
     - name: Prepare GUI cache
       id: gui-ref
