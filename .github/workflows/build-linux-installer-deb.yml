@@ -113,10 +113,22 @@ jobs:
         gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*ubuntu-x86-64.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
-    - uses: ./.github/actions/install
+#    - uses: ./.github/actions/install
+#      with:
+#        python-version: ${{ matrix.python-version }}
+#        development: true
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
-        development: true
+        python-version: '3.11'
+
+    - name: venv
+      run: |
+        python --version
+        python3 --version
+        python3.11 --version
+        python3.11 -m venv venv
 
     - uses: chia-network/actions/activate-venv@main
 
