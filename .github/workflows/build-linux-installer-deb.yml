@@ -121,8 +121,8 @@ jobs:
     - name: Setup Python
 #      uses: actions/setup-python@v4
       run: |
-        sudo apt-get update -y
-        sudo apt-cache search python3.11 | grep pip
+        sudo apt-get update
+        sudo apt-cache search python3.11
         sudo apt-get install python3.11 -y
         ls $(basename $(which python3.11)) | grep pip
         #pip3.11 install virtualenv
