@@ -133,6 +133,12 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - name: install chia
+      run: |
+        pip --version
+        pip install chiapos --pre
+        bash install.sh
+
     - name: Prepare GUI cache
       id: gui-ref
       run: |
