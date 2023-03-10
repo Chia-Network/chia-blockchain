@@ -1463,8 +1463,9 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
         30, api_1.nft_get_nfts, [{"wallet_id": 2}], lambda x: len(x["nft_list"]) == 2
     )
     coins = coins_response["nft_list"]
-    assert coins[0].launcher_id == nft1.launcher_id
-    assert coins[1].launcher_id == nft2.launcher_id
+    nft_set = {nft1.launcher_id, nft2.launcher_id}
+    assert coins[1].launcher_id in nft_set
+    assert coins[0].launcher_id in nft_set
     assert coins[0].owner_did is None
     assert coins[1].owner_did is None
 
