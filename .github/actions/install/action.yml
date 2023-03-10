@@ -31,6 +31,10 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v1.13
+      with:
+        cmake-version: '3.16.x'
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
