@@ -27,17 +27,16 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        sudo apt update -y
-        sudo apt-get install python-apt -y
-        sudo add-apt-repository ppa:deadsnakes/ppa -y
-        sudo apt update -y
-        sudo apt install python3.11 -y
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
 
     - name: Run install script (Windows)
