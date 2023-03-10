@@ -194,8 +194,6 @@ def test_validator() -> None:
         DAO_TREASURY_MOD.get_tree_hash(),
         CAT_TAIL_HASH,
         DAO_SAFE_PAYMENT_MOD.get_tree_hash(),
-        1000,
-        5100,
     )
     # (announcement_source delegated_puzzle_hash announcement_args)
     # (
@@ -222,6 +220,8 @@ def test_validator() -> None:
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
     solution = Program.to([
+        1000,
+        5100,
         [full_proposal.get_tree_hash(), safe_puzzle_hash, 0, 's'],
         [singleton_id, 1200, 950, spend_amount],
         output_conds
@@ -291,8 +291,6 @@ def test_treasury() -> None:
         DAO_TREASURY_MOD.get_tree_hash(),
         CAT_TAIL_HASH,
         DAO_SAFE_PAYMENT_MOD.get_tree_hash(),
-        1000,
-        5100,
     )
     money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct, 1)
     # PROPOSAL_VALIDATOR
@@ -304,6 +302,8 @@ def test_treasury() -> None:
         money_receiver,
         40,
         5,
+        1000,
+        5100,
     )
 
     treasury_puzzle_hash = full_treasury_puz.get_tree_hash()

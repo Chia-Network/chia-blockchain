@@ -1,0 +1,39 @@
+(mod (CONDITIONS SPEND_AMOUNT P2_SINGLETON_PUZHASH p2_singleton_parent_amount_list)
+  ; NOTE: this code will NOT work for assets which have special layers like CATs and NFTs
+  ; For those you'll need to make a new proposal type
+
+  (include condition_codes.clvm)
+
+  (defun loop_through_list (SPEND_AMOUNT P2_SINGLETON_PUZHASH p2_calculated p2_singleton_list total)
+    (c
+      (list CREATE_PUZZLE_ANNOUNCEMENT p2_calculated)
+      (c
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
+        (if p2_singleton_list
+          (loop_through_list
+            SPEND_AMOUNT
+            P2_SINGLETON_PUZHASH
+            (sha256 (f (f p2_singleton_list)) P2_SINGLETON_PUZHASH (r (f p2_singleton_list)))
+            (r p2_singleton_list)
+            (+ total (f (r (f p2_singleton_parent_amount_list))))
+          )
+          (if (> total SPEND_AMOUNT)
+            (list (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT)))
+            (x)
+          )
+        )
+      )
+    )
+  )
+
+  (merge_list
+    CONDITIONS
+    (loop_through_list
+      SPEND_AMOUNT
+      P2_SINGLETON_PUZHASH
+      (sha256 (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_PUZHASH (r (f p2_singleton_parent_amount_list)))
+      (r p2_singleton_parent_amount_list)
+      (f (r (f p2_singleton_parent_amount_list)))
+    )
+  )
+)
