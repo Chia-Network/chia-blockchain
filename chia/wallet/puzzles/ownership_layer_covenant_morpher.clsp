@@ -10,8 +10,8 @@
     TP_HASH
     ; curried second
     SELF_HASH  ; tree hash of all the other hashes above
-    previous_metadata_hash
     previous_inner_puzhash
+    previous_metadata_hash
   )
 
   (include curry.clib)

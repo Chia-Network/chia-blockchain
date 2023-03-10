@@ -5,6 +5,7 @@
     PARENT_MORPHER
     INNER_PUZZLE
     lineage_proof
+    morpher_solution
     inner_solution
   )
 
@@ -15,7 +16,7 @@
       (sha256
         (f lineage_proof)
         (if (r (r lineage_proof))
-            (a PARENT_MORPHER (f (r lineage_proof)))
+            (a PARENT_MORPHER (c (f (r lineage_proof)) morpher_solution))
             INITIAL_PUZZLE_HASH
         )
         (if (r (r lineage_proof))

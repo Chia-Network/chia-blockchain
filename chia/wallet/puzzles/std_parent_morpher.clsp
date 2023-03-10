@@ -3,7 +3,6 @@
     THIS_MOD_HASH
     COVENANT_MOD_HASH
     COVENANT_INITIAL_PUZZLE_HASH
-    .
     inner_puzhash
   )
 

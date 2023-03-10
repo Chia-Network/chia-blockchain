@@ -109,6 +109,7 @@ async def test_covenant_layer() -> None:
                                 inner_puzzle_hash=ACS_PH,
                                 amount=uint64(acs_coin.amount),
                             ),
+                            None,
                             Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
                         ),
                     ),
@@ -128,6 +129,7 @@ async def test_covenant_layer() -> None:
                             covenant_puzzle,
                             solve_covenant_layer(
                                 LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
+                                None,
                                 Program.to([[51, covenant_puzzle_hash, cov.amount]]),
                             ),
                         ),
@@ -158,6 +160,7 @@ async def test_covenant_layer() -> None:
                                 inner_puzzle_hash=ACS_PH,
                                 amount=uint64(acs_cov.amount),
                             ),
+                            None,
                             Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
                         ),
                     ),

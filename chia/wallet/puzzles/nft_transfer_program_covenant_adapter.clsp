@@ -4,8 +4,8 @@
     Current_Owner  ; Truth
     conditions  ; Truth
     (
-      covenant_solutions
       lineage_proof
+      morpher_solution
       inner_solution
     )
   )
@@ -16,6 +16,7 @@
       Current_Owner
       covenant_solutions
       lineage_proof
+      morpher_solution
       (c Current_Owner (c conditions inner_solution))
     )
   )

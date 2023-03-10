@@ -74,10 +74,11 @@ def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[by
         return None
 
 
-def solve_covenant_layer(lineage_proof: LineageProof, inner_solution: Program) -> Program:
+def solve_covenant_layer(lineage_proof: LineageProof, morpher_solution: Program, inner_solution: Program) -> Program:
     solution: Program = Program.to(
         [
             lineage_proof.to_program(),
+            morpher_solution,
             inner_solution,
         ]
     )
