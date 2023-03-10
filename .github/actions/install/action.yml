@@ -47,8 +47,8 @@ runs:
         #sudo add-apt-repository ppa:deadsnakes/ppa -y
         #sudo apt update -y
         sudo apt-get install python3.11 -y
-        python3.11 -m venv venv
-        source venv/bin/activate
+        #python3.11 -m venv venv
+        #source venv/bin/activate
         pip install chiapos --pre
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
 
