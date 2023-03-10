@@ -122,8 +122,8 @@ jobs:
 #      uses: actions/setup-python@v4
       run: |
         sudo apt update -y
-        sudo apt install python3.11 -y
-        python3.11 -m pip3 install virtualenv
+        sudo apt install python3.11 python3.11-pip -y
+        python3.11 -m pip install virtualenv
 
     - name: venv
       run: |
