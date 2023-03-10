@@ -31,9 +31,9 @@ from chia.wallet.vc_wallet.vc_drivers import (
     create_did_puzzle_authorizer,
     match_did_puzzle_authorizer,
     solve_did_puzzle_authorizer,
-    create_p2_puz_or_hidden_puz,
-    match_p2_puz_or_hidden_puz,
-    solve_p2_puz_or_hidden_puz,
+    create_viral_backdoor,
+    match_viral_backdoor,
+    solve_viral_backdoor,
     create_std_parent_morpher,
 )
 
@@ -396,13 +396,13 @@ async def test_p2_puzzle_w_auth() -> None:
 
 
 @pytest.mark.asyncio
-async def test_p2_puzzle_or_hidden_puzzle() -> None:
+async def test_viral_backdoor() -> None:
     async with sim_and_client() as (sim, client):
         # Setup and farm the puzzle
         hidden_puzzle: Program = Program.to((1, [[61, 1]]))  # assert a coin announcement that the solution tells us
         hidden_puzzle_hash: bytes32 = hidden_puzzle.get_tree_hash()
-        p2_either_puzzle: Program = create_p2_puz_or_hidden_puz(hidden_puzzle_hash, ACS)
-        assert match_p2_puz_or_hidden_puz(uncurry_puzzle(p2_either_puzzle)) == (hidden_puzzle_hash, ACS)
+        p2_either_puzzle: Program = create_viral_backdoor(hidden_puzzle_hash, ACS)
+        assert match_viral_backdoor(uncurry_puzzle(p2_either_puzzle)) == (hidden_puzzle_hash, ACS)
 
         await sim.farm_block(p2_either_puzzle.get_tree_hash())
         p2_either_coin: Coin = (
@@ -418,7 +418,7 @@ async def test_p2_puzzle_or_hidden_puzzle() -> None:
                     CoinSpend(
                         p2_either_coin,
                         p2_either_puzzle,
-                        solve_p2_puz_or_hidden_puz(
+                        solve_viral_backdoor(
                             Program.to(None),
                             hidden_puzzle_reveal=ACS,
                         ),
@@ -436,7 +436,7 @@ async def test_p2_puzzle_or_hidden_puzzle() -> None:
                     CoinSpend(
                         p2_either_coin,
                         p2_either_puzzle,
-                        solve_p2_puz_or_hidden_puz(
+                        solve_viral_backdoor(
                             Program.to(bytes32([0] * 32)),
                             hidden_puzzle_reveal=hidden_puzzle,
                         ),
@@ -449,13 +449,14 @@ async def test_p2_puzzle_or_hidden_puzzle() -> None:
 
         # Spend the inner puzzle
         brick_hash: bytes32 = bytes32([0] * 32)
+        wrapped_brick_hash: bytes32 = create_viral_backdoor(hidden_puzzle_hash, brick_hash).get_tree_hash_precalc(brick_hash)
         result = await client.push_tx(
             SpendBundle(
                 [
                     CoinSpend(
                         p2_either_coin,
                         p2_either_puzzle,
-                        solve_p2_puz_or_hidden_puz(
+                        solve_viral_backdoor(
                             Program.to([[51, brick_hash, 0]]),
                         ),
                     )
@@ -467,7 +468,7 @@ async def test_p2_puzzle_or_hidden_puzzle() -> None:
 
         await sim.farm_block()
 
-        assert len(await client.get_coin_records_by_puzzle_hashes([brick_hash], include_spent_coins=False)) > 0
+        assert len(await client.get_coin_records_by_puzzle_hashes([wrapped_brick_hash], include_spent_coins=False)) > 0
 
 
 @pytest.mark.asyncio

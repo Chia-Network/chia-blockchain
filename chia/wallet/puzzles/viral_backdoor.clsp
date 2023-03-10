@@ -1,0 +1,54 @@
+(mod
+  (
+    THIS_MOD_HASH
+    HIDDEN_PUZZLE_HASH
+    INNER_PUZZLE
+    hidden_puzzle_reveal
+    inner_or_hidden_solution
+  )
+
+  (include condition_codes.clvm)
+  (include curry.clib)
+  (include sha256tree.clib)
+  (include utility_macros.clib)
+
+  (defun-inline wrap_puzhash
+    (
+      THIS_MOD_HASH
+      HIDDEN_PUZZLE_HASH
+      new_inner_puzzle_hash
+    )
+
+    (curry_hashes_inline THIS_MOD_HASH
+      (sha256 1 THIS_MOD_HASH)
+      (sha256 1 HIDDEN_PUZZLE_HASH)
+      new_inner_puzzle_hash
+    )
+  )
+
+  (defun wrap_create_coins
+    (
+      THIS_MOD_HASH
+      HIDDEN_PUZZLE_HASH
+      conditions
+    )
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)
+            (c
+              (c CREATE_COIN (c (wrap_puzhash THIS_MOD_HASH HIDDEN_PUZZLE_HASH (f (r (f conditions)))) (r (r (f conditions)))))
+              (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (r conditions))
+            )
+            (c (f conditions) (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (r conditions)))
+        )
+        ()
+    )
+  )
+
+  (if hidden_puzzle_reveal
+      (assert (= HIDDEN_PUZZLE_HASH (sha256tree hidden_puzzle_reveal))
+        ; then
+        (a hidden_puzzle_reveal inner_or_hidden_solution)
+      )
+      (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (a INNER_PUZZLE inner_or_hidden_solution))
+  )
+)

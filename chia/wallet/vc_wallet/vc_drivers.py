@@ -46,9 +46,10 @@ P2_PUZZLE_WITH_AUTH: Program = load_clvm_maybe_recompile(
 DID_PUZZLE_AUTHORIZER: Program = load_clvm_maybe_recompile(
     "did_puzzle_authorizer.clsp", package_or_requirement="chia.wallet.puzzles"
 )
-P2_PUZZLE_OR_HIDDEN_PUZZLE: Program = load_clvm_maybe_recompile(
-    "p2_puzzle_or_hidden_puzzle.clsp", package_or_requirement="chia.wallet.puzzles"
+VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
+    "viral_backdoor.clsp", package_or_requirement="chia.wallet.puzzles"
 )
+VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
 
 
 ##################
@@ -212,21 +213,22 @@ def solve_did_puzzle_authorizer(did_innerpuzhash: bytes32, my_coin_id: bytes32) 
 ##############################
 # P2 Puzzle or Hidden Puzzle #
 ##############################
-def create_p2_puz_or_hidden_puz(hidden_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
-    return P2_PUZZLE_OR_HIDDEN_PUZZLE.curry(
+def create_viral_backdoor(hidden_puzzle_hash: bytes32, inner_puzzle: Program) -> Program:
+    return VIRAL_BACKDOOR.curry(
+        VIRAL_BACKDOOR_HASH,
         hidden_puzzle_hash,
         inner_puzzle,
     )
 
 
-def match_p2_puz_or_hidden_puz(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, Program]]:
-    if uncurried_puzzle.mod == P2_PUZZLE_OR_HIDDEN_PUZZLE:
-        return bytes32(uncurried_puzzle.args.at("f").as_python()), uncurried_puzzle.args.at("rf")
+def match_viral_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, Program]]:
+    if uncurried_puzzle.mod == VIRAL_BACKDOOR:
+        return bytes32(uncurried_puzzle.args.at("rf").as_python()), uncurried_puzzle.args.at("rrf")
     else:
         return None
 
 
-def solve_p2_puz_or_hidden_puz(inner_solution: Program, hidden_puzzle_reveal: Optional[Program] = None) -> Program:
+def solve_viral_backdoor(inner_solution: Program, hidden_puzzle_reveal: Optional[Program] = None) -> Program:
     solution: Program = Program.to(
         [
             hidden_puzzle_reveal,
