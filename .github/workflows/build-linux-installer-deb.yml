@@ -119,9 +119,10 @@ jobs:
 #        development: true
 
     - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+#      uses: actions/setup-python@v4
+      rum: |
+        sudo apt update -y
+        sudo apt install python3.11 -y
 
     - name: venv
       run: |
