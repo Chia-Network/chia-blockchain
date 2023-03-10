@@ -43,10 +43,10 @@ runs:
       run: |
         apt update -y
         apt-cache search python3
-        apt install software-properties-common -y
-        sudo add-apt-repository ppa:deadsnakes/ppa -y
-        sudo apt update -y
-        sudo apt install python3.11 -y
+        #apt install software-properties-common -y
+        #sudo add-apt-repository ppa:deadsnakes/ppa -y
+        #sudo apt update -y
+        apt install python3.11 -y
         python3.11 -m venv venv
         source venv/bin/activate
         pip install chiapos --pre
