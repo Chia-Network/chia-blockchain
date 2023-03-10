@@ -421,7 +421,8 @@ mis = MempoolInclusionStatus
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("softfork2", [False, True])
+# soft-fork 2 is disabled (for now)
+@pytest.mark.parametrize("softfork2", [False])
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
