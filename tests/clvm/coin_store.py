@@ -64,8 +64,9 @@ class CoinStore:
         # this should use blockchain consensus code
 
         program = simple_solution_generator(spend_bundle)
+        # always use the post soft-fork2 semantics
         result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
+            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True, height=uint32(4000000)
         )
         if result.error is not None:
             raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from chia_rs import LIMIT_STACK, MEMPOOL_MODE
+from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
@@ -39,23 +39,19 @@ def get_name_puzzle_conditions(
     *,
     cost_per_byte: int,
     mempool_mode: bool,
-    height: Optional[uint32] = None,
+    height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> NPCResult:
-    # in mempool mode, the height doesn't matter, because it's always strict.
-    # But otherwise, height must be specified to know which rules to apply
-    assert mempool_mode or height is not None
 
     if mempool_mode:
         flags = MEMPOOL_MODE
-    elif height is not None and height >= constants.SOFT_FORK_HEIGHT:
+    elif height >= constants.SOFT_FORK_HEIGHT:
         flags = LIMIT_STACK
     else:
         flags = 0
 
-    # soft-fork2 is disabled (for now)
-    # if height is not None and height >= constants.SOFT_FORK2_HEIGHT:
-    #    flags = flags | ENABLE_ASSERT_BEFORE
+    if height >= constants.SOFT_FORK2_HEIGHT:
+        flags = flags | ENABLE_ASSERT_BEFORE
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]

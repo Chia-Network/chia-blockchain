@@ -1888,8 +1888,7 @@ class TestBodyValidation:
         assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
-    # soft-fork 2 is disabled (for now)
-    @pytest.mark.parametrize("with_softfork2", [False])
+    @pytest.mark.parametrize("with_softfork2", [False, True])
     @pytest.mark.parametrize("with_garbage", [True, False])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",

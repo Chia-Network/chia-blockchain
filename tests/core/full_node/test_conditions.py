@@ -126,8 +126,7 @@ co = ConditionOpcode
 
 class TestConditions:
     @pytest.mark.asyncio
-    # soft-fork 2 is disabled (for now)
-    @pytest.mark.parametrize("softfork2", [False])
+    @pytest.mark.parametrize("softfork2", [True, False])
     @pytest.mark.parametrize(
         "opcode,value,expected",
         [

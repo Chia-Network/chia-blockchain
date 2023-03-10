@@ -2192,18 +2192,10 @@ class TestGeneratorConditions:
         coins = npc_result.conds.spends[0].create_coin
         assert coins == [(puzzle_hash_1.encode("ascii"), 5, hint.encode("ascii"))]
 
-    @pytest.mark.parametrize(
-        "mempool,height",
-        [
-            (True, None),
-            (False, 2300000),
-            (False, 3630000),
-            (False, 3830000),
-        ],
-    )
-    def test_unknown_condition(self, mempool: bool, height: uint32):
+    @pytest.mark.parametrize("mempool", [True, False])
+    def test_unknown_condition(self, mempool: bool, softfork_height: uint32):
         for c in ['(2 100 "foo" "bar")', "(100)", "(4 1) (2 2) (3 3)", '("foobar")']:
-            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=height)
+            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=softfork_height)
             print(npc_result)
             if mempool:
                 assert npc_result.error == Err.INVALID_CONDITION.value
