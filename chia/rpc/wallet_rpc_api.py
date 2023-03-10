@@ -141,6 +141,7 @@ class WalletRpcApi:
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
             "/verify_signature": self.verify_signature,
+            "/check_ids": self.check_ids,
             "/get_transaction_memo": self.get_transaction_memo,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
@@ -1333,6 +1334,46 @@ class WalletRpcApi:
             return {"isValid": is_valid}
         else:
             return {"isValid": False, "error": "Signature is invalid."}
+
+    async def check_ids(self, request) -> EndpointResult:
+        """
+        Check if a list of IDs is owned by the current wallet.
+        :param request: {"ids":["ID1", "ID2", ...], "type":"COIN/NFT/DID"}
+        :return: A list of ids owned by the current wallet
+        """
+        if "ids" not in request:
+            raise ValueError("Ids is required by check_ids.")
+        if "type" not in request:
+            raise ValueError("Type is required by check_ids.")
+        if request["type"].upper() == "COIN":
+            ids: List[bytes32] = [bytes32.fromhex(coin_id) for coin_id in request["ids"]]
+            coin_records: List[
+                WalletCoinRecord
+            ] = await self.service.wallet_state_manager.coin_store.get_multiple_coin_records(ids)
+            valid_ids = [r.coin.name().hex() for r in coin_records]
+        elif request["type"].upper() == "NFT":
+            ids = [
+                decode_puzzle_hash(nft_id) if nft_id.lower().startswith("nft") else bytes32.from_hexstr(nft_id)
+                for nft_id in request["ids"]
+            ]
+            nft_records: List[NFTCoinInfo] = await self.service.wallet_state_manager.nft_store.get_nft_by_ids(ids)
+            valid_ids = [r.nft_id.hex() for r in nft_records]
+        elif request["type"].upper() == "DID":
+            ids = [
+                decode_puzzle_hash(did_id) if did_id.lower().startswith("did") else bytes32.from_hexstr(did_id)
+                for did_id in request["ids"]
+            ]
+            owned_did: Set[str] = set([])
+            for wallet_info in await self.service.wallet_state_manager.get_all_wallet_info_entries(
+                wallet_type=WalletType.DECENTRALIZED_ID
+            ):
+                did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
+                assert did_info.origin_coin is not None
+                owned_did.add(did_info.origin_coin.name().hex())
+            valid_ids = [did.hex() for did in list(filter(lambda did: (did.hex() in owned_did), ids))]
+        else:
+            raise ValueError("Unknown ID type.")
+        return {"valid_ids": valid_ids}
 
     async def sign_message_by_address(self, request) -> EndpointResult:
         """

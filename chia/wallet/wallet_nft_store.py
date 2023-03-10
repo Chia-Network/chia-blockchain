@@ -255,6 +255,19 @@ class WalletNftStore:
 
         return _to_nft_coin_info(row)
 
+    async def get_nft_by_ids(self, nft_ids: List[bytes32]) -> List[NFTCoinInfo]:
+        if len(nft_ids) == 0:
+            return []
+
+        as_hexes = [nid.hex() for nid in nft_ids]
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                f"SELECT {NFT_COIN_INFO_COLUMNS} from users_nfts WHERE "
+                f'removed_height is NULL and nft_id in ({"?," * (len(as_hexes) - 1)}?)',
+                tuple(as_hexes),
+            )
+        return [_to_nft_coin_info(row) for row in rows]
+
     async def rollback_to_block(self, height: int) -> bool:
         """
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.

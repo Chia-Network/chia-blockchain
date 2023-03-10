@@ -158,6 +158,9 @@ class WalletRpcClient(RpcClient):
     async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
+    async def check_ids(self, ids: List[str], type: str):
+        return (await self.fetch("check_ids", {"ids": ids, "type": type}))["valid_ids"]
+
     async def send_transaction(
         self,
         wallet_id: int,
