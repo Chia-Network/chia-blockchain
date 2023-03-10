@@ -34,7 +34,7 @@ runs:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         sudo apt update -y
-        sudo apt-get install python-apt
+        sudo apt-get install python-apt -y
         sudo add-apt-repository ppa:deadsnakes/ppa -y
         sudo apt update -y
         sudo apt install python3.11 -y
