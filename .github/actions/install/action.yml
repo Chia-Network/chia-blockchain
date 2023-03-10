@@ -31,18 +31,19 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    - name: Setup cmake
-      uses: jwlawson/actions-setup-cmake@v1.13
-      with:
-        cmake-version: '3.16.x'
+#    - name: Setup cmake
+#      uses: jwlawson/actions-setup-cmake@v1.13
+#      with:
+#        cmake-version: '3.16.x'
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        sudo apt update -y
-        sudo apt install glibc=2.34 -y
+        python3.11 -m venv venv
+        source venv/bin/activate
+        pip install chiapos --pre
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
 
     - name: Run install script (Windows)
