@@ -123,7 +123,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install python3.11 -y
-        python3.11 -m pip install virtualenv
+        python3.11 -m pip3 install virtualenv
 
     - name: venv
       run: |
