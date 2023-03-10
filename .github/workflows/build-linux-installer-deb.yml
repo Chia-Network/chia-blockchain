@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build:
     name: Linux amd64 DEB Installer
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container: chianetwork/ubuntu-18.04-builder:latest
     timeout-minutes: 120
     strategy:
