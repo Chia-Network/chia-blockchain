@@ -15,8 +15,10 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import launch_conditions_and_coinsol
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
+    VerifiedCredential,
     create_covenant_layer,
     match_covenant_layer,
     solve_covenant_layer,
@@ -469,6 +471,63 @@ async def test_p2_puzzle_or_hidden_puzzle() -> None:
 
 
 @pytest.mark.asyncio
-async def test_vc_lifecycle() -> None:
+@pytest.mark.parametrize("test_syncing", [True, False])
+async def test_vc_lifecycle(test_syncing: bool) -> None:
     async with sim_and_client() as (sim, client):
-        pass
+        RUN_PUZ_PUZ: Program = Program.to([2, 1, None])  # (a 1 ()) takes a puzzle as its solution and runs it with ()
+        RUN_PUZ_PUZ_PH: bytes32 = RUN_PUZ_PUZ.get_tree_hash()
+        await sim.farm_block(RUN_PUZ_PUZ_PH)
+        vc_fund_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[0].coin
+        did_fund_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[1].coin
+
+        # Gotta make a DID first
+        conditions, coin_spend = launch_conditions_and_coinsol(
+            did_fund_coin,
+            ACS,
+            [],
+            uint64(1),
+        )
+        await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        did_fund_coin,
+                        ACS,
+                        Program.to((1, conditions)),
+                    ),
+                    coin_spend,
+                ],
+                G2Element(),
+            )
+        )
+        await sim.farm_block()
+
+        # Now let's launch the VC
+        vc: VerifiedCredential
+        dpuz, coin_spends, vc = VerifiedCredential.launch(
+            vc_fund_coin,
+            coin_spend.coin.name(),
+            ACS_PH,
+            bytes32([0] * 32),
+        )
+        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        vc_fund_coin,
+                        RUN_PUZ_PUZ,
+                        dpuz,
+                    ),
+                    *coin_spends,
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        if test_syncing:
+            vc = VerifiedCredential.get_next_from_coin_spend(coin_spends[1])
+        assert vc.construct_puzzle(ACS).get_tree_hash() == vc.coin.puzzle_hash
