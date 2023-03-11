@@ -197,7 +197,7 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 ):
                     passed += 1
-                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info, self.harvester.log))
+                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.info(f"Debug info: new_signage_point_harvester {passed} plots passed the plot filter")
 
         self.harvester.log.info(f"Debug info: {len(awaitables)} tasks spawned.")
