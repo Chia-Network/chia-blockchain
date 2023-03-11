@@ -1075,12 +1075,18 @@ class FullNode:
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
                         if peer.closed:
-                            peers_with_peak.remove(peer)
+                            try:
+                                peers_with_peak.remove(peer)
+                            except ValueError:
+                                pass
                             continue
                         response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
                         if response is None:
                             await peer.close()
-                            peers_with_peak.remove(peer)
+                            try:
+                                peers_with_peak.remove(peer)
+                            except ValueError:
+                                pass
                         elif isinstance(response, RespondBlocks):
                             await batch_queue.put((peer, response.blocks))
                             fetched = True
