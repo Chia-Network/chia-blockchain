@@ -1,5 +1,4 @@
 from __future__ import annotations
-import chiapos
 
 import logging
 import threading
@@ -9,6 +8,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
+import chiapos
 from blspy import G1Element
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
