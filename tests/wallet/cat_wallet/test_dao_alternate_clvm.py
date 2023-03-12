@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -17,12 +18,14 @@ DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_alternate_proposal_validator.clvm")
 DAO_MONEY_RECEIVER_MOD: Program = load_clvm("dao_alternate_money_receiver.clvm")
 DAO_TREASURY_MOD: Program = load_clvm("dao_alternate_treasury.clvm")
-P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
+# P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
+SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton.clvm")
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_treasury.clvm")
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clvm")
 DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clvm")
+P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 
 
 def test_proposal() -> None:
@@ -274,6 +277,30 @@ def test_receiver() -> None:
     conds: Program = money_receiver.run(solution)
     assert len(conds.as_python()) == 6
     return
+
+
+def test_spend_p2_singleton() -> None:
+    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+
+    p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
+    p2_singleton_puzhash = p2_singleton.get_tree_hash()
+    parent_id = Program.to("parent").get_tree_hash()
+    locked_amount = 100000
+    p2_singleton_coin = Coin(parent_id, p2_singleton_puzhash, locked_amount)
+
+    spend_amount = 1100
+    conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
+
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+
+    solution = Program.to([[[parent_id, locked_amount]]])
+
+    conds = spend_p2_singleton.run(solution)
+    cds = conds.as_python()
+    assert len(conds.as_python()) == 5
 
 
 def test_treasury() -> None:
