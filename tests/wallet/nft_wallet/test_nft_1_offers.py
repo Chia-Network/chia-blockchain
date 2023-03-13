@@ -1275,10 +1275,10 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
     [
         (True, (200, 500, 500)),
         (False, (200, 500, 500)),
-        (False, (0, 0, 0)), # test that we can have 0 royalty
-        (False, (65000, 65534, 65535)), # test that we can reach max royalty
-        (False, (10000, 10001, 10005)), # tests 100% royalty is not allowed
-        (False, (100000, 10001, 10005)), # 1000% shouldn't work
+        (False, (0, 0, 0)),  # test that we can have 0 royalty
+        (False, (65000, 65534, 65535)),  # test that we can reach max royalty
+        (False, (10000, 10001, 10005)),  # tests 100% royalty is not allowed
+        (False, (100000, 10001, 10005)),  # 1000% shouldn't work
     ],
 )
 @pytest.mark.asyncio
@@ -1342,7 +1342,10 @@ async def test_complex_nft_offer(
         )
     else:
         funds_taker = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3+blocks_needed)]
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, 3 + blocks_needed)
+            ]
         )
 
     await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
