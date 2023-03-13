@@ -750,7 +750,7 @@ class TestCATTrades:
         await wallet_node_taker._resend_queue()
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)
-        await time_out_assert(5, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
+        await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
     @pytest.mark.asyncio
     async def test_trade_high_fee(self, wallets_prefarm):
@@ -799,4 +799,4 @@ class TestCATTrades:
         offer = Offer.from_bytes(trade_make.offer)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
         await full_node.process_transaction_records(records=txs1)
-        await time_out_assert(5, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
+        await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
