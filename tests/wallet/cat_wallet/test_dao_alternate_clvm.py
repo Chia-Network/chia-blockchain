@@ -108,6 +108,7 @@ def test_proposal() -> None:
         Program.to(1).get_tree_hash(),
     )
     attendance_required = 200
+    self_destruct_time = 1209600
     solution = Program.to(
         [
             Program.to("validator_hash").get_tree_hash(),
@@ -117,6 +118,8 @@ def test_proposal() -> None:
             attendance_required,
             Program.to(1),
             5,
+            self_destruct_time,
+            0,
         ]
     )
 
@@ -149,10 +152,30 @@ def test_proposal() -> None:
             attendance_required,
             Program.to(1),
             5,
+            self_destruct_time,
+            0,
         ]
     )
     conds = full_proposal.run(solution).as_python()
     assert len(conds) == 6
+
+    # self destruct a proposal
+    attendance_required = 200
+    solution = Program.to(
+        [
+            Program.to("validator_hash").get_tree_hash(),
+            Program.to("receiver_hash").get_tree_hash(), # not needed anymore?
+            20, # timelock length
+            proposal_pass_percentage,
+            attendance_required,
+            Program.to(1),
+            5,
+            self_destruct_time,
+            1,
+        ]
+    )
+    conds = full_proposal.run(solution).as_python()
+    assert len(conds) == 3
 
 def test_proposal_timer() -> None:
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
@@ -392,6 +415,17 @@ def test_treasury() -> None:
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
+    p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
+    p2_singleton_puzhash = p2_singleton.get_tree_hash()
+    parent_id = Program.to("parent").get_tree_hash()
+    locked_amount = 100000
+    spend_amount = 1100
+    conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
+
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
+    spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
+
     proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -400,30 +434,27 @@ def test_treasury() -> None:
         DAO_LOCKUP_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
         CAT_TAIL_HASH,
-        DAO_SAFE_PAYMENT_MOD.get_tree_hash(),
+        SPEND_P2_SINGLETON_MOD.get_tree_hash(),
+        p2_singleton_puzhash,
     )
-    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct, 1)
+
     # PROPOSAL_VALIDATOR
-    # MONEY_RECEIVER
     # PROPOSAL_LENGTH
     # PROPOSAL_SOFTCLOSE_LENGTH
+    # ATTENDANCE_REQUIRED
+    # PASS_MARGIN
+    # PROPOSAL_SELF_DESTRUCT_TIME
+    self_destruct_time = 1209600 # 2 weeks
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         proposal_validator,
-        money_receiver,
         40,
         5,
         1000,
         5100,
+        self_destruct_time
     )
 
     treasury_puzzle_hash = full_treasury_puz.get_tree_hash()
-    treasury_amount = 100
-    delegated_puzzle = Program.to(1)
-    delegated_conditions = [[51, 0xcafef00d, 40], [51, 0xdabbad00, 60]]
-    spend_amount = 100
-    safe_puzzle = DAO_SAFE_PAYMENT_MOD.curry(singleton_struct, delegated_conditions, spend_amount)
-    safe_puzzle_hash = safe_puzzle.get_tree_hash()
-    safe_puzzle_solution = Program.to([treasury_puzzle_hash, treasury_amount])
 
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     # proposal_validator_solution
@@ -441,33 +472,33 @@ def test_treasury() -> None:
         950,
         1200,
         's',
-        safe_puzzle_hash,
+        spend_p2_singleton_puzhash,
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
-    # Add money solution
+
+    # Oracle spend
     solution: Program = Program.to(
         [
-            0,
-            [201, 0xCAFEF00D, 20, [Program.to("coin_id").get_tree_hash()]],
-            0,
+           "o"
         ]
     )
     conds: Program = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 6
+    assert len(conds.as_python()) == 2
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     # proposal_validator_solution
     # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
     # delegated_solution  ; this is not secure unless the delegated puzzle secures it
     solution: Program = Program.to(
         [
-            [full_proposal.get_tree_hash(), safe_puzzle_hash, 0, 's'],
+            "p",
+            [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
             [singleton_id, 1200, 950, spend_amount],
-            safe_puzzle,
-            safe_puzzle_solution
+            spend_p2_singleton,
+            spend_p2_singleton_solution
         ]
     )
     conds = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 5 + len(delegated_conditions)
+    assert len(conds.as_python()) == 6 + len(conditions)
 
 
 def test_lockup() -> None:

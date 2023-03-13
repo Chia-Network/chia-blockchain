@@ -20,6 +20,8 @@
                                               ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
   innerpuz_reveal  ; this is only added during the first vote
   soft_close_length  ; revealed by the treasury
+  self_destruct_time ; revealed by the treasury
+  self_destruct_flag ; if not 0, do the self-destruct spend
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -123,10 +125,12 @@
       PROPOSAL_SOFTCLOSE_LENGTH
       attendance_required
       pass_percentage
+      self_destruct_time
     )
 
     (calculate_singleton_puzzle_hash treasury_singleton_struct
       (puzzle-hash-of-curried-function TREASURY_MOD_HASH
+          (sha256 ONE self_destruct_time)
           (sha256 ONE pass_percentage)
           (sha256 ONE attendance_required)
           (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
@@ -233,87 +237,111 @@
   )
 
   (if soft_close_length
-    ; we are trying to close
-    (if (any (> lockup_innerpuzhashes_or_attendance_required TOTAL_VOTES) (> (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin) YES_VOTES))
-      ;; we're closing a failed proposal
+    (if self_destruct_flag
+      ; we're deleting a bad proposal which hasn't received votes in self_destruct_time
       (list
         (list CREATE_COIN dao_finished_state ONE)
-        (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
-        (list ASSERT_HEIGHT_RELATIVE soft_close_length)
-        (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
-          (sha256
-            (calculate_treasury_puzzlehash
-              (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-              TREASURY_MOD_HASH
-              vote_amounts_or_proposal_validator_hash
-              vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+	(list ASSERT_SECONDS_RELATIVE self_destruct_time)
+	(list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
+	  (sha256
+	    (calculate_treasury_puzzlehash
+	      (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+	      TREASURY_MOD_HASH
+	      vote_amounts_or_proposal_validator_hash
+	      vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
 	      soft_close_length
-              lockup_innerpuzhashes_or_attendance_required
+	      lockup_innerpuzhashes_or_attendance_required
 	      previous_votes_or_pass_margin
-            )
-            (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_ids_or_proposal_timelock_length soft_close_length))
-          )
-        )
-        (list
-          ASSERT_PUZZLE_ANNOUNCEMENT
-          (sha256  ; external timer
-            (calculate_timer_puzhash
-              PROPOSAL_TIMER_MOD_HASH
-              PROPOSAL_MOD_HASH
-              CAT_TAIL_HASH
-              SINGLETON_STRUCT
-              TREASURY_ID
-            )
-            (f (r SINGLETON_STRUCT))
-          )
-        )
-        (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_ids_or_proposal_timelock_length)
+	      self_destruct_time
+	    )
+	    (sha256 previous_votes_or_pass_margin self_destruct_time)
+	  )
+	)
       )
-      ; we're trying to close ourself due to
-      ; TODO: add attendance_required and pass_percentage into solution
-      (if (all (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin)))
-        (x)  ; we've passed, cannot be shut down
-        (list
-          (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
-            (sha256
-              (calculate_treasury_puzzlehash
-                (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-                TREASURY_MOD_HASH
-                vote_amounts_or_proposal_validator_hash
-                vote_info_or_money_receiver_hash
-                vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
-                soft_close_length
-                attendance_required
-                proposal_pass_percentage
-              )
-              (sha256tree
-                (list
-                  vote_coin_ids_or_proposal_timelock_length
-                  soft_close_length
-                  attendance_required
-                  proposal_pass_percentage
-                )
-              )
-            )
-          )
-          (list
-            ASSERT_PUZZLE_ANNOUNCEMENT
-            (sha256  ; external timer
-              (calculate_timer_puzhash
-                PROPOSAL_TIMER_MOD_HASH
-                PROPOSAL_MOD_HASH
-                CAT_TAIL_HASH
-                SINGLETON_STRUCT
-                TREASURY_ID
-              )
-              (f (r SINGLETON_STRUCT))
-            )
-          )
-          (list CREATE_COIN dao_finished_state ONE)
-        )
+
+      ; we are trying to close
+      (if (any (> lockup_innerpuzhashes_or_attendance_required TOTAL_VOTES) (> (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin) YES_VOTES))
+	;; we're closing a failed proposal
+	(list
+	  (list CREATE_COIN dao_finished_state ONE)
+	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
+	  (list ASSERT_HEIGHT_RELATIVE soft_close_length)
+	  (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
+	    (sha256
+	      (calculate_treasury_puzzlehash
+		(c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+		TREASURY_MOD_HASH
+		vote_amounts_or_proposal_validator_hash
+		vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+		soft_close_length
+		lockup_innerpuzhashes_or_attendance_required
+		previous_votes_or_pass_margin
+		self_destruct_time
+	      )
+	      (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_ids_or_proposal_timelock_length soft_close_length))
+	    )
+	  )
+	  (list
+	    ASSERT_PUZZLE_ANNOUNCEMENT
+	    (sha256  ; external timer
+	      (calculate_timer_puzhash
+		PROPOSAL_TIMER_MOD_HASH
+		PROPOSAL_MOD_HASH
+		CAT_TAIL_HASH
+		SINGLETON_STRUCT
+		TREASURY_ID
+	      )
+	      (f (r SINGLETON_STRUCT))
+	    )
+	  )
+	  (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_ids_or_proposal_timelock_length)
+	)
+	; we're trying to close ourself due to
+	; TODO: add attendance_required and pass_percentage into solution
+	(if (all (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin)))
+	  (x)  ; we've passed, cannot be shut down
+	  (list
+	    (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
+	      (sha256
+		(calculate_treasury_puzzlehash
+		  (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+		  TREASURY_MOD_HASH
+		  vote_amounts_or_proposal_validator_hash
+		  vote_info_or_money_receiver_hash
+		  vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+		  soft_close_length
+		  attendance_required
+		  proposal_pass_percentage
+		  self_destruct_time
+		)
+		(sha256tree
+		  (list
+		    vote_coin_ids_or_proposal_timelock_length
+		    soft_close_length
+		    attendance_required
+		    proposal_pass_percentage
+		  )
+		)
+	      )
+	    )
+	    (list
+	      ASSERT_PUZZLE_ANNOUNCEMENT
+	      (sha256  ; external timer
+		(calculate_timer_puzhash
+		  PROPOSAL_TIMER_MOD_HASH
+		  PROPOSAL_MOD_HASH
+		  CAT_TAIL_HASH
+		  SINGLETON_STRUCT
+		  TREASURY_ID
+		)
+		(f (r SINGLETON_STRUCT))
+	      )
+	    )
+	    (list CREATE_COIN dao_finished_state ONE)
+	  )
+	)
       )
     )
-
 
     ; We are adding votes to this proposal. vote_info indicates a YES or NO vote.
     (loop_over_vote_coins
