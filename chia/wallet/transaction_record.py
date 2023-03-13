@@ -114,7 +114,7 @@ class TransactionRecord(Streamable):
     @property
     def is_spendable(self) -> bool:
         past_receipts = self.sent_to
-        if len(past_receipts) < 3:
+        if len(past_receipts) < 6:
             # we haven't tried enough peers yet
             return True
         if any([x[0] for x in past_receipts if x[0] == MempoolInclusionStatus.SUCCESS.value]):
