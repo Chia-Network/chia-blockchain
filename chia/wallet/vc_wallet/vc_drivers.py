@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterator, List, Optional, Tuple, Type, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
@@ -46,9 +46,7 @@ P2_PUZZLE_WITH_AUTH: Program = load_clvm_maybe_recompile(
 DID_PUZZLE_AUTHORIZER: Program = load_clvm_maybe_recompile(
     "did_puzzle_authorizer.clsp", package_or_requirement="chia.wallet.puzzles"
 )
-VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
-    "viral_backdoor.clsp", package_or_requirement="chia.wallet.puzzles"
-)
+VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile("viral_backdoor.clsp", package_or_requirement="chia.wallet.puzzles")
 VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
 
 
@@ -270,9 +268,15 @@ OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
 # TODO: Examine whether or not this is an appropiate brick puzzle
 STANDARD_BRICK_PUZZLE: Program = Program.to((1, [[51, bytes32([0] * 32), 1], [-10, None]]))
 
+
 ########################
 # Verified Credentials #
 ########################
+@dataclass(frozen=True)
+class VCLineageProof(LineageProof):
+    parent_proof_hash: Optional[bytes32] = None
+
+
 _T_VerifiedCredential = TypeVar("_T_VerifiedCredential", bound="VerifiedCredential")
 
 
@@ -280,7 +284,7 @@ _T_VerifiedCredential = TypeVar("_T_VerifiedCredential", bound="VerifiedCredenti
 class VerifiedCredential:
     coin: Coin
     singleton_lineage_proof: LineageProof
-    ownership_lineage_proof: LineageProof
+    ownership_lineage_proof: VCLineageProof
     launcher_id: bytes32
     inner_puzzle_hash: bytes32
     proof_provider: bytes32
@@ -317,7 +321,7 @@ class VerifiedCredential:
                 inner_transfer_program,
             )
         )
-        wrapped_inner_puzzle_hash: bytes32 = create_p2_puz_or_hidden_puz(
+        wrapped_inner_puzzle_hash: bytes32 = create_viral_backdoor(
             create_p2_puzzle_w_auth(
                 create_did_puzzle_authorizer(provider_id),
                 STANDARD_BRICK_PUZZLE,
@@ -383,7 +387,7 @@ class VerifiedCredential:
                     inner_puzzle_hash=OWNERSHIP_LAYER_LAUNCHER.get_tree_hash(),
                     amount=uint64(1),
                 ),
-                LineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
+                VCLineageProof(parent_name=second_launcher_coin.parent_coin_info, amount=uint64(1)),
                 launcher_coin.name(),
                 new_inner_puzzle_hash,
                 provider_id,
@@ -392,35 +396,41 @@ class VerifiedCredential:
         )
 
     def construct_puzzle(self, inner_puzzle: Program) -> Program:
+        return puzzle_for_singleton(
+            self.launcher_id,
+            self.construct_ownership_layer(inner_puzzle),
+        )
+
+    def construct_ownership_layer(self, inner_puzzle: Program) -> Program:
         curried_eve_singleton_hash: bytes32 = puzzle_for_singleton(
             self.launcher_id,
             OWNERSHIP_LAYER_LAUNCHER,
         ).get_tree_hash()
         inner_transfer_program: Program = create_did_tp(self.proof_provider)
 
-        return puzzle_for_singleton(
-            self.launcher_id,
-            construct_ownership_layer(
-                self.proof_hash,
-                create_tp_covenant_adapter(
-                    create_covenant_layer(
+        return construct_ownership_layer(
+            self.proof_hash,
+            create_tp_covenant_adapter(
+                create_covenant_layer(
+                    curried_eve_singleton_hash,
+                    create_ownership_layer_covenant_morpher(
                         curried_eve_singleton_hash,
-                        create_ownership_layer_covenant_morpher(
-                            curried_eve_singleton_hash,
-                            self.launcher_id,
-                            inner_transfer_program.get_tree_hash(),
-                        ),
-                        inner_transfer_program,
+                        self.launcher_id,
+                        inner_transfer_program.get_tree_hash(),
                     ),
-                ),
-                create_p2_puz_or_hidden_puz(
-                    create_p2_puzzle_w_auth(
-                        create_did_puzzle_authorizer(self.proof_provider),
-                        STANDARD_BRICK_PUZZLE,
-                    ).get_tree_hash(),
-                    inner_puzzle,
+                    inner_transfer_program,
                 ),
             ),
+            self.wrap_inner_with_backdoor(inner_puzzle),
+        )
+
+    def wrap_inner_with_backdoor(self, inner_puzzle: Program) -> Program:
+        return create_viral_backdoor(
+            create_p2_puzzle_w_auth(
+                create_did_puzzle_authorizer(self.proof_provider),
+                STANDARD_BRICK_PUZZLE,
+            ).get_tree_hash(),
+            inner_puzzle,
         )
 
     @classmethod
@@ -442,7 +452,7 @@ class VerifiedCredential:
         )
         if layer_below_singleton == OWNERSHIP_LAYER_LAUNCHER:
             proof_hash: Optional[bytes32] = None
-            ownership_lineage_proof: LineageProof = LineageProof(
+            ownership_lineage_proof: VCLineageProof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info, amount=uint64(parent_coin.amount)
             )
             # Launcher solution makes next coin and hints (to provider)
@@ -453,18 +463,15 @@ class VerifiedCredential:
             ownership_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
 
             # Dig to find the inner puzzle / inner solution and extract next inner puzhash and proof hash
-            inner_puzzle: Program = uncurry_puzzle(ownership_layer.args.at("rrrf")).args.at("rf")
+            inner_puzzle: Program = uncurry_puzzle(ownership_layer.args.at("rrrf")).args.at("rrf")
             inner_solution: Program = solution.at("rrf").at("f").at("rf")
             conditions: Iterator[Program] = inner_puzzle.run(inner_solution).as_iter()
-            new_singleton_condition: Program = next(c for c in conditions if c.at("f") == 51 and c.at("rrf") % 2 != 0)
-            inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
-            hints: Program = new_singleton_condition.at("rrrf")
-            proof_hash = None if hints.at("r") == Program.to(None) else bytes32(hints.at("rf").as_python())
-            ownership_lineage_proof = LineageProof(
-                parent_name=parent_coin.parent_coin_info,
-                inner_puzzle_hash=inner_puzzle_hash,
-                amount=uint64(parent_coin.amount),
+            new_singleton_condition: Program = next(
+                c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
             )
+            inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
+            magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
+            proof_hash = bytes32(magic_condition.at("rrrfrrf").as_python())
 
             # Dig to transfer program to get proof provider
             proof_provider = bytes32(
@@ -475,6 +482,22 @@ class VerifiedCredential:
                 .as_python()
             )
 
+            parent_proof_hash: Program = ownership_layer.args.at("rf")
+            ownership_lineage_proof = VCLineageProof(
+                parent_name=parent_coin.parent_coin_info,
+                inner_puzzle_hash=create_viral_backdoor(
+                    create_p2_puzzle_w_auth(
+                        create_did_puzzle_authorizer(proof_provider),
+                        STANDARD_BRICK_PUZZLE,
+                    ).get_tree_hash(),
+                    inner_puzzle_hash,  # type: ignore
+                ).get_tree_hash_precalc(inner_puzzle_hash),
+                amount=uint64(parent_coin.amount),
+                parent_proof_hash=None
+                if parent_proof_hash == Program.to(None)
+                else bytes32(parent_proof_hash.as_python()),
+            )
+
         return cls(
             coin,
             singleton_lineage_proof,
@@ -483,4 +506,95 @@ class VerifiedCredential:
             inner_puzzle_hash,
             proof_provider,
             proof_hash,
+        )
+
+    def magic_condition_for_new_proofs(
+        self,
+        new_proof_hash: Optional[bytes32],
+        provider_innerpuzhash: bytes32,
+    ) -> Program:
+        magic_condition: Program = Program.to(
+            [
+                -10,
+                self.ownership_lineage_proof.to_program(),
+                [self.ownership_lineage_proof.parent_proof_hash],
+                [
+                    provider_innerpuzhash,
+                    self.coin.name(),
+                    new_proof_hash,
+                    None,  # TP update is not allowed because then the singleton will leave the VC protocol
+                ],
+            ]
+        )
+        return magic_condition
+
+    def update_proofs(
+        self,
+        new_proof_hash: Optional[bytes32],
+        inner_puzzle: Program,
+        inner_solution: Program,
+    ) -> Tuple[bytes32, CoinSpend, "VerifiedCredential"]:
+        vc_solution: Program = solution_for_singleton(
+            self.singleton_lineage_proof,
+            uint64(self.coin.amount),
+            Program.to(
+                [  # solve ownership layer
+                    solve_viral_backdoor(
+                        inner_solution,
+                    ),
+                ]
+            ),
+        )
+
+        expected_announcement: bytes32 = std_hash(
+            self.coin.name()
+            + Program.to(new_proof_hash).get_tree_hash()
+            + Program.to(None).get_tree_hash()  # TP update is banned because singleton will leave the VC protocol
+        )
+
+        new_singleton_condition: Program = next(
+            c for c in inner_puzzle.run(inner_solution).as_iter() if c.at("f") == 51 and c.at("rrf").as_int() % 2 != 0
+        )
+        new_inner_puzzle_hash: bytes32 = bytes32(new_singleton_condition.at("rf").as_python())
+
+        slightly_incomplete_vc: VerifiedCredential = VerifiedCredential(
+            Coin(self.coin.name(), bytes32([0] * 32), uint64(new_singleton_condition.at("rrf").as_int())),
+            LineageProof(
+                self.coin.parent_coin_info,
+                self.construct_ownership_layer(self.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                    self.inner_puzzle_hash
+                ),
+                uint64(self.coin.amount),
+            ),
+            VCLineageProof(
+                self.coin.parent_coin_info,
+                self.wrap_inner_with_backdoor(self.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                    self.inner_puzzle_hash
+                ),
+                uint64(self.coin.amount),
+                self.proof_hash,
+            ),
+            self.launcher_id,
+            new_inner_puzzle_hash,
+            self.proof_provider,
+            new_proof_hash,
+        )
+
+        return (
+            expected_announcement,
+            CoinSpend(
+                self.coin,
+                self.construct_puzzle(inner_puzzle),
+                vc_solution,
+            ),
+            replace(
+                slightly_incomplete_vc,
+                coin=Coin(
+                    slightly_incomplete_vc.coin.parent_coin_info,
+                    slightly_incomplete_vc.construct_puzzle(
+                        new_inner_puzzle_hash  # type: ignore
+                    ).get_tree_hash_precalc(new_inner_puzzle_hash),
+                    slightly_incomplete_vc.coin.amount,
+                ),
+            ),
         )

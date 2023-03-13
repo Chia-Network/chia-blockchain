@@ -15,7 +15,11 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import launch_conditions_and_coinsol
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
+    launch_conditions_and_coinsol,
+    puzzle_for_singleton,
+    solution_for_singleton,
+)
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
     VerifiedCredential,
@@ -38,7 +42,7 @@ from chia.wallet.vc_wallet.vc_drivers import (
 )
 
 
-ACS: Program = Program.to(1)
+ACS: Program = Program.to([3, (1, "entropy"), 1, None])
 ACS_PH: bytes32 = ACS.get_tree_hash()
 MOCK_SINGLETON_MOD: Program = Program.to([2, 5, 11])
 MOCK_SINGLETON_MOD_HASH: bytes32 = MOCK_SINGLETON_MOD.get_tree_hash()
@@ -109,7 +113,7 @@ async def test_covenant_layer() -> None:
                                 inner_puzzle_hash=ACS_PH,
                                 amount=uint64(acs_coin.amount),
                             ),
-                            None,
+                            Program.to(None),
                             Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
                         ),
                     ),
@@ -129,7 +133,7 @@ async def test_covenant_layer() -> None:
                             covenant_puzzle,
                             solve_covenant_layer(
                                 LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
-                                None,
+                                Program.to(None),
                                 Program.to([[51, covenant_puzzle_hash, cov.amount]]),
                             ),
                         ),
@@ -160,7 +164,7 @@ async def test_covenant_layer() -> None:
                                 inner_puzzle_hash=ACS_PH,
                                 amount=uint64(acs_cov.amount),
                             ),
-                            None,
+                            Program.to(None),
                             Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
                         ),
                     ),
@@ -452,7 +456,10 @@ async def test_viral_backdoor() -> None:
 
         # Spend the inner puzzle
         brick_hash: bytes32 = bytes32([0] * 32)
-        wrapped_brick_hash: bytes32 = create_viral_backdoor(hidden_puzzle_hash, brick_hash).get_tree_hash_precalc(brick_hash)
+        wrapped_brick_hash: bytes32 = create_viral_backdoor(
+            hidden_puzzle_hash,
+            brick_hash,  # type: ignore
+        ).get_tree_hash_precalc(brick_hash)
         result = await client.push_tx(
             SpendBundle(
                 [
@@ -489,7 +496,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
         )[1].coin
 
         # Gotta make a DID first
-        conditions, coin_spend = launch_conditions_and_coinsol(
+        conditions, launcher_spend = launch_conditions_and_coinsol(
             did_fund_coin,
             ACS,
             [],
@@ -500,21 +507,23 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                 [
                     CoinSpend(
                         did_fund_coin,
-                        ACS,
+                        RUN_PUZ_PUZ,
                         Program.to((1, conditions)),
                     ),
-                    coin_spend,
+                    launcher_spend,
                 ],
                 G2Element(),
             )
         )
         await sim.farm_block()
+        launcher_id: bytes32 = launcher_spend.coin.name()
+        did: Coin = (await client.get_coin_records_by_parent_ids([launcher_id], include_spent_coins=False))[0].coin
 
         # Now let's launch the VC
         vc: VerifiedCredential
         dpuz, coin_spends, vc = VerifiedCredential.launch(
             vc_fund_coin,
-            coin_spend.coin.name(),
+            launcher_id,
             ACS_PH,
             bytes32([0] * 32),
         )
@@ -531,7 +540,42 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                 G2Element(),
             )
         )
+        await sim.farm_block()
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(coin_spends[1])
         assert vc.construct_puzzle(ACS).get_tree_hash() == vc.coin.puzzle_hash
+        assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
+
+        NEW_PROOF_HASH: bytes32 = bytes32([4] * 32)
+        expected_announcement, update_spend, vc = vc.update_proofs(
+            NEW_PROOF_HASH,
+            ACS,
+            Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
+        )
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        did,
+                        puzzle_for_singleton(
+                            launcher_id,
+                            ACS,
+                        ),
+                        solution_for_singleton(
+                            LineageProof(
+                                parent_name=launcher_spend.coin.parent_coin_info,
+                                amount=uint64(launcher_spend.coin.amount),
+                            ),
+                            uint64(did.amount),
+                            Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
+                        ),
+                    ),
+                    update_spend,
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        if test_syncing:
+            vc = VerifiedCredential.get_next_from_coin_spend(update_spend)

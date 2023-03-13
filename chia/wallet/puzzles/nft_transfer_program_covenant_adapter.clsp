@@ -10,14 +10,16 @@
     )
   )
 
-  (a
+  (defun fix_condition ((parent_assertion . (new_owner new_tp conditions)))
+    (list new_owner new_tp (c parent_assertion conditions))
+  )
+
+  (fix_condition (a
     COVENANT_LAYER
     (list
-      Current_Owner
-      covenant_solutions
       lineage_proof
       morpher_solution
-      (c Current_Owner (c conditions inner_solution))
+      (list Current_Owner conditions inner_solution)
     )
-  )
+  ))
 )

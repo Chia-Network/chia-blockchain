@@ -33,21 +33,24 @@
   )
 
   ; Returning (new_metadata new_transfer_program conditions)
-  (list
-    new_metadata
-    new_transfer_program
+  (if provider_innerpuzhash
     (list
-      (list ASSERT_MY_COIN_ID my_coin_id)
-      (list ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256
-          (create_did_puzhash PROVIDER_SINGLETON_STRUCT provider_innerpuzhash)
+      new_metadata
+      (i new_transfer_program new_transfer_program ())
+      (list
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
           (sha256
-            my_coin_id
-            (sha256tree new_metadata)
-            (sha256tree new_transfer_program)
+            (create_did_puzhash PROVIDER_SINGLETON_STRUCT provider_innerpuzhash)
+            (sha256
+              my_coin_id
+              (sha256tree new_metadata)
+              (sha256tree new_transfer_program)
+            )
           )
         )
       )
     )
+    (list Current_Owner () ())
   )
 )
