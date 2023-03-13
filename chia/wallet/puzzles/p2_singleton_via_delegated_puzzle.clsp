@@ -1,0 +1,20 @@
+(mod (SINGLETON_STRUCT singleton_inner_puzhash delegated_puzzle delegated_solution)
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT singleton_inner_puzhash)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                      singleton_inner_puzhash
+                                      (sha256tree SINGLETON_STRUCT)
+     )
+  )
+
+
+  (c
+    (list ASSERT_PUZZLE_ANNOUNCEMENT (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzhash) (sha256tree delegated_puzzle))
+    (c
+      (list CREATE_COIN_ANNOUNCEMENT '$')
+      (a delegated_puzzle delegated_solution))
+  )
+)

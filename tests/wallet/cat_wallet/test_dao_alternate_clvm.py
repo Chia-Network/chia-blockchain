@@ -322,11 +322,16 @@ def test_spend_p2_singleton() -> None:
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
 
+    # Test that p2_singleton_via_delegated_puzzle will run
     p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
     locked_amount = 100000
-    p2_singleton_coin = Coin(parent_id, p2_singleton_puzhash, locked_amount)
+    singleton_inner_hash = Program.to(1).get_tree_hash()
+    deleg_puz = Program.to(1)
+    deleg_conds = Program.to([[51,0xcafef00d, 1000]])
+    conds = p2_singleton.run(Program.to([singleton_inner_hash, deleg_puz, deleg_conds]))
+    assert len(conds.as_python()) == 3
 
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
