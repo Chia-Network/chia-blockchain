@@ -13,6 +13,7 @@ from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    PlotInfo,
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
