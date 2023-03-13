@@ -7,7 +7,8 @@
     LOCKUP_MOD_HASH
     TREASURY_MOD_HASH
     CAT_TAIL_HASH
-    SAFE_PAYMENT_MOD_HASH
+    SPEND_P2_SINGLETON_MOD_HASH
+    P2_SINGLETON_PUZHASH
     attendance_required
     pass_margin  ; this is a percentage 0 - 10,000 - 51% would be 5100
     (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag)
@@ -65,8 +66,8 @@
                                      (sha256 ONE proposal_yes_votes)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE CAT_TAIL_HASH)
-                        				     (sha256 ONE LOCKUP_MOD_HASH)
-                        				     (sha256 ONE TREASURY_MOD_HASH)
+                       		     (sha256 ONE LOCKUP_MOD_HASH)
+                        	     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -75,28 +76,25 @@
   )
 
   (defun-inline calculate_safe_payment_hash (
-    SAFE_PAYMENT_MOD_HASH
-    SINGLETON_STRUCT
+    SPEND_P2_SINGLETON_MOD_HASH
     conditions
     spend_amount
+    p2_singleton_puzhash
     )
-    (puzzle-hash-of-curried-function SAFE_PAYMENT_MOD_HASH
+    (puzzle-hash-of-curried-function SPEND_P2_SINGLETON_MOD_HASH
+    				     (sha256 ONE p2_singleton_puzhash)
 				     (sha256 ONE spend_amount)
 				     (sha256tree conditions)
-				     (sha256tree SINGLETON_STRUCT)
     )
   )
 
 
-  (defun check_spend_conditions (SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT conditions delegated_puzzle_hash spend_amount)
-    ; Check that the delegated_puzzle_hash is equal to the curried safe_spend_mod_hash
-    ; pass through the conditions if it is
+  (defun check_spend_conditions (SPEND_P2_SINGLETON_MOD_HASH conditions spend_amount p2_singleton_puzhash delegated_puzzle_hash)
     (assert
       (= delegated_puzzle_hash
-         (calculate_safe_payment_hash SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT (r (r (r conditions))) spend_amount))
+         (calculate_safe_payment_hash SPEND_P2_SINGLETON_MOD_HASH (r (r (r conditions))) spend_amount p2_singleton_puzhash))
       conditions
     )
-
   )
 
   (defun check_update_conditions (SINGLETON_STRUCT conditions output)
@@ -114,7 +112,7 @@
       	    (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
       	    (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
       	  )
-      	  ()  ; fail
+      	  (x)  ; fail
       	  (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag (c (f conditions) output))
       	)
       )
@@ -129,8 +127,8 @@
 
   (assert_or_nil
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
-    (> total_votes ATTENDANCE_REQUIRED)  ; TODO: we might want to change this to storing total cats and calculating like below
-    (> yes_votes (calculate_win_percentage total_votes PASS_MARGIN))
+    (> total_votes attendance_required)  ; TODO: we might want to change this to storing total cats and calculating like below
+    (> yes_votes (calculate_win_percentage total_votes pass_margin))
     (=
       announcement_source
       (calculate_full_puzzle_hash
@@ -153,7 +151,7 @@
     )
     ; then execute the check method depending on whether we're in spend, update, or dangerous mode
     (if (= spend_or_update_flag "s")
-      (check_spend_conditions SAFE_PAYMENT_MOD_HASH SINGLETON_STRUCT conditions delegated_puzzle_hash spend_amount)
+      (check_spend_conditions SPEND_P2_SINGLETON_MOD_HASH conditions spend_amount P2_SINGLETON_PUZHASH delegated_puzzle_hash)
       (if (= spend_or_update_flag "u")
         (check_update_conditions SINGLETON_STRUCT conditions ())
       	(if (= spend_or_update_flag "d")

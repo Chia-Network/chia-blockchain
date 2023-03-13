@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import List
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.coin import Coin
@@ -295,12 +296,53 @@ def test_spend_p2_singleton() -> None:
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
 
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
-
+    spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
     solution = Program.to([[[parent_id, locked_amount]]])
 
-    conds = spend_p2_singleton.run(solution)
-    cds = conds.as_python()
-    assert len(conds.as_python()) == 5
+    output_conditions = spend_p2_singleton.run(solution)
+    assert len(output_conditions.as_python()) == 5
+
+    # now use the p2_singleton with the proposal validator
+    total_votes = 1200
+    yes_votes = 950
+    attendance_required = 1000
+    pass_margin = 5100
+    CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
+    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        SPEND_P2_SINGLETON_MOD.get_tree_hash(),
+        p2_singleton_puzhash,
+    )
+    proposal: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        singleton_id,
+        yes_votes,
+        total_votes,
+        's',
+        spend_p2_singleton_puzhash,
+    )
+    full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
+    validator_solution = Program.to([
+        attendance_required,
+        pass_margin,
+        [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
+        [singleton_id, total_votes, yes_votes, spend_amount],
+        output_conditions
+    ])
+    conds = proposal_validator.run(validator_solution).as_python()
+    assert output_conditions == conds
 
 
 def test_treasury() -> None:
