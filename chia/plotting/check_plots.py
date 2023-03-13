@@ -173,8 +173,7 @@ def check_plots(
                 except Exception as e:
                     log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                     caught_exception = True
-                if caught_exception is True:
-                    break
+
             if total_proofs > 0 and caught_exception is False:
                 log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
                 total_good_plots[pr.get_size()] += 1
