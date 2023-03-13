@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -12,6 +13,8 @@ from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
+
+log = logging.getLogger(__name__)
 
 
 def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
@@ -152,6 +155,11 @@ class WalletTransactionStore:
         sent_to.append(append_data)
 
         tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
+        if not tx.is_spendable:
+            # if the tx is not spendable, it is confirmed that we can't spend it, but
+            # we need to adjust the GUI to show that it is failed
+            log.info(f"Marking tx={tx.name} as confirmed but failed, since it is not spendable due to errors")
+            tx = dataclasses.replace(tx, confirmed=True, confirmed_at_height=uint32(0))
         await self.add_transaction_record(tx)
         return True
 

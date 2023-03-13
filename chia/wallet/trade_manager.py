@@ -211,6 +211,10 @@ class TradeManager:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED)
         self.wallet_state_manager.state_changed("offer_cancelled")
 
+    async def fail_pending_offer(self, trade_id: bytes32) -> None:
+        await self.trade_store.set_status(trade_id, TradeStatus.FAILED)
+        self.wallet_state_manager.state_changed("offer_failed")
+
     async def cancel_pending_offer_safely(
         self, trade_id: bytes32, fee: uint64 = uint64(0)
     ) -> Optional[List[TransactionRecord]]:
@@ -742,7 +746,7 @@ class TradeManager:
         success, take_offer, error = result
 
         complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
-        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
+        self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)
