@@ -8,6 +8,7 @@ from pathlib import Path
 from time import sleep, time
 from typing import List, Optional
 
+import more_itertools
 from blspy import G1Element
 from chiapos import Verifier
 
@@ -219,13 +220,14 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
-            futures = []
-            for plot_path, plot_info in plot_manager.plots.items():
-                futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for batch in more_itertools.chunked(plot_manager.plots.items(), context_count):
+                futures = []
+                for plot_path, plot_info in batch:
+                    futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
 
-            for future in concurrent.futures.as_completed(futures):
-                _ = future.result()
+                for future in concurrent.futures.as_completed(futures):
+                    _ = future.result()
 
     log.info("")
     log.info("")
