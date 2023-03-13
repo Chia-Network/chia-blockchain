@@ -92,6 +92,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
@@ -1105,6 +1106,8 @@ class WalletStateManager:
                         ):
                             continue
 
+                    if coin_state.spent_height is not None and coin_name in trade_removals:
+                        trade_coin_removed.append(coin_state)
                     wallet_id: Optional[uint32] = None
                     wallet_type: Optional[WalletType] = None
                     if wallet_info is not None:
@@ -1157,8 +1160,6 @@ class WalletStateManager:
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
                         self.log.debug("Coin Removed: %s", coin_state)
-                        if coin_name in trade_removals:
-                            trade_coin_removed.append(coin_state)
                         children: Optional[List[CoinState]] = None
                         record = local_record
                         if record is None:
@@ -1631,13 +1632,42 @@ class WalletStateManager:
         error: Optional[Err],
     ):
         """
-        Full node received our transaction, no need to keep it in queue anymore
+        Full node received our transaction, no need to keep it in queue anymore, unless there was an error
         """
+
         updated = await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         if updated:
             tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
             if tx is not None:
-                self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
+                # we're only interested in errors that are not temporary
+                if send_status and error and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO):
+                    if tx.spend_bundle is not None:
+                        coins_removed = tx.spend_bundle.removals()
+                        trade_coins_removed = set([])
+                        for removed_coin in coins_removed:
+                            trade = await self.trade_manager.get_trade_by_coin(removed_coin)
+                            if trade is not None and trade.status in (
+                                TradeStatus.PENDING_CONFIRM.value,
+                                TradeStatus.PENDING_ACCEPT.value,
+                                TradeStatus.PENDING_CANCEL.value,
+                            ):
+                                # offer was tied to these coins, lets subscribe to them to get a confirmation to
+                                # cancel it if it's confirmed
+                                # we send transactions to multiple peers, and in cases when mempool gets
+                                # fragmented, it's safest to wait for confirmation from blockchain before setting
+                                # offer to failed
+                                trade_coins_removed.add(removed_coin.name())
+                        if trade_coins_removed:
+                            self.log.info(
+                                "Subscribing to unspendable offer coins: %s", [x.hex() for x in trade_coins_removed]
+                            )
+                            await self.add_interested_coin_ids(list(trade_coins_removed))
+
+                    self.state_changed(
+                        "tx_update", tx.wallet_id, {"transaction": tx, "error": error.name, "status": send_status.value}
+                    )
+                else:
+                    self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
     async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
         """

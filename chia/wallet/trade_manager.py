@@ -68,7 +68,7 @@ class TradeManager:
                     "sibling_spends": List[bytes]  # The parent spends for the siblings
                     "sibling_puzzles": List[Program]  # The inner puzzles of the siblings (always OFFER_MOD)
                     "sibling_solutions": List[Program]  # The inner solution of the siblings
-                }
+            }
             )
 
     Wallet:
@@ -147,7 +147,6 @@ class TradeManager:
             return
         if coin_state.spent_height is None:
             self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
-
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
@@ -168,7 +167,6 @@ class TradeManager:
         )
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
-
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_addition_ids) == set(coin_state_names):
             height = coin_states[0].created_height
@@ -394,8 +392,8 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
-    async def save_trade(self, trade: TradeRecord) -> None:
-        await self.trade_store.add_trade_record(trade)
+    async def save_trade(self, trade: TradeRecord, offer_name: bytes32) -> None:
+        await self.trade_store.add_trade_record(trade, offer_name)
         self.wallet_state_manager.state_changed("offer_added")
 
     async def create_offer_for_ids(
@@ -407,13 +405,20 @@ class TradeManager:
         validate_only: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
         if solver is None:
             solver = Solver({})
         result = await self._create_offer_for_ids(
-            offer, driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount
+            offer,
+            driver_dict,
+            solver,
+            fee=fee,
+            min_coin_amount=min_coin_amount,
+            max_coin_amount=max_coin_amount,
+            reuse_puzhash=reuse_puzhash,
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -436,7 +441,7 @@ class TradeManager:
         )
 
         if success is True and trade_offer is not None and not validate_only:
-            await self.save_trade(trade_offer)
+            await self.save_trade(trade_offer, created_offer.name())
 
         return success, trade_offer, error
 
@@ -449,6 +454,7 @@ class TradeManager:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         old: bool = False,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -457,6 +463,14 @@ class TradeManager:
             driver_dict = {}
         if solver is None:
             solver = Solver({})
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
@@ -471,7 +485,7 @@ class TradeManager:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
-                        p2_ph: bytes32 = await wallet.get_new_puzzlehash()
+                        p2_ph: bytes32 = await wallet.get_puzzle_hash(new=not reuse_puzhash)
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
@@ -481,7 +495,7 @@ class TradeManager:
                                     f"Cannot request assets from wallet id {wallet.id()} without more information"
                                 )
                     else:
-                        p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
+                        p2_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(new=not reuse_puzhash)
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
@@ -556,6 +570,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -569,6 +584,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.extend(txs)
                 else:
@@ -579,6 +595,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.extend(txs)
 
@@ -615,6 +632,7 @@ class TradeManager:
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
             [c.name() for c in non_ephemeral_removals], peer=peer
         )
+
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
@@ -715,6 +733,7 @@ class TradeManager:
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[TradeRecord, List[TransactionRecord]]:
         if solver is None:
             solver = Solver({})
@@ -797,6 +816,7 @@ class TradeManager:
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 old=offer.old,
+                reuse_puzhash=reuse_puzhash,
             )
             if not result[0] or result[1] is None:
                 raise ValueError(result[2])
@@ -823,7 +843,7 @@ class TradeManager:
             sent_to=[],
         )
 
-        await self.save_trade(trade_record)
+        await self.save_trade(trade_record, offer.name())
 
         # Dummy transaction for the sake of the wallet push
         push_tx = TransactionRecord(

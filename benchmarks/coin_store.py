@@ -37,7 +37,7 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     return additions, hashes
 
 
-async def run_new_block_benchmark(version: int):
+async def run_new_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
     db_wrapper: DBWrapper2 = await setup_db("coin-store-benchmark.db", version)
 
