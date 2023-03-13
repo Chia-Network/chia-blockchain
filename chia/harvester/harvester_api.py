@@ -131,6 +131,22 @@ class HarvesterAPI:
                                 proof_xs = plot_info.prover.get_full_proof(
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
+                            except RuntimeError as e:
+                                if str(e) == "GRResult_NoProof received":
+                                    self.harvester.log.info(
+                                        f"Proof dropped due to line point compression for {filename}"
+                                    )
+                                    self.harvester.log.info(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                else:
+                                    self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
+                                    self.harvester.log.error(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                continue
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(

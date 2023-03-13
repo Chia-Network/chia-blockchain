@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing
 from collections import Counter
 from pathlib import Path
 from time import sleep, time
@@ -50,6 +51,14 @@ def check_plots(
         refresh_parameter=plot_refresh_parameter,
         refresh_callback=plot_refresh_callback,
     )
+
+    context_count = config["harvester"].get("parallel_decompressers_count", 5)
+    thread_count = config["harvester"].get("decompresser_thread_count", 0)
+    if thread_count == 0:
+        thread_count = multiprocessing.cpu_count() // 2
+    disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
+    plot_manager.configure_decompresser(context_count, thread_count, disable_cpu_affinity)
+
     if num is not None:
         if num == 0:
             log.warning("Not opening plot files")
@@ -170,6 +179,13 @@ def check_plots(
                 except SystemExit:
                     log.warning("System is shutting down.")
                     return None
+                except RuntimeError as e:
+                    if str(e) == "GRResult_NoProof received":
+                        log.info("Proof dropped due to line point compression")
+                        continue
+                    else:
+                        log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
+                        caught_exception = True
                 except Exception as e:
                     log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                     caught_exception = True
