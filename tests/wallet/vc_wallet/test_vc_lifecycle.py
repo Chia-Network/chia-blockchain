@@ -548,10 +548,10 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
         NEW_PROOF_HASH: bytes32 = bytes32([4] * 32)
-        expected_announcement, update_spend, vc = vc.update_proofs(
-            NEW_PROOF_HASH,
+        expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
             Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
+            new_proof_hash=NEW_PROOF_HASH,
         )
         result = await client.push_tx(
             SpendBundle(

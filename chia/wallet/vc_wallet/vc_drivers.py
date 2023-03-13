@@ -528,12 +528,12 @@ class VerifiedCredential:
         )
         return magic_condition
 
-    def update_proofs(
+    def do_spend(
         self,
-        new_proof_hash: Optional[bytes32],
         inner_puzzle: Program,
         inner_solution: Program,
-    ) -> Tuple[bytes32, CoinSpend, "VerifiedCredential"]:
+        new_proof_hash: Optional[bytes32] = None,
+    ) -> Tuple[Optional[bytes32], CoinSpend, "VerifiedCredential"]:
         vc_solution: Program = solution_for_singleton(
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
@@ -546,11 +546,14 @@ class VerifiedCredential:
             ),
         )
 
-        expected_announcement: bytes32 = std_hash(
-            self.coin.name()
-            + Program.to(new_proof_hash).get_tree_hash()
-            + Program.to(None).get_tree_hash()  # TP update is banned because singleton will leave the VC protocol
-        )
+        if new_proof_hash is not None:
+            expected_announcement: Optional[bytes32] = std_hash(
+                self.coin.name()
+                + Program.to(new_proof_hash).get_tree_hash()
+                + Program.to(None).get_tree_hash()  # TP update is banned because singleton will leave the VC protocol
+            )
+        else:
+            expected_announcement = None
 
         new_singleton_condition: Program = next(
             c for c in inner_puzzle.run(inner_solution).as_iter() if c.at("f") == 51 and c.at("rrf").as_int() % 2 != 0
@@ -577,7 +580,7 @@ class VerifiedCredential:
             self.launcher_id,
             new_inner_puzzle_hash,
             self.proof_provider,
-            new_proof_hash,
+            self.proof_hash if new_proof_hash is None else new_proof_hash,
         )
 
         return (
