@@ -1888,31 +1888,42 @@ class TestBodyValidation:
         assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
+    # soft-fork 2 is disabled (for now)
+    @pytest.mark.parametrize("with_softfork2", [False])
+    @pytest.mark.parametrize("with_garbage", [True, False])
     @pytest.mark.parametrize(
-        "opcode,lock_value,expected,with_garbage",
+        "opcode,lock_value,expected",
         [
-            (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK, False),
-            (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK, False),
-            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK, False),
-            (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK, False),
-            (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK, False),
-            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK, False),
-            (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK, False),
-            (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK, False),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK, False),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK, False),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 2, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 3, rbr.NEW_PEAK),
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10029, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10031, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK, False),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK, False),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK, False),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK, False),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
             # additional garbage at the end of parameters
-            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK, True),
-            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK, True),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK, True),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK, True),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
         ],
     )
     async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, with_softfork2, bt):
@@ -1921,6 +1932,14 @@ class TestBodyValidation:
             constants = test_constants.replace(SOFT_FORK2_HEIGHT=0)
         else:
             constants = test_constants
+
+            # if the softfork is not active in this test, fixup all the
+            # tests to instead expect NEW_PEAK unconditionally
+            if opcode in [
+                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+            ]:
+                expected = ReceiveBlockResult.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
 

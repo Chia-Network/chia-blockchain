@@ -179,6 +179,13 @@ def get_transactions_cmd(
     multiple=True,
     help="Exclude this coin from being spent.",
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -191,6 +198,7 @@ def send_cmd(
     min_coin_amount: str,
     max_coin_amount: str,
     coins_to_exclude: Tuple[str],
+    reuse: bool,
 ) -> None:
     extra_params = {
         "id": id,
@@ -202,6 +210,7 @@ def send_cmd(
         "min_coin_amount": min_coin_amount,
         "max_coin_amount": max_coin_amount,
         "exclude_coin_ids": list(coins_to_exclude),
+        "reuse_puzhash": True if reuse else None,
     }
     import asyncio
 
@@ -410,10 +419,29 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the offer.",
+    is_flag=True,
+    default=False,
+)
 def make_offer_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    offer: Tuple[str],
+    request: Tuple[str],
+    filepath: str,
+    fee: str,
+    reuse: bool,
 ) -> None:
-    extra_params = {"offers": offer, "requests": request, "filepath": filepath, "fee": fee}
+    extra_params = {
+        "offers": offer,
+        "requests": request,
+        "filepath": filepath,
+        "fee": fee,
+        "reuse_puzhash": True if reuse else None,
+    }
     import asyncio
 
     from .wallet_funcs import make_offer
@@ -482,10 +510,27 @@ def get_offers_cmd(
 @click.option(
     "-m", "--fee", help="The fee to use when pushing the completed offer, in XCH", default="0", show_default=True
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the offer.",
+    is_flag=True,
+    default=False,
+)
 def take_offer_cmd(
-    path_or_hex: str, wallet_rpc_port: Optional[int], fingerprint: int, examine_only: bool, fee: str
+    path_or_hex: str,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    examine_only: bool,
+    fee: str,
+    reuse: bool,
 ) -> None:
-    extra_params = {"file": path_or_hex, "examine_only": examine_only, "fee": fee}
+    extra_params = {
+        "file": path_or_hex,
+        "examine_only": examine_only,
+        "fee": fee,
+        "reuse_puzhash": True if reuse else None,
+    }
     import asyncio
 
     from .wallet_funcs import take_offer
@@ -718,6 +763,13 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     default=0,
     show_default=True,
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -735,6 +787,7 @@ def nft_mint_cmd(
     edition_number: Optional[int],
     fee: str,
     royalty_percentage_fraction: int,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -765,6 +818,7 @@ def nft_mint_cmd(
         "edition_number": edition_number,
         "fee": fee,
         "royalty_percentage": royalty_percentage_fraction,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
 
@@ -792,6 +846,13 @@ def nft_mint_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def nft_add_uri_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -801,6 +862,7 @@ def nft_add_uri_cmd(
     metadata_uri: str,
     license_uri: str,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -813,6 +875,7 @@ def nft_add_uri_cmd(
         "metadata_uri": metadata_uri,
         "license_uri": license_uri,
         "fee": fee,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_uri_to_nft))
 
@@ -838,6 +901,13 @@ def nft_add_uri_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -845,6 +915,7 @@ def nft_transfer_cmd(
     nft_coin_id: str,
     target_address: str,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -855,6 +926,7 @@ def nft_transfer_cmd(
         "nft_coin_id": nft_coin_id,
         "target_address": target_address,
         "fee": fee,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_nft))
 
@@ -899,6 +971,13 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "-r",
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def nft_set_did_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -906,6 +985,7 @@ def nft_set_did_cmd(
     did_id: str,
     nft_coin_id: str,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -916,6 +996,7 @@ def nft_set_did_cmd(
         "did_id": did_id,
         "nft_coin_id": nft_coin_id,
         "fee": fee,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, set_nft_did))
 

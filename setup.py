@@ -14,7 +14,7 @@ dependencies = [
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.2",
+    "chia_rs==0.2.4",
     "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -61,7 +61,7 @@ dev_dependencies = [
     "black==22.10.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.6.2",
+    "pyinstaller==5.8.0",
     "types-aiofiles",
     "types-cryptography",
     "types-pkg_resources",

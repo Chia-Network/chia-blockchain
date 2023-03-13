@@ -7,7 +7,7 @@ import click
 
 @click.group("keys", short_help="Manage your keys")
 @click.pass_context
-def keys_cmd(ctx: click.Context):
+def keys_cmd(ctx: click.Context) -> None:
     """Create, delete, view and use your key pairs"""
     from pathlib import Path
 
@@ -26,7 +26,7 @@ def keys_cmd(ctx: click.Context):
     required=False,
 )
 @click.pass_context
-def generate_cmd(ctx: click.Context, label: Optional[str]):
+def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     from .init_funcs import check_keys
     from .keys_funcs import generate_and_add
 
@@ -66,7 +66,13 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
     default=None,
 )
 @click.pass_context
-def show_cmd(ctx: click.Context, show_mnemonic_seed, non_observer_derivation, json, fingerprint):
+def show_cmd(
+    ctx: click.Context,
+    show_mnemonic_seed: bool,
+    non_observer_derivation: bool,
+    json: bool,
+    fingerprint: Optional[int],
+) -> None:
     from .keys_funcs import show_keys
 
     show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
@@ -90,7 +96,7 @@ def show_cmd(ctx: click.Context, show_mnemonic_seed, non_observer_derivation, js
     required=False,
 )
 @click.pass_context
-def add_cmd(ctx: click.Context, filename: str, label: Optional[str]):
+def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
     from .init_funcs import check_keys
     from .keys_funcs import query_and_add_private_key_seed
 
@@ -105,12 +111,12 @@ def add_cmd(ctx: click.Context, filename: str, label: Optional[str]):
 
 
 @keys_cmd.group("label", short_help="Manage your key labels")
-def label_cmd():
+def label_cmd() -> None:
     pass
 
 
 @label_cmd.command("show", short_help="Show the labels of all available keys")
-def show_label_cmd():
+def show_label_cmd() -> None:
     from .keys_funcs import show_all_key_labels
 
     show_all_key_labels()
@@ -131,7 +137,7 @@ def show_label_cmd():
     type=str,
     required=True,
 )
-def set_label_cmd(fingerprint: int, label: str):
+def set_label_cmd(fingerprint: int, label: str) -> None:
     from .keys_funcs import set_key_label
 
     set_key_label(fingerprint, label)
@@ -145,7 +151,7 @@ def set_label_cmd(fingerprint: int, label: str):
     type=int,
     required=True,
 )
-def delete_label_cmd(fingerprint: int):
+def delete_label_cmd(fingerprint: int) -> None:
     from .keys_funcs import delete_key_label
 
     delete_key_label(fingerprint)
@@ -161,7 +167,7 @@ def delete_label_cmd(fingerprint: int):
     required=True,
 )
 @click.pass_context
-def delete_cmd(ctx: click.Context, fingerprint: int):
+def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
     from .init_funcs import check_keys
     from .keys_funcs import delete
 
@@ -170,14 +176,14 @@ def delete_cmd(ctx: click.Context, fingerprint: int):
 
 
 @keys_cmd.command("delete_all", short_help="Delete all private keys in keychain")
-def delete_all_cmd():
+def delete_all_cmd() -> None:
     from chia.util.keychain import Keychain
 
     Keychain().delete_all_keys()
 
 
 @keys_cmd.command("generate_and_print", short_help="Generates but does NOT add to keychain")
-def generate_and_print_cmd():
+def generate_and_print_cmd() -> None:
     from .keys_funcs import generate_and_print
 
     generate_and_print()
@@ -220,14 +226,14 @@ def generate_and_print_cmd():
 )
 def sign_cmd(
     message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
-):
+) -> None:
     from .keys_funcs import resolve_derivation_master_key, sign
 
     private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
     sign(message, private_key, hd_path, as_bytes, json)
 
 
-def parse_signature_json(json_str: str):
+def parse_signature_json(json_str: str) -> Tuple[str, str, str, str]:
     import json
 
     try:
@@ -265,7 +271,7 @@ def parse_signature_json(json_str: str):
     show_default=True,
     type=str,
 )
-def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, json: str):
+def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, json: str) -> None:
     from .keys_funcs import as_bytes_from_signing_mode, verify
 
     if json is not None:
@@ -294,7 +300,7 @@ def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, js
     required=False,
 )
 @click.pass_context
-def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]):
+def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]) -> None:
     ctx.obj["fingerprint"] = fingerprint
     ctx.obj["filename"] = filename
 
@@ -347,7 +353,7 @@ def search_cmd(
     search_type: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
     prefix: Optional[str],
-):
+) -> None:
     import sys
 
     from blspy import PrivateKey
@@ -402,7 +408,7 @@ def search_cmd(
 @click.pass_context
 def wallet_address_cmd(
     ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
-):
+) -> None:
     from .keys_funcs import derive_wallet_address, resolve_derivation_master_key
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
@@ -467,7 +473,7 @@ def child_key_cmd(
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
-):
+) -> None:
     from .keys_funcs import derive_child_key, resolve_derivation_master_key
 
     if key_type is None and derive_from_hd_path is None:
