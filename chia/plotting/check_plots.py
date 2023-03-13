@@ -120,6 +120,7 @@ def check_plots(
     bad_plots_list: List[Path] = []
 
     with plot_manager:
+
         def process_plot(plot_path, plot_info, num_start, num_end) -> None:
             nonlocal total_good_plots
             nonlocal total_size
@@ -171,9 +172,15 @@ def check_plots(
                                 )
                             else:
                                 log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
-                            total_proofs += 1
+
                             ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
-                            assert quality_str == ver_quality_str
+                            if quality_str == ver_quality_str:
+                                total_proofs += 1
+                            else:
+                                log.warning(
+                                    f"\tQuality doesn't match with proof. Filepath: {plot_path} "
+                                    "This can occasionally happen with a compressed plot."
+                                )
                         except AssertionError as e:
                             log.error(
                                 f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
@@ -211,7 +218,7 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():
                 futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
