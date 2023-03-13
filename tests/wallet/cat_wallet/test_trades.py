@@ -748,6 +748,8 @@ class TestCATTrades:
         await wallet_node_taker._resend_queue()
         await wallet_node_taker._resend_queue()
         await wallet_node_taker._resend_queue()
+        await wallet_node_taker._resend_queue()
+        await wallet_node_taker._resend_queue()
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)
         await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
