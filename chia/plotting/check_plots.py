@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import multiprocessing
-import concurrent.futures
 from collections import Counter
 from pathlib import Path
 from time import sleep, time
