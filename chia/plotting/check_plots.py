@@ -120,7 +120,7 @@ def check_plots(
     bad_plots_list: List[Path] = []
 
     with plot_manager:
-        def process_plot(plot_path, plot_info, num_start, num_end):
+        def process_plot(plot_path, plot_info, num_start, num_end) -> None:
             nonlocal total_good_plots
             nonlocal total_size
             nonlocal bad_plots_list
