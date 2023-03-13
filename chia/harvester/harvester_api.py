@@ -179,7 +179,6 @@ class HarvesterAPI:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._shut_down:
-                self.harvester.log.error("Debug info: Harvester shut down.")
                 return filename, []
             proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info
@@ -194,7 +193,6 @@ class HarvesterAPI:
                         new_challenge.signage_point_index,
                     )
                 )
-            self.harvester.log.info(f"Debug info: Harvester got {len(all_responses)} from {filename}")
             return filename, all_responses
 
         awaitables = []
@@ -214,9 +212,8 @@ class HarvesterAPI:
                 ):
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
-            self.harvester.log.info(f"Debug info: new_signage_point_harvester {passed} plots passed the plot filter")
+            self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
-        self.harvester.log.info(f"Debug info: {len(awaitables)} tasks spawned.")
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
@@ -224,11 +221,12 @@ class HarvesterAPI:
             time_taken = time.time() - start
             if time_taken > 5:
                 self.harvester.log.warning(
-                    f"Debug info: Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
                     f" to minimize risk of losing rewards."
                 )
             else:
-                self.harvester.log.info(f"Debug info: Looking up qualities on {filename} took: {time_taken}")
+                pass
+                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
             for response in sublist:
                 total_proofs_found += 1
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
