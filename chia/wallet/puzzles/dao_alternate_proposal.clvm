@@ -26,6 +26,7 @@
   (include *standard-cl-21*)
 
   (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
+  (defconstant TEN_THOUSAND 10000)
 
   (defun-inline calculate_win_percentage (TOTAL PERCENTAGE)
     (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
@@ -118,7 +119,6 @@
       treasury_singleton_struct
       TREASURY_MOD_HASH
       PROPOSAL_VALIDATOR_HASH
-      MONEY_RECEIVER_HASH
       PROPOSAL_LENGTH
       PROPOSAL_SOFTCLOSE_LENGTH
       attendance_required
@@ -131,7 +131,6 @@
           (sha256 ONE attendance_required)
           (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
           (sha256 ONE PROPOSAL_LENGTH)
-          MONEY_RECEIVER_HASH
           PROPOSAL_VALIDATOR_HASH
       )
     )
@@ -235,8 +234,8 @@
 
   (if soft_close_length
     ; we are trying to close
-    (if condition  ; TODO: fix this when you rejig the solution parameters
-      ; we're trying to run
+    (if (any (> lockup_innerpuzhashes_or_attendance_required TOTAL_VOTES) (> (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin) YES_VOTES))
+      ;; we're closing a failed proposal
       (list
         (list CREATE_COIN dao_finished_state ONE)
         (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
@@ -247,9 +246,10 @@
               (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
               TREASURY_MOD_HASH
               vote_amounts_or_proposal_validator_hash
-              vote_info_or_money_receiver_hash
               vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
-              soft_close_length
+	      soft_close_length
+              lockup_innerpuzhashes_or_attendance_required
+	      previous_votes_or_pass_margin
             )
             (sha256tree (list (f (r SINGLETON_STRUCT)) vote_coin_ids_or_proposal_timelock_length soft_close_length))
           )
@@ -271,7 +271,7 @@
       )
       ; we're trying to close ourself due to
       ; TODO: add attendance_required and pass_percentage into solution
-      (if (all (> TOTAL_VOTES attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES pass_percentage)))
+      (if (all (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin)))
         (x)  ; we've passed, cannot be shut down
         (list
           (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend

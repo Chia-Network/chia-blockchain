@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 from typing import List
 
 from chia.types.blockchain_format.program import Program
@@ -68,17 +69,18 @@ def test_proposal() -> None:
     # Test Voting
     solution: Program = Program.to(
         [
-            [10],
-            1,
-            [Program.to("vote_coin").get_tree_hash()],
-            [[0xFADEDDAB]],
-            [0xCAFEF00D],
-            0,
-            0,
+            [10], # vote amounts
+            1,  # vote type (yes)
+            [Program.to("vote_coin").get_tree_hash()], # vote coin ids
+            [[0xFADEDDAB]], # previous votes (should be a number?)
+            [0xCAFEF00D],  # lockup inner puz hash
+            0, # inner puz reveal
+            0, # soft close len
         ]
     )
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
+
     # Test exit
     # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -89,17 +91,8 @@ def test_proposal() -> None:
     #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
     # innerpuz_reveal  ; this is only added during the first vote
     # soft_close_length  ; revealed by the treasury
-    solution = Program.to(
-        [
-            Program.to("validator_hash").get_tree_hash(),
-            Program.to("receiver_hash").get_tree_hash(),
-            20,
-            proposal_pass_percentage,
-            1000,
-            0,
-            5,
-        ]
-    )
+
+    # Test attempt to close a passing proposal
     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -109,14 +102,57 @@ def test_proposal() -> None:
         DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_TAIL_HASH,
         treasury_id,
-        200,
-        350,
+        200, # yes votes
+        350, # total votes
         's',
         Program.to(1).get_tree_hash(),
     )
-    conds = full_proposal.run(solution)
-    assert len(conds.as_python()) == 6
+    attendance_required = 200
+    solution = Program.to(
+        [
+            Program.to("validator_hash").get_tree_hash(),
+            Program.to("receiver_hash").get_tree_hash(), # not needed anymore?
+            20, # timelock length
+            proposal_pass_percentage,
+            attendance_required,
+            Program.to(1),
+            5,
+        ]
+    )
 
+    # We get a clvm raise because we're trying to close a passing proposal
+    with pytest.raises(ValueError) as exc_info:
+        full_proposal.run(solution)
+
+    # close a failed proposal
+    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL_HASH,
+        treasury_id,
+        20, # yes votes
+        350, # total votes
+        's',
+        Program.to(1).get_tree_hash(),
+    )
+    attendance_required = 200
+    solution = Program.to(
+        [
+            Program.to("validator_hash").get_tree_hash(),
+            Program.to("receiver_hash").get_tree_hash(), # not needed anymore?
+            20, # timelock length
+            proposal_pass_percentage,
+            attendance_required,
+            Program.to(1),
+            5,
+        ]
+    )
+    conds = full_proposal.run(solution).as_python()
+    assert len(conds) == 6
 
 def test_proposal_timer() -> None:
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
