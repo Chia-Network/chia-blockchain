@@ -121,7 +121,7 @@ def check_plots(
 
     with plot_manager:
 
-        def process_plot(plot_path, plot_info, num_start, num_end) -> None:
+        def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int) -> None:
             nonlocal total_good_plots
             nonlocal total_size
             nonlocal bad_plots_list
@@ -189,10 +189,10 @@ def check_plots(
                         quality_start_time = int(round(time() * 1000))
                 except KeyboardInterrupt:
                     log.warning("Interrupted, closing")
-                    return None
+                    return
                 except SystemExit:
                     log.warning("System is shutting down.")
-                    return None
+                    return
                 except RuntimeError as e:
                     if str(e) == "GRResult_NoProof received":
                         log.info(f"Proof dropped due to line point compression. Filepath: {plot_path}")
