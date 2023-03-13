@@ -219,7 +219,7 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():
                 futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
