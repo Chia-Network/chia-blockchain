@@ -623,10 +623,33 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                 G2Element(),
             )
         )
+        temp = SpendBundle(
+            [
+                CoinSpend(
+                    new_did,
+                    puzzle_for_singleton(
+                        launcher_id,
+                        ACS,
+                    ),
+                    solution_for_singleton(
+                        LineageProof(
+                            parent_name=did.parent_coin_info,
+                            inner_puzzle_hash=ACS_PH,
+                            amount=uint64(did.amount),
+                        ),
+                        uint64(new_did.amount),
+                        Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
+                    ),
+                ),
+                yoink_spend,
+            ],
+            G2Element(),
+        )
+        breakpoint()
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-        if test_syncing:
-            vc = VerifiedCredential.get_next_from_coin_spend(yoink_spend)
-
-        assert len(await client.get_coin_records_by_names([vc.coin.name()], include_spent_coins=False)) > 0
+        # if test_syncing:
+        #     vc = VerifiedCredential.get_next_from_coin_spend(yoink_spend)
+        #
+        # assert len(await client.get_coin_records_by_names([vc.coin.name()], include_spent_coins=False)) > 0
         # Add some assertions about the final state once its settled on

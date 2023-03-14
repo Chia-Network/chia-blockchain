@@ -1,13 +1,52 @@
 (mod
   (
-    lineage_proof
-    parent_metadata_hash
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH_HASH
+    OWNERSHIP_LAYER_MOD_HASH
+    VIRAL_BACKDOOR_MOD_HASH
+    DEFAULT_TRANSFER_PROGRAM
+    launcher_id_hash
+    metadata_hash
+    tp_hash
+    this_hash_hash
+    inner_puzzle_hash
+    my_amount
+    ownership_lineage_proof
+    previous_proof_hash_hash
+    (
+        provider_innerpuzhash
+        my_coin_id
+        new_metadata
+    )
   )
 
-  (qq
-    (
-      (51 0x0000000000000000000000000000000000000000000000000000000000000000 1)
-      (-10 (unquote lineage_proof) ((unquote parent_metadata_hash)) (() () () ())))
+  (include condition_codes.clvm)
+  (include curry.clib)
+
+  (list
+    (list ASSERT_MY_PUZZLEHASH
+      (curry_hashes_inline SINGLETON_MOD_HASH
+        (sha256 2
+          (sha256 1 SINGLETON_MOD_HASH)
+          (sha256 2
+            launcher_id_hash
+            SINGLETON_LAUNCHER_HASH_HASH
+          )
+        )
+        (curry_hashes_inline OWNERSHIP_LAYER_MOD_HASH
+          (sha256 1 OWNERSHIP_LAYER_MOD_HASH)
+          metadata_hash
+          tp_hash
+          (curry_hashes_inline VIRAL_BACKDOOR_MOD_HASH
+            (sha256 1 VIRAL_BACKDOOR_MOD_HASH)
+            this_hash_hash
+            (sha256 1 inner_puzzle_hash)
+          )
+        )
+      )
     )
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN inner_puzzle_hash my_amount)
+    (list -10 ownership_lineage_proof (list previous_proof_hash_hash) (list provider_innerpuzhash my_coin_id new_metadata DEFAULT_TRANSFER_PROGRAM))
   )
 )
