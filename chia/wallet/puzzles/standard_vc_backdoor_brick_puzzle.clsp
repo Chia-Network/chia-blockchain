@@ -1,0 +1,13 @@
+(mod
+  (
+    lineage_proof
+    parent_metadata_hash
+  )
+
+  (qq
+    (
+      (51 0x0000000000000000000000000000000000000000000000000000000000000000 1)
+      (-10 (unquote lineage_proof) ((unquote parent_metadata_hash)) (() () () ())))
+    )
+  )
+)

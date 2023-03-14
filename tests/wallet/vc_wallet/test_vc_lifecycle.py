@@ -408,8 +408,8 @@ async def test_viral_backdoor() -> None:
         # Setup and farm the puzzle
         hidden_puzzle: Program = Program.to((1, [[61, 1]]))  # assert a coin announcement that the solution tells us
         hidden_puzzle_hash: bytes32 = hidden_puzzle.get_tree_hash()
-        p2_either_puzzle: Program = create_viral_backdoor(hidden_puzzle_hash, ACS)
-        assert match_viral_backdoor(uncurry_puzzle(p2_either_puzzle)) == (hidden_puzzle_hash, ACS)
+        p2_either_puzzle: Program = create_viral_backdoor(hidden_puzzle_hash, ACS_PH)
+        assert match_viral_backdoor(uncurry_puzzle(p2_either_puzzle)) == (hidden_puzzle_hash, ACS_PH)
 
         await sim.farm_block(p2_either_puzzle.get_tree_hash())
         p2_either_coin: Coin = (
@@ -426,8 +426,9 @@ async def test_viral_backdoor() -> None:
                         p2_either_coin,
                         p2_either_puzzle,
                         solve_viral_backdoor(
+                            ACS,
                             Program.to(None),
-                            hidden_puzzle_reveal=ACS,
+                            hidden=True,
                         ),
                     )
                 ],
@@ -444,8 +445,9 @@ async def test_viral_backdoor() -> None:
                         p2_either_coin,
                         p2_either_puzzle,
                         solve_viral_backdoor(
+                            hidden_puzzle,
                             Program.to(bytes32([0] * 32)),
-                            hidden_puzzle_reveal=hidden_puzzle,
+                            hidden=True,
                         ),
                     )
                 ],
@@ -458,8 +460,8 @@ async def test_viral_backdoor() -> None:
         brick_hash: bytes32 = bytes32([0] * 32)
         wrapped_brick_hash: bytes32 = create_viral_backdoor(
             hidden_puzzle_hash,
-            brick_hash,  # type: ignore
-        ).get_tree_hash_precalc(brick_hash)
+            brick_hash,
+        ).get_tree_hash()
         result = await client.push_tx(
             SpendBundle(
                 [
@@ -467,6 +469,7 @@ async def test_viral_backdoor() -> None:
                         p2_either_coin,
                         p2_either_puzzle,
                         solve_viral_backdoor(
+                            ACS,
                             Program.to([[51, brick_hash, 0]]),
                         ),
                     )
@@ -544,9 +547,10 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(coin_spends[1])
-        assert vc.construct_puzzle(ACS).get_tree_hash() == vc.coin.puzzle_hash
+        assert vc.construct_puzzle().get_tree_hash() == vc.coin.puzzle_hash
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
+        # Update the proofs with a proper announcement
         NEW_PROOF_HASH: bytes32 = bytes32([4] * 32)
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
@@ -577,5 +581,52 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
             )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(update_spend)
+
+        # Now do a mundane spend just to prove that the coin can be spent WITHOUT DID
+        _, mundane_spend, vc = vc.do_spend(
+            ACS,
+            Program.to([[51, ACS_PH, vc.coin.amount], vc.standard_magic_condition()]),
+        )
+        result = await client.push_tx(SpendBundle([mundane_spend], G2Element()))
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        if test_syncing:
+            vc = VerifiedCredential.get_next_from_coin_spend(mundane_spend)
+
+        # Yoink the coin away from the inner puzzle
+        new_did = (await client.get_coin_records_by_parent_ids([did.name()], include_spent_coins=False))[0].coin
+        expected_announcement, yoink_spend, vc = vc.activate_backdoor(ACS_PH)
+        result = await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        new_did,
+                        puzzle_for_singleton(
+                            launcher_id,
+                            ACS,
+                        ),
+                        solution_for_singleton(
+                            LineageProof(
+                                parent_name=did.parent_coin_info,
+                                inner_puzzle_hash=ACS_PH,
+                                amount=uint64(did.amount),
+                            ),
+                            uint64(new_did.amount),
+                            Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
+                        ),
+                    ),
+                    yoink_spend,
+                ],
+                G2Element(),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        if test_syncing:
+            vc = VerifiedCredential.get_next_from_coin_spend(yoink_spend)
+
+        assert len(await client.get_coin_records_by_names([vc.coin.name()], include_spent_coins=False)) > 0
+        # Add some assertions about the final state once its settled on

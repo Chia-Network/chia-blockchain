@@ -2,8 +2,9 @@
   (
     THIS_MOD_HASH
     HIDDEN_PUZZLE_HASH
-    INNER_PUZZLE
-    hidden_puzzle_reveal
+    INNER_PUZZLE_HASH
+    hidden
+    inner_or_hidden_puzzle_reveal
     inner_or_hidden_solution
   )
 
@@ -22,7 +23,7 @@
     (curry_hashes_inline THIS_MOD_HASH
       (sha256 1 THIS_MOD_HASH)
       (sha256 1 HIDDEN_PUZZLE_HASH)
-      new_inner_puzzle_hash
+      (sha256 1 new_inner_puzzle_hash)
     )
   )
 
@@ -44,11 +45,14 @@
     )
   )
 
-  (if hidden_puzzle_reveal
-      (assert (= HIDDEN_PUZZLE_HASH (sha256tree hidden_puzzle_reveal))
+  (if hidden
+      (assert (= HIDDEN_PUZZLE_HASH (sha256tree inner_or_hidden_puzzle_reveal))
         ; then
-        (a hidden_puzzle_reveal inner_or_hidden_solution)
+        (a inner_or_hidden_puzzle_reveal inner_or_hidden_solution)
       )
-      (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (a INNER_PUZZLE inner_or_hidden_solution))
+      (assert (= INNER_PUZZLE_HASH (sha256tree inner_or_hidden_puzzle_reveal))
+        ; then
+        (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (a inner_or_hidden_puzzle_reveal inner_or_hidden_solution))
+      )
   )
 )
