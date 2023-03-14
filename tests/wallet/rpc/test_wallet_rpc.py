@@ -899,24 +899,24 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
 
 @pytest.mark.asyncio
-async def test_check_ids(wallet_rpc_environment: WalletRpcTestEnvironment):
+async def test_check_ids_ownership(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
     await generate_funds(env.full_node.api, env.wallet_1, 5)
 
-    # DID
+    # DID, no type
     res = await wallet_1_rpc.create_new_did_wallet(amount=1, name="Profile 1")
     assert res["success"]
     did_id_0 = res["my_did"]
-    res = await wallet_1_rpc.check_ids([did_id_0], "DID")
+    res = await wallet_1_rpc.check_ids_ownership([{"id": did_id_0}])
     assert len(res) == 1
-    assert res[0] == decode_puzzle_hash(did_id_0).hex()
+    assert res["DID"][0] == did_id_0
 
     await farm_transaction_block(full_node_api, wallet_1_node)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=15)
-    # NFT
+    # NFT with type
     res = await wallet_1_rpc.create_new_nft_wallet(None)
     nft_wallet_id = res["wallet_id"]
     res = await wallet_1_rpc.mint_nft(
@@ -944,15 +944,15 @@ async def test_check_ids(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].nft_id.hex()
-    res = await wallet_1_rpc.check_ids([nft_id], "NFT")
+    res = await wallet_1_rpc.check_ids_ownership([{"id": nft_id, "type": "NFT"}])
     assert len(res) == 1
-    assert res[0] == nft_id
+    assert decode_puzzle_hash(res["NFT"][0]).hex() == nft_id
 
     # COIN
     coin_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
-    res = await wallet_1_rpc.check_ids([coin_id], "COIN")
+    res = await wallet_1_rpc.check_ids_ownership([{"id": coin_id}])
     assert len(res) == 1
-    assert res[0] == coin_id
+    assert res["COIN"][0] == coin_id
 
 
 @pytest.mark.asyncio
