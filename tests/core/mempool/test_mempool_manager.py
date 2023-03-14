@@ -430,23 +430,21 @@ mis = MempoolInclusionStatus
     "opcode,lock_value,expected_status,expected_error",
     [
         # SECONDS RELATIVE
-        (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS, None),
-        (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS, None),
-        # The rules allow spending an ephemeral coin with an ASSERT_SECONDS_RELATIVE 0 condition
-        (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS, None),
-        (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        (co.ASSERT_SECONDS_RELATIVE, 9, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-        (co.ASSERT_SECONDS_RELATIVE, 10, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, -2, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_SECONDS_RELATIVE, -1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_SECONDS_RELATIVE, 0, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         # HEIGHT RELATIVE
-        (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS, None),
-        (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS, None),
-        (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (co.ASSERT_HEIGHT_RELATIVE, 5, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (co.ASSERT_HEIGHT_RELATIVE, 6, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (co.ASSERT_HEIGHT_RELATIVE, 7, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (co.ASSERT_HEIGHT_RELATIVE, 10, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-        (co.ASSERT_HEIGHT_RELATIVE, 11, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        # the mempool rules don't allow relative height- or time conditions on
+        # ephemeral spends
+        (co.ASSERT_HEIGHT_RELATIVE, -2, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, -1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 0, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 1, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 5, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 7, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 10, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
+        (co.ASSERT_HEIGHT_RELATIVE, 11, mis.FAILED, Err.EPHEMERAL_RELATIVE_CONDITION),
         # HEIGHT ABSOLUTE
         (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS, None),
         (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS, None),
@@ -486,6 +484,7 @@ async def test_ephemeral_timelock(
         co.ASSERT_BEFORE_SECONDS_RELATIVE,
     ]:
         expected_error = Err.INVALID_CONDITION
+        expected_status = MempoolInclusionStatus.FAILED
 
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
@@ -495,8 +494,12 @@ async def test_ephemeral_timelock(
     sb = SpendBundle.aggregate([sb1, sb2])
     # We shouldn't have a record of this ephemeral coin
     assert await get_coin_record_for_test_coins(created_coin.name()) is None
-    _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
-    assert (status, error) == (expected_status, expected_error)
+    try:
+        _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
+        assert (status, error) == (expected_status, expected_error)
+    except ValidationError as e:
+        assert expected_status == mis.FAILED
+        assert expected_error == e.code
 
 
 def mk_item(coins: List[Coin], *, cost: int = 1, fee: int = 0) -> MempoolItem:

@@ -2047,6 +2047,17 @@ class TestBodyValidation:
             # enable softfork2 at height 0, to make it apply to this test
             constants = test_constants.replace(SOFT_FORK2_HEIGHT=0)
 
+            # after the softfork, we don't allow any birth assertions, not
+            # relative time locks on ephemeral coins. This test is only for
+            # ephemeral coins, so these cases should always fail
+            if opcode in [
+                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+                ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+                ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ]:
+                expected = ReceiveBlockResult.INVALID_BLOCK
+
         else:
             constants = test_constants
 

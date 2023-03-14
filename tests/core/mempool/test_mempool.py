@@ -372,23 +372,25 @@ class TestMempoolManager:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
+            # the mempool rules don't allow relative height- or time conditions on
+            # ephemeral spends
             (co.ASSERT_MY_BIRTH_HEIGHT, -1, mis.FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, mis.FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 5, mis.FAILED),
-            (co.ASSERT_MY_BIRTH_HEIGHT, 6, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 6, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, -1, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10049, mis.FAILED),
-            (co.ASSERT_MY_BIRTH_SECONDS, 10050, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10050, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10051, mis.FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS),
-            (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS),
-            (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, -2, mis.FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, -1, mis.FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, 0, mis.FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED),
-            (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS),
-            (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS),
-            (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING),
-            (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, mis.FAILED),
             # the absolute height and seconds tests require fresh full nodes to
             # run the test on. The fixture (one_node_one_block) creates a block,
             # then condition_tester2 creates another 3 blocks
