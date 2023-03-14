@@ -29,12 +29,6 @@ from chia.wallet.vc_wallet.vc_drivers import (
     create_did_tp,
     match_did_tp,
     solve_did_tp,
-    create_p2_puzzle_w_auth,
-    match_p2_puzzle_w_auth,
-    solve_p2_puzzle_w_auth,
-    create_did_puzzle_authorizer,
-    match_did_puzzle_authorizer,
-    solve_did_puzzle_authorizer,
     create_viral_backdoor,
     match_viral_backdoor,
     solve_viral_backdoor,
@@ -300,109 +294,6 @@ async def test_did_tp() -> None:
 
 
 @pytest.mark.asyncio
-async def test_p2_puzzle_w_auth() -> None:
-    async with sim_and_client() as (sim, client):
-        # Create it with mock singleton info
-        brick_hash: bytes32 = bytes32([0] * 32)
-        delegated_puzzle: Program = Program.to([4, [4, (1, 51), [4, 1, [1, None]]], None])  # return a CC with solved ph
-        did_auth_puz: Program = create_did_puzzle_authorizer(
-            MOCK_LAUNCHER_ID, MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH
-        )
-        assert match_did_puzzle_authorizer(uncurry_puzzle(did_auth_puz)) == (MOCK_LAUNCHER_ID,)
-        yoink_puz: Program = create_p2_puzzle_w_auth(did_auth_puz, delegated_puzzle)
-        assert match_p2_puzzle_w_auth(uncurry_puzzle(yoink_puz)) == (did_auth_puz, delegated_puzzle)
-
-        await sim.farm_block(yoink_puz.get_tree_hash())
-        yoink_coin: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([yoink_puz.get_tree_hash()], include_spent_coins=False)
-        )[0].coin
-
-        # Define parameters for next few spend attempts
-        provider_innerpuzhash: bytes32 = ACS_PH
-        my_coin_id: bytes32 = yoink_coin.name()
-        bad_data: bytes32 = bytes32([0] * 32)
-
-        # Try to yoink without any announcement
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            SpendBundle(
-                [
-                    CoinSpend(
-                        yoink_coin,
-                        yoink_puz,
-                        solve_p2_puzzle_w_auth(
-                            solve_did_puzzle_authorizer(
-                                bad_data,
-                                my_coin_id,
-                            ),
-                            Program.to(brick_hash),
-                        ),
-                    )
-                ],
-                G2Element(),
-            )
-        )
-        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-
-        # Create the "DID" now
-        await sim.farm_block(MOCK_SINGLETON.get_tree_hash())
-        did_coin: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([MOCK_SINGLETON.get_tree_hash()], include_spent_coins=False)
-        )[0].coin
-        did_authorization_spend: CoinSpend = CoinSpend(
-            did_coin,
-            MOCK_SINGLETON,
-            Program.to([[[62, std_hash(my_coin_id + delegated_puzzle.get_tree_hash())]]]),
-        )
-
-        # Try to pass the wrong coin id
-        result = await client.push_tx(
-            SpendBundle(
-                [
-                    CoinSpend(
-                        yoink_coin,
-                        yoink_puz,
-                        solve_p2_puzzle_w_auth(
-                            solve_did_puzzle_authorizer(
-                                provider_innerpuzhash,
-                                bad_data,
-                            ),
-                            Program.to(brick_hash),
-                        ),
-                    ),
-                    did_authorization_spend,
-                ],
-                G2Element(),
-            )
-        )
-        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
-
-        # Actually use announcement
-        successful_spend: SpendBundle = SpendBundle(
-            [
-                CoinSpend(
-                    yoink_coin,
-                    yoink_puz,
-                    solve_p2_puzzle_w_auth(
-                        solve_did_puzzle_authorizer(
-                            provider_innerpuzhash,
-                            my_coin_id,
-                        ),
-                        Program.to(brick_hash),
-                    ),
-                ),
-                did_authorization_spend,
-            ],
-            G2Element(),
-        )
-        result = await client.push_tx(successful_spend)
-        assert result == (MempoolInclusionStatus.SUCCESS, None)
-
-        await sim.farm_block()
-
-        assert len(await client.get_coin_records_by_puzzle_hashes([brick_hash], include_spent_coins=False)) > 0
-
-
-@pytest.mark.asyncio
 async def test_viral_backdoor() -> None:
     async with sim_and_client() as (sim, client):
         # Setup and farm the puzzle
@@ -623,29 +514,6 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                 G2Element(),
             )
         )
-        temp = SpendBundle(
-            [
-                CoinSpend(
-                    new_did,
-                    puzzle_for_singleton(
-                        launcher_id,
-                        ACS,
-                    ),
-                    solution_for_singleton(
-                        LineageProof(
-                            parent_name=did.parent_coin_info,
-                            inner_puzzle_hash=ACS_PH,
-                            amount=uint64(did.amount),
-                        ),
-                        uint64(new_did.amount),
-                        Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
-                    ),
-                ),
-                yoink_spend,
-            ],
-            G2Element(),
-        )
-        breakpoint()
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         # if test_syncing:
