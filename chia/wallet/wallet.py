@@ -372,7 +372,8 @@ class Wallet:
             change = max(0, change)
         if change < 0 < fee:
             fee_coins = await self.select_coins(
-                uint64(fee),
+                # change already includes fee amount
+                uint64(abs(change)),
                 excluded_coin_amounts=exclude_coin_amounts,
                 exclude=([] if exclude_coins is None else list(exclude_coins)) + list(coins or []),
             )
@@ -380,8 +381,7 @@ class Wallet:
             spend_value = sum([coin.amount for coin in coins])
             self.log.info(f"Updated spend_value is {spend_value} and total_amount is {total_amount}")
             change = spend_value - total_amount
-
-        assert change >= 0
+        assert change >= 0, f"change is negative: {change}"
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}

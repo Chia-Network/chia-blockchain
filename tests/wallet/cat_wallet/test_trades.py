@@ -799,6 +799,6 @@ class TestCATTrades:
         assert trade_make is not None
         peer = wallet_node_taker.get_full_node_peer()
         offer = Offer.from_bytes(trade_make.offer)
-        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
+        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(1000000000000))
         await full_node.process_transaction_records(records=txs1)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
