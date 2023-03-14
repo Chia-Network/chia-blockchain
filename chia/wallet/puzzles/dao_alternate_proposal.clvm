@@ -236,32 +236,33 @@
 
   )
 
-  (if soft_close_length
-    (if self_destruct_flag
-      ; we're deleting a bad proposal which hasn't received votes in self_destruct_time
-      (list
-        (list CREATE_COIN dao_finished_state ONE)
-	(list ASSERT_SECONDS_RELATIVE self_destruct_time)
-	(list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
-	  (sha256
-	    (calculate_treasury_puzzlehash
-	      (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-	      TREASURY_MOD_HASH
-	      vote_amounts_or_proposal_validator_hash
-	      vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
-	      soft_close_length
-	      lockup_innerpuzhashes_or_attendance_required
-	      previous_votes_or_pass_margin
-	      self_destruct_time
-	    )
-	    (sha256 previous_votes_or_pass_margin self_destruct_time)
+
+  (if self_destruct_flag
+    (list
+      (list CREATE_COIN dao_finished_state ONE)
+      (list ASSERT_SECONDS_RELATIVE self_destruct_time)
+      (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
+	(sha256
+	  (calculate_treasury_puzzlehash
+	    (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+	    TREASURY_MOD_HASH
+	    vote_amounts_or_proposal_validator_hash
+	    vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+	    soft_close_length
+	    lockup_innerpuzhashes_or_attendance_required
+	    previous_votes_or_pass_margin
+	    self_destruct_time
 	  )
+	  (sha256 previous_votes_or_pass_margin self_destruct_time)
 	)
       )
-
-      ; we are trying to close
-      (if (any (> lockup_innerpuzhashes_or_attendance_required TOTAL_VOTES) (> (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin) YES_VOTES))
-	;; we're closing a failed proposal
+    )
+    ; We're not trying to self destruct
+    ; Check whether we have a soft close to either try closing the proposal or adding votes
+    (if soft_close_length
+      ; We are trying to close the proposal, so check whether it passed or failed
+      (if (all (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin)))
+        ; Passed
 	(list
 	  (list CREATE_COIN dao_finished_state ONE)
 	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
@@ -296,94 +297,90 @@
 	  )
 	  (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_ids_or_proposal_timelock_length)
 	)
-	; we're trying to close ourself due to
-	; TODO: add attendance_required and pass_percentage into solution
-	(if (all (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin)))
-	  (x)  ; we've passed, cannot be shut down
-	  (list
-	    (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
-	      (sha256
-		(calculate_treasury_puzzlehash
-		  (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-		  TREASURY_MOD_HASH
-		  vote_amounts_or_proposal_validator_hash
-		  vote_info_or_money_receiver_hash
-		  vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+	; Failed
+	(list
+	  (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
+	    (sha256
+	      (calculate_treasury_puzzlehash
+		(c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+		TREASURY_MOD_HASH
+		vote_amounts_or_proposal_validator_hash
+		vote_info_or_money_receiver_hash
+		vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+		soft_close_length
+		attendance_required
+		proposal_pass_percentage
+		self_destruct_time
+	      )
+	      (sha256tree
+		(list
+		  vote_coin_ids_or_proposal_timelock_length
 		  soft_close_length
 		  attendance_required
 		  proposal_pass_percentage
-		  self_destruct_time
-		)
-		(sha256tree
-		  (list
-		    vote_coin_ids_or_proposal_timelock_length
-		    soft_close_length
-		    attendance_required
-		    proposal_pass_percentage
-		  )
 		)
 	      )
 	    )
-	    (list
-	      ASSERT_PUZZLE_ANNOUNCEMENT
-	      (sha256  ; external timer
-		(calculate_timer_puzhash
-		  PROPOSAL_TIMER_MOD_HASH
-		  PROPOSAL_MOD_HASH
-		  CAT_TAIL_HASH
-		  SINGLETON_STRUCT
-		  TREASURY_ID
-		)
-		(f (r SINGLETON_STRUCT))
-	      )
-	    )
-	    (list CREATE_COIN dao_finished_state ONE)
 	  )
+	  (list
+	    ASSERT_PUZZLE_ANNOUNCEMENT
+	    (sha256  ; external timer
+	      (calculate_timer_puzhash
+		PROPOSAL_TIMER_MOD_HASH
+		PROPOSAL_MOD_HASH
+		CAT_TAIL_HASH
+		SINGLETON_STRUCT
+		TREASURY_ID
+	      )
+	      (f (r SINGLETON_STRUCT))
+	    )
+	  )
+	  (list CREATE_COIN dao_finished_state ONE)
 	)
       )
-    )
-
-    ; We are adding votes to this proposal. vote_info indicates a YES or NO vote.
-    (loop_over_vote_coins
-      SINGLETON_STRUCT
-      CAT_MOD_HASH
-      CAT_TAIL_HASH
-      LOCKUP_MOD_HASH
-      PROPOSAL_MOD_HASH
-      PROPOSAL_TIMER_MOD_HASH
-      TREASURY_MOD_HASH
-      LOCKUP_MOD_HASH
-      TREASURY_ID
-      YES_VOTES
-      TOTAL_VOTES
-      SPEND_OR_UPDATE_FLAG
-      PROPOSED_PUZ_HASH
-      vote_coin_ids_or_proposal_timelock_length
-      vote_amounts_or_proposal_validator_hash
-      previous_votes_or_pass_margin
-      lockup_innerpuzhashes_or_attendance_required
-      vote_info_or_money_receiver_hash
-      0
-      (if (any YES_VOTES TOTAL_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
-        ()
-        (c
-          (list
-            CREATE_COIN
-            (calculate_timer_puzhash
-              PROPOSAL_TIMER_MOD_HASH
-              PROPOSAL_MOD_HASH
-              CAT_TAIL_HASH
-              SINGLETON_STRUCT
-              TREASURY_ID
-            )
-            0
-          )
-          (if (= (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH)  ; reveal the proposed code on chain with the first vote
-            ()
-            (x)
-          )
-        )
-      )
+    
+      ; no soft_close_length so run the add votes path
+      (loop_over_vote_coins
+	SINGLETON_STRUCT
+	CAT_MOD_HASH
+	CAT_TAIL_HASH
+	LOCKUP_MOD_HASH
+	PROPOSAL_MOD_HASH
+	PROPOSAL_TIMER_MOD_HASH
+	TREASURY_MOD_HASH
+	LOCKUP_MOD_HASH
+	TREASURY_ID
+	YES_VOTES
+	TOTAL_VOTES
+	SPEND_OR_UPDATE_FLAG
+	PROPOSED_PUZ_HASH
+	vote_coin_ids_or_proposal_timelock_length
+	vote_amounts_or_proposal_validator_hash
+	previous_votes_or_pass_margin
+	lockup_innerpuzhashes_or_attendance_required
+	vote_info_or_money_receiver_hash
+	0
+	(if (any YES_VOTES TOTAL_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
+	  ()
+	  (c
+	    (list
+	      CREATE_COIN
+	      (calculate_timer_puzhash
+		PROPOSAL_TIMER_MOD_HASH
+		PROPOSAL_MOD_HASH
+		CAT_TAIL_HASH
+		SINGLETON_STRUCT
+		TREASURY_ID
+	      )
+	      0
+	    )
+	    (if (= (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH)  ; reveal the proposed code on chain with the first vote
+	      ()
+	      (x)
+	    )
+	  )
+	)
+      ) 
     )
   )
 )
