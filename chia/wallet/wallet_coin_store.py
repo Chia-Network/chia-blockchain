@@ -181,19 +181,6 @@ class WalletCoinStore:
             rows = await conn.execute_fetchall("SELECT * FROM coin_record WHERE spent_height=0")
         return set(self.coin_record_from_row(row) for row in rows)
 
-    async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
-        """Returns set of all CoinRecords."""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT coin_name from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
-                (
-                    check_height,
-                    check_height,
-                ),
-            )
-
-        return set(bytes32.fromhex(row[0]) for row in rows)
-
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""
