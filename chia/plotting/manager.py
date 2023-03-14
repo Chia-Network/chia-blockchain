@@ -38,6 +38,7 @@ class PlotManager:
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
+    max_compression_level_allowed: int
 
     def __init__(
         self,
@@ -73,9 +74,18 @@ class PlotManager:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
 
-    def configure_decompresser(self, context_count: int, thread_count: int, disable_cpu_affinity: bool) -> None:
+    def configure_decompresser(
+        self,
+        context_count: int,
+        thread_count: int,
+        disable_cpu_affinity: bool,
+        max_compression_level_allowed: int,
+    ) -> None:
         decompresser_context_queue = getattr(chiapos, "decompresser_context_queue")
-        decompresser_context_queue.init(context_count, thread_count, disable_cpu_affinity)
+        decompresser_context_queue.init(
+            context_count, thread_count, disable_cpu_affinity, max_compression_level_allowed
+        )
+        self.max_compression_level_allowed = max_compression_level_allowed
 
     def reset(self) -> None:
         with self:
@@ -284,12 +294,23 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                    if (
+                        prover.get_size() >= 30
+                        and stat_info.st_size < 0.98 * expected_size
+                        and prover.get_compresion_level() == 0
+                    ):
                         log.warning(
                             f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
                             f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                         )
-                        # return None
+                        return None
+
+                    if prover.get_compresion_level() > self.max_compression_level_allowed:
+                        log.warning(
+                            f"Not farming plot {file_path}. Plot compression level: {prover.get_compresion_level()}, "
+                            f"max compression level allowed: {self.max_compression_level_allowed}."
+                        )
+                        return None
 
                     cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)

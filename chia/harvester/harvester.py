@@ -86,7 +86,17 @@ class Harvester:
         if thread_count == 0:
             thread_count = multiprocessing.cpu_count() // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", False)
-        self.plot_manager.configure_decompresser(context_count, thread_count, disable_cpu_affinity)
+        max_compression_level_allowed = config.get("max_compression_level_allowed", 7)
+        try:
+            self.plot_manager.configure_decompresser(
+                context_count,
+                thread_count,
+                disable_cpu_affinity,
+                max_compression_level_allowed,
+            )
+        except Exception as e:
+            self.log.error(f"{type(e)} {e} while configuring decompresser.")
+            raise
 
     async def _start(self) -> None:
         self._refresh_lock = asyncio.Lock()
