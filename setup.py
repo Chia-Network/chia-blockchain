@@ -11,7 +11,7 @@ dependencies = [
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
-    "chiapos==1.0.12b7",  # proof of space
+    "chiapos==1.0.12b8",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.4",
