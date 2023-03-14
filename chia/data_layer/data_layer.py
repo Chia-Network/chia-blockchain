@@ -280,10 +280,12 @@ class DataLayer:
                 root = await self.data_store.get_tree_root(tree_id=tree_id)
             except asyncio.CancelledError:
                 raise
-            except Exception:
+            except Exception as e:
+                self.log.info(f"exception while checking for tree root: {tree_id}: {type(e).__name__}: {e}")
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
             if singleton_record is None:
+                self.log.info(f"Don't have singleton record for: {tree_id}")
                 return
             if root is None:
                 pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
@@ -291,18 +293,18 @@ class DataLayer:
                     if pending_root.generation == 0 and pending_root.node_hash is None:
                         await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                         await self.data_store.clear_pending_roots(tree_id=tree_id)
+                        self.log.info(f"pending generation is original empty generation: {tree_id}")
                         return
-                    else:
-                        root = None
             if root is None:
-                self.log.info(f"Don't have pending root for {tree_id}.")
+                self.log.info(f"Don't have pending root for: {tree_id}")
                 return
             if root.generation == singleton_record.generation:
+                self.log.info(f"root generation caught up with singleton record generation: {tree_id}")
                 return
             if root.generation > singleton_record.generation:
                 self.log.info(
-                    f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
-                    "Maybe we're doing a batch update."
+                    f"Local root ahead of chain root, maybe we're doing a batch update:"
+                    + f" {root.generation} {singleton_record.generation}"
                 )
                 return
             wallet_history = await self.wallet_rpc.dl_history(
@@ -330,6 +332,7 @@ class DataLayer:
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                     await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
             await self.data_store.clear_pending_roots(tree_id=tree_id)
+            self.log.info(f"confirmation status updated: {tree_id}")
 
     async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
