@@ -67,6 +67,7 @@ class PlotManager:
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback
         self._initial = True
+        self.max_compression_level_allowed = 0
 
     def __enter__(self):
         self._lock.acquire()
