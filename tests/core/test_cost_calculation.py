@@ -138,10 +138,11 @@ class TestCostCalculation:
         )
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(pk))
         disassembly = binutils.disassemble(puzzle)
+        unknown_opcode = "15"
         program = SerializedProgram.from_bytes(
             binutils.assemble(
                 f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
-                f"  (() (q . ((48 '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
+                f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
             ).as_bin()
         )
         generator = BlockGenerator(program, [], [])

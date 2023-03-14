@@ -326,6 +326,7 @@ class Wallet:
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> List[CoinSpend]:
         """
         Generates an unsigned transaction in form of List(Puzzle, Solutions)
@@ -343,7 +344,14 @@ class Wallet:
             for prim in primaries:
                 primaries_amount += prim["amount"]
             total_amount = amount + fee + primaries_amount
-
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         total_balance = await self.get_spendable_balance()
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
@@ -420,7 +428,15 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": decorated_target_puzhash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
+                    if reuse_puzhash:
+                        change_puzzle_hash: bytes32 = coin.puzzle_hash
+                        for primary in primaries:
+                            if change_puzzle_hash == primary["puzzlehash"] and change == primary["amount"]:
+                                # We cannot create two coins has same id, create a new puzhash for the change:
+                                change_puzzle_hash = await self.get_new_puzzlehash()
+                                break
+                    else:
+                        change_puzzle_hash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -504,6 +520,7 @@ class Wallet:
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -533,6 +550,7 @@ class Wallet:
             exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_coins,
             puzzle_decorator_override=puzzle_decorator_override,
+            reuse_puzhash=reuse_puzhash,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
@@ -575,15 +593,27 @@ class Wallet:
         )
 
     async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
+        self,
+        fee: uint64,
+        announcement_to_assert: Optional[Announcement] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         chia_coins = await self.select_coins(fee)
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         chia_tx = await self.generate_signed_transaction(
             uint64(0),
-            (await self.get_new_puzzlehash()),
+            (await self.get_puzzle_hash(not reuse_puzhash)),
             fee=fee,
             coins=chia_coins,
             coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+            reuse_puzhash=reuse_puzhash,
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx

@@ -568,7 +568,7 @@ class DIDWallet:
     def get_name(self):
         return self.wallet_info.name
 
-    async def create_update_spend(self, fee: uint64 = uint64(0)):
+    async def create_update_spend(self, fee: uint64 = uint64(0), reuse_puzhash: Optional[bool] = None):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(uint64(1))
@@ -633,7 +633,7 @@ class DIDWallet:
         if fee > 0:
             announcement_to_make = coin.name()
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
-                fee, Announcement(coin.name(), announcement_to_make)
+                fee, Announcement(coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
             announcement_to_make = None
@@ -664,7 +664,13 @@ class DIDWallet:
 
         return spend_bundle
 
-    async def transfer_did(self, new_puzhash: bytes32, fee: uint64, with_recovery: bool) -> TransactionRecord:
+    async def transfer_did(
+        self,
+        new_puzhash: bytes32,
+        fee: uint64,
+        with_recovery: bool,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> TransactionRecord:
         """
         Transfer the current DID to another owner
         :param new_puzhash: New owner's p2_puzzle
@@ -731,7 +737,7 @@ class DIDWallet:
         if fee > 0:
             announcement_to_make = coin.name()
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
-                fee, Announcement(coin.name(), announcement_to_make)
+                fee, Announcement(coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
             chia_tx = None

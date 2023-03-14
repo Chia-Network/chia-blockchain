@@ -457,7 +457,8 @@ async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulato
         yield _
 
 
-@pytest.fixture(scope="function", params=[True, False])
+# soft-fork 2 is disabled (for now)
+@pytest.fixture(scope="function", params=[False])
 def enable_softfork2(request):
     return request.param
 

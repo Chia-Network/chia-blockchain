@@ -10,7 +10,7 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
+from chia.plotting.util import Params, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,
@@ -51,8 +51,8 @@ class PlotKeysResolver:
         pool_contract_address: Optional[str],
         root_path: Path,
         log: logging.Logger,
-        connect_to_daemon=False,
-    ):
+        connect_to_daemon: bool = False,
+    ) -> None:
         self.farmer_public_key = farmer_public_key
         self.alt_fingerprint = alt_fingerprint
         self.pool_public_key = pool_public_key
@@ -141,7 +141,7 @@ async def resolve_plot_keys(
     pool_contract_address: Optional[str],
     root_path: Path,
     log: logging.Logger,
-    connect_to_daemon=False,
+    connect_to_daemon: bool = False,
 ) -> PlotKeys:
     return await PlotKeysResolver(
         farmer_public_key, alt_fingerprint, pool_public_key, pool_contract_address, root_path, log, connect_to_daemon
@@ -149,10 +149,10 @@ async def resolve_plot_keys(
 
 
 async def create_plots(
-    args,
+    args: Params,
     keys: PlotKeys,
     use_datetime: bool = True,
-    test_private_keys: Optional[List] = None,
+    test_private_keys: Optional[List[PrivateKey]] = None,
 ) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
