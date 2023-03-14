@@ -26,7 +26,7 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist, "fee": fee})
         return response
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
+    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]=None) -> Dict[str, Any]:
         request: Dict[str, Any] = {"id": store_id.hex()}
         if root_hash is not None:
             request["root_hash"] = root_hash.hex()
