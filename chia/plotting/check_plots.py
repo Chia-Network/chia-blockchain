@@ -60,7 +60,13 @@ def check_plots(
     if thread_count == 0:
         thread_count = multiprocessing.cpu_count() // 2
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
-    plot_manager.configure_decompresser(context_count, thread_count, disable_cpu_affinity)
+    max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
+    plot_manager.configure_decompresser(
+        context_count,
+        thread_count,
+        disable_cpu_affinity,
+        max_compression_level_allowed,
+    )
 
     if num is not None:
         if num == 0:
