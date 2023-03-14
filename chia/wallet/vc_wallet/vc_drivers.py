@@ -226,21 +226,26 @@ def solve_std_vc_backdoor(
     coin_id: bytes32,
     new_metadata: Program,
 ) -> Program:
-    return Program.to([
-        Program.to(launcher_id).get_tree_hash(),
-        metadata_hash,
-        tp_hash,
-        STANDARD_BRICK_PUZZLE_HASH_HASH,
-        inner_puzzle_hash,
-        amount,
-        ownership_lineage_proof.to_program(),
-        Program.to(ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
-        Program.to([
-            provider_innerpuzhash,
-            coin_id,
-            new_metadata,
-        ])
-    ])
+    solution: Program = Program.to(
+        [
+            Program.to(launcher_id).get_tree_hash(),
+            metadata_hash,
+            tp_hash,
+            STANDARD_BRICK_PUZZLE_HASH_HASH,
+            inner_puzzle_hash,
+            amount,
+            ownership_lineage_proof.to_program(),
+            Program.to(ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
+            Program.to(
+                [
+                    provider_innerpuzhash,
+                    coin_id,
+                    new_metadata,
+                ]
+            ),
+        ]
+    )
+    return solution
 
 
 OWNERSHIP_LAYER_LAUNCHER: Program = EMPTY_METADATA_LAUNCHER_ENFORCER.curry(
@@ -608,7 +613,7 @@ class VerifiedCredential:
                             Program.to(self.proof_hash).get_tree_hash(),
                             self.construct_transfer_program().get_tree_hash(),
                             self.inner_puzzle_hash,
-                            self.coin.amount,
+                            uint64(self.coin.amount),
                             self.ownership_lineage_proof,
                             provider_innerpuzhash,
                             self.coin.name(),
@@ -621,9 +626,7 @@ class VerifiedCredential:
         )
 
         expected_announcement: bytes32 = std_hash(
-            self.coin.name() +
-            Program.to(None).get_tree_hash() +
-            ACS_TRANSFER_PROGRAM.get_tree_hash()
+            self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash()
         )
 
         return (
