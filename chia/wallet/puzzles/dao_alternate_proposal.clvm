@@ -136,6 +136,7 @@
           (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
           (sha256 ONE PROPOSAL_LENGTH)
           PROPOSAL_VALIDATOR_HASH
+	  (sha256 ONE TREASURY_MOD_HASH)
       )
     )
   )

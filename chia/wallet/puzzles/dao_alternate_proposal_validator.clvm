@@ -93,7 +93,8 @@
     (assert
       (= delegated_puzzle_hash
          (calculate_safe_payment_hash SPEND_P2_SINGLETON_MOD_HASH (r (r (r conditions))) spend_amount p2_singleton_puzhash))
-      conditions
+      ;; don't output any conditions, they will come from the p2_singleton spends
+      ()
     )
   )
 
@@ -105,7 +106,7 @@
       	  ; If there are > 1 CREATE_COIN conditions then ASSERT_MY_AMOUNT will fail
       	  ; If the amount is even then the singleton top layer will fail.
       	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
-      	  (check_update_conditions SINGLETON_STRUCT (r conditions) 1 (c (f conditions) output))
+      	  (check_update_conditions SINGLETON_STRUCT (r conditions) (c (f conditions) output))
       	)
       	(if
       	  (any ; block both types of announcement in the update case

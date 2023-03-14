@@ -1,5 +1,6 @@
 (mod
   (
+    TREASURY_MOD_HASH
     PROPOSAL_VALIDATOR
     PROPOSAL_LENGTH
     PROPOSAL_SOFTCLOSE_LENGTH
@@ -16,6 +17,21 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
+  (defun recreate_self (TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
+    (list CREATE_COIN
+      (puzzle-hash-of-curried-function TREASURY_MOD_HASH
+          (sha256 ONE PROPOSAL_SELF_DESTRUCT_TIME)
+          (sha256 ONE PASS_MARGIN)
+          (sha256 ONE ATTENDANCE_REQUIRED)
+          (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
+          (sha256 ONE PROPOSAL_LENGTH)
+          (sha256tree PROPOSAL_VALIDATOR)
+	  (sha256 ONE TREASURY_MOD_HASH)
+      )
+      1 ; we're assuming treasury will always have 1 mojo in amount
+    )
+  )
+
   (if (= proposal_or_oracle_flag 'p')
     ; if we're checking a proposal
     (assert (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
@@ -27,14 +43,18 @@
 	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME))
 	  (c
 	    (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list spend_or_update_flag delegated_puzzle_hash announcement_args))))
-	    (a
-	      PROPOSAL_VALIDATOR
-	      (list
-		ATTENDANCE_REQUIRED
-		PASS_MARGIN
-		proposal_announcement
-		proposal_validator_solution
-		(a delegated_puzzle_reveal delegated_solution)
+	    (c
+	      ; The validator does not return conditions so we recreate the treasury
+	      (recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
+	      (a
+		PROPOSAL_VALIDATOR
+		(list
+		  ATTENDANCE_REQUIRED
+		  PASS_MARGIN
+		  proposal_announcement
+		  proposal_validator_solution
+		  (a delegated_puzzle_reveal delegated_solution)
+		)
 	      )
 	    )
 	  )
@@ -48,6 +68,7 @@
         (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME))
 	; TODO: Add sensible limit to prevent spamming of oracle spend. should this be configurable?
 	(list ASSERT_HEIGHT_RELATIVE 10)
+	(recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
       )
       (x) ; invalid proposal_or_oracle_flag
     )

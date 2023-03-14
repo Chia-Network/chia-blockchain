@@ -18,9 +18,7 @@ DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_alternate_proposal_timer.clvm")
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_alternate_proposal_validator.clvm")
-DAO_MONEY_RECEIVER_MOD: Program = load_clvm("dao_alternate_money_receiver.clvm")
 DAO_TREASURY_MOD: Program = load_clvm("dao_alternate_treasury.clvm")
-# P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton.clvm")
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
@@ -243,13 +241,18 @@ def test_validator() -> None:
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
 
     treasury_puzzle_hash = Program.to("treasury").get_tree_hash()
-    treasury_amount = 401
-    delegated_puzzle = Program.to(1)
-    delegated_conditions = [[51, 0xcafef00d, 40], [51, 0xdabbad00, 60]]
-    spend_amount = 100
-    safe_puzzle = DAO_SAFE_PAYMENT_MOD.curry(singleton_struct, delegated_conditions, spend_amount)
-    safe_puzzle_hash = safe_puzzle.get_tree_hash()
-    output_conds = safe_puzzle.run(Program.to([treasury_puzzle_hash, treasury_amount]))
+
+    p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
+    p2_singleton_puzhash = p2_singleton.get_tree_hash()
+    parent_id = Program.to("parent").get_tree_hash()
+    locked_amount = 100000
+    spend_amount = 1100
+    conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
+
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
+    spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
+    output_conds = spend_p2_singleton.run(spend_p2_singleton_solution)
 
     proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
         singleton_struct,
@@ -259,8 +262,10 @@ def test_validator() -> None:
         DAO_LOCKUP_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
         CAT_TAIL_HASH,
-        DAO_SAFE_PAYMENT_MOD.get_tree_hash(),
+        SPEND_P2_SINGLETON_MOD.get_tree_hash(),
+        p2_singleton_puzhash,
     )
+
     # (announcement_source delegated_puzzle_hash announcement_args)
     # (
     #   proposal_id
@@ -282,18 +287,18 @@ def test_validator() -> None:
         950,
         1200,
         's',
-        safe_puzzle_hash,
+        spend_p2_singleton_puzhash,
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
     solution = Program.to([
         1000,
         5100,
-        [full_proposal.get_tree_hash(), safe_puzzle_hash, 0, 's'],
+        [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
         [singleton_id, 1200, 950, spend_amount],
-        output_conds
+        output_conds.as_python()
     ])
     conds: Program = proposal_validator.run(solution)
-    assert len(conds.as_python()) == 3 + len(delegated_conditions)
+    assert len(conds.as_python()) == 0 # validator doesn't output conditions for spend
 
     # test update
     proposal: Program = DAO_PROPOSAL_MOD.curry(
@@ -312,35 +317,16 @@ def test_validator() -> None:
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
     solution = Program.to([
+        1000,
+        5100,
         [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 'u'],
         [singleton_id, 1200, 950, spend_amount],
-        [[51, 0xcafe00d, 40]]
+        [[51, 0xcafe00d, spend_amount]]
     ])
     conds: Program = proposal_validator.run(solution)
-    cds = conds.as_python()
     assert len(conds.as_python()) == 2
 
     return
-
-
-def test_receiver() -> None:
-    # MINIMUM_INPUT_AMOUNT  ; this is a minimum of -1 to prevent money being removed, but can be increased to prevent DoS/spam
-    # MY_SINGLETON_STRUCT
-    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
-
-    singleton_struct: Program = Program.to(
-        (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
-    )
-    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, singleton_struct, 1)
-    # my_amount
-    # my_treasury_puzzle_hash
-    # amount_change
-    # input_coins
-    solution = Program.to([201, 0xCAFEF00D, 20, [Program.to("coin_id").get_tree_hash()]])
-    conds: Program = money_receiver.run(solution)
-    assert len(conds.as_python()) == 6
-    return
-
 
 def test_spend_p2_singleton() -> None:
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
@@ -408,8 +394,9 @@ def test_spend_p2_singleton() -> None:
         [singleton_id, total_votes, yes_votes, spend_amount],
         output_conditions
     ])
-    conds = proposal_validator.run(validator_solution).as_python()
-    assert output_conditions == conds
+    conds = proposal_validator.run(validator_solution)
+    assert conds.as_python() == b""
+    
 
 
 def test_treasury() -> None:
@@ -449,6 +436,7 @@ def test_treasury() -> None:
     # PROPOSAL_SELF_DESTRUCT_TIME
     self_destruct_time = 1209600 # 2 weeks
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
+        DAO_TREASURY_MOD.get_tree_hash(),
         proposal_validator,
         40,
         5,
@@ -486,7 +474,7 @@ def test_treasury() -> None:
         ]
     )
     conds: Program = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 2
+    assert len(conds.as_python()) == 3
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     # proposal_validator_solution
     # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
@@ -501,7 +489,7 @@ def test_treasury() -> None:
         ]
     )
     conds = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 6 + len(conditions)
+    assert len(conds.as_python()) == 4
 
 
 def test_lockup() -> None:
@@ -592,12 +580,25 @@ def test_proposal_innerpuz() -> None:
     attendance_required: uint64 = uint64(1000)
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
+    self_destruct_time = 1209600 # 2 weeks
 
     # Setup the treasury
     treasury_singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     treasury_singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (treasury_singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
+    treasury_amount = 1
+
+    # setup the p2_singleton
+    p2_singleton = P2_SINGLETON_MOD.curry(treasury_singleton_struct)
+    p2_singleton_puzhash = p2_singleton.get_tree_hash()
+    parent_id = Program.to("parent").get_tree_hash()
+    locked_amount = 100000
+    spend_amount = 1100
+    conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
+    spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
 
     proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
         treasury_singleton_struct,
@@ -607,43 +608,35 @@ def test_proposal_innerpuz() -> None:
         DAO_LOCKUP_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
         CAT_TAIL_HASH,
-        DAO_SAFE_PAYMENT_MOD.get_tree_hash(),
-        attendance_required,
-        proposal_pass_percentage,
+        SPEND_P2_SINGLETON_MOD.get_tree_hash(),
+        p2_singleton_puzhash,
     )
-    money_receiver = DAO_MONEY_RECEIVER_MOD.curry(-1, treasury_singleton_struct, 1)
+
     # PROPOSAL_VALIDATOR
-    # MONEY_RECEIVER
     # PROPOSAL_LENGTH
     # PROPOSAL_SOFTCLOSE_LENGTH
+    # ATTENDANCE_REQUIRED
+    # PASS_MARGIN
+    # PROPOSAL_SELF_DESTRUCT_TIME
     treasury_puz: Program = DAO_TREASURY_MOD.curry(
+        DAO_TREASURY_MOD.get_tree_hash(),
         proposal_validator,
-        money_receiver,
         40,
         5,
+        1000,
+        5100,
+        self_destruct_time
     )
 
     full_treasury_puz = SINGLETON_MOD.curry(treasury_singleton_struct, treasury_puz)
 
     treasury_puzzle_hash = treasury_puz.get_tree_hash()
-    treasury_amount = 401
-    delegated_puzzle = Program.to(1)
-    delegated_conditions = [[51, 0xcafef00d, 100], [51, 0xdabbad00, 100]]
-    spend_amount = 200
-    safe_puzzle = DAO_SAFE_PAYMENT_MOD.curry(treasury_singleton_struct, delegated_conditions, spend_amount)
-    safe_puzzle_hash = safe_puzzle.get_tree_hash()
-    safe_puzzle_solution = Program.to([treasury_puzzle_hash, treasury_amount])
 
     # Setup Proposal
     proposal_singleton_id: Program = Program.to("p_singleton_id").get_tree_hash()
     proposal_singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (proposal_singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
-
-    # P2_PH = Program.to("p2_ph").get_tree_hash()
-    # P2_CONDS = [[51, P2_PH, 200]]
-
-    # proposed_innerpuz = P2_CONDITIONS_MOD.curry(P2_CONDS)
 
     proposal: Program = DAO_PROPOSAL_MOD.curry(
         proposal_singleton_struct,
@@ -657,7 +650,7 @@ def test_proposal_innerpuz() -> None:
         950,
         1200,
         's',
-        safe_puzzle_hash,
+        spend_p2_singleton_puzhash,
     )
     full_proposal = SINGLETON_MOD.curry(proposal_singleton_struct, proposal)
 
@@ -669,12 +662,15 @@ def test_proposal_innerpuz() -> None:
     # delegated_solution  ; this is not secure unless the delegated puzzle secures it
     treasury_solution: Program = Program.to(
         [
-            [full_proposal.get_tree_hash(), safe_puzzle_hash, 0, 's'],
+            "p",
+            [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
             [proposal_singleton_id, 1200, 950, spend_amount],
-            safe_puzzle,
-            safe_puzzle_solution,
+            spend_p2_singleton,
+            spend_p2_singleton_solution,
         ]
     )
+
+    conds = treasury_puz.run(treasury_solution)
 
     # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -689,43 +685,43 @@ def test_proposal_innerpuz() -> None:
     proposal_solution = Program.to(
         [
             proposal_validator.get_tree_hash(),
-            money_receiver.get_tree_hash(),
+            Program.to("receiver").get_tree_hash(), # vote_info_or_money_receiver_hash - don't have money receiver any more
             40,
             proposal_pass_percentage,
             1000,
             0,
             5,
+            self_destruct_time,
+            0,
         ]
     )
+
     # lineage_proof my_amount inner_solution
     lineage_proof = [treasury_singleton_id, treasury_puz.get_tree_hash(), treasury_amount]
-    full_treasury_solution = Program.to([lineage_proof, treasury_amount+spend_amount, treasury_solution])
+    full_treasury_solution = Program.to([lineage_proof, treasury_amount, treasury_solution])
     full_proposal_solution = Program.to([lineage_proof, 1, proposal_solution])
 
     # Run the puzzles
     treasury_conds: Program = full_treasury_puz.run(full_treasury_solution)
     proposal_conds: Program = full_proposal.run(full_proposal_solution)
-    # breakpoint()
     # Check the A_P_As from treasury match the C_P_As from the proposal
     cpa = b">"
     apa = b"?"
     cpas = []
+    apas = []
     for cond in proposal_conds.as_python():
         if cond[0] == cpa:
             cpas.append(std_hash(full_prop_ph + cond[1]))
     for cond in treasury_conds.as_python():
         if cond[0] == apa:
+            apas.append(cond)
             assert bytes32(cond[1]) in cpas
 
-    amps = []
+
     ccs = []
     for cond in treasury_conds.as_python():
         if cond[0] == b"3":
-            if cond[2] == treasury_amount - spend_amount:
-                assert cond[1] == full_treasury_puz.get_tree_hash()
             ccs.append(cond)
-        if cond[0] == b"H":
-            amps.append(cond[1])
-    assert len(ccs) == 1 + len(delegated_conditions)
-    assert len(amps) == 1
-    assert amps[0] == full_treasury_puz.get_tree_hash()
+    assert len(ccs) == 1
+    assert ccs[0][1] == full_treasury_puz.get_tree_hash()
+
