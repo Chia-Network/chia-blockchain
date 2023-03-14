@@ -945,14 +945,26 @@ async def test_check_ids_ownership(wallet_rpc_environment: WalletRpcTestEnvironm
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].nft_id.hex()
     res = await wallet_1_rpc.check_ids_ownership([{"id": nft_id, "type": "NFT"}])
-    assert len(res) == 1
+    assert len(res["NFT"]) == 1
     assert decode_puzzle_hash(res["NFT"][0]).hex() == nft_id
 
     # COIN
     coin_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
     res = await wallet_1_rpc.check_ids_ownership([{"id": coin_id}])
-    assert len(res) == 1
+    assert len(res["COIN"]) == 1
     assert res["COIN"][0] == coin_id
+
+    # Test no ownership
+    res = await wallet_1_rpc.check_ids_ownership(
+        [
+            {"id": "275d0e2ccccbd793834ff84885eae6d8197ddcf5e50e8a7f8c7f6bc30a55a15c"},
+            {"id": "did:chia:1kdrlwda4kd608yuqfgka8rjuahhlzyexjt5asl7eh8ts537hgh2s9px28m"},
+            {"id": "nft1t6qz073yprvzen0ec2c2la7fafffugkx3pf4llmk30pzmu6qu53szt5wmq"},
+        ]
+    )
+    assert len(res["COIN"]) == 0
+    assert len(res["DID"]) == 0
+    assert len(res["NFT"]) == 0
 
 
 @pytest.mark.asyncio
