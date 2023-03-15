@@ -132,6 +132,7 @@ class FullNodeAPI:
             async with self.full_node.new_peak_sem.acquire():
                 await self.full_node.new_peak(request, peer)
         except LimitedSemaphoreFullError:
+            self.log.debug(f"Ignoring NewPeak, limited semaphore full: {request}")
             return None
 
         return None
@@ -1431,7 +1432,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
+            self.log.debug(f"Ignoring NewCompactVDF, limited semaphore full: {request}")
             return None
 
         return None
