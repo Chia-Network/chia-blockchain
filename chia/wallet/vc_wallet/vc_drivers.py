@@ -20,6 +20,10 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER_HASH, construct_ownership_layer
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
+P2_ANNOUNCED_DELEGATED_PUZZLE: Program = load_clvm_maybe_recompile(
+    "p2_announced_delegated_puzzle.clsp", package_or_requirement="chia.wallet.puzzles"
+)
+P2_ANNOUNCED_DELEGATED_PUZZLE_HASH: bytes32 = P2_ANNOUNCED_DELEGATED_PUZZLE.get_tree_hash()
 COVENANT_LAYER: Program = load_clvm_maybe_recompile("covenant_layer.clsp", package_or_requirement="chia.wallet.puzzles")
 COVENANT_LAYER_HASH: bytes32 = COVENANT_LAYER.get_tree_hash()
 STD_COVENANT_PARENT_MORPHER: Program = load_clvm_maybe_recompile(
@@ -248,10 +252,12 @@ def solve_std_vc_backdoor(
     return solution
 
 
-OWNERSHIP_LAYER_LAUNCHER: Program = EMPTY_METADATA_LAUNCHER_ENFORCER.curry(
-    NFT_OWNERSHIP_LAYER_HASH,
-    Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash(),
-    SINGLETON_LAUNCHER,
+OWNERSHIP_LAYER_LAUNCHER: Program = construct_ownership_layer(
+    None,
+    # (mod (_ _ (tp)) (list () tp ()))
+    # (c () (c 19 (q ())))
+    Program.to([4, None, [4, 19, [1, None]]]),
+    P2_ANNOUNCED_DELEGATED_PUZZLE,
 )
 OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
 
@@ -316,9 +322,10 @@ class VerifiedCredential:
             launcher_coin.name(),
             ownership_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(ownership_layer_hash)
-        second_launcher_solution = Program.to(
-            [ownership_layer_hash, uint64(1), [hint, new_inner_puzzle_hash, provider_id]]
+        launch_dpuz: Program = Program.to(
+            (1, [[51, wrapped_inner_puzzle_hash, uint64(1), [hint, new_inner_puzzle_hash]], [-10, transfer_program]])
         )
+        second_launcher_solution = Program.to([launch_dpuz, None])
         second_launcher_coin: Coin = Coin(
             launcher_coin.name(),
             curried_eve_singleton_hash,
@@ -330,7 +337,7 @@ class VerifiedCredential:
                 [51, SINGLETON_LAUNCHER_HASH, 1],
                 [51, origin_coin.puzzle_hash, origin_coin.amount - 1],
                 [61, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())],
-                [61, std_hash(second_launcher_coin.name() + second_launcher_solution.get_tree_hash())],
+                [61, std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())],
             ]
         )
 
@@ -351,8 +358,6 @@ class VerifiedCredential:
                         uint64(1),
                         Program.to(
                             [
-                                transfer_program.get_tree_hash(),
-                                wrapped_inner_puzzle_hash,
                                 second_launcher_solution,
                             ]
                         ),
@@ -437,22 +442,33 @@ class VerifiedCredential:
             ownership_lineage_proof: VCLineageProof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info, amount=uint64(parent_coin.amount)
             )
-            # Launcher solution makes next coin and hints (to provider)
-            launcher_solution_hints: Program = solution.at("rrf").at("rrf").at("rrf")
-            inner_puzzle_hash: bytes32 = bytes32(launcher_solution_hints.at("rf").as_python())
-            proof_provider: bytes32 = bytes32(launcher_solution_hints.at("rrf").as_python())
+            # See what conditions were output by the launcher dpuz and dsol
+            dpuz: Program = solution.at("rrf").at("f").at("f")
+            dsol: Program = solution.at("rrf").at("f").at("rf")
+
+            conditions: Iterator[Program] = dpuz.run(dsol).as_iter()
+            new_singleton_condition: Program = next(
+                c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
+            )
+            inner_puzzle_hash = bytes32(new_singleton_condition.at("rrrf").at("rf").as_python())
+            magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
+            proof_provider = bytes32(
+                uncurry_puzzle(uncurry_puzzle(uncurry_puzzle(magic_condition.at("rf")).args.at("f")).args.at("rrf"))
+                .args.at("frf")
+                .as_python()
+            )
         else:
             ownership_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
 
             # Dig to find the inner puzzle / inner solution and extract next inner puzhash and proof hash
             inner_puzzle: Program = solution.at("rrf").at("f").at("rf")
             inner_solution: Program = solution.at("rrf").at("f").at("rrf")
-            conditions: Iterator[Program] = inner_puzzle.run(inner_solution).as_iter()
-            new_singleton_condition: Program = next(
+            conditions = inner_puzzle.run(inner_solution).as_iter()
+            new_singleton_condition = next(
                 c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
-            magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
+            magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
             if magic_condition.at("rrrff") == Program.to(None):
                 proof_hash_as_prog: Program = ownership_layer.args.at("rf")
             else:
