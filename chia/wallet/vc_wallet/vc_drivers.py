@@ -10,6 +10,7 @@ from chia.util.hash import std_hash
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
+    SINGLETON_MOD,
     SINGLETON_MOD_HASH,
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -17,40 +18,60 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     puzzle_for_singleton,
     solution_for_singleton,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER_HASH, construct_ownership_layer
+from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER, NFT_OWNERSHIP_LAYER_HASH, construct_ownership_layer
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
+
+# Mods
 P2_ANNOUNCED_DELEGATED_PUZZLE: Program = load_clvm_maybe_recompile(
-    "p2_announced_delegated_puzzle.clsp", package_or_requirement="chia.wallet.puzzles"
+    "p2_announced_delegated_puzzle.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
 )
-P2_ANNOUNCED_DELEGATED_PUZZLE_HASH: bytes32 = P2_ANNOUNCED_DELEGATED_PUZZLE.get_tree_hash()
-COVENANT_LAYER: Program = load_clvm_maybe_recompile("covenant_layer.clsp", package_or_requirement="chia.wallet.puzzles")
-COVENANT_LAYER_HASH: bytes32 = COVENANT_LAYER.get_tree_hash()
+COVENANT_LAYER: Program = load_clvm_maybe_recompile(
+    "covenant_layer.clsp", package_or_requirement="chia.wallet.vc_wallet.vc_puzzles", include_standard_libraries=True
+)
 STD_COVENANT_PARENT_MORPHER: Program = load_clvm_maybe_recompile(
-    "std_parent_morpher.clsp", package_or_requirement="chia.wallet.puzzles"
+    "std_parent_morpher.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
 )
-STD_COVENANT_PARENT_MORPHER_HASH: bytes32 = STD_COVENANT_PARENT_MORPHER.get_tree_hash()
 NFT_TP_COVENANT_ADAPTER: Program = load_clvm_maybe_recompile(
-    "nft_transfer_program_covenant_adapter.clsp", package_or_requirement="chia.wallet.puzzles"
+    "nft_transfer_program_covenant_adapter.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
 )
-NFT_TP_COVENANT_ADAPTER_HASH: bytes32 = NFT_TP_COVENANT_ADAPTER.get_tree_hash()
 NFT_DID_TP: Program = load_clvm_maybe_recompile(
-    "nft_update_metadata_with_DID.clsp", package_or_requirement="chia.wallet.puzzles"
+    "nft_update_metadata_with_DID.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
 )
 NFT_OWNERSHIP_LAYER_COVENANT_MORPHER: Program = load_clvm_maybe_recompile(
-    "ownership_layer_covenant_morpher.clsp", package_or_requirement="chia.wallet.puzzles"
+    "ownership_layer_covenant_morpher.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
 )
-NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH: bytes32 = NFT_OWNERSHIP_LAYER_COVENANT_MORPHER.get_tree_hash()
-EMPTY_METADATA_LAUNCHER_ENFORCER: Program = load_clvm_maybe_recompile(
-    "empty_metadata_launcher_enforcer.clsp", package_or_requirement="chia.wallet.puzzles"
+VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
+    "viral_backdoor.clsp", package_or_requirement="chia.wallet.vc_wallet.vc_puzzles", include_standard_libraries=True
 )
-VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile("viral_backdoor.clsp", package_or_requirement="chia.wallet.puzzles")
-VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
 # (mod (Current_Owner conditions . solution) (if solution solution (list Current_Owner () ())))
 # (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
 ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
+
+# Hashes
+P2_ANNOUNCED_DELEGATED_PUZZLE_HASH: bytes32 = P2_ANNOUNCED_DELEGATED_PUZZLE.get_tree_hash()
+COVENANT_LAYER_HASH: bytes32 = COVENANT_LAYER.get_tree_hash()
+STD_COVENANT_PARENT_MORPHER_HASH: bytes32 = STD_COVENANT_PARENT_MORPHER.get_tree_hash()
+NFT_TP_COVENANT_ADAPTER_HASH: bytes32 = NFT_TP_COVENANT_ADAPTER.get_tree_hash()
+NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH: bytes32 = NFT_OWNERSHIP_LAYER_COVENANT_MORPHER.get_tree_hash()
+VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
+
+
+# Standard brick puzzle uses the mods above
 STANDARD_BRICK_PUZZLE: Program = load_clvm_maybe_recompile(
-    "standard_vc_backdoor_brick_puzzle.clsp", package_or_requirement="chia.wallet.puzzles"
+    "standard_vc_backdoor_brick_puzzle.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
 ).curry(
     SINGLETON_MOD_HASH,
     Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
@@ -60,7 +81,6 @@ STANDARD_BRICK_PUZZLE: Program = load_clvm_maybe_recompile(
 )
 STANDARD_BRICK_PUZZLE_HASH: bytes32 = STANDARD_BRICK_PUZZLE.get_tree_hash()
 STANDARD_BRICK_PUZZLE_HASH_HASH: bytes32 = Program.to(STANDARD_BRICK_PUZZLE_HASH).get_tree_hash()
-BRICK_HASH: bytes32 = bytes32([0] * 32)
 
 
 ##################
@@ -97,6 +117,9 @@ def solve_covenant_layer(lineage_proof: LineageProof, morpher_solution: Program,
 
 
 def create_std_parent_morpher(initial_puzzle_hash: bytes32) -> Program:
+    """
+    The standard PARENT_MORPHER for plain coins that want to prove an initial state
+    """
     return STD_COVENANT_PARENT_MORPHER.curry(
         STD_COVENANT_PARENT_MORPHER_HASH,
         COVENANT_LAYER_HASH,
@@ -202,6 +225,9 @@ def create_ownership_layer_covenant_morpher(
     singleton_id: bytes32,
     transfer_program_hash: bytes32,
 ) -> Program:
+    """
+    A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> OL -> Covenant stack
+    """
     first_curry: Program = NFT_OWNERSHIP_LAYER_COVENANT_MORPHER.curry(
         NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH,
         COVENANT_LAYER_HASH,
@@ -216,6 +242,9 @@ def create_ownership_layer_covenant_morpher(
 
 @dataclass(frozen=True)
 class VCLineageProof(LineageProof):
+    """
+    The covenant layer for ownership layers requires to be passed the previous parent's metadata too
+    """
     parent_proof_hash: Optional[bytes32] = None
 
 
@@ -230,6 +259,9 @@ def solve_std_vc_backdoor(
     coin_id: bytes32,
     new_metadata: Program,
 ) -> Program:
+    """
+    Solution to the STANDARD_BRICK_PUZZLE above. Requires proof info about pretty much the whole puzzle stack.
+    """
     solution: Program = Program.to(
         [
             Program.to(launcher_id).get_tree_hash(),
@@ -252,11 +284,13 @@ def solve_std_vc_backdoor(
     return solution
 
 
+# Launching to a VC requires a OL with a transfer program that guarantees a () metadata on the next iteration
+# (mod (_ _ (tp)) (list () tp ()))
+# (c () (c 19 (q ())))
+GUARANTEED_NIL_TP: Program = Program.to([4, None, [4, 19, [1, None]]])
 OWNERSHIP_LAYER_LAUNCHER: Program = construct_ownership_layer(
     None,
-    # (mod (_ _ (tp)) (list () tp ()))
-    # (c () (c 19 (q ())))
-    Program.to([4, None, [4, 19, [1, None]]]),
+    GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
 )
 OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
@@ -270,6 +304,11 @@ _T_VerifiedCredential = TypeVar("_T_VerifiedCredential", bound="VerifiedCredenti
 
 @dataclass(frozen=True)
 class VerifiedCredential:
+    """
+    This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
+    spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
+    likely result in an error.
+    """
     coin: Coin
     singleton_lineage_proof: LineageProof
     ownership_lineage_proof: VCLineageProof
@@ -286,6 +325,19 @@ class VerifiedCredential:
         new_inner_puzzle_hash: bytes32,
         hint: bytes32,
     ) -> Tuple[Program, List[CoinSpend], _T_VerifiedCredential]:
+        """
+        Launch a VC.
+
+        origin_coin: An XCH coin that will be used to fund the spend. A coin of any amount > 1 can be used and the
+        change will automatically go back to the coin's puzzle hash.
+        provider_id: The DID of the proof provider (the entity who is responsible for adding/removing proofs to the vc)
+        new_inner_puzzle_hash: the innermost puzzle hash once the VC is created
+        hint: The first memo to use (other memos are spoken for)
+
+        Returns a delegated puzzle to run (with any solution), a list of spends to push with the origin transaction,
+        and an instance of this class representing the expected state after all relevant spends have been pushed and
+        confirmed.
+        """
         launcher_coin: Coin = generate_launcher_coin(origin_coin, uint64(1))
 
         # Create the second puzzle for the first launch
@@ -379,6 +431,9 @@ class VerifiedCredential:
             ),
         )
 
+
+    ####################################################################################################################
+    # The methods in this section give insight into the structure of the puzzle stack that is considered a "VC"
     def construct_puzzle(self) -> Program:
         return puzzle_for_singleton(
             self.launcher_id,
@@ -419,9 +474,62 @@ class VerifiedCredential:
 
     def hidden_puzzle(self) -> Program:
         return STANDARD_BRICK_PUZZLE
+    ####################################################################################################################
+
+    @staticmethod
+    def is_vc(puzzle_reveal: UncurriedPuzzle) -> Tuple[bool, str]:
+        """
+        This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a VC and an error
+        message for if the puzzle is a mismatch. Returns True for VC launcher spends.
+        """
+        if puzzle_reveal.mod != SINGLETON_MOD:
+            return False, "top most layer is not a singleton"
+        layer_below_singleton: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rf"))
+        if layer_below_singleton.mod != NFT_OWNERSHIP_LAYER:
+            return False, "layer below singleton is not an ownership layer"
+
+        # Need to validate both transfer program...
+        full_transfer_program_as_prog: Program = layer_below_singleton.args.at("rrf")
+        full_transfer_program: UncurriedPuzzle = uncurry_puzzle(full_transfer_program_as_prog)
+        if full_transfer_program.mod != NFT_TP_COVENANT_ADAPTER:
+            # This is the first spot we'll run into trouble if we're examining a VC being launched
+            # Break off to that logic here
+            if full_transfer_program_as_prog == GUARANTEED_NIL_TP:
+                launcher_puzzle: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrf"))
+                if launcher_puzzle != P2_ANNOUNCED_DELEGATED_PUZZLE:
+                    return False, "tp indicates VC is launching, but it does not have the correct inner puzzle"
+                else:
+                    return True, ""
+            else:
+                return False, "top layer of transfer program is not a covenant layer adapter"
+        adapted_transfer_program: UncurriedPuzzle = uncurry_puzzle(full_transfer_program.args.at("f"))
+        if adapted_transfer_program.mod != COVENANT_LAYER:
+            return False, "transfer program is adapted to covenant layer, but covenant layer did not follow"
+        morpher: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rf"))
+        if morpher.mod != NFT_OWNERSHIP_LAYER_COVENANT_MORPHER:
+            return False, "covenant for ownership layer does not match the one expected for VCs"
+        inner_transfer_program: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rrf"))
+        if inner_transfer_program.mod != NFT_DID_TP:
+            return False, "transfer program for ownership layer was not the standard VC transfer program"
+
+        # ...and layer below ownership
+        layer_below_ownership: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrf"))
+        if layer_below_ownership.mod != VIRAL_BACKDOOR:
+            return False, "VC did not have a provider backdoor"
+        hidden_puzzle_hash: bytes32 = layer_below_ownership.args.at("rf")
+        if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
+            return False, "VC did not have the standard method to brick in its backdoor hidden puzzle slot"
+
+        return True, ""
 
     @classmethod
     def get_next_from_coin_spend(cls: Type[_T_VerifiedCredential], parent_spend: CoinSpend) -> _T_VerifiedCredential:
+        """
+        Given a coin spend, this will return the next VC that was create as an output of that spend. This is the main
+        method to use when syncing. If a spend has been identified as having a VC puzzle reveal, running this method
+        on that spend should succeed unless the spend in question was the result of a provider using the backdoor to
+        revoke the credential.
+        """
         coin: Coin = next(c for c in compute_additions(parent_spend) if c.amount % 2 == 1)
 
         # BEGIN CODE
@@ -511,11 +619,18 @@ class VerifiedCredential:
 
         return new_vc
 
+    ####################################################################################################################
+    # The methods in this section are useful for spending an existing VC
     def magic_condition_for_new_proofs(
         self,
         new_proof_hash: Optional[bytes32],
         provider_innerpuzhash: bytes32,
     ) -> Program:
+        """
+        Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
+        the inner puzzle will require a corresponding announcement from the provider DID authorizing that proof hash
+        change.
+        """
         magic_condition: Program = Program.to(
             [
                 -10,
@@ -532,6 +647,10 @@ class VerifiedCredential:
         return magic_condition
 
     def standard_magic_condition(self) -> Program:
+        """
+        Returns the standard magic condition that needs to be returned to the ownership layer. Returning this condition
+        from the inner puzzle will leave the proof hash and transfer program the same.
+        """
         magic_condition: Program = Program.to(
             [
                 -10,
@@ -542,43 +661,19 @@ class VerifiedCredential:
         )
         return magic_condition
 
-    def next_vc(
-        self, next_inner_puzzle_hash: bytes32, new_proof_hash: Optional[bytes32], next_amount: uint64
-    ) -> "VerifiedCredential":
-        slightly_incomplete_vc: VerifiedCredential = VerifiedCredential(
-            Coin(self.coin.name(), bytes32([0] * 32), next_amount),
-            LineageProof(
-                self.coin.parent_coin_info,
-                self.construct_ownership_layer().get_tree_hash(),
-                uint64(self.coin.amount),
-            ),
-            VCLineageProof(
-                self.coin.parent_coin_info,
-                self.wrap_inner_with_backdoor().get_tree_hash(),
-                uint64(self.coin.amount),
-                self.proof_hash,
-            ),
-            self.launcher_id,
-            next_inner_puzzle_hash,
-            self.proof_provider,
-            new_proof_hash,
-        )
-
-        return replace(
-            slightly_incomplete_vc,
-            coin=Coin(
-                slightly_incomplete_vc.coin.parent_coin_info,
-                slightly_incomplete_vc.construct_puzzle().get_tree_hash(),
-                slightly_incomplete_vc.coin.amount,
-            ),
-        )
-
     def do_spend(
         self,
         inner_puzzle: Program,
         inner_solution: Program,
         new_proof_hash: Optional[bytes32] = None,
     ) -> Tuple[Optional[bytes32], CoinSpend, "VerifiedCredential"]:
+        """
+        Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
+        Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
+
+        Returns potentially the puzzle announcement the spend will expect from the provider DID, the spend of the VC,
+        and the expected class representation of the new VC after the spend is pushed and confirmed.
+        """
         vc_solution: Program = solution_for_singleton(
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
@@ -613,14 +708,21 @@ class VerifiedCredential:
                 self.construct_puzzle(),
                 vc_solution,
             ),
-            self.next_vc(
+            self._next_vc(
                 new_inner_puzzle_hash,
                 self.proof_hash if new_proof_hash is None else new_proof_hash,
                 uint64(new_singleton_condition.at("rrf").as_int()),
             ),
         )
 
-    def activate_backdoor(self, provider_innerpuzhash: bytes32) -> Tuple[bytes32, CoinSpend, "VerifiedCredential"]:
+    def activate_backdoor(self, provider_innerpuzhash: bytes32) -> Tuple[bytes32, CoinSpend]:
+        """
+        Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
+
+        Returns the announcement we expect from the provider's DID authorizing this, and the spend of the VC.
+        Sync attempts by this class on spends generated by this method are expected to fail. This could be improved in
+        the future with a separate type/state of VC that is revoked, but perfectly useful as a singleton.
+        """
         vc_solution: Program = solution_for_singleton(
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
@@ -652,9 +754,39 @@ class VerifiedCredential:
         return (
             expected_announcement,
             CoinSpend(self.coin, self.construct_puzzle(), vc_solution),
-            self.next_vc(
-                BRICK_HASH,
+        )
+    ####################################################################################################################
+
+    def _next_vc(
+        self, next_inner_puzzle_hash: bytes32, new_proof_hash: Optional[bytes32], next_amount: uint64
+    ) -> "VerifiedCredential":
+        """
+        Private method that creates the next VC class instance.
+        """
+        slightly_incomplete_vc: VerifiedCredential = VerifiedCredential(
+            Coin(self.coin.name(), bytes32([0] * 32), next_amount),
+            LineageProof(
+                self.coin.parent_coin_info,
+                self.construct_ownership_layer().get_tree_hash(),
+                uint64(self.coin.amount),
+            ),
+            VCLineageProof(
+                self.coin.parent_coin_info,
+                self.wrap_inner_with_backdoor().get_tree_hash(),
+                uint64(self.coin.amount),
                 self.proof_hash,
-                uint64(1),
+            ),
+            self.launcher_id,
+            next_inner_puzzle_hash,
+            self.proof_provider,
+            new_proof_hash,
+        )
+
+        return replace(
+            slightly_incomplete_vc,
+            coin=Coin(
+                slightly_incomplete_vc.coin.parent_coin_info,
+                slightly_incomplete_vc.construct_puzzle().get_tree_hash(),
+                slightly_incomplete_vc.coin.amount,
             ),
         )

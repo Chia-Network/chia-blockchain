@@ -70,21 +70,24 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         )[0].coin
         acs_coin: Coin = (await client.get_coin_records_by_puzzle_hashes([ACS_PH], include_spent_coins=False))[0].coin
         await client.push_tx(
-            cost_logger.add_cost("2x ACS spends - create one coin", SpendBundle(
-                [
-                    CoinSpend(
-                        fake_acs_coin,
-                        FAKE_ACS,
-                        Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]]),
-                    ),
-                    CoinSpend(
-                        acs_coin,
-                        ACS,
-                        Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
-                    ),
-                ],
-                G2Element(),
-            ))
+            cost_logger.add_cost(
+                "2x ACS spends - create one coin",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            fake_acs_coin,
+                            FAKE_ACS,
+                            Program.to([[51, covenant_puzzle_hash, fake_acs_coin.amount]]),
+                        ),
+                        CoinSpend(
+                            acs_coin,
+                            ACS,
+                            Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
+                        ),
+                    ],
+                    G2Element(),
+                ),
+            )
         )
         await sim.farm_block()
 
@@ -122,20 +125,23 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         # Try the initial spend, which the fake origin coin should fail
         for parent, cov in ((fake_acs_coin, fake_acs_cov), (acs_coin, acs_cov)):
             result = await client.push_tx(
-                cost_logger.add_cost("Covenant layer eve spend - one create coin", SpendBundle(
-                    [
-                        CoinSpend(
-                            cov,
-                            covenant_puzzle,
-                            solve_covenant_layer(
-                                LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
-                                Program.to(None),
-                                Program.to([[51, covenant_puzzle_hash, cov.amount]]),
+                cost_logger.add_cost(
+                    "Covenant layer eve spend - one create coin",
+                    SpendBundle(
+                        [
+                            CoinSpend(
+                                cov,
+                                covenant_puzzle,
+                                solve_covenant_layer(
+                                    LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
+                                    Program.to(None),
+                                    Program.to([[51, covenant_puzzle_hash, cov.amount]]),
+                                ),
                             ),
-                        ),
-                    ],
-                    G2Element(),
-                ))
+                        ],
+                        G2Element(),
+                    ),
+                )
             )
             if parent == fake_acs_coin:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_PARENT_ID_FAILED)
@@ -149,24 +155,27 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         ].coin
 
         result = await client.push_tx(
-            cost_logger.add_cost("Covenant layer non-eve spend - one create coin", SpendBundle(
-                [
-                    CoinSpend(
-                        new_acs_cov,
-                        covenant_puzzle,
-                        solve_covenant_layer(
-                            LineageProof(
-                                parent_name=acs_cov.parent_coin_info,
-                                inner_puzzle_hash=ACS_PH,
-                                amount=uint64(acs_cov.amount),
+            cost_logger.add_cost(
+                "Covenant layer non-eve spend - one create coin",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            new_acs_cov,
+                            covenant_puzzle,
+                            solve_covenant_layer(
+                                LineageProof(
+                                    parent_name=acs_cov.parent_coin_info,
+                                    inner_puzzle_hash=ACS_PH,
+                                    amount=uint64(acs_cov.amount),
+                                ),
+                                Program.to(None),
+                                Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
                             ),
-                            Program.to(None),
-                            Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
                         ),
-                    ),
-                ],
-                G2Element(),
-            ))
+                    ],
+                    G2Element(),
+                ),
+            )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -261,26 +270,29 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
 
         # Actually use announcement
-        successful_spend: SpendBundle = cost_logger.add_cost("Fake Ownership Layer - NFT DID TP", SpendBundle(
-            [
-                CoinSpend(
-                    ownership_coin,
-                    ownership_puzzle,
-                    Program.to(
-                        [
-                            solve_did_tp(
-                                provider_innerpuzhash,
-                                my_coin_id,
-                                new_metadata,
-                                new_tp,
-                            )
-                        ]
+        successful_spend: SpendBundle = cost_logger.add_cost(
+            "Fake Ownership Layer - NFT DID TP",
+            SpendBundle(
+                [
+                    CoinSpend(
+                        ownership_coin,
+                        ownership_puzzle,
+                        Program.to(
+                            [
+                                solve_did_tp(
+                                    provider_innerpuzhash,
+                                    my_coin_id,
+                                    new_metadata,
+                                    new_tp,
+                                )
+                            ]
+                        ),
                     ),
-                ),
-                did_authorization_spend,
-            ],
-            G2Element(),
-        ))
+                    did_authorization_spend,
+                ],
+                G2Element(),
+            ),
+        )
         result = await client.push_tx(successful_spend)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -356,19 +368,22 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
             brick_hash,
         ).get_tree_hash()
         result = await client.push_tx(
-            cost_logger.add_cost("Viral backdoor spend - one create coin", SpendBundle(
-                [
-                    CoinSpend(
-                        p2_either_coin,
-                        p2_either_puzzle,
-                        solve_viral_backdoor(
-                            ACS,
-                            Program.to([[51, brick_hash, 0]]),
-                        ),
-                    )
-                ],
-                G2Element(),
-            ))
+            cost_logger.add_cost(
+                "Viral backdoor spend - one create coin",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            p2_either_coin,
+                            p2_either_puzzle,
+                            solve_viral_backdoor(
+                                ACS,
+                                Program.to([[51, brick_hash, 0]]),
+                            ),
+                        )
+                    ],
+                    G2Element(),
+                ),
+            )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -424,22 +439,26 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             bytes32([0] * 32),
         )
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            cost_logger.add_cost("Launch VC", SpendBundle(
-                [
-                    CoinSpend(
-                        vc_fund_coin,
-                        RUN_PUZ_PUZ,
-                        dpuz,
-                    ),
-                    *coin_spends,
-                ],
-                G2Element(),
-            ))
+            cost_logger.add_cost(
+                "Launch VC",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            vc_fund_coin,
+                            RUN_PUZ_PUZ,
+                            dpuz,
+                        ),
+                        *coin_spends,
+                    ],
+                    G2Element(),
+                ),
+            )
         )
         await sim.farm_block()
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(coin_spends[1])
+            assert VerifiedCredential.is_vc(uncurry_puzzle(coin_spends[1].puzzle_reveal.to_program()))
         assert vc.construct_puzzle().get_tree_hash() == vc.coin.puzzle_hash
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
@@ -451,77 +470,86 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             new_proof_hash=NEW_PROOF_HASH,
         )
         result = await client.push_tx(
-            cost_logger.add_cost("Update VC proofs (eve covenant spend) - DID providing announcement", SpendBundle(
-                [
-                    CoinSpend(
-                        did,
-                        puzzle_for_singleton(
-                            launcher_id,
-                            ACS,
-                        ),
-                        solution_for_singleton(
-                            LineageProof(
-                                parent_name=launcher_spend.coin.parent_coin_info,
-                                amount=uint64(launcher_spend.coin.amount),
+            cost_logger.add_cost(
+                "Update VC proofs (eve covenant spend) - DID providing announcement",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            did,
+                            puzzle_for_singleton(
+                                launcher_id,
+                                ACS,
                             ),
-                            uint64(did.amount),
-                            Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
+                            solution_for_singleton(
+                                LineageProof(
+                                    parent_name=launcher_spend.coin.parent_coin_info,
+                                    amount=uint64(launcher_spend.coin.amount),
+                                ),
+                                uint64(did.amount),
+                                Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
+                            ),
                         ),
-                    ),
-                    update_spend,
-                ],
-                G2Element(),
-            ))
+                        update_spend,
+                    ],
+                    G2Element(),
+                ),
+            )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(update_spend)
+            assert VerifiedCredential.is_vc(uncurry_puzzle(update_spend.puzzle_reveal.to_program()))
 
         # Now do a mundane spend just to prove that the coin can be spent WITHOUT DID
         _, mundane_spend, vc = vc.do_spend(
             ACS,
             Program.to([[51, ACS_PH, vc.coin.amount], vc.standard_magic_condition()]),
         )
-        result = await client.push_tx(cost_logger.add_cost("Mundane VC spend - one create coin", SpendBundle([mundane_spend], G2Element())))
+        result = await client.push_tx(
+            cost_logger.add_cost("Mundane VC spend - one create coin", SpendBundle([mundane_spend], G2Element()))
+        )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(mundane_spend)
+            assert VerifiedCredential.is_vc(uncurry_puzzle(mundane_spend.puzzle_reveal.to_program()))
 
         # Yoink the coin away from the inner puzzle
         new_did = (await client.get_coin_records_by_parent_ids([did.name()], include_spent_coins=False))[0].coin
-        expected_announcement, yoink_spend, vc = vc.activate_backdoor(ACS_PH)
+        expected_announcement, yoink_spend = vc.activate_backdoor(ACS_PH)
         result = await client.push_tx(
-            cost_logger.add_cost("VC yoink by DID provider", SpendBundle(
-                [
-                    CoinSpend(
-                        new_did,
-                        puzzle_for_singleton(
-                            launcher_id,
-                            ACS,
-                        ),
-                        solution_for_singleton(
-                            LineageProof(
-                                parent_name=did.parent_coin_info,
-                                inner_puzzle_hash=ACS_PH,
-                                amount=uint64(did.amount),
+            cost_logger.add_cost(
+                "VC yoink by DID provider",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            new_did,
+                            puzzle_for_singleton(
+                                launcher_id,
+                                ACS,
                             ),
-                            uint64(new_did.amount),
-                            Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
+                            solution_for_singleton(
+                                LineageProof(
+                                    parent_name=did.parent_coin_info,
+                                    inner_puzzle_hash=ACS_PH,
+                                    amount=uint64(did.amount),
+                                ),
+                                uint64(new_did.amount),
+                                Program.to([[51, ACS_PH, new_did.amount], [62, expected_announcement]]),
+                            ),
                         ),
-                    ),
-                    yoink_spend,
-                ],
-                G2Element(),
-            ))
+                        yoink_spend,
+                    ],
+                    G2Element(),
+                ),
+            )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         if test_syncing:
             with pytest.raises(ValueError):
                 VerifiedCredential.get_next_from_coin_spend(yoink_spend)
-
 
         # Verify the end state
         new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
