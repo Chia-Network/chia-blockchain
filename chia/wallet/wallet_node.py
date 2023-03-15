@@ -764,7 +764,7 @@ class WalletNode:
         # sync from 0 every time.
         already_checked_coin_ids: Set[bytes32] = set()
         while not self._shut_down:
-            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
+            all_coin_ids = await self.get_coin_ids_to_subscribe()
             not_checked_coin_ids = set(all_coin_ids) - already_checked_coin_ids
             if not_checked_coin_ids == set():
                 break
@@ -1204,7 +1204,7 @@ class WalletNode:
                 # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
                 # we still want to subscribe for all phs and coins.
                 # (Hints are not in filter)
-                all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(uint32(0))
+                all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
                 ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
                 coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
@@ -1332,12 +1332,10 @@ class WalletNode:
         all_puzzle_hashes.update(interested_puzzle_hashes)
         return list(all_puzzle_hashes)
 
-    async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
-        all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
-        removed_names = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-        all_coin_names.update(set(removed_names))
-        all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
-        return list(all_coin_names)
+    async def get_coin_ids_to_subscribe(self) -> List[bytes32]:
+        coin_ids = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        coin_ids.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
+        return list(coin_ids)
 
     async def validate_received_state_from_peer(
         self,
