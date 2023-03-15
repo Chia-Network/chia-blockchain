@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from typing_extensions import Literal
@@ -597,8 +596,7 @@ class TradeManager:
             return True, offer, None
 
         except Exception as e:
-            tb = traceback.format_exc()
-            self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
+            self.log.exception("Error creating trade offer")
             return False, None, str(e)
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
