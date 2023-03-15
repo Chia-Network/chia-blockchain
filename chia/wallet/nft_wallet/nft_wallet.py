@@ -347,6 +347,11 @@ class NFTWallet:
             # For a DID enabled NFT wallet it cannot mint NFT0. Mint NFT1 instead.
             did_id = self.did_id
         amount = uint64(1)
+        # ensure percentage is uint16
+        try:
+            percentage = uint16(percentage)
+        except ValueError:
+            raise ValueError("Percentage must be lower than 655%")
         coins = await self.standard_wallet.select_coins(uint64(amount + fee))
         if coins is None:
             return None
@@ -663,7 +668,6 @@ class NFTWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
-
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
@@ -869,16 +873,23 @@ class NFTWallet:
         for asset, amount in royalty_nft_asset_dict.items():  # royalty enabled NFTs
             transfer_info = driver_dict[asset].also().also()  # type: ignore
             assert isinstance(transfer_info, PuzzleInfo)
+            royalty_percentage_raw = transfer_info["transfer_program"]["royalty_percentage"]
+            assert royalty_percentage_raw is not None
+            # clvm encodes large ints as bytes
+            if isinstance(royalty_percentage_raw, bytes):
+                royalty_percentage = int_from_bytes(royalty_percentage_raw)
+            else:
+                royalty_percentage = int(royalty_percentage_raw)
             if amount > 0:
                 required_royalty_info.append(
                     (
                         asset,
                         bytes32(transfer_info["transfer_program"]["royalty_address"]),
-                        uint16(transfer_info["transfer_program"]["royalty_percentage"]),
+                        uint16(royalty_percentage),
                     )
                 )
             else:
-                offered_royalty_percentages[asset] = uint16(transfer_info["transfer_program"]["royalty_percentage"])
+                offered_royalty_percentages[asset] = uint16(royalty_percentage)
 
         royalty_payments: Dict[Optional[bytes32], List[Tuple[bytes32, Payment]]] = {}
         for asset, amount in fungible_asset_dict.items():  # offered fungible items
@@ -950,6 +961,7 @@ class NFTWallet:
         additional_bundles: List[SpendBundle] = []
         # standard pays the fee if possible
         fee_left_to_pay: uint64 = uint64(0) if None in offer_dict and offer_dict[None] < 0 else fee
+
         for asset, amount in offer_dict.items():
             if amount < 0:
                 if asset is None:
