@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from blspy import G2Element
 
-from chia.clvm.spend_sim import sim_and_client
+from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -51,10 +51,10 @@ MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
 
 
 @pytest.mark.asyncio
-async def test_covenant_layer() -> None:
+async def test_covenant_layer(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Create a puzzle that will not pass the initial covenant check
-        FAKE_ACS: Program = Program.to([3, None, None, 1])
+        FAKE_ACS: Program = Program.to([3, (1, "fake"), 1, None])
         # The output puzzle will be the same for both
         covenant_puzzle: Program = create_covenant_layer(ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
         assert match_covenant_layer(uncurry_puzzle(covenant_puzzle)) == (ACS_PH, create_std_parent_morpher(ACS_PH), ACS)
@@ -70,7 +70,7 @@ async def test_covenant_layer() -> None:
         )[0].coin
         acs_coin: Coin = (await client.get_coin_records_by_puzzle_hashes([ACS_PH], include_spent_coins=False))[0].coin
         await client.push_tx(
-            SpendBundle(
+            cost_logger.add_cost("2x ACS spends - create one coin", SpendBundle(
                 [
                     CoinSpend(
                         fake_acs_coin,
@@ -84,7 +84,7 @@ async def test_covenant_layer() -> None:
                     ),
                 ],
                 G2Element(),
-            )
+            ))
         )
         await sim.farm_block()
 
@@ -122,7 +122,7 @@ async def test_covenant_layer() -> None:
         # Try the initial spend, which the fake origin coin should fail
         for parent, cov in ((fake_acs_coin, fake_acs_cov), (acs_coin, acs_cov)):
             result = await client.push_tx(
-                SpendBundle(
+                cost_logger.add_cost("Covenant layer eve spend - one create coin", SpendBundle(
                     [
                         CoinSpend(
                             cov,
@@ -135,7 +135,7 @@ async def test_covenant_layer() -> None:
                         ),
                     ],
                     G2Element(),
-                )
+                ))
             )
             if parent == fake_acs_coin:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_PARENT_ID_FAILED)
@@ -149,7 +149,7 @@ async def test_covenant_layer() -> None:
         ].coin
 
         result = await client.push_tx(
-            SpendBundle(
+            cost_logger.add_cost("Covenant layer non-eve spend - one create coin", SpendBundle(
                 [
                     CoinSpend(
                         new_acs_cov,
@@ -166,13 +166,13 @@ async def test_covenant_layer() -> None:
                     ),
                 ],
                 G2Element(),
-            )
+            ))
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
 
 @pytest.mark.asyncio
-async def test_did_tp() -> None:
+async def test_did_tp(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Make a mock ownership layer
         # Prepends new metadata and new transfer program as REMARK condition to conditions of TP
@@ -261,7 +261,7 @@ async def test_did_tp() -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
 
         # Actually use announcement
-        successful_spend: SpendBundle = SpendBundle(
+        successful_spend: SpendBundle = cost_logger.add_cost("Fake Ownership Layer - NFT DID TP", SpendBundle(
             [
                 CoinSpend(
                     ownership_coin,
@@ -280,7 +280,7 @@ async def test_did_tp() -> None:
                 did_authorization_spend,
             ],
             G2Element(),
-        )
+        ))
         result = await client.push_tx(successful_spend)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -296,7 +296,7 @@ async def test_did_tp() -> None:
 
 
 @pytest.mark.asyncio
-async def test_viral_backdoor() -> None:
+async def test_viral_backdoor(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # Setup and farm the puzzle
         hidden_puzzle: Program = Program.to((1, [[61, 1]]))  # assert a coin announcement that the solution tells us
@@ -356,7 +356,7 @@ async def test_viral_backdoor() -> None:
             brick_hash,
         ).get_tree_hash()
         result = await client.push_tx(
-            SpendBundle(
+            cost_logger.add_cost("Viral backdoor spend - one create coin", SpendBundle(
                 [
                     CoinSpend(
                         p2_either_coin,
@@ -368,7 +368,7 @@ async def test_viral_backdoor() -> None:
                     )
                 ],
                 G2Element(),
-            )
+            ))
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -379,7 +379,7 @@ async def test_viral_backdoor() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("test_syncing", [True, False])
-async def test_vc_lifecycle(test_syncing: bool) -> None:
+async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         RUN_PUZ_PUZ: Program = Program.to([2, 1, None])  # (a 1 ()) takes a puzzle as its solution and runs it with ()
         RUN_PUZ_PUZ_PH: bytes32 = RUN_PUZ_PUZ.get_tree_hash()
@@ -424,7 +424,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
             bytes32([0] * 32),
         )
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            SpendBundle(
+            cost_logger.add_cost("Launch VC", SpendBundle(
                 [
                     CoinSpend(
                         vc_fund_coin,
@@ -434,7 +434,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                     *coin_spends,
                 ],
                 G2Element(),
-            )
+            ))
         )
         await sim.farm_block()
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -451,7 +451,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
             new_proof_hash=NEW_PROOF_HASH,
         )
         result = await client.push_tx(
-            SpendBundle(
+            cost_logger.add_cost("Update VC proofs (eve covenant spend) - DID providing announcement", SpendBundle(
                 [
                     CoinSpend(
                         did,
@@ -471,7 +471,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                     update_spend,
                 ],
                 G2Element(),
-            )
+            ))
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -483,7 +483,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
             ACS,
             Program.to([[51, ACS_PH, vc.coin.amount], vc.standard_magic_condition()]),
         )
-        result = await client.push_tx(SpendBundle([mundane_spend], G2Element()))
+        result = await client.push_tx(cost_logger.add_cost("Mundane VC spend - one create coin", SpendBundle([mundane_spend], G2Element())))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         if test_syncing:
@@ -493,7 +493,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
         new_did = (await client.get_coin_records_by_parent_ids([did.name()], include_spent_coins=False))[0].coin
         expected_announcement, yoink_spend, vc = vc.activate_backdoor(ACS_PH)
         result = await client.push_tx(
-            SpendBundle(
+            cost_logger.add_cost("VC yoink by DID provider", SpendBundle(
                 [
                     CoinSpend(
                         new_did,
@@ -514,7 +514,7 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
                     yoink_spend,
                 ],
                 G2Element(),
-            )
+            ))
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -522,6 +522,8 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
             with pytest.raises(ValueError):
                 VerifiedCredential.get_next_from_coin_spend(yoink_spend)
 
+
+        # Verify the end state
         new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
             vc.launcher_id,
             construct_ownership_layer(
