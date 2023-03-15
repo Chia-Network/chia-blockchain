@@ -25,7 +25,7 @@
 
   (list
     (list ASSERT_MY_PUZZLEHASH
-      (curry_hashes_inline SINGLETON_MOD_HASH
+      (curry_hashes SINGLETON_MOD_HASH
         (sha256 2
           (sha256 1 SINGLETON_MOD_HASH)
           (sha256 2
@@ -33,11 +33,11 @@
             SINGLETON_LAUNCHER_HASH_HASH
           )
         )
-        (curry_hashes_inline OWNERSHIP_LAYER_MOD_HASH
+        (curry_hashes OWNERSHIP_LAYER_MOD_HASH
           (sha256 1 OWNERSHIP_LAYER_MOD_HASH)
           metadata_hash
           tp_hash
-          (curry_hashes_inline VIRAL_BACKDOOR_MOD_HASH
+          (curry_hashes VIRAL_BACKDOOR_MOD_HASH
             (sha256 1 VIRAL_BACKDOOR_MOD_HASH)
             this_hash_hash
             (sha256 1 inner_puzzle_hash)
