@@ -497,7 +497,7 @@ class VerifiedCredential:
                 else bytes32(parent_proof_hash.as_python()),
             )
 
-        return cls(
+        new_vc: _T_VerifiedCredential = cls(
             coin,
             singleton_lineage_proof,
             ownership_lineage_proof,
@@ -506,6 +506,10 @@ class VerifiedCredential:
             proof_provider,
             proof_hash,
         )
+        if new_vc.construct_puzzle().get_tree_hash() != new_vc.coin.puzzle_hash:
+            raise ValueError("Error getting new VC from coin spend, probably the child singleton is not a VC")
+
+        return new_vc
 
     def magic_condition_for_new_proofs(
         self,

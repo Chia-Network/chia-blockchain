@@ -15,6 +15,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.nft_wallet.nft_puzzles import construct_ownership_layer
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
     puzzle_for_singleton,
@@ -22,6 +23,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 )
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
+    ACS_TRANSFER_PROGRAM,
     VerifiedCredential,
     create_covenant_layer,
     match_covenant_layer,
@@ -516,8 +518,24 @@ async def test_vc_lifecycle(test_syncing: bool) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-        # if test_syncing:
-        #     vc = VerifiedCredential.get_next_from_coin_spend(yoink_spend)
-        #
-        # assert len(await client.get_coin_records_by_names([vc.coin.name()], include_spent_coins=False)) > 0
-        # Add some assertions about the final state once its settled on
+        if test_syncing:
+            with pytest.raises(ValueError):
+                VerifiedCredential.get_next_from_coin_spend(yoink_spend)
+
+        new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
+            vc.launcher_id,
+            construct_ownership_layer(
+                None,
+                ACS_TRANSFER_PROGRAM,
+                ACS,
+            ),
+        )
+
+        assert (
+            len(
+                await client.get_coin_records_by_puzzle_hashes(
+                    [new_singletons_puzzle_reveal.get_tree_hash()], include_spent_coins=False
+                )
+            )
+            > 0
+        )
