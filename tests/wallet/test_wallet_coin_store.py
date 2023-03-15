@@ -106,7 +106,7 @@ async def test_bulk_get() -> None:
 
         store = await WalletCoinStore.create(db_wrapper)
         records = await store.get_coin_records([coin_1.name(), coin_2.name(), token_bytes(32), coin_4.name()])
-        assert records == [record_1, record_2, None, record_4]
+        assert records == {coin_1.name(): record_1, coin_2.name(): record_2, coin_4.name(): record_4}
 
 
 @pytest.mark.asyncio
