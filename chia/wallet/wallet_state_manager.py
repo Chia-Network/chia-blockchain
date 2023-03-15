@@ -1623,10 +1623,10 @@ class WalletStateManager:
                             # offer to failed
                             trade_coins_removed.add(removed_coin.name())
                     if trade and trade_coins_removed:
-                        if not tx.is_spendable:
-                            # we've already sent this transaction to full node and it was accepted
-                            # or we've sent it with low fee and it was rejected
-                            # we don't need to subscribe to these coins anymore
+                        if not tx.is_valid():
+                            # we've tried to send this transaction to a full node multiple times
+                            # but failed, it's safe to assume that it's not going to be accepted
+                            # we can mark this offer as failed
                             self.log.info("This offer can't be posted, removing it from pending offers")
                             assert trade is not None
                             await self.trade_manager.fail_pending_offer(trade.trade_id)

@@ -155,9 +155,8 @@ class WalletTransactionStore:
         sent_to.append(append_data)
 
         tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
-        if not tx.is_spendable:
-            # if the tx is not spendable, it is confirmed that we can't spend it, but
-            # we need to adjust the GUI to show that it is failed
+        if not tx.is_valid():
+            # if the tx is not valid due to repeated failures, we will confirm that we can't spend it
             log.info(f"Marking tx={tx.name} as confirmed but failed, since it is not spendable due to errors")
             tx = dataclasses.replace(tx, confirmed=True, confirmed_at_height=uint32(0))
         await self.add_transaction_record(tx)

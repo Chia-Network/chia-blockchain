@@ -111,8 +111,7 @@ class TransactionRecord(Streamable):
         }
         return formatted
 
-    @property
-    def is_spendable(self) -> bool:
+    def is_valid(self) -> bool:
         past_receipts = self.sent_to
         if len(past_receipts) < 6:
             # we haven't tried enough peers yet

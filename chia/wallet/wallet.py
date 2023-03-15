@@ -370,7 +370,8 @@ class Wallet:
         change = spend_value - total_amount
         if negative_change_allowed:
             change = max(0, change)
-        if change < 0 < fee:
+        # only kicks in if fee is missing
+        if change < 0 and fee + amount == total_amount:
             fee_coins = await self.select_coins(
                 # change already includes fee amount
                 uint64(abs(change)),
