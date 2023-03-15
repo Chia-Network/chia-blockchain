@@ -17,6 +17,13 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
+  (defun merge_list (list_a list_b)
+    (if list_a
+      (c (f list_a) (merge_list (r list_a) list_b))
+      list_b
+    )
+  )
+
   (defun recreate_self (TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
     (list CREATE_COIN
       (puzzle-hash-of-curried-function TREASURY_MOD_HASH
@@ -35,28 +42,40 @@
   (if (= proposal_or_oracle_flag 'p')
     ; if we're checking a proposal
     (assert (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
-      (c
-	(list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list announcement_source PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH)))
+      ; Merge the treasury conditions with the proposal validator conditions
+      ; If the update case then the validator returns the new treasury create coin
+      ; If the spend case then we need to recreate the treasury outselves
+      (merge_list
+	; treasury specific conditions
 	(c
-	  ; also announce the oracle info so proposals can close if treasury is being spammed
-	  ; TODO: could include these values in the announcement above so there is only one CPA
-	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME))
+	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list announcement_source PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH)))
 	  (c
-	    (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list spend_or_update_flag delegated_puzzle_hash announcement_args))))
+	    ; also announce the oracle info so proposals can close if treasury is being spammed
+	    ; TODO: could include these values in the announcement above so there is only one CPA
+	    (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME))
 	    (c
-	      ; The validator does not return conditions so we recreate the treasury
-	      (recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
-	      (a
-		PROPOSAL_VALIDATOR
-		(list
-		  ATTENDANCE_REQUIRED
-		  PASS_MARGIN
-		  proposal_announcement
-		  proposal_validator_solution
-		  (a delegated_puzzle_reveal delegated_solution)
+	      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list spend_or_update_flag delegated_puzzle_hash announcement_args))))
+	      (if (= spend_or_update_flag "s")
+		; spend case, recreate the treasury
+		(c
+		  (recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
+		  ()
 		)
+		; update case so don't recreate the treasury
+		()
 	      )
 	    )
+	  )
+	)
+	; conditions output by the proposal
+	(a
+	  PROPOSAL_VALIDATOR
+	  (list
+	    ATTENDANCE_REQUIRED
+	    PASS_MARGIN
+	    proposal_announcement
+	    proposal_validator_solution
+	    (a delegated_puzzle_reveal delegated_solution)
 	  )
 	)
       )

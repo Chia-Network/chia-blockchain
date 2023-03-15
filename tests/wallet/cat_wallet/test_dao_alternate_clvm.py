@@ -298,7 +298,7 @@ def test_validator() -> None:
         output_conds.as_python()
     ])
     conds: Program = proposal_validator.run(solution)
-    assert len(conds.as_python()) == 0 # validator doesn't output conditions for spend
+    assert len(conds.as_python()) == 3 + len(conditions)
 
     # test update
     proposal: Program = DAO_PROPOSAL_MOD.curry(
@@ -395,7 +395,7 @@ def test_spend_p2_singleton() -> None:
         output_conditions
     ])
     conds = proposal_validator.run(validator_solution)
-    assert conds.as_python() == b""
+    assert len(conds.as_python()) == 3 + len(conditions)
     
 
 
@@ -489,7 +489,7 @@ def test_treasury() -> None:
         ]
     )
     conds = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 4
+    assert len(conds.as_python()) == 7 + len(conditions)
 
 
 def test_lockup() -> None:
@@ -670,8 +670,6 @@ def test_proposal_innerpuz() -> None:
         ]
     )
 
-    conds = treasury_puz.run(treasury_solution)
-
     # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
     # vote_coin_id_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -717,11 +715,11 @@ def test_proposal_innerpuz() -> None:
             apas.append(cond)
             assert bytes32(cond[1]) in cpas
 
-
     ccs = []
     for cond in treasury_conds.as_python():
         if cond[0] == b"3":
+            if int_from_bytes(cond[2]) == 1:
+                assert cond[1] == full_treasury_puz.get_tree_hash()
             ccs.append(cond)
-    assert len(ccs) == 1
-    assert ccs[0][1] == full_treasury_puz.get_tree_hash()
+    assert len(ccs) == 2 + len(conditions)
 
