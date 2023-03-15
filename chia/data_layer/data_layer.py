@@ -60,8 +60,8 @@ class DataLayer:
     none_bytes: bytes32
     lock: asyncio.Lock
     _server: Optional[ChiaServer]
-    downloaders: List[DLDownloader]
-    uploaders: List[DLUploader]
+    downloaders: List[str]
+    uploaders: List[str]
 
     @property
     def server(self) -> ChiaServer:
@@ -77,8 +77,8 @@ class DataLayer:
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
-        downloaders: List[DLDownloader],
-        uploaders: List[DLUploader],  # dont add FilesystemUploader to this, it is the default uploader
+        downloaders: List[str],
+        uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
     ):
         if name == "":
@@ -397,7 +397,7 @@ class DataLayer:
                     timeout,
                     self.log,
                     proxy_url,
-                    self.get_downloader(url),
+                    await self.get_downloader(url),
                 )
                 if success:
                     self.log.info(
@@ -413,18 +413,18 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
-    def get_downloader(self, url: str) -> DLDownloader:
-        # todo go through all downloaders and find one that handles the url
+    async def get_downloader(self, url: str) -> Optional[str]:
+        request_json = {"url": url}
         for d in self.downloaders:
-            if d.check_url(url, self.log):
-                return d
-        # todo throw good exception
-        return HttpDownloader()
+            async with aiohttp.ClientSession().post(d + "check_url", json=request_json) as response:
+                res_json = await response.json()
+                if res_json["handles_url"] == True:
+                    return d
+        # todo return list of downloaders
+        return None
 
     async def upload_files(self, tree_id: bytes32) -> None:
-
-        uploader: DLUploader = self.get_uploader(tree_id)
-
+        uploader = await self.get_uploader(tree_id)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {tree_id}.")
@@ -438,15 +438,15 @@ class DataLayer:
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
         while publish_generation > 0:
-            if not await uploader.upload(
-                self.data_store,
-                tree_id,
-                root,
-                self.server_files_location,
-                self.log,
-            ):
-                break
-
+            res, full_tree_path, diff_path = await write_files_for_root(
+                self.data_store, tree_id, root, self.server_files_location
+            )
+            if uploader is not None:
+                request_json = {"id": tree_id, "full_tree_path": full_tree_path, "diff_path": diff_path}
+                async with aiohttp.ClientSession().post(uploader + "upload", json=request_json) as response:
+                    res_json = await response.json()
+                    if res_json["uploaded"] != True:
+                        break
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
@@ -827,10 +827,12 @@ class DataLayer:
             target_generation=singleton_record.generation,
         )
 
-    def get_uploader(self, tree_id: bytes32) -> DLUploader:
-
+    async def get_uploader(self, tree_id: bytes32) -> Optional[str]:
         for uploader in self.uploaders:
-            if uploader.check_store_id(tree_id, self.log):
-                return uploader
-
-        return FilesystemUploader()
+            request_json = {"id": tree_id}
+            # todo handle errors
+            async with aiohttp.ClientSession().post(uploader + "check_store_id", json=request_json) as response:
+                res_json = await response.json()
+                if res_json["handles_store"] == True:
+                    return uploader
+        return None

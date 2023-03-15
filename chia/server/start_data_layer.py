@@ -3,15 +3,20 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, List, Optional, cast
+
+import boto3 as boto3
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
+from chia.data_layer.downloader import DLDownloader, S3Downloader
+from chia.data_layer.uploader import DLUploader, S3Uploader
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -29,9 +34,15 @@ log = logging.getLogger(__name__)
 def create_data_layer_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
+    downloaders: List[DLDownloader],
+    uploaders: List[DLUploader],  # dont add FilesystemUploader to this, it is the default uploader
     wallet_service: Optional[Service[WalletNode]] = None,
     connect_to_daemon: bool = True,
 ) -> Service[DataLayer]:
+    if uploaders is None:
+        uploaders = []
+    if downloaders is None:
+        downloaders = []
     service_config = config[SERVICE_NAME]
     self_hostname = config["self_hostname"]
     wallet_rpc_port = service_config["wallet_peer"]["port"]
@@ -42,7 +53,14 @@ def create_data_layer_service(
         wallet_root_path = wallet_service.root_path
         wallet_config = wallet_service.config
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
-    data_layer = DataLayer(config=service_config, root_path=root_path, wallet_rpc_init=wallet_rpc_init)
+
+    data_layer = DataLayer(
+        config=service_config,
+        root_path=root_path,
+        wallet_rpc_init=wallet_rpc_init,
+        downloaders=downloaders,
+        uploaders=uploaders,
+    )  # dont add Fil)
     api = DataLayerAPI(data_layer)
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
@@ -68,6 +86,19 @@ def create_data_layer_service(
     )
 
 
+bucket_name = "chia-datalayer-test-bucket"
+client = boto3.client(
+    "s3",
+    region_name="us-east-1",
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+)
+
+
+uploaders: List[str] = []
+downloaders: List[str] = []
+
+
 async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
@@ -86,7 +117,7 @@ async def async_main() -> int:
         overwrite=False,
     )
 
-    service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
+    service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
     await service.setup_process_global_state()
     await service.run()
 
