@@ -230,6 +230,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -434,6 +435,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -837,6 +839,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
