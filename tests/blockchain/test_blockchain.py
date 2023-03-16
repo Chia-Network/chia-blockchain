@@ -1919,11 +1919,6 @@ class TestBodyValidation:
             (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
-            # additional garbage at the end of parameters
-            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),
-            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
         ],
     )
     async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, with_softfork2, bt):
