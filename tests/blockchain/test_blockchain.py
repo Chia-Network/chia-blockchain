@@ -1854,9 +1854,10 @@ class TestBodyValidation:
             # SECONDS RELATIVE
             (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),  # <- birth time is
-            (co.ASSERT_SECONDS_RELATIVE, 9, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_RELATIVE, 10, rbr.NEW_PEAK),  # <- current block time
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),  # <- birth time
+            (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_RELATIVE, 9, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),  # <- current block time
             (co.ASSERT_SECONDS_RELATIVE, 11, rbr.INVALID_BLOCK),
             # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
@@ -1872,9 +1873,9 @@ class TestBodyValidation:
             # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_SECONDS_ABSOLUTE, 10019, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10020, rbr.NEW_PEAK),  # <- previous tx-block
-            (co.ASSERT_SECONDS_ABSOLUTE, 10021, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),  # <- current block
+            (co.ASSERT_SECONDS_ABSOLUTE, 10021, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.INVALID_BLOCK),  # <- current block
             (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
         ],
@@ -1892,6 +1893,15 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
             ]:
+                expected = ReceiveBlockResult.NEW_PEAK
+
+            # before soft-fork 2, the timestamp we compared against was the
+            # current block's timestamp as opposed to the previous tx-block's
+            # timestamp. These conditions used to be valid, before the soft-fork
+            if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and lock_value > 0 and lock_value <= 10:
+                expected = ReceiveBlockResult.NEW_PEAK
+
+            if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
                 expected = ReceiveBlockResult.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
@@ -2011,7 +2021,7 @@ class TestBodyValidation:
             # SECONDS RELATIVE
             (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
             # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
@@ -2024,8 +2034,10 @@ class TestBodyValidation:
             (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
             # SECONDS ABSOLUTE
             # genesis timestamp is 10000 and each block is 10 seconds
-            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10020, rbr.NEW_PEAK),  # <- previous tx-block
+            (co.ASSERT_SECONDS_ABSOLUTE, 10021, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.INVALID_BLOCK),  # <- current tx-block
             (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
         ],
@@ -2034,6 +2046,7 @@ class TestBodyValidation:
         if with_softfork2:
             # enable softfork2 at height 0, to make it apply to this test
             constants = test_constants.replace(SOFT_FORK2_HEIGHT=0)
+
         else:
             constants = test_constants
 
@@ -2044,6 +2057,15 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
             ]:
                 expected = ReceiveBlockResult.NEW_PEAK
+
+            # before the softfork, we compared ASSERT_SECONDS_* conditions
+            # against the current block's timestamp, so we need to
+            # adjust these test cases
+            if opcode == co.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
+                expected = rbr.NEW_PEAK
+
+            if opcode == co.ASSERT_SECONDS_RELATIVE and lock_value > -10 and lock_value <= 0:
+                expected = rbr.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
 

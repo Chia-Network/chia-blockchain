@@ -164,8 +164,8 @@ class TestConditions:
             (co.ASSERT_SECONDS_RELATIVE, -1, None),
             (co.ASSERT_SECONDS_RELATIVE, 0, None),
             (co.ASSERT_SECONDS_RELATIVE, 10, None),
-            (co.ASSERT_SECONDS_RELATIVE, 11, None),
-            (co.ASSERT_SECONDS_RELATIVE, 20, None),
+            (co.ASSERT_SECONDS_RELATIVE, 11, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, 20, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 21, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
@@ -174,8 +174,8 @@ class TestConditions:
             (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
             (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
             (co.ASSERT_SECONDS_ABSOLUTE, 10030, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10039, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10040, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10039, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10040, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
             (co.ASSERT_SECONDS_ABSOLUTE, 10041, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
             (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
         ],
@@ -190,6 +190,16 @@ class TestConditions:
             co.ASSERT_MY_BIRTH_SECONDS,
         ]:
             expected = None
+
+        if not softfork2:
+            # before soft-fork 2, the timestamp we compared against was the
+            # current block's timestamp as opposed to the previous tx-block's
+            # timestamp. These conditions used to be valid, before the soft-fork
+            if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and value > 10 and value <= 20:
+                expected = None
+
+            if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and value > 10030 and value <= 10040:
+                expected = None
 
         await check_conditions(bt, conditions, expected_err=expected, softfork2=softfork2)
 

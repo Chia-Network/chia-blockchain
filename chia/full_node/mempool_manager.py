@@ -472,15 +472,16 @@ class MempoolManager:
                 log.warning(f"{spend.puzzle_hash.hex()} != {coin_record.coin.puzzle_hash.hex()}")
                 return Err.WRONG_PUZZLE_HASH, None, []
 
-        chialisp_height = (
-            self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
-        )
-
+        # the height and time we pass in here represent the previous transaction
+        # block's height and timestamp. In the mempool, the most recent peak
+        # block we've received will be the previous transaction block, from the
+        # point-of-view of the next block to be farmed. Therefore we pass in the
+        # current peak's height and timestamp
         assert self.peak.timestamp is not None
         tl_error: Optional[Err] = mempool_check_time_locks(
             removal_record_dict,
             npc_result.conds,
-            uint32(chialisp_height),
+            self.peak.height,
             self.peak.timestamp,
         )
 
@@ -567,6 +568,7 @@ class MempoolManager:
         """
         if new_peak is None:
             return []
+        # we're only interested in transaction blocks
         if new_peak.is_transaction_block is False:
             return []
         if self.peak == new_peak:

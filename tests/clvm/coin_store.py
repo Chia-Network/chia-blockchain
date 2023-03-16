@@ -88,7 +88,11 @@ class CoinStore:
         err = mempool_check_time_locks(
             ephemeral_db,
             result.conds,
+            # TODO: this is technically not right, it's supposed to be the
+            # previous transaction block's height
             uint32(now.height),
+            # TODO: this is technically not right, it's supposed to be the
+            # previous transaction block's timestamp
             uint64(now.seconds),
         )
 
