@@ -22,7 +22,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 
 from ...blockchain.blockchain_test_utils import _validate_and_add_block
 from .ram_db import create_ram_blockchain
@@ -81,6 +81,8 @@ async def check_spend_bundle_validity(
             block_list_input=blocks,
             guarantee_transaction_block=True,
             transaction_data=spend_bundle,
+            genesis_timestamp=uint64(10000),
+            time_per_block=10,
         )
         newest_block = additional_blocks[-1]
 
@@ -134,13 +136,13 @@ class TestConditions:
             # the coin being spent was created in the 3rd block (i.e. block 2)
             # ensure invalid heights fail and pass correctly, depending on
             # which end of the range they exceed
+            # genesis timestamp is 10000 and each block is 10 seconds
             # MY BIRTH HEIGHT
             (co.ASSERT_MY_BIRTH_HEIGHT, -1, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 3, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 2, None),
             # MY BIRTH SECONDS
-            # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_MY_BIRTH_SECONDS, -1, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10019, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
@@ -161,13 +163,20 @@ class TestConditions:
             # SECONDS RELATIVE
             (co.ASSERT_SECONDS_RELATIVE, -1, None),
             (co.ASSERT_SECONDS_RELATIVE, 0, None),
+            (co.ASSERT_SECONDS_RELATIVE, 10, None),
+            (co.ASSERT_SECONDS_RELATIVE, 11, None),
+            (co.ASSERT_SECONDS_RELATIVE, 20, None),
+            (co.ASSERT_SECONDS_RELATIVE, 21, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             # SECONDS ABSOLUTE
             (co.ASSERT_SECONDS_ABSOLUTE, -1, None),
             (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
             (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10039, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10040, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10041, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
             (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
         ],
     )
