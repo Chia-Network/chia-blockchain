@@ -24,6 +24,7 @@
   self_destruct_flag ; if not 0, do the self-destruct spend
 )
   (include condition_codes.clvm)
+  (include utility_macros.clib)
   (include curry-and-treehash.clinc)
   (include *standard-cl-21*)
 
@@ -239,28 +240,31 @@
 
 
   (if self_destruct_flag
-    (list
-      (list CREATE_COIN dao_finished_state ONE)
-      (list ASSERT_SECONDS_RELATIVE self_destruct_time)
-      (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
-	(sha256
-	  (calculate_treasury_puzzlehash
-	    (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-	    TREASURY_MOD_HASH
-	    vote_amounts_or_proposal_validator_hash
-	    vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
-	    soft_close_length
-	    lockup_innerpuzhashes_or_attendance_required
-	    previous_votes_or_pass_margin
-	    self_destruct_time
+    ; assert self_destruct_time > proposal_timelock_length
+    (assert (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
+      (list
+	(list CREATE_COIN dao_finished_state ONE)
+	(list ASSERT_SECONDS_RELATIVE self_destruct_time)
+	(list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
+	  (sha256
+	    (calculate_treasury_puzzlehash
+	      (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+	      TREASURY_MOD_HASH
+	      vote_amounts_or_proposal_validator_hash
+	      vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+	      soft_close_length
+	      lockup_innerpuzhashes_or_attendance_required
+	      previous_votes_or_pass_margin
+	      self_destruct_time
+	    )
+	    (sha256 previous_votes_or_pass_margin self_destruct_time)
 	  )
-	  (sha256 previous_votes_or_pass_margin self_destruct_time)
 	)
       )
     )
     ; We're not trying to self destruct
     ; Check whether we have a soft close to either try closing the proposal or adding votes
-    (if soft_close_length
+    (if soft_close_length ; Add detailed comment on why this is used
       ; We are trying to close the proposal, so check whether it passed or failed
       (if (all (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required) (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin)))
         ; Passed
