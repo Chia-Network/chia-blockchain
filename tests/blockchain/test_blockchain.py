@@ -1894,26 +1894,32 @@ class TestBodyValidation:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
+            # MY BIRHT HEIGHT
             (co.ASSERT_MY_BIRTH_HEIGHT, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_HEIGHT, 2, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_HEIGHT, 3, rbr.NEW_PEAK),
+            # MY BIRHT SECONDS
             (co.ASSERT_MY_BIRTH_SECONDS, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10029, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.NEW_PEAK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10031, rbr.INVALID_BLOCK),
+            # SECONDS RELATIVE
             (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # HEIGHT ABSOLUTE
             (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
+            # SECONDS ABSOLUTE
             # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
