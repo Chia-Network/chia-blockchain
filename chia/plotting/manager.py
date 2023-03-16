@@ -58,7 +58,7 @@ class PlotManager:
         self.pool_public_keys = []
         self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
         self.match_str = match_str
-        self.open_no_key_filenames = open_no_key_filenames
+        self.open_no_key_filenames = True
         self.last_refresh_time = 0
         self.refresh_parameter = refresh_parameter
         self.log = logging.getLogger(__name__)
@@ -319,13 +319,21 @@ class PlotManager:
                 assert cache_entry is not None
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
-                    log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
+                    log.warning(
+                        f"Plot {file_path} has a farmer public key that is not in the farmer's pk list. "
+                        f"Plot farmer key: {cache_entry.farmer_public_key} "
+                        f"Farmer public keys: {self.farmer_public_keys}"
+                    )
                     self.no_key_filenames.add(file_path)
                     if not self.open_no_key_filenames:
                         return None
 
                 if cache_entry.pool_public_key is not None and cache_entry.pool_public_key not in self.pool_public_keys:
-                    log.warning(f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list.")
+                    log.warning(
+                        f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list. "
+                        f"Plot pool public key: {cache_entry.pool_public_key} "
+                        f"Pool public keys: {self.pool_public_keys}"
+                    )
                     self.no_key_filenames.add(file_path)
                     if not self.open_no_key_filenames:
                         return None
