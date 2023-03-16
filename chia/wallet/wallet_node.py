@@ -764,7 +764,7 @@ class WalletNode:
         # sync from 0 every time.
         already_checked_coin_ids: Set[bytes32] = set()
         while not self._shut_down:
-            all_coin_ids = await self.get_coin_ids_to_subscribe(0)
+            all_coin_ids = await self.get_coin_ids_to_subscribe()
             not_checked_coin_ids = set(all_coin_ids) - already_checked_coin_ids
             if not_checked_coin_ids == set():
                 break
@@ -1204,7 +1204,7 @@ class WalletNode:
                 # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
                 # we still want to subscribe for all phs and coins.
                 # (Hints are not in filter)
-                all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(uint32(0))
+                all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
                 ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
                 coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
@@ -1245,7 +1245,7 @@ class WalletNode:
             fork_height = header_block.height - 1
 
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
-            request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
+            request_prev = wallet_protocol.RequestBlockHeader(uint32(top.height - 1))
             response_prev: Optional[RespondBlockHeader] = await peer.call_api(
                 FullNodeAPI.request_block_header, request_prev
             )
@@ -1332,12 +1332,10 @@ class WalletNode:
         all_puzzle_hashes.update(interested_puzzle_hashes)
         return list(all_puzzle_hashes)
 
-    async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
-        all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
-        removed_names = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-        all_coin_names.update(set(removed_names))
-        all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
-        return list(all_coin_names)
+    async def get_coin_ids_to_subscribe(self) -> List[bytes32]:
+        coin_ids = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        coin_ids.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
+        return list(coin_ids)
 
     async def validate_received_state_from_peer(
         self,
@@ -1509,7 +1507,7 @@ class WalletNode:
             return True
 
         # block is not included in wp recent chain
-        start = block.height + 1
+        start = uint32(block.height + 1)
         compare_to_recent = False
         inserted: int = 0
         first_height_recent = weight_proof.recent_chain_data[0].height
@@ -1522,13 +1520,13 @@ class WalletNode:
             start_height = block.height
             end_height = block.height + 32
             ses_start_height = 0
-            end = 0
+            end = uint32(0)
             for idx, ses in enumerate(weight_proof.sub_epochs):
                 if idx == len(weight_proof.sub_epochs) - 1:
                     break
-                next_ses_height = (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
-                    idx + 1
-                ].num_blocks_overflow
+                next_ses_height = uint32(
+                    (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[idx + 1].num_blocks_overflow
+                )
                 # start_ses_hash
                 if ses_start_height <= start_height < next_ses_height:
                     inserted = idx + 1
@@ -1539,9 +1537,10 @@ class WalletNode:
                         if idx > len(weight_proof.sub_epochs) - 3:
                             break
                         # else add extra ses as request start <-> end spans two ses
-                        end = (idx + 2) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
-                            idx + 2
-                        ].num_blocks_overflow
+                        end = uint32(
+                            (idx + 2) * self.constants.SUB_EPOCH_BLOCKS
+                            + weight_proof.sub_epochs[idx + 2].num_blocks_overflow
+                        )
                         inserted += 1
                         break
                 ses_start_height = next_ses_height

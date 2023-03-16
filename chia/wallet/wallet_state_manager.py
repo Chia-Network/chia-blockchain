@@ -1030,7 +1030,6 @@ class WalletStateManager:
 
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
-        trade_coin_removed: List[CoinState] = []
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
@@ -1066,7 +1065,7 @@ class WalletStateManager:
                             continue
 
                     if coin_state.spent_height is not None and coin_name in trade_removals:
-                        trade_coin_removed.append(coin_state)
+                        await self.trade_manager.coins_of_interest_farmed(coin_state, fork_height, peer)
                     wallet_id: Optional[uint32] = None
                     wallet_type: Optional[WalletType] = None
                     if wallet_info is not None:
@@ -1400,8 +1399,6 @@ class WalletStateManager:
                 else:
                     await self.retry_store.remove_state(coin_state)
                 continue
-        for coin_state_removed in trade_coin_removed:
-            await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height, peer)
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
