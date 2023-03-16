@@ -49,6 +49,7 @@ jobs:
 
   macos:
     uses: ./.github/workflows/test-single.yml
+    if: ${{ needs.configure.outputs.matrix_mode != 'limited' }}
     needs: configure
     with:
       emoji: 🍎
