@@ -7,6 +7,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
@@ -240,11 +241,13 @@ def create_ownership_layer_covenant_morpher(
     return first_curry.curry(first_curry.get_tree_hash())
 
 
+@streamable
 @dataclass(frozen=True)
-class VCLineageProof(LineageProof):
+class VCLineageProof(LineageProof, Streamable):
     """
     The covenant layer for ownership layers requires to be passed the previous parent's metadata too
     """
+
     parent_proof_hash: Optional[bytes32] = None
 
 
@@ -309,6 +312,7 @@ class VerifiedCredential:
     spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
     likely result in an error.
     """
+
     coin: Coin
     singleton_lineage_proof: LineageProof
     ownership_lineage_proof: VCLineageProof
@@ -431,7 +435,6 @@ class VerifiedCredential:
             ),
         )
 
-
     ####################################################################################################################
     # The methods in this section give insight into the structure of the puzzle stack that is considered a "VC"
     def construct_puzzle(self) -> Program:
@@ -474,6 +477,7 @@ class VerifiedCredential:
 
     def hidden_puzzle(self) -> Program:
         return STANDARD_BRICK_PUZZLE
+
     ####################################################################################################################
 
     @staticmethod
@@ -755,6 +759,7 @@ class VerifiedCredential:
             expected_announcement,
             CoinSpend(self.coin, self.construct_puzzle(), vc_solution),
         )
+
     ####################################################################################################################
 
     def _next_vc(
