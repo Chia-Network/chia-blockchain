@@ -1,3 +1,6 @@
+; This is a PARENT_MORPHER for use with covenant_layer.clsp
+
+; Is is used to prove that the parent was a singleton -> ownership_layer (w/ covenant_layer in TP) puzzle stack
 (mod
   (
     ; curried first - a bunch of info to create a singleton -> ownership layer puzzle stack
@@ -10,13 +13,14 @@
     TP_HASH
     ; curried second
     SELF_HASH  ; tree hash of all the other hashes above
-    previous_inner_puzhash
+    previous_inner_puzhash  ; Truth
     previous_metadata_hash
   )
 
   (include curry.clib)
 
   (curry_hashes (f SINGLETON_STRUCT)
+    ; (sha256tree SINGLETON_STRUCT) 
     (sha256 2
       (sha256 1 (f SINGLETON_STRUCT))
       (sha256 2

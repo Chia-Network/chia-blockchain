@@ -1,8 +1,12 @@
+; This layer ensures that a second puzzle hash or "backdoor" that can be used without the inner puzzle's permission
+; travels with each generation of a coin.
+
+; The hidden puzzle is responsible for recreating this layer if it wishes, this layer will not wrap its outputs.
 (mod
   (
     THIS_MOD_HASH
     HIDDEN_PUZZLE_HASH
-    INNER_PUZZLE_HASH
+    INNER_PUZZLE_HASH  ; must be a hash so that the backdoor has enough info to create a puzzle reveal to spend the coin
     hidden
     inner_or_hidden_puzzle_reveal
     inner_or_hidden_solution

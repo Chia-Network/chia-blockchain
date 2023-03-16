@@ -1,3 +1,9 @@
+; This is the standard puzzle that a VerifiedCredential provider will put into the backdoor slot of viral_backdoor.clsp
+
+; The goal of this puzzle is to recreate the VC exactly as it is except for three things:
+; 1) There is no longer a viral backdoor layer
+; 2) The metadata in the ownership layer becomes ()
+; 3) The transfer program in the ownership layer becomes an anyone-can-spend
 (mod
   (
     SINGLETON_MOD_HASH
@@ -5,16 +11,17 @@
     OWNERSHIP_LAYER_MOD_HASH
     VIRAL_BACKDOOR_MOD_HASH
     DEFAULT_TRANSFER_PROGRAM
+    ; most of the specific information is solved rather than curried in because we don't care about committing to it
     launcher_id_hash
     metadata_hash
     tp_hash
-    this_hash_hash
+    this_hash_hash  ; the hash of this puzzle with all of its curried arguments hashed AGAIN with (sha256 1 this_hash)
     inner_puzzle_hash
     my_amount
-    ownership_lineage_proof
-    previous_proof_hash_hash
+    ownership_lineage_proof  ; need to solve the covenant layer one last time
+    previous_proof_hash_hash  ; like metadata_hash above but for the previous coin
     (
-        provider_innerpuzhash
+        provider_innerpuzhash  ; DID needs to authorize the transfer program (and therefore this backdoor)
         my_coin_id
         new_metadata
     )
@@ -24,6 +31,7 @@
   (include curry.clib)
 
   (list
+    ; The purpose of this condition is just to make sure we're telling the truth about the current inner puzzle hash
     (list ASSERT_MY_PUZZLEHASH
       (curry_hashes SINGLETON_MOD_HASH
         (sha256 2
@@ -47,6 +55,11 @@
     )
     (list ASSERT_MY_AMOUNT my_amount)
     (list CREATE_COIN inner_puzzle_hash my_amount)
-    (list -10 ownership_lineage_proof (list previous_proof_hash_hash) (list provider_innerpuzhash my_coin_id new_metadata DEFAULT_TRANSFER_PROGRAM))
+    (list
+      -10
+      ownership_lineage_proof  ; for covenant layer
+      (list previous_proof_hash_hash)  ; for covenant layer parent morpher
+      (list provider_innerpuzhash my_coin_id new_metadata DEFAULT_TRANSFER_PROGRAM)  ; for transfer program
+    )
   )
 )

@@ -1,8 +1,9 @@
+; This is a utility layer to give a coin that allows it to prove that it came from some INITIAL_PUZZLE_HASH
 (mod
   (
     ; curried first
     INITIAL_PUZZLE_HASH
-    PARENT_MORPHER
+    PARENT_MORPHER  ; Defines how to wrap a parent inner puzzle hash to prove that it had this layer running in of it
     INNER_PUZZLE
     lineage_proof
     morpher_solution
@@ -15,11 +16,11 @@
     (list ASSERT_MY_PARENT_ID
       (sha256
         (f lineage_proof)
-        (if (r (r lineage_proof))
+        (if (r (r lineage_proof))  ; different logic based on whether the lineage proof is 2 or 3 elements long
             (a PARENT_MORPHER (c (f (r lineage_proof)) morpher_solution))
             INITIAL_PUZZLE_HASH
         )
-        (if (r (r lineage_proof))
+        (if (r (r lineage_proof))  ; different logic based on whether the lineage proof is 2 or 3 elements long
             (f (r (r lineage_proof)))
             (f (r lineage_proof))
         )

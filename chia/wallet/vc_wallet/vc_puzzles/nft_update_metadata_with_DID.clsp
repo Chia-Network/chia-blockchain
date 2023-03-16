@@ -1,3 +1,7 @@
+; This is a TRANSFER_PROGRAM for use with nft_ownership_layer.clsp
+
+; Given a DID's singleton struct, assert its announcement of any changes. If no DID's innerpuz is provided, then just
+; return the same metadata and transfer program with no conditions
 (mod
   (
     PROVIDER_SINGLETON_STRUCT
