@@ -458,8 +458,6 @@ class MempoolManager:
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = self.check_removals(removal_record_dict)
-        # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
-        conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -499,11 +497,8 @@ class MempoolManager:
                 return tl_error, None, []  # MempoolInclusionStatus.FAILED
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
-            for conflicting in conflicts:
-                for item in self.mempool.get_spends_by_coin_id(conflicting.name()):
-                    conflicting_pool_items[item.name] = item
-            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
-            if not can_replace(conflicting_pool_items, removal_record_dict, potential):
+            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
+            if not can_replace(conflicts, removal_record_dict, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
@@ -514,32 +509,32 @@ class MempoolManager:
             f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        return None, potential, list(conflicting_pool_items.keys())
+        return None, potential, [item.name for item in conflicts]
 
-    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
+    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], Set[MempoolItem]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
-        Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
+        Returns Error (if any), the set of existing MempoolItems with conflicting spends (if any).
         Note that additions are not checked for duplicates, because having duplicate additions requires also
         having duplicate removals.
         """
         assert self.peak is not None
-        conflicts: List[Coin] = []
+        conflicts: Set[MempoolItem] = set()
 
         for record in removals.values():
             removal = record.coin
             # 1. Checks if it's been spent already
             if record.spent:
-                return Err.DOUBLE_SPEND, []
+                return Err.DOUBLE_SPEND, set()
             # 2. Checks if there's a mempool conflict
             items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(removal.name())
-            if len(items) > 0:
-                conflicts.append(removal)
+            for item in items:
+                conflicts.add(item)
 
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, conflicts
         # 5. If coins can be spent return list of unspents as we see them in local storage
-        return None, []
+        return None, set()
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
@@ -650,14 +645,21 @@ class MempoolManager:
 
 
 def can_replace(
-    conflicting_items: Dict[bytes32, MempoolItem],
+    conflicting_items: Set[MempoolItem],
     removals: Dict[bytes32, CoinRecord],
     new_item: MempoolItem,
 ) -> bool:
+    """
+    This function implements the mempool replacement rules. Given a Mempool item
+    we're attempting to insert into the mempool (new_item) and the set of existing
+    mempool items that conflict with it, this function answers the question whether
+    the existing items can be replaced by the new one. The removals parameter are
+    the coin records the new mempool item is spending.
+    """
 
     conflicting_fees = 0
     conflicting_cost = 0
-    for item in conflicting_items.values():
+    for item in conflicting_items:
         conflicting_fees += item.fee
         conflicting_cost += item.cost
 
