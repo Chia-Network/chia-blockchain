@@ -36,7 +36,7 @@ jobs:
         submodules: recursive
 
     - name: Set Env
-      uses: Chia-Network/actions/setjobenv@wallentx/conditionalfix
+      uses: Chia-Network/actions/setjobenv@wallentx/setjobarm
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
