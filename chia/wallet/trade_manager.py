@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from typing_extensions import Literal
@@ -222,6 +221,10 @@ class TradeManager:
     async def cancel_pending_offer(self, trade_id: bytes32) -> None:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED)
         self.wallet_state_manager.state_changed("offer_cancelled")
+
+    async def fail_pending_offer(self, trade_id: bytes32) -> None:
+        await self.trade_store.set_status(trade_id, TradeStatus.FAILED)
+        self.wallet_state_manager.state_changed("offer_failed")
 
     async def cancel_pending_offer_safely(
         self, trade_id: bytes32, fee: uint64 = uint64(0)
@@ -609,8 +612,7 @@ class TradeManager:
             return True, offer, None
 
         except Exception as e:
-            tb = traceback.format_exc()
-            self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
+            self.log.exception("Error creating trade offer")
             return False, None, str(e)
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
@@ -823,7 +825,7 @@ class TradeManager:
 
             complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, result[1]]), solver)
 
-        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
+        self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)

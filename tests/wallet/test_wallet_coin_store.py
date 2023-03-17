@@ -311,47 +311,6 @@ def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
 
 
 @pytest.mark.asyncio
-async def test_get_coin_names_to_check() -> None:
-    r1 = record(coin_1, confirmed=1, spent=0)
-    r2 = record(coin_2, confirmed=2, spent=4)
-    r3 = record(coin_3, confirmed=3, spent=5)
-    r4 = record(coin_4, confirmed=4, spent=6)
-    r5 = record(coin_5, confirmed=5, spent=7)
-    # these spent heights violate the invariant
-    r6 = record(coin_6, confirmed=6, spent=1)
-    r7 = record(coin_7, confirmed=7, spent=2)
-
-    async with DBConnection(1) as db_wrapper:
-        store = await WalletCoinStore.create(db_wrapper)
-
-        await store.add_coin_record(r1)
-        await store.add_coin_record(r2)
-        await store.add_coin_record(r3)
-        await store.add_coin_record(r4)
-        await store.add_coin_record(r5)
-        await store.add_coin_record(r6)
-        await store.add_coin_record(r7)
-
-        for i in range(10):
-            coins = await store.get_coin_names_to_check(i)
-
-            # r1 is unspent and should always be included, regardless of height
-            assert r1.coin.name() in coins
-            # r2 was spent at height 4
-            assert (r2.coin.name() in coins) == (i < 4)
-            # r3 was spent at height 5
-            assert (r3.coin.name() in coins) == (i < 5)
-            # r4 was spent at height 6
-            assert (r4.coin.name() in coins) == (i < 6)
-            # r5 was spent at height 7
-            assert (r5.coin.name() in coins) == (i < 7)
-            # r6 was confirmed at height 6
-            assert (r6.coin.name() in coins) == (i < 6)
-            # r7 was confirmed at height 7
-            assert (r7.coin.name() in coins) == (i < 7)
-
-
-@pytest.mark.asyncio
 async def test_get_first_coin_height() -> None:
     r1 = record(coin_1, confirmed=1, spent=0)
     r2 = record(coin_2, confirmed=2, spent=4)

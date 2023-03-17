@@ -1071,7 +1071,6 @@ class WalletStateManager:
 
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
-        trade_coin_removed: List[CoinState] = []
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
@@ -1107,7 +1106,7 @@ class WalletStateManager:
                             continue
 
                     if coin_state.spent_height is not None and coin_name in trade_removals:
-                        trade_coin_removed.append(coin_state)
+                        await self.trade_manager.coins_of_interest_farmed(coin_state, fork_height, peer)
                     wallet_id: Optional[uint32] = None
                     wallet_type: Optional[WalletType] = None
                     if wallet_info is not None:
@@ -1441,8 +1440,6 @@ class WalletStateManager:
                 else:
                     await self.retry_store.remove_state(coin_state)
                 continue
-        for coin_state_removed in trade_coin_removed:
-            await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height, peer)
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
@@ -1638,28 +1635,43 @@ class WalletStateManager:
         updated = await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         if updated:
             tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
-            if tx is not None:
+            if tx is not None and tx.spend_bundle is not None:
+                self.log.info("Checking if we need to cancel trade for tx: %s", tx.name)
                 # we're only interested in errors that are not temporary
-                if send_status and error and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO):
-                    if tx.spend_bundle is not None:
-                        coins_removed = tx.spend_bundle.removals()
-                        trade_coins_removed = set([])
-                        for removed_coin in coins_removed:
-                            trade = await self.trade_manager.get_trade_by_coin(removed_coin)
-                            if trade is not None and trade.status in (
-                                TradeStatus.PENDING_CONFIRM.value,
-                                TradeStatus.PENDING_ACCEPT.value,
-                                TradeStatus.PENDING_CANCEL.value,
-                            ):
-                                # offer was tied to these coins, lets subscribe to them to get a confirmation to
-                                # cancel it if it's confirmed
-                                # we send transactions to multiple peers, and in cases when mempool gets
-                                # fragmented, it's safest to wait for confirmation from blockchain before setting
-                                # offer to failed
-                                trade_coins_removed.add(removed_coin.name())
-                        if trade_coins_removed:
+                if (
+                    send_status != MempoolInclusionStatus.SUCCESS
+                    and error
+                    and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)
+                ):
+                    coins_removed = tx.spend_bundle.removals()
+                    trade_coins_removed = set([])
+                    trade = None
+                    for removed_coin in coins_removed:
+                        trade = await self.trade_manager.get_trade_by_coin(removed_coin)
+                        if trade is not None and trade.status in (
+                            TradeStatus.PENDING_CONFIRM.value,
+                            TradeStatus.PENDING_ACCEPT.value,
+                            TradeStatus.PENDING_CANCEL.value,
+                        ):
+                            # offer was tied to these coins, lets subscribe to them to get a confirmation to
+                            # cancel it if it's confirmed
+                            # we send transactions to multiple peers, and in cases when mempool gets
+                            # fragmented, it's safest to wait for confirmation from blockchain before setting
+                            # offer to failed
+                            trade_coins_removed.add(removed_coin.name())
+                    if trade and trade_coins_removed:
+                        if not tx.is_valid():
+                            # we've tried to send this transaction to a full node multiple times
+                            # but failed, it's safe to assume that it's not going to be accepted
+                            # we can mark this offer as failed
+                            self.log.info("This offer can't be posted, removing it from pending offers")
+                            assert trade is not None
+                            await self.trade_manager.fail_pending_offer(trade.trade_id)
+
+                        else:
                             self.log.info(
-                                "Subscribing to unspendable offer coins: %s", [x.hex() for x in trade_coins_removed]
+                                "Subscribing to unspendable offer coins: %s",
+                                [x.hex() for x in trade_coins_removed],
                             )
                             await self.add_interested_coin_ids(list(trade_coins_removed))
 

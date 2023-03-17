@@ -64,7 +64,6 @@ from chia.wallet.wallet_info import WalletInfo
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
 
-
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
@@ -366,7 +365,7 @@ class Wallet:
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction, got {total_amount}")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             if total_amount > total_balance:
@@ -385,15 +384,27 @@ class Wallet:
             )
         elif exclude_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
+
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
-
+        self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
         change = spend_value - total_amount
         if negative_change_allowed:
             change = max(0, change)
-
-        assert change >= 0
+        # only kicks in if fee is missing
+        if change < 0 and fee + amount == total_amount:
+            fee_coins = await self.select_coins(
+                # change already includes fee amount
+                uint64(abs(change)),
+                excluded_coin_amounts=exclude_coin_amounts,
+                exclude=([] if exclude_coins is None else list(exclude_coins)) + list(coins or []),
+            )
+            coins = coins.union(fee_coins)
+            spend_value = sum([coin.amount for coin in coins])
+            self.log.info(f"Updated spend_value is {spend_value} and total_amount is {total_amount}")
+            change = spend_value - total_amount
+        assert change >= 0, f"change is negative: {change}"
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
