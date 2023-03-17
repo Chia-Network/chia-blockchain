@@ -8,16 +8,19 @@ from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
-from chia.full_node.mempool_manager import MempoolManager, compute_assert_height
+from chia.full_node.mempool_manager import MempoolManager, can_replace, compute_assert_height
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
@@ -122,6 +125,7 @@ def make_test_conds(
     height_absolute: int = 0,
     seconds_relative: Optional[int] = None,
     seconds_absolute: int = 0,
+    cost: int = 0,
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
         [
@@ -145,7 +149,7 @@ def make_test_conds(
         None,
         None,
         [],
-        0,
+        cost,
         0,
         0,
     )
@@ -494,6 +498,74 @@ async def test_ephemeral_timelock(
     assert await get_coin_record_for_test_coins(created_coin.name()) is None
     _, status, error = await add_spendbundle(mempool_manager, sb, sb.name())
     assert (status, error) == (expected_status, expected_error)
+
+
+def mk_item(coins: List[Coin], *, cost: int = 1, fee: int = 0) -> MempoolItem:
+    # we don't actually care about the puzzle and solutions for the purpose of
+    # can_replace()
+    spends = [CoinSpend(c, SerializedProgram(), SerializedProgram()) for c in coins]
+    spend_bundle = SpendBundle(spends, G2Element())
+    npc_results = NPCResult(None, make_test_conds(cost=cost), uint64(cost))
+    return MempoolItem(spend_bundle, uint64(fee), npc_results, spend_bundle.name(), uint32(0))
+
+
+def make_test_coins() -> List[Coin]:
+    ret: List[Coin] = []
+    for i in range(5):
+        ret.append(Coin(height_hash(i), height_hash(i + 100), i * 100))
+    return ret
+
+
+coins = make_test_coins()
+
+
+@pytest.mark.parametrize(
+    "existing_items,new_item,expected",
+    [
+        # FEE RULE
+        # the new item must pay a higher fee, in absolute terms
+        # replacing exactly the same spend is fine, as long as we increment the fee
+        ([mk_item(coins[0:1])], mk_item(coins[0:1]), False),
+        # this is less than the minimum fee increase
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=9999999), False),
+        # this is the minimum fee increase
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000), True),
+        # FEE RATE RULE
+        # the new item must pay a higher fee per cost than the existing item(s)
+        # the existing fee rate is 2 and the new fee rate is 2
+        ([mk_item(coins[0:1], cost=1000, fee=2000)], mk_item(coins[0:1], cost=10000000, fee=20000000), False),
+        # the new rate is >2
+        ([mk_item(coins[0:1], cost=1000, fee=2000)], mk_item(coins[0:1], cost=10000000, fee=20000001), True),
+        # SUPERSET RULE
+        # we can't replace an item spending coin 0 and 1 with an
+        # item that just spends coin 0
+        ([mk_item(coins[0:2])], mk_item(coins[0:1], fee=10000000), False),
+        # or just spends coin 1
+        ([mk_item(coins[0:2])], mk_item(coins[1:2], fee=10000000), False),
+        # but if we spend the same coins
+        ([mk_item(coins[0:2])], mk_item(coins[0:2], fee=10000000), True),
+        # or if we spend the same coins with additional coins
+        ([mk_item(coins[0:2])], mk_item(coins[0:3], fee=10000000), True),
+        # FEE- AND FEE RATE RULES
+        # if we're replacing two items, each paying a fee of 100, we need to
+        # spend (at least) the same coins and pay at least 10000000 higher fee
+        (
+            [mk_item(coins[0:1], fee=100, cost=100), mk_item(coins[1:2], fee=100, cost=100)],
+            mk_item(coins[0:2], fee=10000200, cost=200),
+            True,
+        ),
+        # if the fee rate is exactly the same, we won't allow the replacement
+        (
+            [mk_item(coins[0:1], fee=100, cost=100), mk_item(coins[1:2], fee=100, cost=100)],
+            mk_item(coins[0:2], fee=10000200, cost=10000200),
+            False,
+        ),
+    ],
+)
+def test_can_replace(existing_items: List[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
+
+    removals = set(c.name() for c in new_item.spend_bundle.removals())
+    assert can_replace(set(existing_items), removals, new_item) == expected
 
 
 @pytest.mark.asyncio
