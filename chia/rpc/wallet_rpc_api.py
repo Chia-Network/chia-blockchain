@@ -266,10 +266,8 @@ class WalletRpcApi:
         )
 
     async def get_latest_singleton_coin_spend(
-        self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
+        self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
     ) -> Tuple[CoinSpend, CoinState]:
-        if peer is None:
-            raise ValueError("No peers to get info from")
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
         )
@@ -820,8 +818,7 @@ class WalletRpcApi:
         if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
             if tr.type == uint32(TransactionType.INCOMING_TX.value):
                 # Fetch incoming tx coin spend
-                peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-                assert peer is not None
+                peer = self.service.get_full_node_peer()
                 assert len(tr.additions) == 1
                 coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
                     [tr.additions[0].parent_coin_info], peer=peer
@@ -1610,9 +1607,7 @@ class WalletRpcApi:
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
+        peer = self.service.get_full_node_peer()
         return {
             "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
             "id": offer.name(),
@@ -1634,9 +1629,7 @@ class WalletRpcApi:
             solver = Solver(info=maybe_marshalled_solver)
 
         async with self.service.wallet_state_manager.lock:
-            peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-            if peer is None:
-                raise ValueError("No peer connected")
+            peer = self.service.get_full_node_peer()
             trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
                 offer,
                 peer,
@@ -1818,7 +1811,7 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
@@ -1863,8 +1856,7 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        assert peer is not None
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
@@ -2623,8 +2615,7 @@ class WalletRpcApi:
             except ValueError:
                 return {"success": False, "error": f"Invalid Coin ID format for 'coin_id': {request['coin_id']!r}"}
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        assert peer is not None
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
@@ -3106,11 +3097,6 @@ class WalletRpcApi:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
-
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-
         dl_wallet: DataLayerWallet
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
@@ -3123,7 +3109,10 @@ class WalletRpcApi:
                     self.service.wallet_state_manager,
                     self.service.wallet_state_manager.main_wallet,
                 )
-        await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]), peer)
+        await dl_wallet.track_new_launcher_id(
+            bytes32.from_hexstr(request["launcher_id"]),
+            self.service.get_full_node_peer(),
+        )
         return {}
 
     async def dl_stop_tracking(self, request) -> Dict:
@@ -3311,10 +3300,6 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 assert isinstance(wallet, DataLayerWallet)
@@ -3326,7 +3311,7 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             txs = await dl_wallet.delete_mirror(
                 bytes32.from_hexstr(request["coin_id"]),
-                peer,
+                self.service.get_full_node_peer(),
                 fee=request.get("fee", uint64(0)),
             )
             for tx in txs:
