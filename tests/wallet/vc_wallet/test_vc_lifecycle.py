@@ -469,33 +469,43 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
             new_proof_hash=NEW_PROOF_HASH,
         )
-        result = await client.push_tx(
-            cost_logger.add_cost(
-                "Update VC proofs (eve covenant spend) - DID providing announcement",
-                SpendBundle(
-                    [
-                        CoinSpend(
-                            did,
-                            puzzle_for_singleton(
-                                launcher_id,
-                                ACS,
+        for use_did in (False, True):
+            result = await client.push_tx(
+                cost_logger.add_cost(
+                    "Update VC proofs (eve covenant spend) - DID providing announcement",
+                    SpendBundle(
+                        [
+                            *(
+                                [
+                                    CoinSpend(
+                                        did,
+                                        puzzle_for_singleton(
+                                            launcher_id,
+                                            ACS,
+                                        ),
+                                        solution_for_singleton(
+                                            LineageProof(
+                                                parent_name=launcher_spend.coin.parent_coin_info,
+                                                amount=uint64(launcher_spend.coin.amount),
+                                            ),
+                                            uint64(did.amount),
+                                            Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
+                                        ),
+                                    )
+                                ]
+                                if use_did
+                                else []
                             ),
-                            solution_for_singleton(
-                                LineageProof(
-                                    parent_name=launcher_spend.coin.parent_coin_info,
-                                    amount=uint64(launcher_spend.coin.amount),
-                                ),
-                                uint64(did.amount),
-                                Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
-                            ),
-                        ),
-                        update_spend,
-                    ],
-                    G2Element(),
-                ),
+                            update_spend,
+                        ],
+                        G2Element(),
+                    ),
+                )
             )
-        )
-        assert result == (MempoolInclusionStatus.SUCCESS, None)
+            if use_did:
+                assert result == (MempoolInclusionStatus.SUCCESS, None)
+            else:
+                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
         await sim.farm_block()
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(update_spend)
