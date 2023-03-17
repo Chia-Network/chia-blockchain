@@ -1469,6 +1469,22 @@ async def test_verify_signature(
 
 
 @pytest.mark.asyncio
+async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    await generate_funds(full_node_api, env.wallet_1)
+    assert rpc_server is not None
+    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
+    res = await api.set_auto_claim(req)
+    assert not res["auto_claim"]
+    assert res["auto_claim_tx_fee"] == 0
+    assert res["auto_claim_min_amount"] == 100
+    assert res["auto_claim_coin_size"] == 50
+
+
+@pytest.mark.asyncio
 async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
