@@ -396,9 +396,9 @@ class MempoolManager:
         log.debug(f"Cost: {cost}")
 
         assert npc_result.conds is not None
-        # build removal list
-        removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
-        if set(removal_names) != set([s.name() for s in new_spend.removals()]):
+        # build set of removals
+        removal_names: Set[bytes32] = set(bytes32(spend.coin_id) for spend in npc_result.conds.spends)
+        if removal_names != set(s.name() for s in new_spend.removals()):
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
@@ -498,7 +498,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
-            if not can_replace(conflicts, removal_record_dict, potential):
+            if not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
@@ -646,7 +646,7 @@ class MempoolManager:
 
 def can_replace(
     conflicting_items: Set[MempoolItem],
-    removals: Dict[bytes32, CoinRecord],
+    removal_names: Set[bytes32],
     new_item: MempoolItem,
 ) -> bool:
     """
@@ -654,7 +654,7 @@ def can_replace(
     we're attempting to insert into the mempool (new_item) and the set of existing
     mempool items that conflict with it, this function answers the question whether
     the existing items can be replaced by the new one. The removals parameter are
-    the coin records the new mempool item is spending.
+    the coin IDs the new mempool item is spending.
     """
 
     conflicting_fees = 0
@@ -669,7 +669,7 @@ def can_replace(
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
         for coin in item.removals:
-            if coin.name() not in removals:
+            if coin.name() not in removal_names:
                 log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                 return False
 
