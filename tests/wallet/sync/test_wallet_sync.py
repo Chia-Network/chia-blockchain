@@ -1373,9 +1373,9 @@ async def test_long_sync_untrusted_break(
         return trusted_peers == 1 and untrusted_peers == 0
 
     for block in default_400_blocks:
-        await trusted_full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await trusted_full_node_api.full_node.add_block(block)
     for block in default_1000_blocks[:400]:
-        await untrusted_full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await untrusted_full_node_api.full_node.add_block(block)
 
     untrusted_full_node_api.register_interest_in_puzzle_hash = MagicMock(
         return_value=register_interest_in_puzzle_hash()
