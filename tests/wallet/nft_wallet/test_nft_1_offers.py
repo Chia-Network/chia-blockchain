@@ -1302,7 +1302,6 @@ async def test_complex_nft_offer(
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
-
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -1323,10 +1322,7 @@ async def test_complex_nft_offer(
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
-    if royalty_pts[0] > 60000:
-        blocks_needed = 9
-    else:
-        blocks_needed = 3
+    blocks_needed = 3
     if not forwards_compat:
         for i in range(blocks_needed):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -1352,7 +1348,6 @@ async def test_complex_nft_offer(
     await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
     await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
     await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
-
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
@@ -1408,7 +1403,6 @@ async def test_complex_nft_offer(
     await time_out_assert(30, cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
     await time_out_assert(30, cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
     await time_out_assert(30, cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
-
     did_id_maker = bytes32.fromhex(did_wallet_maker.get_my_DID())
     did_id_taker = bytes32.fromhex(did_wallet_taker.get_my_DID())
     target_puzhash_maker = ph_maker
@@ -1500,9 +1494,14 @@ async def test_complex_nft_offer(
     nft_to_offer_asset_id_maker: bytes32 = maker_nfts[0].nft_id
     nft_to_offer_asset_id_taker_1: bytes32 = taker_nfts[0].nft_id
     nft_to_offer_asset_id_taker_2: bytes32 = taker_nfts[1].nft_id
-    XCH_REQUESTED = 2000000000000
-    CAT_REQUESTED = 100000
-    FEE = uint64(2000000000000)
+    if royalty_basis_pts_maker > 60000:
+        XCH_REQUESTED = 20000
+        CAT_REQUESTED = 1000
+        FEE = uint64(20000)
+    else:
+        XCH_REQUESTED = 2000000000000
+        CAT_REQUESTED = 100000
+        FEE = uint64(2000000000000)
 
     complex_nft_offer = {
         nft_to_offer_asset_id_maker: -1,
