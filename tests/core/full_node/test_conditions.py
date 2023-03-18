@@ -135,38 +135,41 @@ class TestConditions:
             # the coin being spent was created in the 3rd block (i.e. block 2)
             # ensure invalid heights fail and pass correctly, depending on
             # which end of the range they exceed
+            # MY BIRTH HEIGHT
             (co.ASSERT_MY_BIRTH_HEIGHT, -1, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 3, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 2, None),
+            # MY BIRTH SECONDS
             # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_MY_BIRTH_SECONDS, -1, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10019, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10020, None),
             (co.ASSERT_MY_BIRTH_SECONDS, 10021, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -1, None),
             (co.ASSERT_HEIGHT_RELATIVE, 0, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
             (co.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            # HEIGHT ABSOLUTE
             (co.ASSERT_HEIGHT_ABSOLUTE, -1, None),
             (co.ASSERT_HEIGHT_ABSOLUTE, 0, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 3, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
             (co.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            # SECONDS RELATIVE
             (co.ASSERT_SECONDS_RELATIVE, -1, None),
             (co.ASSERT_SECONDS_RELATIVE, 0, None),
+            (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            # SECONDS ABSOLUTE
             (co.ASSERT_SECONDS_ABSOLUTE, -1, None),
             (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            # test boundary values
-            (co.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-            (co.ASSERT_HEIGHT_RELATIVE, 1, None),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 3, None),
-            # genesis timestamp is 10000 and each block is 10 seconds
-            (co.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
             (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
-            (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, 0, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
         ],
     )
     async def test_condition(self, opcode, value, expected, bt, softfork2):
