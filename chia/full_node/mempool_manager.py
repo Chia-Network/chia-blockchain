@@ -7,7 +7,7 @@ from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from multiprocessing.context import BaseContext
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
 from blspy import GTElement
 from chiabip158 import PyBIP158
@@ -685,6 +685,17 @@ class MempoolManager:
         return items
 
 
+T = TypeVar("T", uint32, uint64)
+
+
+def optional_min(a: Optional[T], b: Optional[T]) -> Optional[T]:
+    return min((v for v in [a, b] if v is not None), default=None)
+
+
+def optional_max(a: Optional[T], b: Optional[T]) -> Optional[T]:
+    return max((v for v in [a, b] if v is not None), default=None)
+
+
 def can_replace(
     conflicting_items: Set[MempoolItem],
     removal_names: Set[bytes32],
@@ -700,6 +711,9 @@ def can_replace(
 
     conflicting_fees = 0
     conflicting_cost = 0
+    assert_height: Optional[uint32] = None
+    assert_before_height: Optional[uint32] = None
+    assert_before_seconds: Optional[uint64] = None
     for item in conflicting_items:
         conflicting_fees += item.fee
         conflicting_cost += item.cost
@@ -714,6 +728,10 @@ def can_replace(
                 log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                 return False
 
+        assert_height = optional_max(assert_height, item.assert_height)
+        assert_before_height = optional_min(assert_before_height, item.assert_before_height)
+        assert_before_seconds = optional_min(assert_before_seconds, item.assert_before_seconds)
+
     # New item must have higher fee per cost
     conflicting_fees_per_cost = conflicting_fees / conflicting_cost
     if new_item.fee_per_cost <= conflicting_fees_per_cost:
@@ -727,6 +745,31 @@ def can_replace(
     fee_increase = new_item.fee - conflicting_fees
     if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
         log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
+        return False
+
+    # New item may not have a different effective height/time lock (time-lock rule)
+    if new_item.assert_height != assert_height:
+        log.debug(
+            "Rejecting conflicting tx due to changing ASSERT_HEIGHT constraints %s -> %s",
+            assert_height,
+            new_item.assert_height,
+        )
+        return False
+
+    if new_item.assert_before_height != assert_before_height:
+        log.debug(
+            "Rejecting conflicting tx due to changing ASSERT_BEFORE_HEIGHT constraints %s -> %s",
+            assert_before_height,
+            new_item.assert_before_height,
+        )
+        return False
+
+    if new_item.assert_before_seconds != assert_before_seconds:
+        log.debug(
+            "Rejecting conflicting tx due to changing ASSERT_BEFORE_SECONDS constraints %s -> %s",
+            assert_before_seconds,
+            new_item.assert_before_seconds,
+        )
         return False
 
     log.info(f"Replacing conflicting tx in mempool. New tx fee: {new_item.fee}, old tx fees: {conflicting_fees}")

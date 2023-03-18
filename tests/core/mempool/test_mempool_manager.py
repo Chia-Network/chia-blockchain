@@ -11,7 +11,14 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
-from chia.full_node.mempool_manager import MempoolManager, TimelockConditions, can_replace, compute_assert_height
+from chia.full_node.mempool_manager import (
+    MempoolManager,
+    TimelockConditions,
+    can_replace,
+    compute_assert_height,
+    optional_max,
+    optional_min,
+)
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -584,13 +591,44 @@ async def test_ephemeral_timelock(
         assert expected_error == e.code
 
 
-def mk_item(coins: List[Coin], *, cost: int = 1, fee: int = 0) -> MempoolItem:
+def test_optional_min() -> None:
+    assert optional_min(uint32(100), None) == uint32(100)
+    assert optional_min(None, uint32(100)) == uint32(100)
+    assert optional_min(None, None) is None
+    assert optional_min(uint32(123), uint32(234)) == uint32(123)
+
+
+def test_optional_max() -> None:
+    assert optional_max(uint32(100), None) == uint32(100)
+    assert optional_max(None, uint32(100)) == uint32(100)
+    assert optional_max(None, None) is None
+    assert optional_max(uint32(123), uint32(234)) == uint32(234)
+
+
+def mk_item(
+    coins: List[Coin],
+    *,
+    cost: int = 1,
+    fee: int = 0,
+    assert_height: Optional[int] = None,
+    assert_before_height: Optional[int] = None,
+    assert_before_seconds: Optional[int] = None,
+) -> MempoolItem:
     # we don't actually care about the puzzle and solutions for the purpose of
     # can_replace()
     spends = [CoinSpend(c, SerializedProgram(), SerializedProgram()) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
     npc_results = NPCResult(None, make_test_conds(cost=cost), uint64(cost))
-    return MempoolItem(spend_bundle, uint64(fee), npc_results, spend_bundle.name(), uint32(0))
+    return MempoolItem(
+        spend_bundle,
+        uint64(fee),
+        npc_results,
+        spend_bundle.name(),
+        uint32(0),
+        None if assert_height is None else uint32(assert_height),
+        None if assert_before_height is None else uint32(assert_before_height),
+        None if assert_before_seconds is None else uint64(assert_before_seconds),
+    )
 
 
 def make_test_coins() -> List[Coin]:
@@ -643,6 +681,97 @@ coins = make_test_coins()
             [mk_item(coins[0:1], fee=100, cost=100), mk_item(coins[1:2], fee=100, cost=100)],
             mk_item(coins[0:2], fee=10000200, cost=10000200),
             False,
+        ),
+        # TIMELOCK RULE
+        # the new item must not have different time lock than the existing item(s)
+        # the assert height time lock condition was introduced in the new item
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000, assert_height=1000), False),
+        # the assert before height time lock condition was introduced in the new item
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000, assert_before_height=1000), False),
+        # the assert before seconds time lock condition was introduced in the new item
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000, assert_before_seconds=1000), False),
+        # if we don't alter any time locks, we are allowed to replace
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000), True),
+        # ASSERT_HEIGHT
+        # the assert height time lock condition was removed in the new item
+        ([mk_item(coins[0:1], assert_height=1000)], mk_item(coins[0:1], fee=10000000), False),
+        # different assert height constraint
+        ([mk_item(coins[0:1], assert_height=1000)], mk_item(coins[0:1], fee=10000000, assert_height=100), False),
+        ([mk_item(coins[0:1], assert_height=1000)], mk_item(coins[0:1], fee=10000000, assert_height=2000), False),
+        # the same assert height is OK
+        ([mk_item(coins[0:1], assert_height=1000)], mk_item(coins[0:1], fee=10000000, assert_height=1000), True),
+        # The new spend just have to match the most restrictive condition
+        (
+            [mk_item(coins[0:1], assert_height=200), mk_item(coins[1:2], assert_height=400)],
+            mk_item(coins[0:2], fee=10000000, assert_height=400),
+            True,
+        ),
+        # ASSERT_BEFORE_HEIGHT
+        # the assert before height time lock condition was removed in the new item
+        ([mk_item(coins[0:1], assert_before_height=1000)], mk_item(coins[0:1], fee=10000000), False),
+        # different assert before height constraint
+        (
+            [mk_item(coins[0:1], assert_before_height=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_height=100),
+            False,
+        ),
+        (
+            [mk_item(coins[0:1], assert_before_height=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_height=2000),
+            False,
+        ),
+        # the assert before height time lock condition was introduced in the new item
+        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000, assert_before_height=1000), False),
+        # The new spend just have to match the most restrictive condition
+        (
+            [mk_item(coins[0:1], assert_before_height=200), mk_item(coins[1:2], assert_before_height=400)],
+            mk_item(coins[0:2], fee=10000000, assert_before_height=200),
+            True,
+        ),
+        # ASSERT_BEFORE_SECONDS
+        # the assert before height time lock condition was removed in the new item
+        ([mk_item(coins[0:1], assert_before_seconds=1000)], mk_item(coins[0:1], fee=10000000), False),
+        # different assert before seconds constraint
+        (
+            [mk_item(coins[0:1], assert_before_seconds=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_seconds=100),
+            False,
+        ),
+        (
+            [mk_item(coins[0:1], assert_before_seconds=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_seconds=2000),
+            False,
+        ),
+        # the assert before height time lock condition was introduced in the new item
+        (
+            [mk_item(coins[0:1], assert_before_seconds=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_seconds=1000),
+            True,
+        ),
+        # MIXED CONDITIONS
+        # we can't replace an assert_before_seconds with assert_before_height
+        (
+            [mk_item(coins[0:1], assert_before_seconds=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_height=2000),
+            False,
+        ),
+        # we added another condition
+        (
+            [mk_item(coins[0:1], assert_before_seconds=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_before_seconds=1000, assert_height=200),
+            False,
+        ),
+        # we removed assert before height
+        (
+            [mk_item(coins[0:1], assert_height=200, assert_before_height=1000)],
+            mk_item(coins[0:1], fee=10000000, assert_height=200),
+            False,
+        ),
+        # The new spend just have to match the most restrictive condition
+        (
+            [mk_item(coins[0:1], assert_before_seconds=200), mk_item(coins[1:2], assert_before_seconds=400)],
+            mk_item(coins[0:2], fee=10000000, assert_before_seconds=200),
+            True,
         ),
     ],
 )
