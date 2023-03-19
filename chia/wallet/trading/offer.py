@@ -78,6 +78,7 @@ class Offer:
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
+    final_spend_bundle: Optional[SpendBundle] = None
 
     @staticmethod
     def ph() -> bytes32:
@@ -152,6 +153,7 @@ class Offer:
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
+        object.__setattr__(self, "final_spend_bundle", self.to_spend_bundle())
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -535,6 +537,8 @@ class Offer:
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self._bundle])
 
     def to_spend_bundle(self) -> SpendBundle:
+        if self.final_spend_bundle:
+            return self.final_spend_bundle
         # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
