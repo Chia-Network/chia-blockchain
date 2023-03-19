@@ -21,6 +21,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.debug_spend_bundle import disassemble
 from tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
 
 
@@ -488,7 +489,7 @@ async def test_nft_offer_with_metadata_update(
     updated_nft = coins_maker[0]
     updated_nft_info = match_puzzle(uncurry_puzzle(updated_nft.full_puzzle))
 
-    assert url_to_add in updated_nft_info.also().info["metadata"]  # type: ignore
+    assert url_to_add in disassemble(updated_nft_info.also().info["metadata"])  # type: ignore
 
     # MAKE FIRST TRADE: 1 NFT for 100 xch
     maker_balance_pre = await wallet_maker.get_confirmed_balance()
