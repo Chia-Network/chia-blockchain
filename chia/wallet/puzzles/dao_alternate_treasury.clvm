@@ -48,10 +48,20 @@
       (merge_list
 	; treasury specific conditions
 	(c
-	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list announcement_source PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH)))
+	  (list CREATE_PUZZLE_ANNOUNCEMENT
+	    (sha256tree
+	      (list
+		(f proposal_validator_solution)
+		PROPOSAL_LENGTH
+		PROPOSAL_SOFTCLOSE_LENGTH
+		ATTENDANCE_REQUIRED
+		PASS_MARGIN
+	      )
+	    )
+	  )
 	  (c
 	    ; also announce the oracle info so proposals can close if treasury is being spammed
-	    ; TODO: could include these values in the announcement above so there is only one CPA
+	    ; TODO: could we include these values in the announcement above so there is only one CPA
 	    (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME))
 	    (c
 	      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list spend_or_update_flag delegated_puzzle_hash announcement_args))))
@@ -61,7 +71,7 @@
 		  (recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
 		  ()
 		)
-		; update case so don't recreate the treasury
+		; update case, so don't recreate the treasury
 		()
 	      )
 	    )
