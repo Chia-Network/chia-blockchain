@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from os import remove
 from pathlib import Path
 from tempfile import NamedTemporaryFile

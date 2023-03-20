@@ -45,8 +45,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
+from chia.wallet.dao_wallet.dao_utils import match_proposal_puzzle, match_treasury_puzzle
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
-from chia.wallet.dao_wallet.dao_utils import match_treasury_puzzle, match_proposal_puzzle
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -954,7 +954,7 @@ class WalletStateManager:
         uncurried_args: Iterator[Program],
         parent_coin_state: CoinState,
         coin_state: CoinState,
-        coin_spend: CoinSpend
+        coin_spend: CoinSpend,
     ):
         self.log.info("Entering dao_treasury handling in WalletStateManager")
         (
@@ -982,7 +982,7 @@ class WalletStateManager:
         uncurried_args: Iterator[Program],
         parent_coin_state: CoinState,
         coin_state: CoinState,
-        coin_spend: CoinSpend
+        coin_spend: CoinSpend,
     ):
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
@@ -1162,7 +1162,6 @@ class WalletStateManager:
                         wallet_id = uint32(local_record.wallet_id)
                         wallet_type = local_record.wallet_type
                     elif coin_state.created_height is not None:
-
                         # This is where we find out which wallet_id the coin belongs to
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()

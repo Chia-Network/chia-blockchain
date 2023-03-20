@@ -2,22 +2,17 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import List, Optional, Set, Any
+from typing import Any, List, Optional, Set
+
 from blspy import AugSchemeMPL, G1Element, G2Element
-from chia.wallet.derivation_record import DerivationRecord
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-)
+
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.server.ws_connection import WSChiaConnection
-from chia.wallet.lineage_proof import LineageProof
+from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
@@ -25,18 +20,23 @@ from chia.wallet.cat_wallet.cat_utils import (
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.types.spend_bundle import SpendBundle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_utils import (
-    get_lockup_puzzle,
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
     get_innerpuz_from_lockup_puzzle,
+    get_lockup_puzzle,
 )
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -207,7 +207,7 @@ class DAOCATWallet:
         spendable_cat_list = []
         dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
         YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
-        proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
+        # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
@@ -240,17 +240,18 @@ class DAOCATWallet:
                 running_sum = running_sum + coin.amount
                 # CREATE_COIN new_puzzle coin.amount
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
-                primaries = [{
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                    "amount": uint64(vote_amount),
-                    "memos": [new_innerpuzzle.get_tree_hash()]
-                }]
+                primaries = [
+                    {
+                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                        "amount": uint64(vote_amount),
+                        "memos": [new_innerpuzzle.get_tree_hash()],
+                    }
+                ]
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
                 )
                 inner_solution = await self.standard_wallet.make_solution(
-                    primaries=primaries,
-                    puzzle_announcements=puzzle_announcements
+                    primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
             else:
                 vote_amount = amount - running_sum
@@ -261,20 +262,19 @@ class DAOCATWallet:
                     {
                         "puzzlehash": new_innerpuzzle.get_tree_hash(),
                         "amount": uint64(vote_amount),
-                        "memos": [new_innerpuzzle.get_tree_hash()]
+                        "memos": [new_innerpuzzle.get_tree_hash()],
                     },
                     {
                         "puzzlehash": lci.inner_puzzle.get_tree_hash(),
                         "amount": uint64(change),
-                        "memos": [lci.inner_puzzle.get_tree_hash()]
+                        "memos": [lci.inner_puzzle.get_tree_hash()],
                     },
                 ]
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
                 )
                 inner_solution = await self.standard_wallet.make_solution(
-                    primaries=primaries,
-                    puzzle_announcements=puzzle_announcements
+                    primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
             if is_yes_vote:
                 vote_info = 1
@@ -282,16 +282,18 @@ class DAOCATWallet:
             voting_coin_id_list.append(coin.name())
             previous_votes_list.append(get_active_votes_from_lockup_puzzle(lci.inner_puzzle))
             lockup_innerpuz_list.append(get_innerpuz_from_lockup_puzzle(lci.inner_puzzle))
-            solution = Program.to([
-                coin.name(),
-                inner_solution,
-                coin.amount,
-                proposal_id,
-                [YES_VOTES, TOTAL_VOTES, INNERPUZ],
-                vote_info,
-                vote_amount,
-                coin.puzzle_hash
-            ])
+            solution = Program.to(
+                [
+                    coin.name(),
+                    inner_solution,
+                    coin.amount,
+                    proposal_id,
+                    [YES_VOTES, TOTAL_VOTES, INNERPUZ],
+                    vote_info,
+                    vote_amount,
+                    coin.puzzle_hash,
+                ]
+            )
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
@@ -331,7 +333,6 @@ class DAOCATWallet:
         spendable_cat_list = []
         cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
         for lci in coins:
-
             coin = lci.coin
             new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
 
@@ -340,7 +341,7 @@ class DAOCATWallet:
                 {
                     "puzzlehash": new_innerpuzzle.get_tree_hash(),
                     "amount": uint64(coin.amount),
-                    "memos": [new_innerpuzzle.get_tree_hash()]
+                    "memos": [new_innerpuzzle.get_tree_hash()],
                 },
             ]
             inner_solution = await self.standard_wallet.make_solution(
@@ -354,16 +355,18 @@ class DAOCATWallet:
             # vote_info
             # vote_amount
             # my_puzhash
-            solution = Program.to([
-                0,
-                inner_solution,
-                coin.amount,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ])
+            solution = Program.to(
+                [
+                    0,
+                    inner_solution,
+                    coin.amount,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            )
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
@@ -398,18 +401,18 @@ class DAOCATWallet:
         YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
         proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in locked_coins:
-
             coin = lci.coin
             new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
 
             # CREATE_COIN new_puzzle coin.amount
-            primaries = [
-                {
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [new_innerpuzzle.get_tree_hash()]
-                },
-            ]
+            # primaries = [
+            #     {
+            #         "puzzlehash": new_innerpuzzle.get_tree_hash(),
+            #         "amount": uint64(coin.amount),
+            #         "memos": [new_innerpuzzle.get_tree_hash()],
+            #     },
+            # ]
+
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
             # my_amount
@@ -418,16 +421,18 @@ class DAOCATWallet:
             # vote_info
             # vote_amount
             # my_puzhash
-            solution = Program.to([
-                0,
-                0,
-                coin.amount,
-                proposal_id,
-                proposal_curry_vals,
-                0,
-                0,
-                0,
-            ])
+            solution = Program.to(
+                [
+                    0,
+                    0,
+                    coin.amount,
+                    proposal_id,
+                    proposal_curry_vals,
+                    0,
+                    0,
+                    0,
+                ]
+            )
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(

@@ -1,10 +1,7 @@
-from typing import List
+from __future__ import annotations
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
-from chia.wallet.singleton import SINGLETON_TOP_LAYER_MOD_HASH, LAUNCHER_PUZZLE_HASH
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
 
 def get_dao_inner_puzhash_by_p2(

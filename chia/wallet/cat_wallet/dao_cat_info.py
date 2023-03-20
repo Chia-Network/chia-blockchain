@@ -1,9 +1,12 @@
-from typing import List, Optional
-from chia.types.blockchain_format.program import Program
-from chia.util.ints import uint64
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import List, Optional
+
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 

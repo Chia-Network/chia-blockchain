@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+import copy
 import dataclasses
 import json
 import logging
 import re
 import time
-import copy
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
 import chia.wallet.singleton
-from chia.protocols import wallet_protocol
+
+# from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -29,41 +30,39 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
-from chia.wallet.dao_wallet.dao_utils import (
-    SINGLETON_LAUNCHER,
+from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
+    SINGLETON_LAUNCHER,
     curry_singleton,
     generate_cat_tail,
     get_cat_tail_hash_from_treasury_puzzle,
-    get_new_puzzle_from_treasury_solution,
-    get_proposal_puzzle,
-    get_treasury_puzzle,
-    uncurry_proposal,
     get_finished_state_puzzle,
     get_new_puzzle_from_proposal_solution,
+    get_new_puzzle_from_treasury_solution,
+    get_proposal_puzzle,
     get_proposal_timer_puzzle,
+    get_treasury_puzzle,
+    uncurry_proposal,
     uncurry_treasury,
-    # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
-from chia.wallet.singleton import (
-    get_most_recent_singleton_coin_from_coin_spend,
+from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_innerpuzzle_from_puzzle,
-    get_singleton_id_from_puzzle,
+    get_most_recent_singleton_coin_from_coin_spend,
 )
-from chia.wallet.wallet_singleton_store import WalletSingletonStore
-from chia.wallet.singleton_record import SingletonRecord
+
+# from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+
+# from chia.wallet.wallet_singleton_store import WalletSingletonStore
 
 
 class DAOWallet:
@@ -774,7 +773,7 @@ class DAOWallet:
     def generate_spend_proposal(self, p2_puzzle_hash, amount) -> Program:
         if amount > self.dao_info.current_treasury_coin.amount:
             raise ValueError("The proposed spend amount is greater than the treasury balance")
-        relative_change = self.dao_info.current_treasury_coin.amount - amount
+        # relative_change = self.dao_info.current_treasury_coin.amount - amount
         # TODO: create_dao_spend_proposal has gone AWOL
         # puzzle = create_dao_spend_proposal(
         #     p2_puzzle_hash,
@@ -888,7 +887,6 @@ class DAOWallet:
         dao_proposal_puzzle: Program,
         launcher_coin: Coin,
     ) -> SpendBundle:
-
         # TODO: connect with DAO CAT Wallet here
 
         # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
@@ -936,24 +934,26 @@ class DAOWallet:
         #                  ; we only use this when closing out so set it to 0 and we will do the vote spend case
 
         # TODO: fill this in when we can take a list of coins in dao_proposal.clvm
-        voting_info = 0
-        if is_yes_vote:
-            voting_info = 1
+        # voting_info = 0
+        # if is_yes_vote:
+        #     voting_info = 1
 
-        inner_sol = Program.to(
-            [
-                vote_amounts_list,
-                voting_info,
-                voting_coin_id_list,
-                previous_votes_list,
-                lockup_innerpuz_list,
-                0,
-            ]
-        )
+        # inner_sol = Program.to(
+        #     [
+        #         vote_amounts_list,
+        #         voting_info,
+        #         voting_coin_id_list,
+        #         previous_votes_list,
+        #         lockup_innerpuz_list,
+        #         0,
+        #     ]
+        # )
 
         return
 
-    async def create_add_money_to_treasury_spend(self, amount: uint64, fee: uint64 = uint64(0)) -> Optional[TransactionRecord]:
+    async def create_add_money_to_treasury_spend(
+        self, amount: uint64, fee: uint64 = uint64(0)
+    ) -> Optional[TransactionRecord]:
         # make sure we're generating an odd output amount
         if amount + self.dao_info.current_treasury_coin.amount % 2 == 0:
             amount -= 1
@@ -976,7 +976,11 @@ class DAOWallet:
                 0,
             ]
         )
-        lineage_proof = [info[1] for info in self.dao_info.parent_info if info[0] == self.dao_info.current_treasury_coin.parent_coin_info][0]
+        lineage_proof = [
+            info[1]
+            for info in self.dao_info.parent_info
+            if info[0] == self.dao_info.current_treasury_coin.parent_coin_info
+        ][0]
         fullsol = Program.to(
             [
                 lineage_proof.to_program(),
@@ -992,7 +996,9 @@ class DAOWallet:
         announcement_message = Program.to([new_amount_change, 0]).get_tree_hash()
         announcement_set.add(Announcement(self.dao_info.current_treasury_coin.puzzle_hash, announcement_message).name())
 
-        xch_sb = await self.standard_wallet.create_spend_bundle_relative_chia(-new_amount_change, fee=fee, puzzle_announcements_to_assert=announcement_set)
+        xch_sb = await self.standard_wallet.create_spend_bundle_relative_chia(
+            -new_amount_change, fee=fee, puzzle_announcements_to_assert=announcement_set
+        )
 
         full_spend = SpendBundle.aggregate([treasury_sb, xch_sb])
 
@@ -1017,7 +1023,9 @@ class DAOWallet:
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
 
         # Update dao_info with the new coin
-        current_coin = Coin(self.dao_info.current_treasury_coin.name(), full_treasury_puzzle.get_tree_hash(), new_amount_total)
+        current_coin = Coin(
+            self.dao_info.current_treasury_coin.name(), full_treasury_puzzle.get_tree_hash(), new_amount_total
+        )
         await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()], [self.wallet_id])
 
         # MH: We should do this on receiving the coin instead of sending the spend incase our spend doesn't go through
@@ -1113,7 +1121,7 @@ class DAOWallet:
 
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         ret = await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
-        if len(ret) == 0 :
+        if len(ret) == 0:
             return None
         return ret[-1]
 
@@ -1124,7 +1132,9 @@ class DAOWallet:
     ):
         new_dao_info = copy.copy(self.dao_info)
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
-        solution = Program.from_bytes(bytes(new_state.solution)).rest().rest().first()  # get proposal solution from full singleton solution
+        solution = (
+            Program.from_bytes(bytes(new_state.solution)).rest().rest().first()
+        )  # get proposal solution from full singleton solution
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         curried_args = uncurry_proposal(puzzle)  # not sure if we're going to use this
         (
@@ -1255,7 +1265,9 @@ class DAOWallet:
             # TODO: what do we do here?
             return
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
-        solution = Program.from_bytes(bytes(new_state.solution)).rest().rest().first()  # get proposal solution from full singleton solution
+        solution = (
+            Program.from_bytes(bytes(new_state.solution)).rest().rest().first()
+        )  # get proposal solution from full singleton solution
         new_innerpuz = get_new_puzzle_from_treasury_solution(puzzle, solution)
         child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         dao_info = DAOInfo(

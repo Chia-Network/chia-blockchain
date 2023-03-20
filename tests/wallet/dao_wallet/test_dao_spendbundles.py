@@ -1,17 +1,21 @@
 # type: ignore
 
-from blspy import AugSchemeMPL, G1Element, PrivateKey, G2Element
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
+from __future__ import annotations
+
 from typing import List
+
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
-from chia.types.blockchain_format.coin import Coin
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.cat_loader import CAT_MOD
-from chia.types.coin_spend import CoinSpend
 from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -26,7 +30,6 @@ CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 
 
 def test_vote_from_locked_state():
-
     current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
@@ -250,7 +253,6 @@ def test_vote_from_locked_state():
 
 
 def test_close_proposal():
-
     current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()

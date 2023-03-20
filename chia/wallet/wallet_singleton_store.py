@@ -1,29 +1,32 @@
 from __future__ import annotations
+
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Tuple, Optional, Any, TypeVar
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.wallet import singleton
-from chia.types.coin_spend import CoinSpend
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.singleton import (
-    get_most_recent_singleton_coin_from_coin_spend,
-    get_innerpuzzle_from_puzzle,
-    get_singleton_id_from_puzzle,
-)
-from chia.wallet.singleton_record import SingletonRecord
-from chia.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
-from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
+from typing import Any, List, Optional, Tuple, TypeVar
 
 from clvm.casts import int_from_bytes
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
+from chia.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint32
+from chia.wallet import singleton
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.singleton import (
+    get_innerpuzzle_from_puzzle,
+    get_most_recent_singleton_coin_from_coin_spend,
+    get_singleton_id_from_puzzle,
+)
+from chia.wallet.singleton_record import SingletonRecord
+
 log = logging.getLogger(__name__)
 _T_WalletSingletonStore = TypeVar("_T_WalletSingletonStore", bound="WalletSingletonStore")
+
 
 class WalletSingletonStore:
     db_wrapper: DBWrapper2
@@ -54,10 +57,7 @@ class WalletSingletonStore:
 
         return self
 
-    async def save_singleton(
-        self,
-        record: SingletonRecord
-    ) -> None:
+    async def save_singleton(self, record: SingletonRecord) -> None:
         singleton_id = singleton.get_singleton_id_from_puzzle(record.parent_coinspend.puzzle_reveal)
         pending_int = 0
         if record.pending:
@@ -97,11 +97,10 @@ class WalletSingletonStore:
         conditions = conditions_dict_for_solution(
             coin_state.puzzle_reveal.to_program(),
             coin_state.solution.to_program(),
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
         cc_cond = [
-            cond for cond in conditions[1][ConditionOpcode.CREATE_COIN]
-            if int_from_bytes(cond.vars[1]) % 2 == 1
+            cond for cond in conditions[1][ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1
         ][0]
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
         inner_puz = get_innerpuzzle_from_puzzle(coin_state.puzzle_reveal)
@@ -109,15 +108,7 @@ class WalletSingletonStore:
         lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
         # Create and save the new singleton record
         new_record = SingletonRecord(
-            coin,
-            singleton_id,
-            wallet_id,
-            coin_state,
-            inner_puz.get_tree_hash(),
-            True,
-            0,
-            lineage_proof,
-            None
+            coin, singleton_id, wallet_id, coin_state, inner_puz.get_tree_hash(), True, 0, lineage_proof, None
         )
         await self.save_singleton(new_record)
         # check if coin is in DB and mark deleted if found
@@ -125,7 +116,6 @@ class WalletSingletonStore:
         if current_record:
             self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
         return
-        
 
     def _to_singleton_record(self, row: Row) -> SingletonRecord:
         return SingletonRecord(
@@ -137,7 +127,7 @@ class WalletSingletonStore:
             pending=True if row[6] == 1 else False,
             removed_height=uint32(row[7]),
             lineage_proof=LineageProof.from_bytes(row[8]),
-            custom_data=row[9]
+            custom_data=row[9],
         )
 
     async def delete_singleton_by_singleton_id(self, singleton_id: bytes32, height: uint32) -> bool:
@@ -148,8 +138,7 @@ class WalletSingletonStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove NFT in the users_nfts table
             cursor = await conn.execute(
-                "UPDATE singletons SET removed_height=? WHERE singleton_id=?",
-                (int(height), singleton_id.hex())
+                "UPDATE singletons SET removed_height=? WHERE singleton_id=?", (int(height), singleton_id.hex())
             )
             return cursor.rowcount > 0
 
@@ -169,7 +158,6 @@ class WalletSingletonStore:
             log.warning("Couldn't find singleton with coin id to delete: %s", coin_id)
             return False
 
-
     async def update_pending_transaction(self, coin_id: bytes32, pending: bool) -> bool:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             c = await conn.execute(
@@ -177,7 +165,6 @@ class WalletSingletonStore:
                 (pending, coin_id.hex()),
             )
             return c.rowcount > 0
-
 
     async def get_records_by_wallet_id(self, wallet_id: int) -> List[SingletonRecord]:
         """
@@ -217,7 +204,6 @@ class WalletSingletonStore:
                 (singleton_id.hex(),),
             )
         return [self._to_singleton_record(row) for row in rows]
-
 
     async def rollback(self, height: int, wallet_id_arg: int) -> None:
         """

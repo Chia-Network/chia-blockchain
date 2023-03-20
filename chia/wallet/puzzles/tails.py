@@ -14,14 +14,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
+from chia.wallet.dao_wallet.dao_utils import DAO_PROPOSAL_MOD, SINGLETON_LAUNCHER, SINGLETON_MOD
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
-from chia.wallet.dao_wallet.dao_utils import (
-    SINGLETON_MOD,
-    SINGLETON_LAUNCHER,
-    DAO_PROPOSAL_MOD,
-)
-from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 
@@ -230,7 +225,6 @@ class GenesisByIdOrProposal(LimitationsProgram):
     async def generate_issuance_bundle(
         cls, wallet, tail_info: Dict, amount: uint64
     ) -> Tuple[TransactionRecord, SpendBundle]:
-
         if "coins" in tail_info:
             coins = tail_info["coins"]
             origin_id = coins.copy().pop().name()

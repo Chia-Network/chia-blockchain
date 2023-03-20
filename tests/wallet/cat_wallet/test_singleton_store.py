@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 import dataclasses
-import pytest
 from secrets import token_bytes
 
+import pytest
+
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_spend import CoinSpend
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint32, uint64
+from chia.wallet.dao_wallet.dao_wallet import DAOInfo, DAOWallet
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.dao_wallet.dao_wallet import DAOWallet, DAOInfo
-from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from chia.wallet.singleton import create_fullpuz, get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
+from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from tests.util.db_connection import DBConnection
 
 
@@ -42,9 +43,10 @@ def get_record():
         pending=pending,
         removed_height=removed_height,
         lineage_proof=lineage_proof,
-        custom_data=custom_data
+        custom_data=custom_data,
     )
     return record
+
 
 class TestSingletonStore:
     @pytest.mark.asyncio
@@ -80,7 +82,3 @@ class TestSingletonStore:
             assert record.removed_height == 1
             record = await db.get_record_by_coin_id(record_2.coin.name())
             assert record.removed_height == 1
-
-            
-
-            
