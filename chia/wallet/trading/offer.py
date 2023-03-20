@@ -78,7 +78,7 @@ class Offer:
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
-    _offered_coins: Optional[Dict[Optional[bytes32], List[Coin]]] = None
+    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
     final_spend_bundle: Optional[SpendBundle] = None
 
     @staticmethod
@@ -155,6 +155,7 @@ class Offer:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
         object.__setattr__(self, "final_spend_bundle", self.to_spend_bundle())
+        object.__setattr__(self, "_offered_coins", self._get_offered_coins())
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -176,9 +177,7 @@ class Offer:
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     # It's also a little heuristic, but it should get most things
-    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
-        if self._offered_coins is not None:
-            return self._offered_coins
+    def _get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
         for parent_spend in self._bundle.coin_spends:
@@ -244,8 +243,10 @@ class Offer:
             if coins_for_this_spend != []:
                 offered_coins.setdefault(asset_id, [])
                 offered_coins[asset_id].extend(coins_for_this_spend)
-        object.__setattr__(self, "_offered_coins", offered_coins)
         return offered_coins
+
+    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+        return self._offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
