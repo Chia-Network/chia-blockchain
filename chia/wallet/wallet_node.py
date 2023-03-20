@@ -87,6 +87,12 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
 
 
 @dataclasses.dataclass
+class PeerPeak:
+    height: uint32
+    hash: bytes32
+
+
+@dataclasses.dataclass
 class WalletNode:
     config: Dict
     root_path: Path
@@ -121,7 +127,7 @@ class WalletNode:
     # in Untrusted mode wallet might get the state update before receiving the block
     race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
     race_cache_hashes: List[Tuple[uint32, bytes32]] = dataclasses.field(default_factory=list)
-    node_peaks: Dict[bytes32, Tuple[uint32, bytes32]] = dataclasses.field(default_factory=dict)
+    node_peaks: Dict[bytes32, PeerPeak] = dataclasses.field(default_factory=dict)
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 300
@@ -1174,12 +1180,12 @@ class WalletNode:
                 phs: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
                 ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
                 coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
-                peer_new_peak_height, peer_new_peak_hash = self.node_peaks[peer.peer_node_id]
+                peer_new_peak = self.node_peaks[peer.peer_node_id]
                 success = await self.receive_state_from_peer(
                     ph_updates + coin_updates,
                     peer,
-                    height=peer_new_peak_height,
-                    header_hash=peer_new_peak_hash,
+                    height=peer_new_peak.height,
+                    header_hash=peer_new_peak.hash,
                 )
                 if success:
                     self.synced_peers.add(peer.peer_node_id)
