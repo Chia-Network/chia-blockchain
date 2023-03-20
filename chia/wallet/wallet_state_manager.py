@@ -1489,10 +1489,7 @@ class WalletStateManager:
                     coin_confirmed_transaction = True
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
-        if parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type:
-            change = True
-        else:
-            change = False
+        change = parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type
 
         if coinbase or not coin_confirmed_transaction and not change:
             tx_record = TransactionRecord(
