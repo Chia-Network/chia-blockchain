@@ -523,7 +523,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
 
         for error in ("forget_vc", "make_banned_announcement", None):
             result = await client.push_tx(
-                SpendBundle(
+                cost_logger.add_cost("CR-XCH w/ VC announcement, ACS Proof Checker", SpendBundle(
                     [
                         CoinSpend(
                             cr_coin,
@@ -547,7 +547,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
                         *([auth_spend] if error != "forget_vc" else []),
                     ],
                     G2Element()
-                )
+                ))
             )
             if error is None:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
