@@ -109,12 +109,10 @@ async def test_nft_offer_with_fee(
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
-
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
 
+    assert await nft_wallet_taker.get_nft_count() == 0
     # MAKE FIRST TRADE: 1 NFT for 100 xch
     maker_balance_pre = await wallet_maker.get_confirmed_balance()
     taker_balance_pre = await wallet_taker.get_confirmed_balance()
@@ -176,11 +174,10 @@ async def test_nft_offer_with_fee(
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
-
-    coins_maker = await nft_wallet_maker.get_current_nfts()
     coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_maker) == 0
     assert len(coins_taker) == 1
+
+    assert await nft_wallet_maker.get_nft_count() == 0
     if not forwards_compat:
         if reuse_puzhash:
             # Check if unused index changed
@@ -270,10 +267,8 @@ async def test_nft_offer_with_fee(
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre - xch_offered - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre + xch_offered - taker_fee)
 
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_maker) == 1
-    assert len(coins_taker) == 0
+    assert await nft_wallet_maker.get_nft_count() == 1
+    assert await nft_wallet_taker.get_nft_count() == 0
 
 
 @pytest.mark.parametrize(
@@ -344,12 +339,9 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
-
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
-
+    assert await nft_wallet_taker.get_nft_count() == 0
     # maker creates offer and cancels
     maker_balance_pre = await wallet_maker.get_confirmed_balance()
     # taker_balance_pre = await wallet_taker.get_confirmed_balance()
@@ -385,8 +377,7 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
 
     maker_balance = await wallet_maker.get_confirmed_balance()
     assert maker_balance == maker_balance_pre - cancel_fee
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    assert len(coins_maker) == 1
+    assert await nft_wallet_maker.get_nft_count() == 1
 
 
 @pytest.mark.parametrize(
@@ -467,11 +458,9 @@ async def test_nft_offer_with_metadata_update(
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
-
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
+    assert await nft_wallet_taker.get_nft_count() == 0
 
     # Maker updates metadata:
     nft_to_update = coins_maker[0]
@@ -545,10 +534,8 @@ async def test_nft_offer_with_metadata_update(
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
 
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_maker) == 0
-    assert len(coins_taker) == 1
+    assert await nft_wallet_maker.get_nft_count() == 0
+    assert await nft_wallet_taker.get_nft_count() == 1
 
 
 @pytest.mark.parametrize(
@@ -637,9 +624,7 @@ async def test_nft_offer_nft_for_cat(
 
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
-
+    assert await nft_wallet_taker.get_nft_count() == 0
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
     async with wallet_node_0.wallet_state_manager.lock:
@@ -744,10 +729,10 @@ async def test_nft_offer_nft_for_cat(
     taker_balance_post = await wallet_taker.get_confirmed_balance()
     assert maker_balance_post == maker_balance_pre - maker_fee
     assert taker_balance_post == taker_balance_pre - taker_fee
-    coins_maker = await nft_wallet_maker.get_current_nfts()
     coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_maker) == 0
     assert len(coins_taker) == 1
+
+    assert await nft_wallet_maker.get_nft_count() == 0
     if not forwards_compat:
         if reuse_puzhash:
             # Check if unused index changed
@@ -849,10 +834,8 @@ async def test_nft_offer_nft_for_cat(
     taker_balance_post_2 = await wallet_taker.get_confirmed_balance()
     assert maker_balance_post_2 == maker_balance_post - maker_fee
     assert taker_balance_post_2 == taker_balance_post - taker_fee
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_maker) == 1
-    assert len(coins_taker) == 0
+    assert await nft_wallet_maker.get_nft_count() == 1
+    assert await nft_wallet_taker.get_nft_count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1006,7 +989,5 @@ async def test_nft_offer_nft_for_nft(
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre - taker_fee)
 
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_maker) == 1
-    assert len(coins_taker) == 1
+    assert await nft_wallet_maker.get_nft_count() == 1
+    assert await nft_wallet_taker.get_nft_count() == 1
