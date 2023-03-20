@@ -14,44 +14,31 @@ for setuptools_scm/PEP 440 reasons.
 * Added wallet RPC `nft_count_nfts` - counts NFTs per wallet or for all wallets
 * Added Community DNS introducers to initial (default) config.yaml
 * Added additional state_changed events to metrics destination (used by chia-exporter)
+* Added support for Python 3.11
+* Added new `chia wallet check` CLI command
+* Added new config option `reuse_public_key_for_change` to stops generating new change addresses and use the specified address
 * add nft id to rpcs by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14588
 
 ### Changed
-* Add support for Python 3.11 by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/11407
-* Don't print entire TransactionRecord to log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14456
-* Return a better error message when the 'coin_id' argument for nft_get_info cannot be decoded into a 32 byte hex string by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14454
-* Always Log service startup and shutdown. by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14447
-* Output proper json by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14451
-* Rate limit 'Rate limiting' message by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14435
-* update GUI when wallets are removed by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14251
-* let sqlite count NFTs on removal by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14523
-* Offer CLI command help now shows --fee units as XCH by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14529
-* optimize offers by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14531
-* bump chia_rs to 0.2.2 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14533
-* Improve the help text for the peer command by @TheLastCicada in https://github.com/Chia-Network/chia-blockchain/pull/14542
-* Simplify request_mempool_transactions() and get_items_not_in_filter() by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14404
-* Remove redundant checks for minting coin and reserve fee by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14560
-* Augment mempool's total_mempool_fees to int as it shouldn't be limited by type Mojos by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14587
-* nft paging at sqlite level by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14561
-* Softfork2 infrastructure by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14625
-* Check Wallet DB integrity by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14401
+* Changed `chia show -f` to output proper json
+* Rate limit `Rate limiting` log messages
+* Notify GUI when wallets are removed
+* Optimized counting of NFTs during removal by leveraging sqlite
+* Offer CLI command help now shows `--fee` units as XCH
+* Optimized offer code by limiting `additions` recomputation
+* Updated `chia_rs` to 0.2.4
+* Improve the help text for the `chia peer` and `chia peer -a` commands
+* Remove redundant checks for minting coin and reserve fee
+* Improved `nfg_get_nfts` performance by shifting paging to sqlite 
+* Improved RPC `did_find_lost_did`
+* Extend the sign APIs to support hex string
+* Changed mempool backend to use an in-memory sqlite DB
 * make conditions_for_solution() support untrusted input by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14615
 * Introduce BlockRecordProtocol as a subset of BlockRecord that the mempool manager uses for peak by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14628
-* Extend sign API to support hex string by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14448
-* Separate mempool item's JSON response value from the internal structure by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14476
-* Improve chia wallet check help and diagnostic messages by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14688
-* Extend did_find_lost_did API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14673
-* Refine help text for chia peer -a by @TheLastCicada in https://github.com/Chia-Network/chia-blockchain/pull/14563
-* sqlite-backed mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14657
-* Bump chia_rs to 0.2.3. and ASSERT_MY_BIRTH_* by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14720
-* Move startup / shutdown logging to INFO by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14546
-* Adding Changed label to dependabot updates by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/14765
-* Bump chia rs 0.2.4 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14758
-* Stop sending change to a new address by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14422
-* disable soft-fork 2 (for now) by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14786
-* in mempool, support sqlite without generated columns by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14788
+* Don't print entire TransactionRecord to log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14456
 
 ### Fixed
+* Fixed error message when the `coin_id` argument for `nft_get_info` cannot be decoded
 * Dl wallet store index fix by @neurosis69 in https://github.com/Chia-Network/chia-blockchain/pull/13316
 * Deprecate `curry-and-treehash` and replace it with `curry`. by @richardkiss in https://github.com/Chia-Network/chia-blockchain/pull/14066
 * Fix get memo API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14513
