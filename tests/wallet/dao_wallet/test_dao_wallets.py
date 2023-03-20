@@ -107,7 +107,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     # Get the cat wallets for wallet_1
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
-    dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
+    # dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
 
     # Send some cats to the dao_cat lockup
     dao_cat_amt = 100
@@ -176,8 +176,9 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     proposal_amt = 100000
     fee = 100
     inner_proposal = dao_wallet_0.generate_spend_proposal(ph_1, proposal_amt)
-    proposal_spend = await dao_wallet_0.generate_new_proposal(inner_proposal.get_tree_hash(), fee)
+    # proposal_spend = await dao_wallet_0.generate_new_proposal(inner_proposal.get_tree_hash(), fee)
     breakpoint()
+
 
 def test_dao_singleton_update():
     pass

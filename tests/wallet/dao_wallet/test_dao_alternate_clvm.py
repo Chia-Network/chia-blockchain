@@ -1,9 +1,8 @@
 from __future__ import annotations
-import pytest
-from typing import List
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
-from chia.types.blockchain_format.coin import Coin
+from clvm.casts import int_to_bytes
+
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -11,8 +10,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
-
-from clvm.casts import int_from_bytes, int_to_bytes
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -22,7 +19,7 @@ SINGLETON_LAUNCHER_HASH: bytes32 = SINGLETON_LAUNCHER.get_tree_hash()
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_LOCKUP_MOD_HASH: bytes32 = DAO_LOCKUP_MOD.get_tree_hash()
 DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_alternate_proposal_timer.clvm")
-DAO_PROPOSAL_TIMER_MOD_HASH:  bytes32 = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
+DAO_PROPOSAL_TIMER_MOD_HASH: bytes32 = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
 DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_alternate_proposal_validator.clvm")
@@ -34,7 +31,7 @@ SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
-DAO_RESALE_PREVENTION_HASH: bytes32 =  DAO_RESALE_PREVENTION.get_tree_hash()
+DAO_RESALE_PREVENTION_HASH: bytes32 = DAO_RESALE_PREVENTION.get_tree_hash()
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_treasury.clvm")
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clvm")
@@ -55,7 +52,7 @@ def test_proposal() -> None:
     )
     self_destruct_time = 1209600
     oracle_spend_delay = 10
-    active_votes_list = [0xFADEDDAB] # are the the ids of previously voted on proposals?
+    active_votes_list = [0xFADEDDAB]  # are the the ids of previously voted on proposals?
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
 
@@ -68,7 +65,7 @@ def test_proposal() -> None:
         CAT_MOD_HASH,
         CAT_TAIL_HASH,
         active_votes_list,
-        acs # innerpuz
+        acs,  # innerpuz
     )
 
     dao_cat_puz: Program = CAT_MOD.curry(CAT_MOD_HASH, CAT_TAIL_HASH, lockup_puz)
@@ -88,7 +85,7 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes,
         current_total_votes,
-        's',
+        "s",
         acs_ph,
     )
 
@@ -97,13 +94,13 @@ def test_proposal() -> None:
     vote_coin_id = Program.to("vote_coin").get_tree_hash()
     solution: Program = Program.to(
         [
-            [vote_amount], # vote amounts
+            [vote_amount],  # vote amounts
             vote_type,  # vote type (yes)
-            [vote_coin_id], # vote coin ids
-            [active_votes_list], # previous votes
+            [vote_coin_id],  # vote coin ids
+            [active_votes_list],  # previous votes
             [acs_ph],  # lockup inner puz hash
-            0, # inner puz reveal
-            0, # soft close len
+            0,  # inner puz reveal
+            0,  # soft close len
             self_destruct_time,
             oracle_spend_delay,
             0,
@@ -132,7 +129,7 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes + vote_amount,
         current_total_votes + vote_amount,
-        's',
+        "s",
         acs_ph,
     )
     assert conditions[ConditionOpcode.CREATE_COIN][0].vars[0] == next_proposal.get_tree_hash()
@@ -152,7 +149,7 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes,
         current_total_votes,
-        's',
+        "s",
         acs_ph,
     )
     vote_amount = 10
@@ -160,15 +157,15 @@ def test_proposal() -> None:
     vote_coin_id = Program.to("vote_coin").get_tree_hash()
     solution: Program = Program.to(
         [
-            [vote_amount], # vote amounts
+            [vote_amount],  # vote amounts
             vote_type,  # vote type (yes)
-            [vote_coin_id], # vote coin ids
+            [vote_coin_id],  # vote coin ids
             # TODO: Check whether previous votes should be 0 in the first spend since
             # proposal looks at (f previous_votes) during loop_over_vote_coins
-            [0], # previous votes
+            [0],  # previous votes
             [acs_ph],  # lockup inner puz hash
-            acs, # inner puz reveal
-            0, # soft close len
+            acs,  # inner puz reveal
+            0,  # soft close len
             self_destruct_time,
             oracle_spend_delay,
             0,
@@ -178,12 +175,7 @@ def test_proposal() -> None:
     conditions = conditions_dict_for_solution(launch_proposal, solution, INFINITE_COST)[1]
     # check that the timer is created
     timer_puz = DAO_PROPOSAL_TIMER_MOD.curry(
-        DAO_PROPOSAL_MOD_HASH,
-        DAO_PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        CAT_TAIL_HASH,
-        singleton_struct,
-        treasury_id
+        DAO_PROPOSAL_MOD_HASH, DAO_PROPOSAL_TIMER_MOD_HASH, CAT_MOD_HASH, CAT_TAIL_HASH, singleton_struct, treasury_id
     )
     timer_puzhash = timer_puz.get_tree_hash()
     assert conditions[ConditionOpcode.CREATE_COIN][1].vars[0] == timer_puzhash
@@ -204,7 +196,7 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes,
         current_total_votes,
-        's',
+        "s",
         acs_ph,
     )
     attendance_required = 200
@@ -245,19 +237,12 @@ def test_proposal() -> None:
     )
     treasury_puzhash = treasury.get_tree_hash()
     apa_msg = Program.to(
-        [
-         singleton_id,
-         proposal_timelock,
-         soft_close_length,
-         attendance_required,
-         proposal_pass_percentage
-        ]
+        [singleton_id, proposal_timelock, soft_close_length, attendance_required, proposal_pass_percentage]
     ).get_tree_hash()
 
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(treasury_puzhash + apa_msg)
     timer_apa = std_hash(timer_puzhash + singleton_id)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == timer_apa
-
 
     # close a failed proposal
     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
@@ -269,9 +254,9 @@ def test_proposal() -> None:
         DAO_LOCKUP_MOD_HASH,
         CAT_TAIL_HASH,
         treasury_id,
-        20, # failing number of yes votes
+        20,  # failing number of yes votes
         current_total_votes,
-        's',
+        "s",
         acs_ph,
     )
     solution = Program.to(
@@ -291,13 +276,7 @@ def test_proposal() -> None:
     )
     conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)[1]
     apa_msg = Program.to(
-        [
-         singleton_id,
-         proposal_timelock,
-         soft_close_length,
-         attendance_required,
-         proposal_pass_percentage
-        ]
+        [singleton_id, proposal_timelock, soft_close_length, attendance_required, proposal_pass_percentage]
     ).get_tree_hash()
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(treasury_puzhash + apa_msg)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == timer_apa
@@ -386,7 +365,7 @@ def test_validator() -> None:
     )
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
 
-    treasury_puzzle_hash = Program.to("treasury").get_tree_hash()
+    # treasury_puzzle_hash = Program.to("treasury").get_tree_hash()
 
     p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
@@ -432,17 +411,19 @@ def test_validator() -> None:
         singleton_id,
         950,
         1200,
-        's',
+        "s",
         spend_p2_singleton_puzhash,
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
-    solution = Program.to([
-        1000,
-        5100,
-        [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
-        [singleton_id, 1200, 950, spend_amount],
-        output_conds.as_python()
-    ])
+    solution = Program.to(
+        [
+            1000,
+            5100,
+            [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, "s"],
+            [singleton_id, 1200, 950, spend_amount],
+            output_conds.as_python(),
+        ]
+    )
     conds: Program = proposal_validator.run(solution)
     assert len(conds.as_python()) == 3 + len(conditions)
 
@@ -458,27 +439,28 @@ def test_validator() -> None:
         singleton_id,
         950,
         1200,
-        'u',
+        "u",
         Program.to(1).get_tree_hash(),
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
-    solution = Program.to([
-        1000,
-        5100,
-        [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, 'u'],
-        [singleton_id, 1200, 950, spend_amount],
-        [[51, 0xcafe00d, spend_amount]]
-    ])
+    solution = Program.to(
+        [
+            1000,
+            5100,
+            [full_proposal.get_tree_hash(), Program.to(1).get_tree_hash(), 0, "u"],
+            [singleton_id, 1200, 950, spend_amount],
+            [[51, 0xCAFE00D, spend_amount]],
+        ]
+    )
     conds: Program = proposal_validator.run(solution)
     assert len(conds.as_python()) == 2
 
     return
 
+
 def test_spend_p2_singleton() -> None:
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
-    singleton_struct: Program = Program.to(
-        (SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH))
-    )
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
 
     # Test that p2_singleton_via_delegated_puzzle will run
     p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
@@ -487,7 +469,7 @@ def test_spend_p2_singleton() -> None:
     locked_amount = 100000
     singleton_inner_hash = Program.to(1).get_tree_hash()
     deleg_puz = Program.to(1)
-    deleg_conds = Program.to([[51,0xcafef00d, 1000]])
+    deleg_conds = Program.to([[51, 0xCAFEF00D, 1000]])
     conds = p2_singleton.run(Program.to([singleton_inner_hash, deleg_puz, deleg_conds]))
     assert len(conds.as_python()) == 3
 
@@ -529,17 +511,19 @@ def test_spend_p2_singleton() -> None:
         singleton_id,
         yes_votes,
         total_votes,
-        's',
+        "s",
         spend_p2_singleton_puzhash,
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
-    validator_solution = Program.to([
-        attendance_required,
-        pass_margin,
-        [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
-        [singleton_id, total_votes, yes_votes, spend_amount],
-        output_conditions
-    ])
+    validator_solution = Program.to(
+        [
+            attendance_required,
+            pass_margin,
+            [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, "s"],
+            [singleton_id, total_votes, yes_votes, spend_amount],
+            output_conditions,
+        ]
+    )
     conds = proposal_validator.run(validator_solution)
     assert len(conds.as_python()) == 3 + len(conditions)
 
@@ -547,9 +531,7 @@ def test_spend_p2_singleton() -> None:
 def test_treasury() -> None:
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
-    singleton_struct: Program = Program.to(
-        (SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH))
-    )
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
@@ -580,7 +562,7 @@ def test_treasury() -> None:
     # ATTENDANCE_REQUIRED
     # PASS_MARGIN
     # PROPOSAL_SELF_DESTRUCT_TIME
-    self_destruct_time = 1209600 # 2 weeks
+    self_destruct_time = 1209600  # 2 weeks
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD.get_tree_hash(),
         proposal_validator,
@@ -592,7 +574,7 @@ def test_treasury() -> None:
         oracle_spend_delay,
     )
 
-    treasury_puzzle_hash = full_treasury_puz.get_tree_hash()
+    # treasury_puzzle_hash = full_treasury_puz.get_tree_hash()
 
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     # proposal_validator_solution
@@ -609,17 +591,13 @@ def test_treasury() -> None:
         singleton_id,
         950,
         1200,
-        's',
+        "s",
         spend_p2_singleton_puzhash,
     )
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
 
     # Oracle spend
-    solution: Program = Program.to(
-        [
-           "o"
-        ]
-    )
+    solution: Program = Program.to(["o"])
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
@@ -629,10 +607,10 @@ def test_treasury() -> None:
     solution: Program = Program.to(
         [
             "p",
-            [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, 's'],
+            [full_proposal.get_tree_hash(), spend_p2_singleton_puzhash, 0, "s"],
             [singleton_id, 1200, 950, spend_amount],
             spend_p2_singleton,
-            spend_p2_singleton_solution
+            spend_p2_singleton_solution,
         ]
     )
     conds = full_treasury_puz.run(solution)
@@ -727,16 +705,14 @@ def test_proposal_innerpuz() -> None:
     attendance_required: uint64 = uint64(1000)
     proposal_timelock = 40
     soft_close_length = 5
-    self_destruct_time = 1209600 # 2 weeks
+    self_destruct_time = 1209600  # 2 weeks
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
+    # LOCKUP_TIME: uint64 = uint64(200)
     oracle_spend_delay = 10
 
     # Setup the treasury
     treasury_id: Program = Program.to("treasury_id").get_tree_hash()
-    treasury_singleton_struct: Program = Program.to(
-        (SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH))
-    )
+    treasury_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     treasury_amount = 1
 
     # setup the p2_singleton
@@ -779,9 +755,7 @@ def test_proposal_innerpuz() -> None:
 
     # Setup Proposal
     proposal_id: Program = Program.to("proposal_id").get_tree_hash()
-    proposal_singleton_struct: Program = Program.to(
-        (SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH))
-    )
+    proposal_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
 
     current_votes = 1200
     yes_votes = 950
@@ -796,7 +770,7 @@ def test_proposal_innerpuz() -> None:
         treasury_id,
         yes_votes,
         current_votes,
-        's',
+        "s",
         spend_p2_singleton_puzhash,
     )
     full_proposal: Program = SINGLETON_MOD.curry(proposal_singleton_struct, proposal)
@@ -805,7 +779,7 @@ def test_proposal_innerpuz() -> None:
     treasury_solution: Program = Program.to(
         [
             "p",
-            [full_proposal_puzhash, spend_p2_singleton_puzhash, 0, 's'],
+            [full_proposal_puzhash, spend_p2_singleton_puzhash, 0, "s"],
             [proposal_id, current_votes, yes_votes, spend_amount],
             spend_p2_singleton,
             spend_p2_singleton_solution,
