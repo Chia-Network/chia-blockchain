@@ -54,6 +54,7 @@ def test_proposal() -> None:
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
     self_destruct_time = 1209600
+    oracle_spend_delay = 10
     active_votes_list = [0xFADEDDAB] # are the the ids of previously voted on proposals?
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
@@ -233,6 +234,7 @@ def test_proposal() -> None:
         attendance_required,
         proposal_pass_percentage,
         self_destruct_time,
+        oracle_spend_delay,
     )
     treasury: Program = SINGLETON_MOD.curry(
         Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH))),
@@ -547,6 +549,7 @@ def test_treasury() -> None:
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
     locked_amount = 100000
+    oracle_spend_delay = 10
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
 
@@ -580,7 +583,8 @@ def test_treasury() -> None:
         5,
         1000,
         5100,
-        self_destruct_time
+        self_destruct_time,
+        oracle_spend_delay,
     )
 
     treasury_puzzle_hash = full_treasury_puz.get_tree_hash()
@@ -721,6 +725,7 @@ def test_proposal_innerpuz() -> None:
     self_destruct_time = 1209600 # 2 weeks
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
+    oracle_spend_delay = 10
 
     # Setup the treasury
     treasury_id: Program = Program.to("treasury_id").get_tree_hash()
@@ -760,6 +765,7 @@ def test_proposal_innerpuz() -> None:
         attendance_required,
         proposal_pass_percentage,
         self_destruct_time,
+        oracle_spend_delay,
     )
     treasury_inner_puzhash = treasury_inner_puz.get_tree_hash()
 
@@ -826,7 +832,7 @@ def test_proposal_innerpuz() -> None:
 
     # Announcements
     # Proposal CPA (proposal_timelock) <-> Treasury APA
-    # Proposal APA (proposal_id, proposal_timelock, soft_close_length) <-> Treasury CPA 
+    # Proposal APA (proposal_id, proposal_timelock, soft_close_length) <-> Treasury CPA
     treasury_apa = treasury_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0]
     proposal_cpa = proposal_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT][0].vars[0]
     assert std_hash(full_proposal_puzhash + proposal_cpa) == treasury_apa

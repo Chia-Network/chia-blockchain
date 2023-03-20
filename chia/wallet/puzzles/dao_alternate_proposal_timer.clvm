@@ -1,5 +1,5 @@
 ; This is a persistent timer for a proposal which allows it to have a relative time that survives despite it being recreated.
-; It has a curried TIMELOCK, which is applied as a ASSERT_HEIGHT_RELATIVE
+; The closing time is contained in the timelock and passed in to the solution, and confirmed via an announcement from the Proposal
 ; It creates/asserts announcements to pair it with the finishing spend of a proposal
 
 (mod (

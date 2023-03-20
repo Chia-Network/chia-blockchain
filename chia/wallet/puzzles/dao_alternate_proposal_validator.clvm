@@ -25,13 +25,6 @@
   (include curry-and-treehash.clinc)
   (include utility_macros.clib)
 
-  (defmacro assert_or_nil items
-      (if (r items)
-          (list if (f items) (c assert (r items)) (q . ()))
-          (f items)
-      )
-  )
-
   (defconstant TEN_THOUSAND 10000)
 
   (defun-inline calculate_win_percentage (TOTAL PERCENTAGE)
@@ -104,15 +97,18 @@
 
   (defun check_spend_conditions (SPEND_P2_SINGLETON_MOD_HASH conditions spend_amount p2_singleton_puzhash delegated_puzzle_hash)
     (assert
-      (= delegated_puzzle_hash
-         (calculate_safe_payment_hash SPEND_P2_SINGLETON_MOD_HASH (r (r (r conditions))) spend_amount p2_singleton_puzhash))
+      (=
+        delegated_puzzle_hash
+        (calculate_safe_payment_hash SPEND_P2_SINGLETON_MOD_HASH (r (r (r conditions))) spend_amount p2_singleton_puzhash)
+      )
       (check_even_amounts (r (r (r conditions))))
+
       ;; return the conditions
       conditions
     )
   )
 
-  (defun check_update_conditions (SINGLETON_STRUCT conditions output)
+  (defun check_update_conditions (SINGLETON_STRUCT conditions)
     ; QUESTION: Is this only used for updating the treasury?
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
@@ -121,7 +117,7 @@
       	  ; If there are > 1 CREATE_COIN conditions then ASSERT_MY_AMOUNT will fail
       	  ; If the amount is even then the singleton top layer will fail.
       	  (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
-      	  (check_update_conditions SINGLETON_STRUCT (r conditions) (c (f conditions) output))
+      	  (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions)))
       	)
       	(if
       	  (any ; block both types of announcement in the update case
@@ -129,7 +125,7 @@
       	    (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
       	  )
       	  (x)  ; fail
-      	  (check_update_conditions SINGLETON_STRUCT (r conditions) spend_or_update_flag seen_flag (c (f conditions) output))
+      	  (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions)))
       	)
       )
       ; success: return all the conditions
@@ -137,7 +133,7 @@
     )
   )
 
-  (defun check_dangerous_conditions (SINGLETON_STRUCT conditions)
+  (defun-inline check_dangerous_conditions (SINGLETON_STRUCT conditions)
      conditions
   )
 
