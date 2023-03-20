@@ -78,6 +78,7 @@ class Offer:
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _offered_coins: Optional[Dict[Optional[bytes32], List[Coin]]] = None
     final_spend_bundle: Optional[SpendBundle] = None
 
     @staticmethod
@@ -176,6 +177,8 @@ class Offer:
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     # It's also a little heuristic, but it should get most things
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+        if self._offered_coins is not None:
+            return self._offered_coins
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
         for parent_spend in self._bundle.coin_spends:
@@ -241,7 +244,7 @@ class Offer:
             if coins_for_this_spend != []:
                 offered_coins.setdefault(asset_id, [])
                 offered_coins[asset_id].extend(coins_for_this_spend)
-
+        object.__setattr__(self, "_offered_coins", offered_coins)
         return offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:

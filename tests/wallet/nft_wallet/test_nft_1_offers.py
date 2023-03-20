@@ -1620,8 +1620,8 @@ async def test_complex_nft_offer(
     )
     maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
     taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
-    await time_out_assert(30, len, 2, maker_nfts)
-    await time_out_assert(30, len, 1, taker_nfts)
+    assert len(maker_nfts) == 2
+    assert len(taker_nfts) == 1
 
     assert nft_to_offer_asset_id_maker == taker_nfts[0].nft_id
     assert nft_to_offer_asset_id_taker_1 in [nft.nft_id for nft in maker_nfts]
@@ -1700,9 +1700,6 @@ async def test_complex_nft_offer(
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )
-    maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
-    taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
-    await time_out_assert(30, len, 3, maker_nfts)
-    await time_out_assert(30, len, 0, taker_nfts)
-
-    assert nft_to_offer_asset_id_maker in [nft.nft_id for nft in maker_nfts]
+    assert await basic_nft_wallet_maker.get_nft_count() == 3
+    assert await basic_nft_wallet_taker.get_nft_count() == 0
+    assert await basic_nft_wallet_maker.nft_store.get_nft_by_id(nft_to_offer_asset_id_maker) is not None

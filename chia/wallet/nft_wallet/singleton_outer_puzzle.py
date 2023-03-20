@@ -31,8 +31,9 @@ class SingletonOuterPuzzle:
         matched, curried_args = match_singleton_puzzle(puzzle)
         if matched:
             singleton_struct, inner_puzzle = curried_args
-            launcher_id = singleton_struct.at("rf").as_atom()
-            launcher_ph = singleton_struct.at("rr").as_atom()
+            launcher_struct = singleton_struct.pair[1].pair
+            launcher_id = launcher_struct[0].atom
+            launcher_ph = launcher_struct[1].atom
             constructor_dict = {
                 "type": "singleton",
                 "launcher_id": "0x" + launcher_id.hex(),
