@@ -86,7 +86,7 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
     return path
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class PeerPeak:
     height: uint32
     hash: bytes32
