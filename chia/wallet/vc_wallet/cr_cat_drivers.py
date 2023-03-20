@@ -16,7 +16,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 )
 from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
-from chia.wallet.vc_wallet.vc_drivers import NFT_TP_COVENANT_ADAPTER_HASH, GUARANTEED_NIL_TP, P2_ANNOUNCED_DELEGATED_PUZZLE_HASH, COVENANT_LAYER_HASH, NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH, NFT_DID_TP
+from chia.wallet.vc_wallet.vc_drivers import NFT_TP_COVENANT_ADAPTER_HASH, GUARANTEED_NIL_TP, P2_ANNOUNCED_DELEGATED_PUZZLE, COVENANT_LAYER_HASH, NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH, NFT_DID_TP
 
 
 # Mods
@@ -41,8 +41,12 @@ def construct_cr_layer(
             SINGLETON_LAUNCHER_HASH,
             NFT_OWNERSHIP_LAYER_HASH,
             NFT_TP_COVENANT_ADAPTER_HASH,
-            GUARANTEED_NIL_TP.get_tree_hash(),
-            P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
+            Program.to(NFT_OWNERSHIP_LAYER_HASH).curry(
+                Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash(),
+                Program.to(None),
+                GUARANTEED_NIL_TP,
+                P2_ANNOUNCED_DELEGATED_PUZZLE,
+            ).get_tree_hash_precalc(NFT_OWNERSHIP_LAYER_HASH, Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash()),
             COVENANT_LAYER_HASH,
             NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH,
             NFT_DID_TP.get_tree_hash(),
