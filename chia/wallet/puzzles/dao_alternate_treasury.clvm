@@ -44,7 +44,7 @@
           (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
           (sha256 ONE PROPOSAL_LENGTH)
           (sha256tree PROPOSAL_VALIDATOR)
-	        (sha256 ONE TREASURY_MOD_HASH)
+	  (sha256 ONE TREASURY_MOD_HASH)
       )
       ONE ; we're assuming treasury will always have 1 mojo in amount
     )
@@ -79,7 +79,7 @@
 	      (if (= spend_or_update_flag "s")
 		; spend case, recreate the treasury
 		(c
-		  (recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME)
+		  (recreate_self TREASURY_MOD_HASH PROPOSAL_VALIDATOR PROPOSAL_LENGTH PROPOSAL_SOFTCLOSE_LENGTH ATTENDANCE_REQUIRED PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME ORACLE_SPEND_DELAY)
 		  ()
 		)
 		; update case, so don't recreate the treasury
@@ -105,6 +105,7 @@
     (if (= proposal_or_oracle_flag 'o')
       ; create the oracle announcement
       (list
+        ; add announcement attendance required
         (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 PASS_MARGIN PROPOSAL_SELF_DESTRUCT_TIME))
       	(list ASSERT_HEIGHT_RELATIVE ORACLE_SPEND_DELAY)
       	(recreate_self

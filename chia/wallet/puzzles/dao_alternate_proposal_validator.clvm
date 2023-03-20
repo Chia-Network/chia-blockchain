@@ -81,6 +81,7 @@
     )
   )
 
+  ; check for CC with odd amount, check  that it's recreating the treasury
   (defun check_even_amounts (conditions)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
@@ -129,7 +130,7 @@
       	)
       )
       ; success: return all the conditions
-      output
+      ()
     )
   )
 

@@ -246,6 +246,7 @@
 
   (if self_destruct_flag
     ; assert self_destruct_time > proposal_timelock_length
+    ; this is the code path for if we've not been accepted by the treasury for a long time, and we're "bad" for some reason
     (assert (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
       (list
       	(list CREATE_COIN dao_finished_state ONE)
@@ -340,6 +341,7 @@
             		self_destruct_time
                 oracle_spend_delay
       	      )
+	      ; Change these to oracle
       	      (sha256tree
           		(list
           		  (f (r SINGLETON_STRUCT))

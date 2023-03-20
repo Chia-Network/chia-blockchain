@@ -105,6 +105,7 @@ def test_proposal() -> None:
             0, # inner puz reveal
             0, # soft close len
             self_destruct_time,
+            oracle_spend_delay,
             0,
         ]
     )
@@ -169,6 +170,7 @@ def test_proposal() -> None:
             acs, # inner puz reveal
             0, # soft close len
             self_destruct_time,
+            oracle_spend_delay,
             0,
         ]
     )
@@ -219,6 +221,7 @@ def test_proposal() -> None:
             0,
             soft_close_length,
             self_destruct_time,
+            oracle_spend_delay,
             0,
         ]
     )
@@ -282,6 +285,7 @@ def test_proposal() -> None:
             0,
             soft_close_length,
             self_destruct_time,
+            oracle_spend_delay,
             0,
         ]
     )
@@ -311,6 +315,7 @@ def test_proposal() -> None:
             0,
             soft_close_length,
             self_destruct_time,
+            oracle_spend_delay,
             1,
         ]
     )
@@ -817,6 +822,7 @@ def test_proposal_innerpuz() -> None:
             0,
             soft_close_length,
             self_destruct_time,
+            oracle_spend_delay,
             0,
         ]
     )
