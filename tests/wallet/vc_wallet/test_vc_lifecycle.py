@@ -507,47 +507,59 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
         )
         cr_puz_hash: bytes32 = cr_puz.get_tree_hash()
         await sim.farm_block(cr_puz_hash)
-        cr_coin: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([cr_puz_hash], include_spent_coins=False)
-        )[0].coin
+        cr_coin: Coin = (await client.get_coin_records_by_puzzle_hashes([cr_puz_hash], include_spent_coins=False))[
+            0
+        ].coin
 
         # Try to spend the coin to ourselves
         _, auth_spend, vc = vc.do_spend(
             ACS,
-            Program.to([
-                [51, ACS_PH, vc.coin.amount],
-                [62, std_hash(cr_coin.name() + b"\xca")],
-                vc.standard_magic_condition(),
-            ]),
+            Program.to(
+                [
+                    [51, ACS_PH, vc.coin.amount],
+                    [62, std_hash(cr_coin.name() + b"\xca")],
+                    vc.standard_magic_condition(),
+                ]
+            ),
         )
 
         for error in ("forget_vc", "make_banned_announcement", None):
             result = await client.push_tx(
-                cost_logger.add_cost("CR-XCH w/ VC announcement, ACS Proof Checker", SpendBundle(
-                    [
-                        CoinSpend(
-                            cr_coin,
-                            cr_puz,
-                            solve_cr_layer(
-                                NEW_PROOFS,
-                                Program.to(None),
-                                launcher_id,
-                                vc.launcher_id,
-                                vc.wrap_inner_with_backdoor().get_tree_hash(),
-                                cr_coin.name(),
-                                Program.to(
-                                    [
-                                        [51, ACS_PH, cr_coin.amount],
-                                        *([60, b"\xcd" + bytes(32)] if error == "make_banned_announcement" else []),
-                                        [61, std_hash(cr_coin.name() + b"\xcd" + std_hash(ACS_PH + int_to_bytes(cr_coin.amount)))],
-                                    ]
+                cost_logger.add_cost(
+                    "CR-XCH w/ VC announcement, ACS Proof Checker",
+                    SpendBundle(
+                        [
+                            CoinSpend(
+                                cr_coin,
+                                cr_puz,
+                                solve_cr_layer(
+                                    NEW_PROOFS,
+                                    Program.to(None),
+                                    launcher_id,
+                                    vc.launcher_id,
+                                    vc.wrap_inner_with_backdoor().get_tree_hash(),
+                                    cr_coin.name(),
+                                    Program.to(
+                                        [
+                                            [51, ACS_PH, cr_coin.amount],
+                                            *([60, b"\xcd" + bytes(32)] if error == "make_banned_announcement" else []),
+                                            [
+                                                61,
+                                                std_hash(
+                                                    cr_coin.name()
+                                                    + b"\xcd"
+                                                    + std_hash(ACS_PH + int_to_bytes(cr_coin.amount))
+                                                ),
+                                            ],
+                                        ]
+                                    ),
                                 ),
-                            )
-                        ),
-                        *([auth_spend] if error != "forget_vc" else []),
-                    ],
-                    G2Element()
-                ))
+                            ),
+                            *([auth_spend] if error != "forget_vc" else []),
+                        ],
+                        G2Element(),
+                    ),
+                )
             )
             if error is None:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -556,9 +568,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
-        assert len(
-            await client.get_coin_records_by_puzzle_hashes([cr_puz_hash], include_spent_coins=False)
-        ) > 0
+        assert len(await client.get_coin_records_by_puzzle_hashes([cr_puz_hash], include_spent_coins=False)) > 0
 
 
 @pytest.mark.asyncio
