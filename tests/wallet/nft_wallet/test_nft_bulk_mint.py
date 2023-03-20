@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 from secrets import token_bytes
 from typing import Any, Dict
 
 import pytest
-from chia import full_node
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
