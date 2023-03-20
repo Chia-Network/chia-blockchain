@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import Any, Iterator, List
+from typing import Any, List
 
 import pytest
 
