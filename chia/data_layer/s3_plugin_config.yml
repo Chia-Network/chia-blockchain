@@ -1,0 +1,13 @@
+
+port: 8999
+aws_credentials:
+  access_key_id: "xxx_key_id"
+  secret_access_key: "xxx_secret_access_key"
+  region: "xxx_region"
+
+store_ids: ["xxx","xxx", "xxx"]
+
+urls: ["xxx","xxx"]
+
+buckets:
+  bucket_name_1: ["xxx", "xxx", "xxx"]

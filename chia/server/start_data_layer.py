@@ -5,18 +5,13 @@ import pathlib
 import sys
 from typing import Any, Dict, List, Optional, cast
 
-import boto3 as boto3
-
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
-from chia.data_layer.downloader import DLDownloader, S3Downloader
-from chia.data_layer.uploader import DLUploader, S3Uploader
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -34,8 +29,8 @@ log = logging.getLogger(__name__)
 def create_data_layer_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
-    downloaders: List[DLDownloader],
-    uploaders: List[DLUploader],  # dont add FilesystemUploader to this, it is the default uploader
+    downloaders: List[str],
+    uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
     wallet_service: Optional[Service[WalletNode]] = None,
     connect_to_daemon: bool = True,
 ) -> Service[DataLayer]:
@@ -86,19 +81,6 @@ def create_data_layer_service(
     )
 
 
-bucket_name = "chia-datalayer-test-bucket"
-client = boto3.client(
-    "s3",
-    region_name="us-east-1",
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-)
-
-
-uploaders: List[str] = []
-downloaders: List[str] = []
-
-
 async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
@@ -117,6 +99,8 @@ async def async_main() -> int:
         overwrite=False,
     )
 
+    uploaders: List[str] = config["data_layer"]["uploaders"]
+    downloaders: List[str] = config["data_layer"]["downloaders"]
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
     await service.setup_process_global_state()
     await service.run()

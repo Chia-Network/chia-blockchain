@@ -33,8 +33,6 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
-from chia.data_layer.downloader import DLDownloader, HttpDownloader
-from chia.data_layer.uploader import DLUploader, FilesystemUploader
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -416,10 +414,11 @@ class DataLayer:
     async def get_downloader(self, url: str) -> Optional[str]:
         request_json = {"url": url}
         for d in self.downloaders:
-            async with aiohttp.ClientSession().post(d + "check_url", json=request_json) as response:
-                res_json = await response.json()
-                if res_json["handles_url"] == True:
-                    return d
+            async with aiohttp.ClientSession() as session:
+                async with session.post("http://" + d + "/check_url", json=request_json) as response:
+                    res_json = await response.json()
+                    if res_json["handles_url"] is True:
+                        return d
         # todo return list of downloaders
         return None
 
@@ -442,11 +441,12 @@ class DataLayer:
                 self.data_store, tree_id, root, self.server_files_location
             )
             if uploader is not None:
-                request_json = {"id": tree_id, "full_tree_path": full_tree_path, "diff_path": diff_path}
-                async with aiohttp.ClientSession().post(uploader + "upload", json=request_json) as response:
-                    res_json = await response.json()
-                    if res_json["uploaded"] != True:
-                        break
+                request_json = {"id": tree_id.hex(), "full_tree_path": str(full_tree_path), "diff_path": str(diff_path)}
+                async with aiohttp.ClientSession() as session:
+                    async with session.post("http://" + uploader + "/upload", json=request_json) as response:
+                        res_json = await response.json()
+                        if res_json["uploaded"] is False:
+                            break
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
@@ -829,10 +829,15 @@ class DataLayer:
 
     async def get_uploader(self, tree_id: bytes32) -> Optional[str]:
         for uploader in self.uploaders:
-            request_json = {"id": tree_id}
             # todo handle errors
-            async with aiohttp.ClientSession().post(uploader + "check_store_id", json=request_json) as response:
-                res_json = await response.json()
-                if res_json["handles_store"] == True:
-                    return uploader
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
+                ) as response:
+                    try:
+                        res_json = await response.json()
+                    except Exception as e:
+                        self.log.error(f"get_uploader could not parse response {e}")
+            if res_json["handles_store"] is True:
+                return uploader
         return None

@@ -4,10 +4,11 @@ import asyncio
 import concurrent.futures
 import functools
 import logging
-from typing import List
+from pathlib import Path
 from urllib.parse import urlparse
 
 import boto3 as boto3
+import yaml
 from aiohttp import web
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -15,32 +16,48 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 log = logging.getLogger(__name__)
 
 
-store_ids: List[bytes32] = []
+with open("s3_plugin_config.yml", "r") as f:
+    config = yaml.safe_load(f)
+
+port = config["port"]
+region = config["aws_credentials"]["region"]
+aws_access_key_id = config["aws_credentials"]["access_key_id"]
+aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+store_ids = config["store_ids"]
+bukets = config["buckets"]
+urls = config["urls"]
+
+
 boto_client = boto3.client(
     "s3",
-    region_name="us-east-1",
+    region_name=region,
     aws_access_key_id=aws_access_key_id,
     aws_secret_access_key=aws_secret_access_key,
 )
 
 
 async def check_store_id(request: web.Request) -> web.Response:
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception as e:
+        print(f"failed parsing request {request} {e}")
+        return web.json_response({"handles_url": False})
     store_id = bytes32.from_hexstr(data["id"])
-    log.info(f"check uploader {store_id} {store_ids}")
-    for store in store_ids:
-        if store_id == store:
-            log.info(f"s3 uploader handles store {store}")
-            return web.json_response({"handles_store": True})
+    if store_id.hex() in store_ids:
+        return web.json_response({"handles_store": True})
     return web.json_response({"handles_store": False})
 
 
 async def upload(request: web.Request) -> web.Response:
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception as e:
+        print(f"failed parsing request {request} {e}")
+        return web.json_response({"handles_url": False})
     store_id = bytes32.from_hexstr(data["id"])
     full_tree_path = data["full_tree_path"]
     diff_path = data["diff_path"]
-    bucket = get_bucket(store_id)
+    bucket = await get_bucket(store_id)
     # todo add try catch
     boto_client.upload_file(str(full_tree_path), bucket, full_tree_path)
     boto_client.upload_file(str(diff_path), bucket, diff_path)
@@ -48,22 +65,29 @@ async def upload(request: web.Request) -> web.Response:
 
 
 async def check_url(request: web.Request) -> web.Response:
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception as e:
+        print(f"failed parsing request {request} {e}")
+        return web.json_response({"handles_url": False})
     parse_result = urlparse(data["url"])
-    if parse_result.scheme == "s3":
+    if parse_result.scheme == "s3" and data["url"] in urls:
         return web.json_response({"handles_url": True})
     return web.json_response({"handles_url": False})
 
 
 async def download(request: web.Request) -> web.Response:
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception as e:
+        print(f"failed parsing request {request} {e}")
+        return web.json_response({"handles_url": False})
     url = data["url"]
-    client_folder = data["client_folder"]
+    client_folder = Path(data["client_folder"])
     filename = data["filename"]
     parse_result = urlparse(url)
     bucket = parse_result.netloc
     target_filename = client_folder.joinpath(filename)
-    log.debug(f"target file name {target_filename} bucket {bucket}")
     # Create folder for parent directory
     target_filename.parent.mkdir(parents=True, exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor() as pool:
@@ -74,16 +98,20 @@ async def download(request: web.Request) -> web.Response:
     return web.json_response({"downloaded": True})
 
 
-async def get_bucket(bucket: bytes32) -> str:
-    return "chia-datalayer-test-bucket"
+async def get_bucket(store_id: bytes32) -> str:
+    for bucket in bukets:
+        if store_id.hex() in bukets[bucket]:
+            return bucket
+    raise Exception(f"bucket not found store id {store_id.hex()}")
 
 
-async def make_app() -> None:
+async def make_app():
     app = web.Application()
-    app.add_routes([web.get("/check_store_id", check_store_id)])
-    app.add_routes([web.get("/upload", upload)])
-    app.add_routes([web.get("/check_url", check_url)])
-    app.add_routes([web.get("/download", download)])
+    app.add_routes([web.post("/check_store_id", check_store_id)])
+    app.add_routes([web.post("/upload", upload)])
+    app.add_routes([web.post("/check_url", check_url)])
+    app.add_routes([web.post("/download", download)])
+    return app
 
 
-web.run_app(make_app())
+web.run_app(make_app(), port=8999)

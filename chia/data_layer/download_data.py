@@ -12,7 +12,6 @@ from typing_extensions import Literal
 
 from chia.data_layer.data_layer_util import NodeType, Root, SerializedNode, ServerInfo, Status
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.downloader import DLDownloader
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
@@ -144,16 +143,17 @@ async def insert_from_delta_file(
         timestamp = int(time.time())
         existing_generation += 1
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
-        request_json = {"url": server_info.url, "client_folder": client_foldername, "filename": filename}
+        request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
         if downloader is None:
             # use http downloader
             if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
                 break
         else:
-            async with aiohttp.ClientSession().post(downloader + "download", json=request_json) as response:
-                res_json = await response.json()
-                if res_json["downloaded"] != True:
-                    break
+            async with aiohttp.ClientSession() as session:
+                async with session.post("http://" + downloader + "/download", json=request_json) as response:
+                    res_json = await response.json()
+                    if res_json["downloaded"] is False:
+                        break
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
