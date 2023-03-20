@@ -564,7 +564,10 @@ class WalletRpcApi:
         return {}
 
     async def get_timestamp_for_height(self, request) -> EndpointResult:
-        return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}
+        timestamp = await self.service.get_timestamp_for_height(uint32(request["height"]))
+        if timestamp is None:
+            raise ValueError("Error fetching timestamp for height '%s'", request["height"])
+        return {"timestamp": timestamp}
 
     ##########################################################################################
     # Wallet Management

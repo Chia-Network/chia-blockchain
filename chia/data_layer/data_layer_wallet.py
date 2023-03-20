@@ -252,17 +252,18 @@ class DataLayerWallet:
         singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
             launcher_id
         )
+        timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
+        if timestamp is None:
+            raise ValueError("Error fetching timestamp for height '%s'.", height)
         if singleton_record is not None:
             if (  # This is an unconfirmed singleton that we know about
                 singleton_record.coin_id == new_singleton.name() and not singleton_record.confirmed
             ):
-                timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
                 await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height, timestamp)
             else:
                 self.log.info(f"Spend of launcher {launcher_id} has already been processed")
                 return None
         else:
-            timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
@@ -907,6 +908,8 @@ class DataLayerWallet:
 
             new_singleton = Coin(parent_name, full_puzzle_hash, amount)
             timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
+            if timestamp is None:
+                raise ValueError("Error fetching timestamp for height '%s'.", height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),

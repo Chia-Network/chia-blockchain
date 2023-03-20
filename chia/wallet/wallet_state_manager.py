@@ -1155,6 +1155,14 @@ class WalletStateManager:
                                 created_timestamp = await self.wallet_node.get_timestamp_for_height(
                                     coin_state.created_height
                                 )
+                                if created_timestamp is None:
+                                    raise ValueError(
+                                        "Error fetching timestamp for height '%s'. "
+                                        "Aborting coin processing for coin %s",
+                                        coin_state.created_height,
+                                        coin_state.coin.name(),
+                                    )
+
                                 tx_record = TransactionRecord(
                                     confirmed_at_height=uint32(coin_state.created_height),
                                     created_at_time=uint64(created_timestamp),
@@ -1202,6 +1210,13 @@ class WalletStateManager:
                                 spent_timestamp = await self.wallet_node.get_timestamp_for_height(
                                     coin_state.spent_height
                                 )
+                                if spent_timestamp is None:
+                                    raise ValueError(
+                                        "Error fetching timestamp for height '%s'. "
+                                        "Aborting coin processing for coin %s",
+                                        coin_state.spent_height,
+                                        coin_state.coin.name(),
+                                    )
 
                                 # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                                 # Even though we are just adding coin record to the db (after reorg)
@@ -1495,6 +1510,10 @@ class WalletStateManager:
             else:
                 tx_type = TransactionType.FEE_REWARD.value
             timestamp = await self.wallet_node.get_timestamp_for_height(height)
+            if timestamp is None:
+                raise ValueError(
+                    "Error fetching timestamp for height '%s'. Aborting coin processing for coin %s", height, coin_name
+                )
 
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
@@ -1659,6 +1678,9 @@ class WalletStateManager:
 
     async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> CoinRecord:
         timestamp: uint64 = await self.wallet_node.get_timestamp_for_height(wr.confirmed_block_height)
+        if timestamp is None:
+            raise ValueError("Error fetching timestamp for height '%s'.", wr.confirmed_block_height)
+
         return wr.to_coin_record(timestamp)
 
     async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:

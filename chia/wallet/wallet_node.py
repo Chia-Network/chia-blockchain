@@ -1004,10 +1004,13 @@ class WalletNode:
                 neither.append(node)
         return synced_and_trusted + synced + trusted + neither
 
-    async def get_timestamp_for_height(self, height: uint32) -> uint64:
+    async def get_timestamp_for_height(self, height: uint32) -> Optional[uint64]:
         """
-        Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
-        a transaction block
+        Returns the timestamp for transaction block at h=height, if `height` is not a transaction block,
+        backtracks until it finds a transaction block.
+
+        Note that `get_timestamp_for_height` can fail if a height is requested that we do not yet have a block for.
+        If we are running in "light wallet" mode, we may not yet have this information. Return None in that case.
         """
         if height in self.height_to_time:
             return self.height_to_time[height]
@@ -1017,10 +1020,14 @@ class WalletNode:
             if cache_ts is not None:
                 return cache_ts
 
+        if all([peak[0] < height for peak in self.node_peaks.values()]):
+            self.log.warning("Error fetching timestamp for height %s. No peers are that high.", height)
+            return None
+
         peers: List[WSChiaConnection] = self.get_full_node_peers_in_order()
-        last_tx_block: Optional[HeaderBlock] = None
+
         for peer in peers:
-            last_tx_block = await fetch_last_tx_from_peer(height, peer)
+            last_tx_block: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
             if last_tx_block is None:
                 continue
 
@@ -1028,7 +1035,8 @@ class WalletNode:
             self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
             return last_tx_block.foliage_transaction_block.timestamp
 
-        raise PeerRequestException("Error fetching timestamp from all peers")
+        self.log.warning("Error fetching timestamp for height %s. Peer peaks: %s", height, self.node_peaks)
+        return None
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
