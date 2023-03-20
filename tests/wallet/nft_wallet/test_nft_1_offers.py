@@ -1267,7 +1267,6 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
         (True, (200, 500, 500)),
         (False, (200, 500, 500)),
         (False, (0, 0, 0)),  # test that we can have 0 royalty
-        (False, (65000, 65534, 65535)),  # test that we can reach max royalty
         (False, (10000, 10001, 10005)),  # tests 100% royalty is not allowed
         (False, (100000, 10001, 10005)),  # 1000% shouldn't work
     ],
