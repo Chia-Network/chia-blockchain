@@ -62,7 +62,7 @@ async def wait_rpc_state_condition(
                 f"timed out while waiting for {async_function.__name__}(): {elapsed} >= {timeout}",
             )
 
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.3)
 
 
 async def make_new_block_with(resp: Dict, full_node_api: FullNodeSimulator, ph: bytes32) -> SpendBundle:

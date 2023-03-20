@@ -5,6 +5,7 @@ from secrets import token_bytes
 from typing import Any, Dict
 
 import pytest
+from chia import full_node
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -28,8 +29,7 @@ from chia.wallet.util.address_type import AddressType
 
 
 async def nft_count(wallet: NFTWallet) -> int:
-    nfts = await wallet.nft_store.get_nft_list()
-    return len(nfts)
+    return await wallet.get_nft_count()
 
 
 @pytest.mark.parametrize(
@@ -310,14 +310,12 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         # We are using a long time out here because it can take a long time for the NFTs to show up
         # Even with only 10 NFTs it regularly takes longer than 30-40s for them to be found
@@ -484,6 +482,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         spends = []
 
         for i in range(0, n, chunk):
+            await time_out_assert(30, client.get_synced)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
@@ -510,14 +509,12 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         await time_out_assert(60, get_taker_nfts, n)
 
@@ -911,14 +908,12 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         # We are using a long time out here because it can take a long time for the NFTs to show up
         # Even with only 10 NFTs it regularly takes longer than 30-40s for them to be found
