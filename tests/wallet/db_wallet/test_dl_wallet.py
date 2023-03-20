@@ -21,12 +21,6 @@ from chia.wallet.util.merkle_tree import MerkleTree
 pytestmark = pytest.mark.data_layer
 
 
-@pytest.fixture(scope="module")
-def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bool:
     rec = await dl_wallet.get_latest_singleton(lid)
     if rec is None:
