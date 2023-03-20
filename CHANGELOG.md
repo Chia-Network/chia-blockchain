@@ -9,12 +9,11 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.7.1 Chia blockchain 2023-03-22
 
 ### Added
-* Get memo api by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14377
-* Add additional state_changed events to metrics destination by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/14419
-* RPC call to reset wallet sync data by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14365
-* Adding Community seeders/dns introducers by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/14497
-* Add dexie DNS seeder by @denisu in https://github.com/Chia-Network/chia-blockchain/pull/14556
-* rpc endpoint to count nfts per wallet or all wallets by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14570
+* Added wallet RPC `get_transaction_memo` 
+* Added wallet RPC `set_wallet_resync_on_startup` to reset wallet sync data on wallet restart
+* Added wallet RPC `nft_count_nfts` - counts NFTs per wallet or for all wallets
+* Added Community DNS introducers to initial (default) config.yaml
+* Added additional state_changed events to metrics destination (used by chia-exporter)
 * add nft id to rpcs by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14588
 
 ### Changed
