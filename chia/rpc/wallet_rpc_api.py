@@ -577,7 +577,6 @@ class WalletRpcApi:
         :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
         :return:
         """
-        print(self.service.config)
         return self.service.set_auto_claim(
             request.get("enabled", self.service.config.get("auto_claim", True)),
             request.get("tx_fee", self.service.config.get("auto_claim_tx_fee", 0)),
