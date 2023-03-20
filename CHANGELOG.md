@@ -8,6 +8,66 @@ for setuptools_scm/PEP 440 reasons.
 
 ## 1.7.1 Chia blockchain 2023-03-22
 
+### Added
+* Get memo api by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14377
+* Add additional state_changed events to metrics destination by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/14419
+* RPC call to reset wallet sync data by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14365
+* Adding Community seeders/dns introducers by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/14497
+* Add dexie DNS seeder by @denisu in https://github.com/Chia-Network/chia-blockchain/pull/14556
+* rpc endpoint to count nfts per wallet or all wallets by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14570
+* add nft id to rpcs by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14588
+
+### Changed
+* Add support for Python 3.11 by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/11407
+* Don't print entire TransactionRecord to log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14456
+* Return a better error message when the 'coin_id' argument for nft_get_info cannot be decoded into a 32 byte hex string by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14454
+* Always Log service startup and shutdown. by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14447
+* Output proper json by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14451
+* Rate limit 'Rate limiting' message by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14435
+* update GUI when wallets are removed by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14251
+* let sqlite count NFTs on removal by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14523
+* Offer CLI command help now shows --fee units as XCH by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14529
+* optimize offers by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14531
+* bump chia_rs to 0.2.2 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14533
+* Improve the help text for the peer command by @TheLastCicada in https://github.com/Chia-Network/chia-blockchain/pull/14542
+* Simplify request_mempool_transactions() and get_items_not_in_filter() by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14404
+* Remove redundant checks for minting coin and reserve fee by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14560
+* Augment mempool's total_mempool_fees to int as it shouldn't be limited by type Mojos by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14587
+* nft paging at sqlite level by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14561
+* Softfork2 infrastructure by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14625
+* Check Wallet DB integrity by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14401
+* make conditions_for_solution() support untrusted input by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14615
+* Introduce BlockRecordProtocol as a subset of BlockRecord that the mempool manager uses for peak by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14628
+* Extend sign API to support hex string by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14448
+* Separate mempool item's JSON response value from the internal structure by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14476
+* Improve chia wallet check help and diagnostic messages by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14688
+* Extend did_find_lost_did API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14673
+* Refine help text for chia peer -a by @TheLastCicada in https://github.com/Chia-Network/chia-blockchain/pull/14563
+* sqlite-backed mempool by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14657
+* Bump chia_rs to 0.2.3. and ASSERT_MY_BIRTH_* by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14720
+* Move startup / shutdown logging to INFO by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14546
+* Adding Changed label to dependabot updates by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/14765
+* Bump chia rs 0.2.4 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14758
+* Stop sending change to a new address by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14422
+* disable soft-fork 2 (for now) by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14786
+* in mempool, support sqlite without generated columns by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14788
+
+### Fixed
+* Dl wallet store index fix by @neurosis69 in https://github.com/Chia-Network/chia-blockchain/pull/13316
+* Deprecate `curry-and-treehash` and replace it with `curry`. by @richardkiss in https://github.com/Chia-Network/chia-blockchain/pull/14066
+* Fix get memo API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14513
+* wallet: Don't update `FINISHED_SYNC_UP_TO` during long sync by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14520
+* Don't raise on lack of hints in notification manager by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14590
+* handle ._get_extra_info() call on a closing connection by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14618
+* close the keychain proxy in more failure and cancellation cases by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14415
+* wallet: Fix sync mode indication by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14524
+* anyio is needed as a standard dependency for the simulator by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14661
+* no duplicate offers, handle conflict offers correctly by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14722
+* Listen on ::0 so we can respond to both ipv4 and ipv6 by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/14731
+* Don't create a coin for 0 amount royalty payments by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14769
+* avoid AttributeError when shutting down plotting by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/3954
+* better handling of offer status and failed txs by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14812
+
 ## 1.7.0 Chia blockchain 2023-02-15
 
 ### Added
