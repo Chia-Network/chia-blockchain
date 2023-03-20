@@ -3,6 +3,7 @@ import pytest
 from typing import Optional, Tuple
 
 from blspy import G2Element
+from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -22,6 +23,10 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     solution_for_singleton,
 )
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.vc_wallet.cr_cat_drivers import (
+    construct_cr_layer,
+    solve_cr_layer,
+)
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
     VerifiedCredential,
@@ -390,6 +395,170 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         await sim.farm_block()
 
         assert len(await client.get_coin_records_by_puzzle_hashes([wrapped_brick_hash], include_spent_coins=False)) > 0
+
+
+# TODO: Should probably merge this with the test below
+@pytest.mark.asyncio
+async def test_cr_layer(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        RUN_PUZ_PUZ: Program = Program.to([2, 1, None])  # (a 1 ()) takes a puzzle as its solution and runs it with ()
+        RUN_PUZ_PUZ_PH: bytes32 = RUN_PUZ_PUZ.get_tree_hash()
+        await sim.farm_block(RUN_PUZ_PUZ_PH)
+        vc_fund_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[0].coin
+        did_fund_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[1].coin
+
+        # Gotta make a DID first
+        conditions, launcher_spend = launch_conditions_and_coinsol(
+            did_fund_coin,
+            ACS,
+            [],
+            uint64(1),
+        )
+        await client.push_tx(
+            SpendBundle(
+                [
+                    CoinSpend(
+                        did_fund_coin,
+                        RUN_PUZ_PUZ,
+                        Program.to((1, conditions)),
+                    ),
+                    launcher_spend,
+                ],
+                G2Element(),
+            )
+        )
+        await sim.farm_block()
+        launcher_id: bytes32 = launcher_spend.coin.name()
+        did: Coin = (await client.get_coin_records_by_parent_ids([launcher_id], include_spent_coins=False))[0].coin
+
+        # Now let's launch the VC
+        vc: VerifiedCredential
+        dpuz, coin_spends, vc = VerifiedCredential.launch(
+            vc_fund_coin,
+            launcher_id,
+            ACS_PH,
+            bytes32([0] * 32),
+        )
+        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            cost_logger.add_cost(
+                "Launch VC",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            vc_fund_coin,
+                            RUN_PUZ_PUZ,
+                            dpuz,
+                        ),
+                        *coin_spends,
+                    ],
+                    G2Element(),
+                ),
+            )
+        )
+        await sim.farm_block()
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        # Update the proofs with a proper announcement
+        NEW_PROOFS: Program = Program.to((("test", True), ("test2", False)))
+        NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
+        expected_announcement, update_spend, vc = vc.do_spend(
+            ACS,
+            Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
+            new_proof_hash=NEW_PROOF_HASH,
+        )
+        await client.push_tx(
+            cost_logger.add_cost(
+                "Update VC proofs (eve covenant spend) - DID providing announcement",
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            did,
+                            puzzle_for_singleton(
+                                launcher_id,
+                                ACS,
+                            ),
+                            solution_for_singleton(
+                                LineageProof(
+                                    parent_name=launcher_spend.coin.parent_coin_info,
+                                    amount=uint64(launcher_spend.coin.amount),
+                                ),
+                                uint64(did.amount),
+                                Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
+                            ),
+                        ),
+                        update_spend,
+                    ],
+                    G2Element(),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+
+        # Now lets farm a CR coin
+        cr_puz: Program = construct_cr_layer(
+            [launcher_id],
+            Program.to((1, 1)),
+            ACS,
+        )
+        cr_puz_hash: bytes32 = cr_puz.get_tree_hash()
+        await sim.farm_block(cr_puz_hash)
+        cr_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([cr_puz_hash], include_spent_coins=False)
+        )[0].coin
+
+        # Try to spend the coin to ourselves
+        _, auth_spend, vc = vc.do_spend(
+            ACS,
+            Program.to([
+                [51, ACS_PH, vc.coin.amount],
+                [62, std_hash(cr_coin.name() + b"\xca")],
+                vc.standard_magic_condition(),
+            ]),
+        )
+
+        for error in ("forget_vc", "make_banned_announcement", None):
+            result = await client.push_tx(
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            cr_coin,
+                            cr_puz,
+                            solve_cr_layer(
+                                NEW_PROOFS,
+                                Program.to(None),
+                                launcher_id,
+                                vc.launcher_id,
+                                vc.wrap_inner_with_backdoor().get_tree_hash(),
+                                cr_coin.name(),
+                                Program.to(
+                                    [
+                                        [51, ACS_PH, cr_coin.amount],
+                                        *([60, b"\xcd" + bytes(32)] if error == "make_banned_announcement" else []),
+                                        [61, std_hash(cr_coin.name() + b"\xcd" + std_hash(ACS_PH + int_to_bytes(cr_coin.amount)))],
+                                    ]
+                                ),
+                            )
+                        ),
+                        *([auth_spend] if error != "forget_vc" else []),
+                    ],
+                    G2Element()
+                )
+            )
+            if error is None:
+                assert result == (MempoolInclusionStatus.SUCCESS, None)
+            elif error == "forget_vc":
+                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+            elif error == "make_banned_announcement":
+                assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        assert len(
+            await client.get_coin_records_by_puzzle_hashes([cr_puz_hash], include_spent_coins=False)
+        ) > 0
 
 
 @pytest.mark.asyncio
