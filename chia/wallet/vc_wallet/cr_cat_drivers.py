@@ -89,3 +89,58 @@ def solve_cr_layer(
         ]
     )
     return solution
+
+
+_T_CRCAT = TypeVar("_T_CRCAT", bound="CRCAT")
+
+
+@dataclass(frozen=True)
+class CRCAT:
+    coin: Coin
+    tail_hash: bytes32
+    lineage_proof: LineageProof
+    authorized_providers: List[bytes32]
+    proofs_checker: Program
+    inner_puzzle_hash: bytes32
+
+    @classmethod
+    def launch(
+        cls: Type[_T_CRCAT],
+        origin_coin: Coin,
+        tail: Program,
+        tail_solution: Program,
+        authorized_providers: List[bytes32],
+        proofs_checker: Program,
+        new_inner_puzzle_hash: bytes32,
+        hint: bytes32,
+    ) -> Tuple[Program, List[CoinSpend], _T_CRCAT]:
+        ...
+
+    def construct_puzzle(self) -> Program:
+        ...
+
+    @staticmethod
+    def is_cr_cat(puzzle_reveal: UncurriedPuzzle) -> Tuple[bool, str]:
+        ...
+
+    @classmethod
+    def get_next_from_coin_spend(cls: Type[_T_CRCAT], parent_spend: CoinSpend) -> _T_CRCAT:
+        ...
+
+    def do_spend(
+        self,
+        previous_coin_id: bytes32,
+        next_coin_proof: LineageProof,
+        previous_subtotal: int,
+        extra_delta: int,
+        inner_puzzle: Program,
+        inner_solution: Program,
+    ) -> Tuple[List[bytes32], CoinSpend, "CRCAT"]:
+        ...
+
+    @classmethod
+    def spend_many(
+        cls: Type[_T_CRCAT],
+        spend_params: List[Tuple[_T_CRCAT, Program, Program]],
+    ) -> Tuple[List[bytes32], List[CoinSpend], List[_T_CRCAT]]:
+        ...
