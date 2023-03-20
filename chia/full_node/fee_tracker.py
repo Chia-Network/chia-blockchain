@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from chia.full_node.fee_estimate_store import FeeStore
+from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator_constants import (
     FEE_ESTIMATOR_VERSION,
     INFINITE_FEE_RATE,
@@ -26,7 +27,6 @@ from chia.full_node.fee_estimator_constants import (
     SUFFICIENT_FEE_TXS,
 )
 from chia.full_node.fee_history import FeeStatBackup, FeeTrackerBackup
-from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint8, uint32, uint64
 
 
@@ -129,7 +129,7 @@ class FeeStat:  # TxConfirmStats
 
         self.old_unconfirmed_txs = [0 for _ in range(0, len(buckets))]
 
-    def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItem) -> None:
+    def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItemInfo) -> None:
         if blocks_to_confirm < 1:
             raise ValueError("tx_confirmed called with < 1 block to confirm")
 
@@ -164,7 +164,7 @@ class FeeStat:  # TxConfirmStats
         self.unconfirmed_txs[block_index][bucket_index] += 1
         return bucket_index
 
-    def remove_tx(self, latest_seen_height: uint32, item: MempoolItem, bucket_index: int) -> None:
+    def remove_tx(self, latest_seen_height: uint32, item: MempoolItemInfo, bucket_index: int) -> None:
         if item.height_added_to_mempool is None:
             return
         block_ago = latest_seen_height - item.height_added_to_mempool
@@ -475,7 +475,7 @@ class FeeTracker:
         )
         self.fee_store.store_fee_data(backup)
 
-    def process_block(self, block_height: uint32, items: List[MempoolItem]) -> None:
+    def process_block(self, block_height: uint32, items: List[MempoolItemInfo]) -> None:
         """A new block has been farmed and these transactions have been included in that block"""
         if block_height <= self.latest_seen_height:
             # Ignore reorgs
@@ -498,7 +498,7 @@ class FeeTracker:
             self.first_recorded_height = block_height
             self.log.info(f"Fee Estimator first recorded height: {self.first_recorded_height}")
 
-    def process_block_tx(self, current_height: uint32, item: MempoolItem) -> None:
+    def process_block_tx(self, current_height: uint32, item: MempoolItemInfo) -> None:
         if item.height_added_to_mempool is None:
             raise ValueError("process_block_tx called with item.height_added_to_mempool=None")
 
@@ -510,8 +510,7 @@ class FeeTracker:
         self.med_horizon.tx_confirmed(blocks_to_confirm, item)
         self.long_horizon.tx_confirmed(blocks_to_confirm, item)
 
-    def add_tx(self, item: MempoolItem) -> None:
-
+    def add_tx(self, item: MempoolItemInfo) -> None:
         if item.height_added_to_mempool < self.latest_seen_height:
             self.log.info(f"Processing Item from pending pool: cost={item.cost} fee={item.fee}")
 
@@ -522,7 +521,7 @@ class FeeTracker:
         self.med_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
         self.long_horizon.new_mempool_tx(self.latest_seen_height, bucket_index)
 
-    def remove_tx(self, item: MempoolItem) -> None:
+    def remove_tx(self, item: MempoolItemInfo) -> None:
         bucket_index = get_bucket_index(self.buckets, item.fee_per_cost * 1000)
         self.short_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.med_horizon.remove_tx(self.latest_seen_height, item, bucket_index)

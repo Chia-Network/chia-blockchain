@@ -6,7 +6,6 @@ or that they're failing for the right reason when they're invalid.
 from __future__ import annotations
 
 import logging
-import time
 from typing import List, Optional, Tuple
 
 import pytest
@@ -49,6 +48,8 @@ async def initial_blocks(bt, block_count: int = 4) -> List[FullBlock]:
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=EASY_PUZZLE_HASH,
         pool_reward_puzzle_hash=EASY_PUZZLE_HASH,
+        genesis_timestamp=10000,
+        time_per_block=10,
     )
     return blocks
 
@@ -58,13 +59,18 @@ async def check_spend_bundle_validity(
     blocks: List[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
+    softfork2: bool = False,
 ) -> Tuple[List[CoinRecord], List[CoinRecord]]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
-    constants = bt.constants
+    if softfork2:
+        constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
+    else:
+        constants = bt.constants
+
     db_wrapper, blockchain = await create_ram_blockchain(constants)
     try:
         for block in blocks:
@@ -98,7 +104,11 @@ async def check_spend_bundle_validity(
 
 
 async def check_conditions(
-    bt: BlockTools, condition_solution: Program, expected_err: Optional[Err] = None, spend_reward_index: int = -2
+    bt: BlockTools,
+    condition_solution: Program,
+    expected_err: Optional[Err] = None,
+    spend_reward_index: int = -2,
+    softfork2: bool = False,
 ):
     blocks = await initial_blocks(bt)
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
@@ -108,29 +118,72 @@ async def check_conditions(
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 
-    await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err)
+    await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err, softfork2=softfork2)
+
+
+co = ConditionOpcode
 
 
 class TestConditions:
     @pytest.mark.asyncio
-    async def test_invalid_block_age(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_RELATIVE[0]} 2))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_HEIGHT_RELATIVE_FAILED)
+    # soft-fork 2 is disabled (for now)
+    @pytest.mark.parametrize("softfork2", [False])
+    @pytest.mark.parametrize(
+        "opcode,value,expected",
+        [
+            # the chain has 4 blocks, the spend is happening in the 5th block
+            # the coin being spent was created in the 3rd block (i.e. block 2)
+            # ensure invalid heights fail and pass correctly, depending on
+            # which end of the range they exceed
+            # MY BIRTH HEIGHT
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 3, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 2, None),
+            # MY BIRTH SECONDS
+            # genesis timestamp is 10000 and each block is 10 seconds
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10019, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10020, None),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10021, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            # HEIGHT RELATIVE
+            (co.ASSERT_HEIGHT_RELATIVE, -1, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, None),
+            (co.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+            # HEIGHT ABSOLUTE
+            (co.ASSERT_HEIGHT_ABSOLUTE, -1, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 0, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 3, None),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            # SECONDS RELATIVE
+            (co.ASSERT_SECONDS_RELATIVE, -1, None),
+            (co.ASSERT_SECONDS_RELATIVE, 0, None),
+            (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+            # SECONDS ABSOLUTE
+            (co.ASSERT_SECONDS_ABSOLUTE, -1, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10049, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        ],
+    )
+    async def test_condition(self, opcode, value, expected, bt, softfork2):
+        conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
 
-    @pytest.mark.asyncio
-    async def test_valid_block_age(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_RELATIVE[0]} 1))"))
-        await check_conditions(bt, conditions)
+        # when soft fork 2 is not active, these conditions are also not active,
+        # and never constrain the block
+        if not softfork2 and opcode in [
+            co.ASSERT_MY_BIRTH_HEIGHT,
+            co.ASSERT_MY_BIRTH_SECONDS,
+        ]:
+            expected = None
 
-    @pytest.mark.asyncio
-    async def test_invalid_block_height(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE[0]} 4))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_HEIGHT_ABSOLUTE_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_block_height(self, bt):
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE[0]} 3))"))
-        await check_conditions(bt, conditions)
+        await check_conditions(bt, conditions, expected_err=expected, softfork2=softfork2)
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, bt):
@@ -146,20 +199,6 @@ class TestConditions:
         blocks = await initial_blocks(bt)
         coin = list(blocks[-2].get_included_reward_coins())[0]
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"))
-        await check_conditions(bt, conditions)
-
-    @pytest.mark.asyncio
-    async def test_invalid_seconds_absolute(self, bt):
-        # TODO: make the test suite not use `time.time` so we can more accurately
-        # set `time_now` to make it minimal while still failing
-        time_now = int(time.time()) + 3000
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]} {time_now}))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_seconds_absolute(self, bt):
-        time_now = int(time.time())
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]} {time_now}))"))
         await check_conditions(bt, conditions)
 
     @pytest.mark.asyncio

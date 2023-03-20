@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
-from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
+from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -44,6 +44,8 @@ async def do_spend(
     extra_deltas: Optional[List[int]] = None,
     additional_spends: List[SpendBundle] = [],
     limitations_solutions: Optional[List[Program]] = None,
+    cost_logger: Optional[CostLogger] = None,
+    cost_log_msg: str = "",
 ) -> int:
     if limitations_solutions is None:
         limitations_solutions = [Program.to([])] * len(coins)
@@ -72,15 +74,16 @@ async def do_spend(
         spendable_cat_list,
     )
     agg_sig = AugSchemeMPL.aggregate(signatures)
-    result = await sim_client.push_tx(
-        SpendBundle.aggregate(
-            [
-                *additional_spends,
-                spend_bundle,
-                SpendBundle([], agg_sig),  # "Signing" the spend bundle
-            ]
-        )
+    final_bundle = SpendBundle.aggregate(
+        [
+            *additional_spends,
+            spend_bundle,
+            SpendBundle([], agg_sig),  # "Signing" the spend bundle
+        ]
     )
+    if cost_logger is not None:
+        final_bundle = cost_logger.add_cost(cost_log_msg, final_bundle)
+    result = await sim_client.push_tx(final_bundle)
     assert result == expected_result
     cost = cost_of_spend_bundle(spend_bundle)
     await sim.farm_block()
@@ -88,10 +91,8 @@ async def do_spend(
 
 
 class TestCATLifecycle:
-    cost: Dict[str, int] = {}
-
     @pytest.mark.asyncio()
-    async def test_cat_mod(self):
+    async def test_cat_mod(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
@@ -101,7 +102,7 @@ class TestCATLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
 
             # Testing the eve spend
-            self.cost["Eve Spend"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -119,6 +120,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend + create three children (TAIL: ())",
             )
 
             # There's 4 total coins at this point. A farming reward and the three children of the spend above.
@@ -129,7 +132,7 @@ class TestCATLifecycle:
                 for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             coins = [coins[0], coins[1]]
-            self.cost["Two CATs"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -146,6 +149,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend x2 + create one child (TAIL: ())",
             )
 
             # Testing a combination of three
@@ -154,7 +159,7 @@ class TestCATLifecycle:
                 for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             total_amount: uint64 = uint64(sum([c.amount for c in coins]))
-            self.cost["Three CATs"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -172,6 +177,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 3,
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend x3 + create one child (TAIL: ())",
             )
 
             # Spend with a standard lineage proof
@@ -179,7 +186,7 @@ class TestCATLifecycle:
             _, curried_args = cat_puzzle.uncurry()
             _, _, innerpuzzle = curried_args.as_iter()
             lineage_proof = LineageProof(parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), parent_coin.amount)
-            self.cost["Standard Lineage Check"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -188,10 +195,12 @@ class TestCATLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 reveal_limitations_program=False,
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend + create one child",
             )
 
             # Melt some value
-            self.cost["Melting Value"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -208,6 +217,8 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend (Melt) + create one child (TAIL: ())",
             )
 
             # Mint some value
@@ -227,7 +238,7 @@ class TestCATLifecycle:
                 ],
                 G2Element(),
             )
-            self.cost["Mint Value"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -245,10 +256,12 @@ class TestCATLifecycle:
                 extra_deltas=[1],
                 additional_spends=[acs_bundle],
                 limitations_solutions=[checker_solution],
+                cost_logger=cost_logger,
+                cost_log_msg="ACS burn + Cat Spend (Mint) + create one child (TAIL: ())",
             )
 
     @pytest.mark.asyncio()
-    async def test_complex_spend(self):
+    async def test_complex_spend(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
@@ -264,7 +277,7 @@ class TestCATLifecycle:
             eve_to_melt = cat_records[3].coin
 
             # Spend two of them to make them non-eve
-            self.cost["Spend two eves"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -286,6 +299,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend x2 + create one child each (TAIL: ())",
             )
 
             # Make the lineage proofs for the non-eves
@@ -300,7 +315,7 @@ class TestCATLifecycle:
 
             # Do the complex spend
             # We have both and eve and non-eve doing both minting and melting
-            self.cost["Complex Spend"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -335,10 +350,12 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 4,
                 extra_deltas=[13, -21, 21, -13],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend x2 (mint & melt) + Cat Spend x2 (mint & melt) - one child each (TAIL: ())",
             )
 
     @pytest.mark.asyncio()
-    async def test_genesis_by_id(self):
+    async def test_genesis_by_id(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
@@ -358,7 +375,7 @@ class TestCATLifecycle:
             )
             await sim.farm_block()
 
-            self.cost["Genesis by ID"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -374,10 +391,12 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: genesis_by_id)",
             )
 
     @pytest.mark.asyncio()
-    async def test_genesis_by_puzhash(self):
+    async def test_genesis_by_puzhash(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
@@ -397,7 +416,7 @@ class TestCATLifecycle:
             )
             await sim.farm_block()
 
-            self.cost["Genesis by Puzhash"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -413,10 +432,12 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: genesis_by_puzhash)",
             )
 
     @pytest.mark.asyncio()
-    async def test_everything_with_signature(self):
+    async def test_everything_with_signature(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             tail: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
@@ -432,7 +453,7 @@ class TestCATLifecycle:
                 sk, (starting_coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
 
-            self.cost["Signature Issuance"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -449,6 +470,8 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: everything_with_signature)",
             )
 
             # Test melting value
@@ -457,7 +480,7 @@ class TestCATLifecycle:
                 sk, (int_to_bytes(-1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
 
-            self.cost["Signature Melt"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -475,6 +498,8 @@ class TestCATLifecycle:
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend (Melt) - create one child (TAIL: everything_with_signature)",
             )
 
             # Test minting value
@@ -499,7 +524,7 @@ class TestCATLifecycle:
                 G2Element(),
             )
 
-            self.cost["Signature Mint"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -518,10 +543,12 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
+                cost_logger=cost_logger,
+                cost_log_msg="ACS Burn + Cat Spend (Mint) - create one child (TAIL: everything_with_signature)",
             )
 
     @pytest.mark.asyncio()
-    async def test_delegated_tail(self):
+    async def test_delegated_tail(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
@@ -556,7 +583,7 @@ class TestCATLifecycle:
             )
             signature: G2Element = AugSchemeMPL.sign(sk, new_tail.get_tree_hash())
 
-            self.cost["Delegated Genesis"] = await do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -573,11 +600,6 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 signatures=[signature],
                 limitations_solutions=[checker_solution],
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: delegated_tail - genesis_by_id)",
             )
-
-    def test_cost(self):
-        import json
-        import logging
-
-        log = logging.getLogger(__name__)
-        log.warning(json.dumps(self.cost))

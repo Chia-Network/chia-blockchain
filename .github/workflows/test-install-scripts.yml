@@ -2,6 +2,8 @@ name: 🏗️ Test Install Scripts
 
 on:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
       - 'long_lived/**'
       - main
@@ -9,6 +11,8 @@ on:
   release:
     types: [published]
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
       - '**'
 
@@ -83,7 +87,7 @@ jobs:
           url: "docker://debian:bullseye"
         - name: debian:bookworm
           type: debian
-          # https://packages.debian.org/bookworm/python/python3 (3.10)
+          # https://packages.debian.org/bookworm/python/python3 (3.11)
           url: "docker://debian:bookworm"
         - name: fedora:34
           type: fedora

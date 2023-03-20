@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.7.0 Chia blockchain 2023-02-15
+
+### Added
+
+- New `chia wallet coins` CLI and RPCs for listing, splitting, and combining coins
+- New on-chain notification for offers, specifically designed for NFT offers
+- New full node dynamic fee estimator (`chia show -f` and `get_fee_estimate` full node RPC)
+- Implementation of soft fork at block 3630000 - see the 1.7.0 blog post for more details
+- Add gzip support to DataLayer download client (Thanks, @Chida82!)
+- Add proxy support to DataLayer download client (Thanks again, @Chida82!)
+- Add `get_timestamp_for_height` Wallet RPC for converting heights to timestamps
+- Add `tools/legacy_keyring.py` to allow migration from the removed old key storage format.  Available only from source installations.
+- Add Arch Linux to install-gui.sh script (Thanks, @DaOneLuna!)
+- Add a `daemon_heartbeat` setting to config.yaml
+- add `trusted_max_subscribe_items` and `wallet:trusted_peers` to config.yaml
+- NFT bulk transfer and DID assignment wallet RPCs
+- Add the expected offer ID to some RPCs that take offer blobs
+
+### Changed
+
+- bump `chia_rs` dependency to `0.2.0`
+- Update version of `clvm_tools_rs` to `0.1.30`
+- Use better check that we are on mainnet when deciding to use default Chia DNS server
+- Remove conflicting TXs before adding SpendBundle to Mempool in `add_spend_bundle`
+- Try each Chia DNS Server in list before trying introducers
+- optimize mempool's potential cache
+- Display complete exception info in log file for validation, consensus, and protocol errors
+- Enable setting time between blocks in full node sim
+- Limit rate of log messages when farmer is disconnected from pool
+- Add SigningMode and update `verify_signature` RPC to work with `sign_message_by_*` RPCs
+
+### Fixed
+
+- Offer security updates: Offers that are generated with this version cannot be accepted with older versions of Chia - see blog post for details
+- server: Fix invalid attribute accesses in `WSChiaConnection`
+- header validation time logging severity reduced from warning to info when time is less than two seconds
+- replacing transactions in the mempool is normal behavior, not a warning
+- don't throw unnecessary exception on peer connect
+- Return existing CAT wallet instead of raising
+- Resolve peers in harvester and timelord startup (fixes #14158)
+- bump default bladebit version to `2.0.1` in `install-plotter.sh`
+- disallow empty SpendBundles in the mempool
+- avoid an exception in some rare cases when requesting the pool login link
+- provide a clear error when the `wallet_id` value is missing in a call to the `nft_set_bulk_nft_did` wallet rpc (Thanks, @steppsr!)
+- allow cancellation of offers when there is no spendable balance
+- track all transactions of an NFT bulk mint instead of just the first
+- Make the `--id` flag on cancel_offer required
+- corrected a target address vs. metadata mismatch when bulk minting and airdropping NFTs
+- Fixed wallet DB issues resulting when there are unexpected failures during syncing
+
+### Deprecated
+
+- Python 3.7 support is deprecated and will be removed in a future version
+
 ## 1.6.2 Chia blockchain 2023-01-03
 
 ### Added

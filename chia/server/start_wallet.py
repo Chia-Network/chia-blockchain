@@ -39,14 +39,9 @@ def create_wallet_service(
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
-    # add local node to trusted peers if old config
-    if "trusted_peers" not in service_config:
-        full_node_config = config["full_node"]
-        trusted_peer = full_node_config["ssl"]["public_crt"]
-        service_config["trusted_peers"] = {}
-        service_config["trusted_peers"]["local_node"] = trusted_peer
     if "short_sync_blocks_behind_threshold" not in service_config:
         service_config["short_sync_blocks_behind_threshold"] = 20
+
     node = WalletNode(
         service_config,
         root_path,

@@ -16,7 +16,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.notification_store import NotificationStore
-from tests.util.wallet_is_synced import wallets_are_synced
 
 
 # For testing backwards compatibility with a DB change to add height
@@ -31,10 +30,10 @@ async def test_notification_store_backwards_compat() -> None:
     try:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
+                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
             )
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount) " "VALUES(?, ?, ?)",
+                "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
                 (
                     bytes32([0] * 32),
                     bytes([0] * 10),
@@ -86,7 +85,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await time_out_assert(30, wallets_are_synced, True, [wallet_node_1, wallet_node_2], full_node_api)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)
 
     funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
     funds_2 = 0
@@ -170,6 +169,9 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
         await notification_manager_2.notification_store.get_notifications([n.coin_id for n in notifications])
         == notifications
     )
+
+    sent_notifications = await notification_manager_1.notification_store.get_all_notifications()
+    assert len(sent_notifications) == 0
 
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0

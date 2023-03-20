@@ -41,8 +41,8 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 
 class TestSSL:
     @pytest.mark.asyncio
-    async def test_public_connections(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets, _ = wallet_node_sim_and_wallet
+    async def test_public_connections(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -82,8 +82,8 @@ class TestSSL:
             await establish_connection(farmer_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
-    async def test_full_node(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets, bt = wallet_node_sim_and_wallet
+    async def test_full_node(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, bt = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(bt.root_path, bt.config)
@@ -101,8 +101,8 @@ class TestSSL:
         await establish_connection(full_node_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
-    async def test_wallet(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets, bt = wallet_node_sim_and_wallet
+    async def test_wallet(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, bt = simulator_and_wallet
         wallet_node, wallet_server = wallets[0]
         ca_private_crt_path, ca_private_key_path = private_ssl_ca_paths(bt.root_path, bt.config)
         chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(bt.root_path, bt.config)

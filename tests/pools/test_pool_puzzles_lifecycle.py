@@ -239,10 +239,10 @@ class TestPoolPuzzles(TestCase):
             DELAY_TIME,
             DELAY_PH,  # height
         )
-        # filter for only the singleton solution
+        # pick the larger coin, otherwise we'll fail with Err.MINTING_COIN
         singleton_coinsol: CoinSpend = list(
             filter(
-                lambda e: e.coin.amount == START_AMOUNT,
+                lambda e: e.coin.amount != START_AMOUNT,
                 coin_sols,
             )
         )[0]
