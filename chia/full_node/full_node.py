@@ -1171,7 +1171,7 @@ class FullNode:
         lookup_coin_ids: List[bytes32],
     ) -> None:
         # Looks up coin records in DB for the coins that wallets are interested in
-        new_states: List[CoinRecord] = await self.coin_store.get_coin_records(list(lookup_coin_ids))
+        new_states: List[CoinRecord] = await self.coin_store.get_coin_records(lookup_coin_ids)
 
         # Re-arrange to a map, and filter out any non-ph sized hint
         coin_id_to_ph_hint: Dict[bytes32, bytes32] = {
@@ -1179,7 +1179,7 @@ class FullNode:
         }
 
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
-        for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
+        for coin_record in state_change_summary.rolled_back_records + new_states:
             cr_name: bytes32 = coin_record.name
 
             for peer in self.subscriptions.peers_for_coin_id(cr_name):
