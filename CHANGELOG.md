@@ -38,19 +38,20 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 - Quieted wallet log output for `Record: ... not in mempool` (fixes #14452)
 - Quieted log output for `AttributeError: 'NoneType' object has no attribute '_get_extra_info`
+- Reduced log output for `Using previous generator for height`
 - Fixed error message when the `coin_id` argument for `nft_get_info` cannot be decoded
 - Reduced cases where wallet claims to be synced while still syncing
 - Resolved unnecessary error logging caused by unhinted coins (see #14757)
 - Avoid `Unclosed client session` errors and associated tracebacks when using Ctrl-c during CLI commands
-- wallet: Fix sync mode indication by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14524
+- Avoid `AttributeError` when shutting down plotting
 - Added `anyio` as a dependency
-- no duplicate offers, handle conflict offers correctly by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14722
-- Don't create a coin for 0 amount royalty payments by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14769
-- avoid AttributeError when shutting down plotting by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/3954
-- better handling of offer status and failed txs by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14812
+- Resolved issues when offers involve small amounts and royalties round down to zero (fixes #14744)
+- Limit retries to 3 for submitting offers transactions to the mempool and improved handling of offer status (fixes #14714)
+- Resolved issues with offers stick as pending when multiple people accept the same offer no duplicate offers (fixes #14621)
+- wallet: Fix sync mode indication by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14524
 
 ### Deprecated
-- `curry-and-treehash` Chialisp replaced by new `curry` library
+- `curry-and-treehash` Chialisp library replaced by new `curry` library
 
 
 ## 1.7.0 Chia blockchain 2023-02-15
