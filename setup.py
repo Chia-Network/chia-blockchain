@@ -50,7 +50,8 @@ dev_dependencies = [
     "py3createtorrent",
     "pylint",
     "pytest",
-    "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
+    # TODO: do not checkpoint to main
+    "pytest-asyncio==0.20.3",  # require attribute 'fixture'
     "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
