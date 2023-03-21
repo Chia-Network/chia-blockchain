@@ -1033,10 +1033,11 @@ class WalletStateManager:
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
-        local_records = await self.coin_store.get_coin_records([st.coin.name() for st in coin_states])
+        coin_names = [coin_state.coin.name() for coin_state in coin_states]
+        local_records = await self.coin_store.get_coin_records(coin_names)
 
-        for coin_state in coin_states:
-            local_record = local_records.get(coin_state.coin.name())
+        for coin_name, coin_state in zip(coin_names, coin_states):
+            local_record = local_records.get(coin_name)
             rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
@@ -1045,7 +1046,6 @@ class WalletStateManager:
                     await self.retry_store.remove_state(coin_state)
 
                     existing: Optional[WalletCoinRecord]
-                    coin_name: bytes32 = coin_state.coin.name()
                     wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                         coin_state.coin.puzzle_hash
                     )
@@ -1076,7 +1076,7 @@ class WalletStateManager:
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
                             if (
-                                await potential_dl.get_singleton_record(coin_state.coin.name()) is not None
+                                await potential_dl.get_singleton_record(coin_name) is not None
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
                                 wallet_id = potential_dl.id()
