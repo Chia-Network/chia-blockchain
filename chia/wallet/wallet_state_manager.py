@@ -1494,9 +1494,8 @@ class WalletStateManager:
         else:
             change = False
 
-        if coinbase:
+        if coinbase or not coin_confirmed_transaction and not change:
             timestamp = await self.wallet_node.get_timestamp_for_height(height)
-
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=timestamp,
@@ -1515,30 +1514,8 @@ class WalletStateManager:
                 name=coin_name,
                 memos=[],
             )
-            await self.tx_store.add_transaction_record(tx_record)
-        else:
-            if not coin_confirmed_transaction and not change:
-                timestamp = await self.wallet_node.get_timestamp_for_height(height)
-                tx_record = TransactionRecord(
-                    confirmed_at_height=uint32(height),
-                    created_at_time=timestamp,
-                    to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)),
-                    amount=uint64(coin.amount),
-                    fee_amount=uint64(0),
-                    confirmed=True,
-                    sent=uint32(0),
-                    spend_bundle=None,
-                    additions=[coin],
-                    removals=[],
-                    wallet_id=wallet_id,
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(tx_type),
-                    name=coin_name,
-                    memos=[],
-                )
-                if coin.amount > 0:
-                    await self.tx_store.add_transaction_record(tx_record)
+            if tx_record.amount > 0:
+                await self.tx_store.add_transaction_record(tx_record)
 
         coin_record_1: WalletCoinRecord = WalletCoinRecord(
             coin, height, uint32(0), False, coinbase, wallet_type, wallet_id
