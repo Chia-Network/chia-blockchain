@@ -1511,17 +1511,13 @@ class WalletStateManager:
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
-            records: List[TransactionRecord] = []
+            coin_confirmed_transaction = False
             for record in all_unconfirmed_transaction_records:
-                for add_coin in record.additions:
-                    if add_coin == coin:
-                        records.append(record)
+                if coin in record.additions and not record.confirmed:
+                    await self.tx_store.set_confirmed(record.name, height)
+                    coin_confirmed_transaction = True
 
-            if len(records) > 0:
-                for record in records:
-                    if record.confirmed is False:
-                        await self.tx_store.set_confirmed(record.name, height)
-            elif not change:
+            if not coin_confirmed_transaction and not change:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(height),
