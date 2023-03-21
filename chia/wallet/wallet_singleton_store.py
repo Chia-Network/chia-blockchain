@@ -55,6 +55,10 @@ class WalletSingletonStore:
 
     async def save_singleton(self, record: SingletonRecord) -> None:
         singleton_id = singleton.get_singleton_id_from_puzzle(record.parent_coinspend.puzzle_reveal)
+        if singleton_id is None:
+            raise RuntimeError(
+                "Failed to derive Singleton ID from puzzle reveal in parent spend %s", record.parent_coinspend
+            )
         pending_int = 0
         if record.pending:
             pending_int = 1
@@ -87,7 +91,7 @@ class WalletSingletonStore:
         # get singleton_id from puzzle_reveal
         singleton_id = get_singleton_id_from_puzzle(coin_state.puzzle_reveal)
         if not singleton_id:
-            raise ValueError("Coin to add is not a valid singleton")
+            raise RuntimeError("Coin to add is not a valid singleton")
 
         # get details for singleton record
         conditions = conditions_dict_for_solution(
@@ -95,11 +99,16 @@ class WalletSingletonStore:
             coin_state.solution.to_program(),
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
+        if conditions is None:
+            raise RuntimeError("Failed to add spend for coin: %s ", coin_state.coin.name())
+
         cc_cond = [
             cond for cond in conditions[1][ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1
         ][0]
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
         inner_puz = get_innerpuzzle_from_puzzle(coin_state.puzzle_reveal)
+        if inner_puz is None:
+            raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
         lineage_bytes = coin_state.solution.to_program().first().as_atom_list()
         lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
         # Create and save the new singleton record
