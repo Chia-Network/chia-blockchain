@@ -94,7 +94,7 @@ class WalletSingletonStore:
             raise RuntimeError("Coin to add is not a valid singleton")
 
         # get details for singleton record
-        conditions = conditions_dict_for_solution(
+        error, conditions, cost = conditions_dict_for_solution(
             coin_state.puzzle_reveal.to_program(),
             coin_state.solution.to_program(),
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -102,9 +102,8 @@ class WalletSingletonStore:
         if conditions is None:
             raise RuntimeError("Failed to add spend for coin: %s ", coin_state.coin.name())
 
-        cc_cond = [
-            cond for cond in conditions[1][ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1
-        ][0]
+        cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
+
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
         inner_puz = get_innerpuzzle_from_puzzle(coin_state.puzzle_reveal)
         if inner_puz is None:
