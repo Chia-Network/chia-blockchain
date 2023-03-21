@@ -64,7 +64,7 @@ def compress_with_zdict(blob: bytes, zdict: bytes) -> bytes:
 
 def decompress_with_zdict(blob: bytes, zdict: bytes) -> bytes:
     do = zlib.decompressobj(zdict=zdict)
-    return do.decompress(blob)
+    return do.decompress(blob, max_length=6 * 1024 * 1024)  # Limit output size
 
 
 def decompress_object_with_puzzles(compressed_object_blob: bytes) -> bytes:

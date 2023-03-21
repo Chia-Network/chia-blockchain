@@ -1200,6 +1200,7 @@ class TestFullNodeProtocol:
             (4, Err.INVALID_PLOT_SIGNATURE),
             (5, Err.INVALID_POSPACE),
             (6, Err.INVALID_POSPACE),
+            (7, Err.TOO_MANY_GENERATOR_REFS),
         ],
     )
     async def test_unfinished_block_with_replaced_generator(self, wallet_nodes, self_hostname, committment, expected):
@@ -1315,6 +1316,10 @@ class TestFullNodeProtocol:
         else:
             reward_chain_block = block.reward_chain_block.get_unfinished()
 
+        generator_refs: List[uint32] = []
+        if committment > 6:
+            generator_refs = [uint32(n) for n in range(600)]
+
         unf = UnfinishedBlock(
             block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             reward_chain_block,
@@ -1324,7 +1329,7 @@ class TestFullNodeProtocol:
             transaction_block,
             transactions_info,
             replaced_generator,
-            [],
+            generator_refs,
         )
 
         _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
