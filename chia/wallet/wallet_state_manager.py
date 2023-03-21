@@ -1045,7 +1045,6 @@ class WalletStateManager:
                     # This only succeeds if we don't raise out of the transaction
                     await self.retry_store.remove_state(coin_state)
 
-                    existing: Optional[WalletCoinRecord]
                     wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                         coin_state.coin.puzzle_hash
                     )
