@@ -9,50 +9,49 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.7.1 Chia blockchain 2023-03-22
 
 ### Added
-* Added wallet RPC `get_transaction_memo` 
-* Added wallet RPC `set_wallet_resync_on_startup` to reset wallet sync data on wallet restart
-* Added wallet RPC `nft_count_nfts` - counts NFTs per wallet or for all wallets
-* Added Community DNS introducers to initial (default) config.yaml
-* Added additional state_changed events to metrics destination (used by chia-exporter)
-* Added support for Python 3.11
-* Added new `chia wallet check` CLI command
-* Added new config option `reuse_public_key_for_change` to stops generating new change addresses and use the specified address
-* add nft id to rpcs by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14588
+- `get_transaction_memo` wallet RPC
+- `set_wallet_resync_on_startup` wallet RPC to reset wallet sync data on wallet restart
+- `nft_count_nfts` wallet RPC - counts NFTs per wallet or for all wallets
+- Community DNS introducers to initial (default) config.yaml
+- additional metrics for `state_changed` events (used by chia-exporter)
+- Python 3.11 support
+- `chia wallet check` CLI command
+- `reuse_public_key_for_change` config.yaml option to allow address reuse for change
+- `nft_id` added to the JSON output of all NFT RPC
+- `curry` Chialisp library replaces `curry-and-treehash`
 
 ### Changed
-* Changed `chia show -f` to output proper json
-* Rate limit `Rate limiting` log messages
-* Notify GUI when wallets are removed
-* Optimized counting of NFTs during removal by leveraging sqlite
-* Offer CLI command help now shows `--fee` units as XCH
-* Optimized offer code by limiting `additions` recomputation
-* Updated `chia_rs` to 0.2.4
-* Improve the help text for the `chia peer` and `chia peer -a` commands
-* Remove redundant checks for minting coin and reserve fee
-* Improved `nfg_get_nfts` performance by shifting paging to sqlite 
-* Improved RPC `did_find_lost_did`
-* Extend the sign APIs to support hex string
-* Changed mempool backend to use an in-memory sqlite DB
-* make conditions_for_solution() support untrusted input by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14615
-* Introduce BlockRecordProtocol as a subset of BlockRecord that the mempool manager uses for peak by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14628
-* Don't print entire TransactionRecord to log file by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14456
+- `chia show -f` changed to output proper JSON
+- `Rate limiting` log messages are themselves rate limited
+- Notified GUI when wallets are removed
+- Optimized counting of NFTs during removal by leveraging SQLite
+- Offer CLI command help now shows `--fee` units as XCH
+- Optimized offer code by limiting `additions` recomputation
+- `chia_rs` updated to 0.2.4
+- Improve the help text for the `chia peer` and `chia peer -a` commands
+- Remove redundant checks for minting coin and reserve fee
+- `nfg_get_nfts` performance improvments by shifting paging to SQLite 
+- `did_find_lost_did` improved
+- Extend the sign APIs to support hex string
+- Changed mempool backend to use an in-memory SQLite DB
 
 ### Fixed
-* Fixed error message when the `coin_id` argument for `nft_get_info` cannot be decoded
-* Dl wallet store index fix by @neurosis69 in https://github.com/Chia-Network/chia-blockchain/pull/13316
-* Deprecate `curry-and-treehash` and replace it with `curry`. by @richardkiss in https://github.com/Chia-Network/chia-blockchain/pull/14066
-* Fix get memo API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14513
-* wallet: Don't update `FINISHED_SYNC_UP_TO` during long sync by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14520
-* Don't raise on lack of hints in notification manager by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14590
-* handle ._get_extra_info() call on a closing connection by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14618
-* close the keychain proxy in more failure and cancellation cases by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14415
-* wallet: Fix sync mode indication by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14524
-* anyio is needed as a standard dependency for the simulator by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14661
-* no duplicate offers, handle conflict offers correctly by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14722
-* Listen on ::0 so we can respond to both ipv4 and ipv6 by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/14731
-* Don't create a coin for 0 amount royalty payments by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14769
-* avoid AttributeError when shutting down plotting by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/3954
-* better handling of offer status and failed txs by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14812
+- Quieted wallet log output for `Record: ... not in mempool` (fixes #14452)
+- Quieted log output for `AttributeError: 'NoneType' object has no attribute '_get_extra_info`
+- Fixed error message when the `coin_id` argument for `nft_get_info` cannot be decoded
+- Reduced cases where wallet claims to be synced while still syncing
+- Resolved unnecessary error logging caused by unhinted coins (see #14757)
+- Avoid `Unclosed client session` errors and associated tracebacks when using Ctrl-c during CLI commands
+- wallet: Fix sync mode indication by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14524
+- Added `anyio` as a dependency
+- no duplicate offers, handle conflict offers correctly by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14722
+- Don't create a coin for 0 amount royalty payments by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14769
+- avoid AttributeError when shutting down plotting by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/3954
+- better handling of offer status and failed txs by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14812
+
+### Deprecated
+- `curry-and-treehash` Chialisp replaced by new `curry` library
+
 
 ## 1.7.0 Chia blockchain 2023-02-15
 
