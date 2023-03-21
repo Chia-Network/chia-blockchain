@@ -38,6 +38,9 @@ class DummyWallet:
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         raise Exception("Not supported for DummyWallet")
 
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        raise Exception("Not supported for DummyWallet")
+
     async def select_coins(
         self,
         amount: uint64,

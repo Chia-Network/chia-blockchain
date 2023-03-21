@@ -435,6 +435,9 @@ class DIDWallet:
 
         await self.add_parent(coin.name(), future_parent)
 
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        pass
+
     def create_backup(self) -> str:
         """
         Create a serialized backup data for DIDInfo

@@ -353,6 +353,9 @@ class CATWallet:
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        pass
+
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin) -> None:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))

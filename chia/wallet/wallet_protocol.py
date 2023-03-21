@@ -28,6 +28,9 @@ class WalletProtocol(Protocol):
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         ...
 
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        ...
+
     async def select_coins(
         self,
         amount: uint64,

@@ -175,6 +175,9 @@ class NFTWallet:
         assert cs is not None
         await self.puzzle_solution_received(cs, peer)
 
+    async def coin_spent(self, coin: Coin, height: uint32, _: WSChiaConnection) -> None:
+        await self.remove_coin(coin, height)
+
     async def puzzle_solution_received(self, coin_spend: CoinSpend, peer: WSChiaConnection) -> None:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()

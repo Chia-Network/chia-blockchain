@@ -6,6 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import G1Element, G2Element, PrivateKey
+from chia_rs import CoinState
 from typing_extensions import final
 
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
@@ -54,6 +55,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 
 
 @final
@@ -969,6 +971,45 @@ class PoolWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         pass
+
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        if coin.amount != uint64(1):
+            self.log.warning(f"coin_spent - Invalid amount: {coin.amount}")
+            return
+
+        # This loop pre-syncs all pool wallet state changes up to the latest state of the peer
+        # after the first received state update was received from the peer.
+        current_spent_coin = coin
+        current_spent_height: Optional[int] = height
+        while current_spent_height is not None:
+            coin_spend = await fetch_coin_spend(uint32(current_spent_height), current_spent_coin, peer)
+            if not await self.apply_state_transition(coin_spend, uint32(current_spent_height)):
+                break
+            new_singleton_coin = self.get_next_interesting_coin(coin_spend)
+            if new_singleton_coin is None:
+                # No more singleton (maybe destroyed?)
+                break
+
+            new_singleton_coin_name = new_singleton_coin.name()
+            # TODO, add something like `WalletCoinStore.has_coin`
+            if await self.wallet_state_manager.coin_store.get_coin_record(new_singleton_coin_name) is None:
+                await self.wallet_state_manager.coin_added(
+                    new_singleton_coin,
+                    current_spent_height,
+                    [],
+                    uint32(self.wallet_id),
+                    WalletType.POOLING_WALLET,
+                    peer,
+                    new_singleton_coin_name,
+                )
+            await self.wallet_state_manager.coin_store.set_spent(current_spent_coin.name(), current_spent_height)
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton_coin_name])
+            new_singleton_coin_state: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+                [new_singleton_coin_name], peer=peer
+            )
+            assert len(new_singleton_coin_state) == 1
+            current_spent_height = new_singleton_coin_state[0].spent_height
+            current_spent_coin = new_singleton_coin_state[0].coin
 
     async def select_coins(
         self,

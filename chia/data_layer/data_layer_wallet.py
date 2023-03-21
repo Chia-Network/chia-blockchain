@@ -844,6 +844,10 @@ class DataLayerWallet:
                 )
                 await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
 
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        singleton_spend = await fetch_coin_spend(height, coin, peer)
+        await self.singleton_removed(singleton_spend, height)
+
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
         parent_name = parent_spend.coin.name()
         puzzle = parent_spend.puzzle_reveal

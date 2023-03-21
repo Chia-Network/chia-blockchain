@@ -624,6 +624,9 @@ class Wallet:
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 
+    async def coin_spent(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        pass
+
     def get_name(self) -> str:
         return "Standard Wallet"
 

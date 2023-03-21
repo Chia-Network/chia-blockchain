@@ -1196,56 +1196,9 @@ class WalletStateManager:
                                         unconfirmed_record.name, uint32(coin_state.spent_height)
                                     )
 
-                        if record.wallet_type == WalletType.POOLING_WALLET:
-                            if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
-                                pool_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=PoolWallet)
-                                curr_coin_state: CoinState = coin_state
-
-                                while curr_coin_state.spent_height is not None:
-                                    cs = await fetch_coin_spend_for_coin_state(curr_coin_state, peer)
-                                    success = await pool_wallet.apply_state_transition(
-                                        cs, uint32(curr_coin_state.spent_height)
-                                    )
-                                    if not success:
-                                        break
-                                    new_singleton_coin: Optional[Coin] = pool_wallet.get_next_interesting_coin(cs)
-                                    if new_singleton_coin is None:
-                                        # No more singleton (maybe destroyed?)
-                                        break
-
-                                    coin_name = new_singleton_coin.name()
-                                    existing = await self.coin_store.get_coin_record(coin_name)
-                                    if existing is None:
-                                        await self.coin_added(
-                                            new_singleton_coin,
-                                            uint32(curr_coin_state.spent_height),
-                                            [],
-                                            uint32(record.wallet_id),
-                                            record.wallet_type,
-                                            peer,
-                                            coin_name,
-                                        )
-                                    await self.coin_store.set_spent(
-                                        curr_coin_state.coin.name(), uint32(curr_coin_state.spent_height)
-                                    )
-                                    await self.add_interested_coin_ids([new_singleton_coin.name()])
-                                    new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
-                                        [coin_name], peer=peer, fork_height=fork_height
-                                    )
-                                    assert len(new_coin_state) == 1
-                                    curr_coin_state = new_coin_state[0]
-                        if record.wallet_type == WalletType.DATA_LAYER:
-                            singleton_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
-                            dl_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=DataLayerWallet)
-                            await dl_wallet.singleton_removed(
-                                singleton_spend,
-                                uint32(coin_state.spent_height),
-                            )
-
-                        elif record.wallet_type == WalletType.NFT:
-                            if coin_state.spent_height is not None:
-                                nft_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=NFTWallet)
-                                await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
+                        await self.wallets[wallet_identifier.id].coin_spent(
+                            coin_state.coin, uint32(coin_state.spent_height), peer
+                        )
 
                         # Check if a child is a singleton launcher
                         for child in children:
