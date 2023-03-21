@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import dataclasses
+# import dataclasses
 from secrets import token_bytes
 
 import pytest
@@ -10,15 +10,16 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint32, uint64
-from chia.wallet.dao_wallet.dao_wallet import DAOInfo, DAOWallet
+
+# from chia.wallet.dao_wallet.dao_wallet import DAOInfo, DAOWallet
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.singleton import create_fullpuz, get_singleton_id_from_puzzle
+from chia.wallet.singleton import create_fullpuz  # , get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from tests.util.db_connection import DBConnection
 
 
-def get_record():
+def get_record() -> SingletonRecord:
     launcher_id = bytes32(token_bytes(32))
     inner_puz = Program.to(1)
     inner_puz_hash = inner_puz.get_tree_hash()
@@ -26,11 +27,11 @@ def get_record():
     parent_puz_hash = parent_puz.get_tree_hash()
     parent_coin = Coin(launcher_id, parent_puz_hash, 1)
     inner_sol = Program.to([[51, parent_puz_hash, 1]])
-    lineage_proof = LineageProof(launcher_id, inner_puz.get_tree_hash(), 1)
+    lineage_proof = LineageProof(launcher_id, inner_puz.get_tree_hash(), uint64(1))
     parent_sol = Program.to([lineage_proof.to_program(), 1, inner_sol])
     parent_coinspend = CoinSpend(parent_coin, parent_puz, parent_sol)
-    child_coin = Coin(parent_coin.name(), parent_puz_hash, 1)
-    wallet_id = 2
+    # child_coin = Coin(parent_coin.name(), parent_puz_hash, 1)
+    wallet_id = uint32(2)
     pending = True
     removed_height = 0
     custom_data = "{'key': 'value'}"
@@ -64,7 +65,7 @@ class TestSingletonStore:
             # modify pending
             await db.update_pending_transaction(record.coin.name(), False)
             record_to_check = await db.get_records_by_coin_id(record.coin.name())
-            assert record_to_check[0].pending == False
+            assert record_to_check[0].pending is False
 
     @pytest.mark.asyncio
     async def test_singleton_remove(self) -> None:
@@ -74,9 +75,9 @@ class TestSingletonStore:
             record_2 = get_record()
             await db.save_singleton(record_1)
             await db.save_singleton(record_2)
-            resp_1 = await db.delete_singleton_by_coin_id(record_1.coin.name(), 1)
+            resp_1 = await db.delete_singleton_by_coin_id(record_1.coin.name(), uint32(1))
             assert resp_1
-            resp_2 = await db.delete_singleton_by_singleton_id(record_2.singleton_id, 1)
+            resp_2 = await db.delete_singleton_by_singleton_id(record_2.singleton_id, uint32(1))
             assert resp_2
             record = (await db.get_records_by_coin_id(record_1.coin.name()))[0]
             assert record.removed_height == 1

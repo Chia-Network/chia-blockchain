@@ -10,3 +10,4 @@ per-file-ignores =
     chia/wallet/dao_wallet/dao_utils.py:E501
     chia/wallet/dao_wallet/dao_wallet.py:E501
     chia/wallet/cat_wallet/dao_cat_wallet.py:E501
+    tests/wallet/dao_wallet/test_dao_clvm.py:E501
