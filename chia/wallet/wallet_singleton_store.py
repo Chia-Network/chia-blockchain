@@ -3,25 +3,21 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import Any, List, Optional, Tuple, TypeVar
+from typing import List, Type, TypeVar
 
 from clvm.casts import int_from_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.singleton import (
-    get_innerpuzzle_from_puzzle,
-    get_most_recent_singleton_coin_from_coin_spend,
-    get_singleton_id_from_puzzle,
-)
+from chia.wallet.singleton import get_innerpuzzle_from_puzzle, get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
 
 log = logging.getLogger(__name__)
@@ -64,8 +60,8 @@ class WalletSingletonStore:
             pending_int = 1
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             columns = (
-                "coin_id, coin, singleton_id, wallet_id, parent_coin_spend, inner_puzzle_hash, pending, removed_height, "
-                "lineage_proof, custom_data"
+                "coin_id, coin, singleton_id, wallet_id, parent_coin_spend, inner_puzzle_hash, "
+                "pending, removed_height, lineage_proof, custom_data"
             )
             await conn.execute(
                 f"INSERT or REPLACE INTO singletons ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -123,7 +119,7 @@ class WalletSingletonStore:
             singleton_id=bytes32.from_hexstr(row[2]),
             wallet_id=uint32(row[3]),
             parent_coinspend=CoinSpend.from_bytes(row[4]),
-            inner_puzzle_hash=bytes32.from_bytes(row[5]),  #  inner puz hash
+            inner_puzzle_hash=bytes32.from_bytes(row[5]),  # inner puz hash
             pending=True if row[6] == 1 else False,
             removed_height=uint32(row[7]),
             lineage_proof=LineageProof.from_bytes(row[8]),
@@ -208,7 +204,7 @@ class WalletSingletonStore:
     async def rollback(self, height: int, wallet_id_arg: int) -> None:
         """
         Rollback removes all entries which have entry_height > height passed in. Note that this is not committed to the
-        DB until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
+        DB until db_wrapper.commit() is called. However, it is written to the cache, so it can be fetched with
         get_all_state_transitions.
         """
 

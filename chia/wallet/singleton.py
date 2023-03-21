@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -16,7 +17,7 @@ LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 
 
-def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
+def get_innerpuzzle_from_puzzle(puzzle: Union[Program, SerializedProgram]) -> Optional[Program]:
     """
     Extract the inner puzzle of a singleton
     :param puzzle: Singleton puzzle
@@ -32,7 +33,7 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
     return Program(INNER_PUZZLE)
 
 
-def get_singleton_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
+def get_singleton_id_from_puzzle(puzzle: Union[Program, SerializedProgram]) -> Optional[bytes32]:
     """
     Extract the singleton ID from a singleton puzzle
     :param puzzle: Singleton puzzle
@@ -48,7 +49,7 @@ def get_singleton_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     return bytes32(Program(SINGLETON_STRUCT).rest().first().as_atom())
 
 
-def is_singleton(inner_f: Program) -> bool:
+def is_singleton(inner_f: Union[Program, SerializedProgram]) -> bool:
     """
     Check if a puzzle is a singleton mod
     :param inner_f: puzzle
@@ -70,7 +71,7 @@ def create_fullpuz_hash(innerpuz_hash: bytes32, launcher_id: bytes32) -> bytes32
     return curry_and_treehash(SINGLETON_TOP_LAYER_MOD_HASH_QUOTED, singleton_struct.get_tree_hash(), innerpuz_hash)
 
 
-def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:
+def create_fullpuz(innerpuz: Union[Program, SerializedProgram], launcher_id: bytes32) -> Program:
     """
     Create a full Singleton puzzle
     :param innerpuz: Singleton inner puzzle
