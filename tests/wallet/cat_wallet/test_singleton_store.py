@@ -57,14 +57,14 @@ class TestSingletonStore:
             await db.save_singleton(record)
             records_by_wallet = await db.get_records_by_wallet_id(record.wallet_id)
             assert records_by_wallet[0] == record
-            record_by_coin_id = await db.get_record_by_coin_id(record.coin.name())
-            assert record_by_coin_id == record
+            record_by_coin_id = await db.get_records_by_coin_id(record.coin.name())
+            assert record_by_coin_id[0] == record
             records_by_singleton_id = await db.get_records_by_singleton_id(record.singleton_id)
             assert records_by_singleton_id[0] == record
             # modify pending
             await db.update_pending_transaction(record.coin.name(), False)
-            record_to_check = await db.get_record_by_coin_id(record.coin.name())
-            assert record_to_check.pending == False
+            record_to_check = await db.get_records_by_coin_id(record.coin.name())
+            assert record_to_check[0].pending == False
 
     @pytest.mark.asyncio
     async def test_singleton_remove(self) -> None:
@@ -78,7 +78,7 @@ class TestSingletonStore:
             assert resp_1
             resp_2 = await db.delete_singleton_by_singleton_id(record_2.singleton_id, 1)
             assert resp_2
-            record = await db.get_record_by_coin_id(record_1.coin.name())
+            record = (await db.get_records_by_coin_id(record_1.coin.name()))[0]
             assert record.removed_height == 1
-            record = await db.get_record_by_coin_id(record_2.coin.name())
+            record = (await db.get_records_by_coin_id(record_2.coin.name()))[0]
             assert record.removed_height == 1

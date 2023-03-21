@@ -116,8 +116,8 @@ class WalletSingletonStore:
         )
         await self.save_singleton(new_record)
         # check if coin is in DB and mark deleted if found
-        current_record = await self.get_record_by_coin_id(coin_state.coin.name())
-        if current_record:
+        current_records = await self.get_records_by_coin_id(coin_state.coin.name())
+        if len(current_records) > 0:
             await self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
         return
 
@@ -182,7 +182,7 @@ class WalletSingletonStore:
             )
         return [self._to_singleton_record(row) for row in rows]
 
-    async def get_record_by_coin_id(self, coin_id: bytes33) -> SingletonRecord:
+    async def get_records_by_coin_id(self, coin_id: bytes32) -> List[SingletonRecord]:
         """
         Retrieves all entries for a coin ID.
         """
@@ -192,12 +192,9 @@ class WalletSingletonStore:
                 "SELECT * FROM singletons WHERE coin_id = ?",
                 (coin_id.hex(),),
             )
-        if rows:
-            return self._to_singleton_record(rows[0])
-        else:
-            return None
+        return [self._to_singleton_record(row) for row in rows]
 
-    async def get_records_by_singleton_id(self, singleton_id: bytes33) -> SingletonRecord:
+    async def get_records_by_singleton_id(self, singleton_id: bytes32) -> List[SingletonRecord]:
         """
         Retrieves all entries for a singleton ID.
         """
