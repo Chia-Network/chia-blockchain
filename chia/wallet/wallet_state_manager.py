@@ -1487,6 +1487,7 @@ class WalletStateManager:
                 if coin in record.additions and not record.confirmed:
                     await self.tx_store.set_confirmed(record.name, height)
                     coin_confirmed_transaction = True
+                    break
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         change = parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type
