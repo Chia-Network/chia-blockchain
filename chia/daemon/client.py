@@ -209,12 +209,12 @@ async def acquire_connection_to_daemon(
     closed.
     """
 
-    daemon: Optional[DaemonProxy] = None
     try:
         daemon = await connect_to_daemon_and_validate(root_path, config, quiet=quiet)
-        yield daemon  # <----
+        try:
+            yield daemon
+        finally:
+            if daemon is not None:
+                await daemon.close()
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
-
-    if daemon is not None:
-        await daemon.close()
