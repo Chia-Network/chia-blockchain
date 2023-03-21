@@ -1037,6 +1037,7 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_names)
 
         for coin_name, coin_state in zip(coin_names, coin_states):
+            self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.get(coin_name)
             rollback_wallets = None
             try:
@@ -1048,7 +1049,6 @@ class WalletStateManager:
                     wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                         coin_state.coin.puzzle_hash
                     )
-                    self.log.debug("%s: %s", coin_name, coin_state)
 
                     # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
                     if local_record is not None:
@@ -1114,7 +1114,7 @@ class WalletStateManager:
 
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
-                        self.log.debug("Coin Removed: %s", coin_state)
+                        self.log.debug("Coin spent: %s", coin_state)
                         children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
                         record = local_record
                         if record is None:
@@ -1321,7 +1321,7 @@ class WalletStateManager:
                                 pool_state = solution_to_pool_state(launcher_spend)
                                 assert pool_state is not None
                             except (AssertionError, ValueError) as e:
-                                self.log.debug(f"Not a pool wallet launcher {e}")
+                                self.log.debug(f"Not a pool wallet launcher {e}, child: {child}")
                                 matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
                                 if (
                                     matched
@@ -1379,7 +1379,7 @@ class WalletStateManager:
                     else:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
-                self.log.exception(f"Error adding state... {e}")
+                self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
