@@ -1116,7 +1116,7 @@ class WalletStateManager:
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
                         self.log.debug("Coin Removed: %s", coin_state)
-                        children: Optional[List[CoinState]] = None
+                        children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
                         record = local_record
                         if record is None:
                             farmer_reward = False
@@ -1175,10 +1175,6 @@ class WalletStateManager:
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
 
-                            children = await self.wallet_node.fetch_children(
-                                coin_name, peer=peer, fork_height=fork_height
-                            )
-                            assert children is not None
                             additions = [state.coin for state in children]
                             if len(children) > 0:
                                 fee = 0
@@ -1309,11 +1305,6 @@ class WalletStateManager:
                                 await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
 
                         # Check if a child is a singleton launcher
-                        if children is None:
-                            children = await self.wallet_node.fetch_children(
-                                coin_name, peer=peer, fork_height=fork_height
-                            )
-                        assert children is not None
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
                                 continue
