@@ -1495,10 +1495,9 @@ class WalletStateManager:
             change = False
 
         if coinbase or not coin_confirmed_transaction and not change:
-            timestamp = await self.wallet_node.get_timestamp_for_height(height)
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
-                created_at_time=timestamp,
+                created_at_time=await self.wallet_node.get_timestamp_for_height(height),
                 to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)),
                 amount=uint64(coin.amount),
                 fee_amount=uint64(0),
