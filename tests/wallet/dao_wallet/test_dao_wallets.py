@@ -110,7 +110,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
 
     # Send some cats to the dao_cat lockup
-    dao_cat_amt = 100
+    dao_cat_amt = uint64(100)
     async with wallet_node_0.wallet_state_manager.lock:
         txs = await dao_wallet_0.create_new_dao_cats(dao_cat_amt)
     sb = txs[0].spend_bundle
@@ -151,7 +151,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert dao_wallet_0.apply_state_transition_call_count == 0
     # Add money to the Treasury -- see dao_treasury.clvm, add money spend case
 
-    funding_amt = 10000000000
+    funding_amt = uint64(10000000000)
     funding_tx = await dao_wallet_0.create_add_money_to_treasury_spend(funding_amt)
     funding_sb = funding_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_sb.name())
