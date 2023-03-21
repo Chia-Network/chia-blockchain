@@ -1013,7 +1013,7 @@ class WalletStateManager:
             wallet_type = WalletType.NFT
         return wallet_id, wallet_type
 
-    async def new_coin_state(
+    async def add_coin_states(
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
