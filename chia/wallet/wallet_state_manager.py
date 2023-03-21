@@ -1074,12 +1074,10 @@ class WalletStateManager:
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
-        local_records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(
-            [st.coin.name() for st in coin_states]
-        )
+        local_records = await self.coin_store.get_coin_records([st.coin.name() for st in coin_states])
 
-        assert len(local_records) == len(coin_states)
-        for coin_state, local_record in zip(coin_states, local_records):
+        for coin_state in coin_states:
+            local_record = local_records.get(coin_state.coin.name())
             rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
@@ -1703,8 +1701,8 @@ class WalletStateManager:
         return wr.to_coin_record(timestamp)
 
     async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:
-        records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(**kwargs)
-        return [await self.get_coin_record_by_wallet_record(record) for record in records if record is not None]
+        records = await self.coin_store.get_coin_records(**kwargs)
+        return [await self.get_coin_record_by_wallet_record(record) for record in records.values()]
 
     async def is_addition_relevant(self, addition: Coin):
         """

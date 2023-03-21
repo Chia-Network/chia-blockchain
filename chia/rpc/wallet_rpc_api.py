@@ -242,6 +242,7 @@ class WalletRpcApi:
             "added_stray_cat",
             "pending_transaction",
             "tx_update",
+            "wallet_removed",
             "new_on_chain_notification",
         }:
             payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
@@ -985,13 +986,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Set[Coin] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
+            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            )
+            exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = set()
 
@@ -1480,13 +1478,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Optional[Set[Coin]] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
+            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            )
+            exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = None
         if hold_lock:

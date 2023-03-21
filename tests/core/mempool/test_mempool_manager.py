@@ -426,22 +426,30 @@ mis = MempoolInclusionStatus
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
+        # SECONDS RELATIVE
         (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS, None),
         (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS, None),
         # The rules allow spending an ephemeral coin with an ASSERT_SECONDS_RELATIVE 0 condition
         (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS, None),
         (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, 9, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, 10, mis.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        # HEIGHT RELATIVE
         (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS, None),
         (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS, None),
-        # Unlike ASSERT_SECONDS_RELATIVE, for ASSERT_HEIGHT_RELATIVE the block height
-        # must be greater than the coin creation height + the argument, which means
-        # the coin cannot be spent in the same block (where the height would be the same)
         (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
         (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 5, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 6, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 7, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 10, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 11, mis.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        # HEIGHT ABSOLUTE
         (co.ASSERT_HEIGHT_ABSOLUTE, 4, mis.SUCCESS, None),
         (co.ASSERT_HEIGHT_ABSOLUTE, 5, mis.SUCCESS, None),
         (co.ASSERT_HEIGHT_ABSOLUTE, 6, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
         (co.ASSERT_HEIGHT_ABSOLUTE, 7, mis.PENDING, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        # SECONDS ABSOLUTE
         # Current block timestamp is 10050
         (co.ASSERT_SECONDS_ABSOLUTE, 10049, mis.SUCCESS, None),
         (co.ASSERT_SECONDS_ABSOLUTE, 10050, mis.SUCCESS, None),

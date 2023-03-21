@@ -137,7 +137,7 @@ class WalletCoinStore:
         include_spent_coins: bool = True,
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
-    ) -> List[Optional[WalletCoinRecord]]:
+    ) -> Dict[bytes32, WalletCoinRecord]:
         """Returns CoinRecord with specified coin id."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
@@ -155,7 +155,7 @@ class WalletCoinStore:
             coin_name = bytes32.fromhex(row[0])
             ret[coin_name] = record
 
-        return [ret.get(name) for name in coin_names]
+        return ret
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""

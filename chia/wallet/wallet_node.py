@@ -917,11 +917,9 @@ class WalletNode:
         await self.update_ui()
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
-    async def is_peer_synced(
-        self, peer: WSChiaConnection, header_block: HeaderBlock, request_time: uint64
-    ) -> Optional[uint64]:
+    async def is_peer_synced(self, peer: WSChiaConnection, height: uint32) -> Optional[uint64]:
         # Get last timestamp
-        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(header_block.height, peer)
+        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
         latest_timestamp: Optional[uint64] = None
         if last_tx is not None:
             assert last_tx.foliage_transaction_block is not None
@@ -931,7 +929,7 @@ class WalletNode:
         if (
             latest_timestamp is None
             or self.config.get("testing", False) is False
-            and latest_timestamp < request_time - 600
+            and latest_timestamp < uint64(time.time()) - 600
         ):
             return None
         return latest_timestamp
@@ -1006,29 +1004,6 @@ class WalletNode:
                 neither.append(node)
         return synced_and_trusted + synced + trusted + neither
 
-    async def disconnect_and_stop_wpeers(self) -> None:
-        if self._server is None:
-            return
-
-        # Close connection of non-trusted peers
-        full_node_connections = self.server.get_connections(NodeType.FULL_NODE)
-        if len(full_node_connections) > 1:
-            for peer in full_node_connections:
-                if not self.is_trusted(peer):
-                    await peer.close()
-
-        if self.wallet_peers is not None:
-            await self.wallet_peers.ensure_is_closed()
-            self.wallet_peers = None
-
-    async def check_for_synced_trusted_peer(self, header_block: HeaderBlock, request_time: uint64) -> bool:
-        if self._server is None:
-            return False
-        for peer in self.server.get_connections(NodeType.FULL_NODE):
-            if self.is_trusted(peer) and await self.is_peer_synced(peer, header_block, request_time):
-                return True
-        return False
-
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
         """
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
@@ -1060,7 +1035,6 @@ class WalletNode:
             # When logging out of wallet
             self.log.debug("state manager is None (shutdown)")
             return
-        request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
         if peak_hb is not None and new_peak.weight < peak_hb.weight:
@@ -1089,7 +1063,7 @@ class WalletNode:
             # dont disconnect from peer, this might be a reorg
             return
 
-        latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, new_peak_hb, request_time)
+        latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, new_peak_hb.height)
         if latest_timestamp is None:
             if trusted:
                 self.log.debug(f"Trusted peer {peer.get_peer_info()} is not synced.")
@@ -1101,7 +1075,7 @@ class WalletNode:
         if self.is_trusted(peer):
             await self.new_peak_from_trusted(new_peak_hb, latest_timestamp, peer)
         else:
-            if not await self.new_peak_from_untrusted(new_peak_hb, peer, request_time):
+            if not await self.new_peak_from_untrusted(new_peak_hb, peer):
                 return
 
         if peer.peer_node_id in self.synced_peers:
@@ -1113,17 +1087,13 @@ class WalletNode:
     async def new_peak_from_trusted(self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection):
         async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height) as current_height:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
-            # Disconnect from all untrusted peers if our local node is trusted and synced
-            await self.disconnect_and_stop_wpeers()
             # Sync to trusted node if we haven't done so yet. As long as we have synced once (and not
             # disconnected), we assume that the full node will continue to give us state updates, so we do
             # not need to resync.
             if peer.peer_node_id not in self.synced_peers:
                 await self.long_sync(new_peak_hb.height, peer, uint32(max(0, current_height - 256)), rollback=True)
 
-    async def new_peak_from_untrusted(
-        self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64
-    ) -> bool:
+    async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
         far_behind: bool = (
             new_peak_hb.height - await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
             > self.LONG_SYNC_THRESHOLD
@@ -1148,10 +1118,6 @@ class WalletNode:
         )
         if not syncing and secondary_sync_running:
             self.log.info("Will not do secondary sync, there is already another sync task running.")
-            return False
-
-        if await self.check_for_synced_trusted_peer(new_peak_hb, request_time):
-            self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
             return False
 
         try:
