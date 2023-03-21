@@ -46,8 +46,8 @@ for setuptools_scm/PEP 440 reasons.
 - Avoid `AttributeError` when shutting down plotting
 - Added `anyio` as a dependency
 - Resolved issues when offers involve small amounts and royalties round down to zero (fixes #14744)
-- Limit retries to 3 for submitting offers transactions to the mempool and improved handling of offer status (fixes #14714)
-- Resolved issues with offers stick as pending when multiple people accept the same offer no duplicate offers (fixes #14621)
+- Limit retries to 3 for submitting offer transactions to the mempool and improved handling of offer status (fixes #14714)
+- Resolved issues with offers stuck as pending when multiple people accept the same offer (fixes #14621)
 - wallet: Fix sync mode indication by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14524
 
 ### Deprecated
