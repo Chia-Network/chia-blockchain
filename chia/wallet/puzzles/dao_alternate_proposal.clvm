@@ -250,7 +250,7 @@
     (assert (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
       (list
       	(list CREATE_COIN dao_finished_state ONE)
-      	(list ASSERT_SECONDS_RELATIVE self_destruct_time)
+      	(list ASSERT_HEIGHT_RELATIVE self_destruct_time)
       	(list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
       	  (sha256
       	    (calculate_treasury_puzzlehash
