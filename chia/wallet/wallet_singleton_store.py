@@ -118,7 +118,7 @@ class WalletSingletonStore:
         # check if coin is in DB and mark deleted if found
         current_record = await self.get_record_by_coin_id(coin_state.coin.name())
         if current_record:
-            self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
+            await self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
         return
 
     def _to_singleton_record(self, row: Row) -> SingletonRecord:
