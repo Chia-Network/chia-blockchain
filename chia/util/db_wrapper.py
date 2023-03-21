@@ -53,9 +53,13 @@ async def manage_connection(
     async with contextlib.AsyncExitStack() as exit_stack:
         if log_path is not None:
             file = exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
-            connection = await exit_stack.enter_async_context(_create_connection(database=database, uri=uri, log_file=file, name=name))
+            connection = await exit_stack.enter_async_context(
+                _create_connection(database=database, uri=uri, log_file=file, name=name),
+            )
         else:
-            connection = await exit_stack.enter_async_context(_create_connection(database=database, uri=uri, name=name))
+            connection = await exit_stack.enter_async_context(
+                _create_connection(database=database, uri=uri, name=name),
+            )
 
         yield connection
 
