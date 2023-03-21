@@ -50,7 +50,7 @@ def test_proposal() -> None:
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
-    self_destruct_time = 1209600
+    self_destruct_time = 1000 # number of blocks
     oracle_spend_delay = 10
     active_votes_list = [0xFADEDDAB]  # are the the ids of previously voted on proposals?
     acs: Program = Program.to(1)
@@ -562,7 +562,7 @@ def test_treasury() -> None:
     # ATTENDANCE_REQUIRED
     # PASS_MARGIN
     # PROPOSAL_SELF_DESTRUCT_TIME
-    self_destruct_time = 1209600  # 2 weeks
+    self_destruct_time = 1000
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD.get_tree_hash(),
         proposal_validator,
@@ -597,7 +597,7 @@ def test_treasury() -> None:
     full_proposal = SINGLETON_MOD.curry(singleton_struct, proposal)
 
     # Oracle spend
-    solution: Program = Program.to(["o"])
+    solution: Program = Program.to([0])
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
@@ -705,7 +705,7 @@ def test_proposal_innerpuz() -> None:
     attendance_required: uint64 = uint64(1000)
     proposal_timelock = 40
     soft_close_length = 5
-    self_destruct_time = 1209600  # 2 weeks
+    self_destruct_time = 1000
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     # LOCKUP_TIME: uint64 = uint64(200)
     oracle_spend_delay = 10

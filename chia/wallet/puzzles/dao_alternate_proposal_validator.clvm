@@ -81,29 +81,12 @@
     )
   )
 
-  ; check for CC with odd amount, check  that it's recreating the treasury
-  (defun check_even_amounts (conditions)
-    (if conditions
-      (if (= (f (f conditions)) CREATE_COIN)
-        (if (= (r (divmod (f (r (r (f conditions)))) 2)) 1)
-	  (x) ; fail because odd output
-	  (check_even_amounts (r conditions))
-	)
-	(check_even_amounts (r conditions))
-      )
-      1
-    )
-  )
-
-
   (defun check_spend_conditions (SPEND_P2_SINGLETON_MOD_HASH conditions spend_amount p2_singleton_puzhash delegated_puzzle_hash)
     (assert
       (=
         delegated_puzzle_hash
         (calculate_safe_payment_hash SPEND_P2_SINGLETON_MOD_HASH (r (r (r conditions))) spend_amount p2_singleton_puzhash)
       )
-      (check_even_amounts (r (r (r conditions))))
-
       ;; return the conditions
       conditions
     )
