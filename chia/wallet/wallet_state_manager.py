@@ -1472,26 +1472,23 @@ class WalletStateManager:
             wallet_id,
             wallet_type,
         )
-        farmer_reward = False
-        pool_reward = False
-        if self.is_farmer_reward(height, coin):
-            farmer_reward = True
-        elif self.is_pool_reward(height, coin):
-            pool_reward = True
 
-        farm_reward = False
+        if self.is_pool_reward(height, coin):
+            tx_type = TransactionType.COINBASE_REWARD
+        elif self.is_farmer_reward(height, coin):
+            tx_type = TransactionType.FEE_REWARD
+        else:
+            tx_type = TransactionType.INCOMING_TX
+
+        coinbase = tx_type != TransactionType.INCOMING_TX
+
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         if parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type:
             change = True
         else:
             change = False
 
-        if farmer_reward or pool_reward:
-            farm_reward = True
-            if pool_reward:
-                tx_type: int = TransactionType.COINBASE_REWARD.value
-            else:
-                tx_type = TransactionType.FEE_REWARD.value
+        if coinbase:
             timestamp = await self.wallet_node.get_timestamp_for_height(height)
 
             tx_record = TransactionRecord(
@@ -1540,7 +1537,7 @@ class WalletStateManager:
                     wallet_id=wallet_id,
                     sent_to=[],
                     trade_id=None,
-                    type=uint32(TransactionType.INCOMING_TX.value),
+                    type=uint32(tx_type),
                     name=coin_name,
                     memos=[],
                 )
@@ -1548,7 +1545,7 @@ class WalletStateManager:
                     await self.tx_store.add_transaction_record(tx_record)
 
         coin_record_1: WalletCoinRecord = WalletCoinRecord(
-            coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
+            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id
         )
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
 
