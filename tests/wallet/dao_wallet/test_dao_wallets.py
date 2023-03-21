@@ -15,7 +15,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
-from tests.util.wallet_is_synced import wallet_is_synced
+
 
 puzzle_hash_0 = bytes32(32 * b"0")
 
@@ -61,7 +61,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
-    await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
     cat_amt = 2000
 
