@@ -1481,6 +1481,12 @@ class WalletStateManager:
             tx_type = TransactionType.INCOMING_TX
 
         coinbase = tx_type != TransactionType.INCOMING_TX
+        coin_confirmed_transaction = False
+        if not coinbase:
+            for record in all_unconfirmed_transaction_records:
+                if coin in record.additions and not record.confirmed:
+                    await self.tx_store.set_confirmed(record.name, height)
+                    coin_confirmed_transaction = True
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         if parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type:
@@ -1511,12 +1517,6 @@ class WalletStateManager:
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
-            coin_confirmed_transaction = False
-            for record in all_unconfirmed_transaction_records:
-                if coin in record.additions and not record.confirmed:
-                    await self.tx_store.set_confirmed(record.name, height)
-                    coin_confirmed_transaction = True
-
             if not coin_confirmed_transaction and not change:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
                 tx_record = TransactionRecord(
