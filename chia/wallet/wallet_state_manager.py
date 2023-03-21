@@ -1094,7 +1094,7 @@ class WalletStateManager:
                         ph_to_index_cache.put(coin_state.coin.puzzle_hash, derivation_index)
                         if derivation_index > used_up_to:
                             await self.puzzle_store.set_used_up_to(derivation_index)
-                            used_up_to = max(used_up_to, derivation_index)
+                            used_up_to = derivation_index
 
                     if coin_state.created_height is None:
                         # TODO implements this coin got reorged
