@@ -30,7 +30,7 @@ for setuptools_scm/PEP 440 reasons.
 - `chia_rs` updated to 0.2.4
 - Improve the help text for the `chia peer` and `chia peer -a` commands
 - Remove redundant checks for minting coin and reserve fee
-- `nfg_get_nfts` performance improvments by shifting paging to SQLite 
+- `nfg_get_nfts` performance improvments by shifting paging to SQLite
 - `did_find_lost_did` improved
 - Extend the sign APIs to support hex string
 - Changed mempool backend to use an in-memory SQLite DB
@@ -52,7 +52,6 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Deprecated
 - `curry-and-treehash` Chialisp library replaced by new `curry` library
-
 
 ## 1.7.0 Chia blockchain 2023-02-15
 
