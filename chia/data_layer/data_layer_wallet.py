@@ -116,14 +116,12 @@ class DataLayerWallet:
     async def create(
         cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
         wallet_info: WalletInfo,
-        name: Optional[str] = None,
     ) -> DataLayerWallet:
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
         self.wallet_info = wallet_info
         self.wallet_id = uint8(self.wallet_info.id)
 

@@ -235,11 +235,7 @@ class WalletStateManager:
                     wallet_info,
                 )
             elif wallet_type == WalletType.DATA_LAYER:
-                wallet = await DataLayerWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
+                wallet = await DataLayerWallet.create(self, wallet_info)
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
