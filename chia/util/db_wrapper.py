@@ -51,17 +51,15 @@ async def manage_connection(
     name: Optional[str] = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
     async with contextlib.AsyncExitStack() as exit_stack:
+        connection: aiosqlite.Connection
         if log_path is not None:
             file = exit_stack.enter_context(log_path.open("a", encoding="utf-8"))
-            connection = await exit_stack.enter_async_context(
-                _create_connection(database=database, uri=uri, log_file=file, name=name),
-            )
+            connection = await _create_connection(database=database, uri=uri, log_file=file, name=name)
         else:
-            connection = await exit_stack.enter_async_context(
-                _create_connection(database=database, uri=uri, name=name),
-            )
+            connection = await _create_connection(database=database, uri=uri, name=name)
 
-        yield connection
+        async with connection:
+            yield connection
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
