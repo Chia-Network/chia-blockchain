@@ -2055,22 +2055,24 @@ class TestBodyValidation:
             (co.ASSERT_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
             # BEFORE SECONDS RELATIVE
+            # relative conditions are not allowed on ephemeral spends
             (co.ASSERT_BEFORE_SECONDS_RELATIVE, -2, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x10000000000000000, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x10000000000000000, rbr.INVALID_BLOCK),
             # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
             # BEFORE HEIGHT RELATIVE
+            # relative conditions are not allowed on ephemeral spends
             (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -2, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
-            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0x100000000, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0x100000000, rbr.INVALID_BLOCK),
             # HEIGHT ABSOLUTE
             (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
@@ -2108,8 +2110,6 @@ class TestBodyValidation:
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
                 ConditionOpcode.ASSERT_SECONDS_RELATIVE,
                 ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
             ]:
                 expected = ReceiveBlockResult.INVALID_BLOCK
 

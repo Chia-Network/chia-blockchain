@@ -157,8 +157,8 @@ def make_test_conds(
         0,
         uint32(height_absolute),
         uint64(seconds_absolute),
-        uint32(before_height_absolute) if before_height_absolute else None,
-        uint64(before_seconds_absolute) if before_seconds_absolute else None,
+        None if before_height_absolute is None else uint32(before_height_absolute),
+        None if before_seconds_absolute is None else uint64(before_seconds_absolute),
         [],
         cost,
         0,
@@ -251,7 +251,7 @@ def expect(
         # 1 is a relative height, but that only amounts to 13, so the absolute
         # height is more restrictive
         (make_test_conds(height_relative=1), expect(height=13)),
-        # 100 is a relative height, and sinec the coin was confirmed at height 12,
+        # 100 is a relative height, and since the coin was confirmed at height 12,
         # that's 112
         (make_test_conds(height_absolute=42, height_relative=100), expect(height=112)),
         # Same thing but without the absolute height
@@ -720,8 +720,6 @@ coins = make_test_coins()
             mk_item(coins[0:1], fee=10000000, assert_before_height=2000),
             False,
         ),
-        # the assert before height time lock condition was introduced in the new item
-        ([mk_item(coins[0:1])], mk_item(coins[0:1], fee=10000000, assert_before_height=1000), False),
         # The new spend just have to match the most restrictive condition
         (
             [mk_item(coins[0:1], assert_before_height=200), mk_item(coins[1:2], assert_before_height=400)],
@@ -748,6 +746,12 @@ coins = make_test_coins()
             mk_item(coins[0:1], fee=10000000, assert_before_seconds=1000),
             True,
         ),
+        # The new spend just have to match the most restrictive condition
+        (
+            [mk_item(coins[0:1], assert_before_seconds=200), mk_item(coins[1:2], assert_before_seconds=400)],
+            mk_item(coins[0:2], fee=10000000, assert_before_seconds=200),
+            True,
+        ),
         # MIXED CONDITIONS
         # we can't replace an assert_before_seconds with assert_before_height
         (
@@ -766,12 +770,6 @@ coins = make_test_coins()
             [mk_item(coins[0:1], assert_height=200, assert_before_height=1000)],
             mk_item(coins[0:1], fee=10000000, assert_height=200),
             False,
-        ),
-        # The new spend just have to match the most restrictive condition
-        (
-            [mk_item(coins[0:1], assert_before_seconds=200), mk_item(coins[1:2], assert_before_seconds=400)],
-            mk_item(coins[0:2], fee=10000000, assert_before_seconds=200),
-            True,
         ),
     ],
 )
