@@ -99,9 +99,8 @@ def decode_info_value(cls: Any, value: Any) -> Any:
         return cls(value)
     elif isinstance(value, list):
         return [decode_info_value(cls, v) for v in value]
-    elif isinstance(value, Program):
-        if value.atom is None:
-            return value
+    elif isinstance(value, Program) and value.atom is None:
+        return value
     else:
         if value == "()":  # special case
             return Program.to([])
