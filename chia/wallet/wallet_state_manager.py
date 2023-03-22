@@ -1480,7 +1480,7 @@ class WalletStateManager:
         else:
             tx_type = TransactionType.INCOMING_TX
 
-        coinbase = tx_type != TransactionType.INCOMING_TX
+        coinbase = tx_type in {TransactionType.FEE_REWARD, TransactionType.COINBASE_REWARD}
         coin_confirmed_transaction = False
         if not coinbase:
             for record in all_unconfirmed_transaction_records:
