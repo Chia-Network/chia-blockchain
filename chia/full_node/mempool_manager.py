@@ -43,6 +43,10 @@ from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
+# mempool items replacing existing ones must increase the total fee at least by
+# this amount. 0.00001 XCH
+MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
+
 
 # TODO: once the 1.8.0 soft-fork has activated, we don't really need to pass
 # the constants through here
@@ -270,52 +274,6 @@ class MempoolManager:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
-    @staticmethod
-    def get_min_fee_increase() -> int:
-        # 0.00001 XCH
-        return 10000000
-
-    def can_replace(
-        self,
-        conflicting_items: Dict[bytes32, MempoolItem],
-        removals: Dict[bytes32, CoinRecord],
-        fees: uint64,
-        fees_per_cost: float,
-    ) -> bool:
-        conflicting_fees = 0
-        conflicting_cost = 0
-        for item in conflicting_items.values():
-            conflicting_fees += item.fee
-            conflicting_cost += item.cost
-
-            # All coins spent in all conflicting items must also be spent in the new item. (superset rule). This is
-            # important because otherwise there exists an attack. A user spends coin A. An attacker replaces the
-            # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
-            # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
-            # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-            for coin in item.removals:
-                if coin.name() not in removals:
-                    log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
-                    return False
-
-        # New item must have higher fee per cost
-        conflicting_fees_per_cost = conflicting_fees / conflicting_cost
-        if fees_per_cost <= conflicting_fees_per_cost:
-            log.debug(
-                f"Rejecting conflicting tx due to not increasing fees per cost "
-                f"({fees_per_cost} <= {conflicting_fees_per_cost})"
-            )
-            return False
-
-        # New item must increase the total fee at least by a certain amount
-        fee_increase = fees - conflicting_fees
-        if fee_increase < self.get_min_fee_increase():
-            log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
-            return False
-
-        log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
-        return True
-
     async def pre_validate_spendbundle(
         self, new_spend: SpendBundle, new_spend_bytes: Optional[bytes], spend_name: bytes32
     ) -> NPCResult:
@@ -438,9 +396,9 @@ class MempoolManager:
         log.debug(f"Cost: {cost}")
 
         assert npc_result.conds is not None
-        # build removal list
-        removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
-        if set(removal_names) != set([s.name() for s in new_spend.removals()]):
+        # build set of removals
+        removal_names: Set[bytes32] = set(bytes32(spend.coin_id) for spend in npc_result.conds.spends)
+        if removal_names != set(s.name() for s in new_spend.removals()):
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
@@ -500,8 +458,6 @@ class MempoolManager:
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = self.check_removals(removal_record_dict)
-        # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
-        conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -541,11 +497,8 @@ class MempoolManager:
                 return tl_error, None, []  # MempoolInclusionStatus.FAILED
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
-            for conflicting in conflicts:
-                for item in self.mempool.get_spends_by_coin_id(conflicting.name()):
-                    conflicting_pool_items[item.name] = item
-            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicting_pool_items)}")
-            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
+            if not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
@@ -556,32 +509,32 @@ class MempoolManager:
             f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        return None, potential, list(conflicting_pool_items.keys())
+        return None, potential, [item.name for item in conflicts]
 
-    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
+    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], Set[MempoolItem]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
-        Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
+        Returns Error (if any), the set of existing MempoolItems with conflicting spends (if any).
         Note that additions are not checked for duplicates, because having duplicate additions requires also
         having duplicate removals.
         """
         assert self.peak is not None
-        conflicts: List[Coin] = []
+        conflicts: Set[MempoolItem] = set()
 
         for record in removals.values():
             removal = record.coin
             # 1. Checks if it's been spent already
             if record.spent:
-                return Err.DOUBLE_SPEND, []
+                return Err.DOUBLE_SPEND, set()
             # 2. Checks if there's a mempool conflict
             items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(removal.name())
-            if len(items) > 0:
-                conflicts.append(removal)
+            for item in items:
+                conflicts.add(item)
 
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, conflicts
         # 5. If coins can be spent return list of unspents as we see them in local storage
-        return None, []
+        return None, set()
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
@@ -689,3 +642,51 @@ class MempoolManager:
             items.append(item.spend_bundle)
 
         return items
+
+
+def can_replace(
+    conflicting_items: Set[MempoolItem],
+    removal_names: Set[bytes32],
+    new_item: MempoolItem,
+) -> bool:
+    """
+    This function implements the mempool replacement rules. Given a Mempool item
+    we're attempting to insert into the mempool (new_item) and the set of existing
+    mempool items that conflict with it, this function answers the question whether
+    the existing items can be replaced by the new one. The removals parameter are
+    the coin IDs the new mempool item is spending.
+    """
+
+    conflicting_fees = 0
+    conflicting_cost = 0
+    for item in conflicting_items:
+        conflicting_fees += item.fee
+        conflicting_cost += item.cost
+
+        # All coins spent in all conflicting items must also be spent in the new item. (superset rule). This is
+        # important because otherwise there exists an attack. A user spends coin A. An attacker replaces the
+        # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
+        # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
+        # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
+        for coin in item.removals:
+            if coin.name() not in removal_names:
+                log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
+                return False
+
+    # New item must have higher fee per cost
+    conflicting_fees_per_cost = conflicting_fees / conflicting_cost
+    if new_item.fee_per_cost <= conflicting_fees_per_cost:
+        log.debug(
+            f"Rejecting conflicting tx due to not increasing fees per cost "
+            f"({new_item.fee_per_cost} <= {conflicting_fees_per_cost})"
+        )
+        return False
+
+    # New item must increase the total fee at least by a certain amount
+    fee_increase = new_item.fee - conflicting_fees
+    if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
+        log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
+        return False
+
+    log.info(f"Replacing conflicting tx in mempool. New tx fee: {new_item.fee}, old tx fees: {conflicting_fees}")
+    return True

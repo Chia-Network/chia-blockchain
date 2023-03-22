@@ -625,7 +625,7 @@ class CATWallet:
         self,
         payments: List[Payment],
         fee: uint64 = uint64(0),
-        cat_discrepancy: Optional[Tuple[int, Program]] = None,  # (extra_delta, limitations_solution)
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
@@ -646,9 +646,9 @@ class CATWallet:
             puzzle_announcements_bytes = None
 
         if cat_discrepancy is not None:
-            extra_delta, limitations_solution = cat_discrepancy
+            extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
-            extra_delta, limitations_solution = 0, Program.to([])
+            extra_delta, tail_reveal, tail_solution = 0, Program.to([]), Program.to([])
         payment_amount: int = sum([p.amount for p in payments])
         starting_amount: int = payment_amount - extra_delta
         if reuse_puzhash is None:
@@ -707,12 +707,6 @@ class CATWallet:
                 change_puzhash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": change_puzhash, "amount": uint64(change), "memos": []})
 
-        limitations_program_reveal = Program.to([])
-        if self.cat_info.my_tail is None:
-            assert cat_discrepancy is None
-        elif cat_discrepancy is not None:
-            limitations_program_reveal = self.cat_info.my_tail
-
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
         chia_tx = None
@@ -765,6 +759,11 @@ class CATWallet:
                     primaries=[],
                     coin_announcements_to_assert={announcement.name()},
                 )
+            if cat_discrepancy is not None:
+                # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
+                innersol = Program.to(
+                    [[], (1, Program.to([51, None, -113, tail_reveal, tail_solution]).cons(innersol.at("rfr"))), []]
+                )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
@@ -773,10 +772,10 @@ class CATWallet:
                 self.cat_info.limitations_program_hash,
                 inner_puzzle,
                 innersol,
-                limitations_solution=limitations_solution,
+                limitations_solution=tail_solution,
                 extra_delta=extra_delta,
                 lineage_proof=lineage_proof,
-                limitations_program_reveal=limitations_program_reveal,
+                limitations_program_reveal=tail_reveal,
             )
             spendable_cat_list.append(new_spendable_cat)
 
@@ -809,6 +808,7 @@ class CATWallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_cat_coins: Optional[Set[Coin]] = None,
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         reuse_puzhash: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
@@ -831,6 +831,7 @@ class CATWallet:
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
+            cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,

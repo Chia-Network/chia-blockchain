@@ -109,14 +109,14 @@ class ServeInThread:
 
     def _run(self) -> None:
         # TODO: yuck yuck, messes with a single global
+        original_event_loop_policy = asyncio.get_event_loop_policy()
         asyncio.set_event_loop_policy(chia_policy.ChiaPolicy())
-        asyncio.run(self.main())
-        # new_loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(new_loop)
-        # new_loop.run_until_complete(self.main())
+        try:
+            asyncio.run(self.main())
+        finally:
+            asyncio.set_event_loop_policy(original_event_loop_policy)
 
     async def main(self) -> None:
-        self.loop = asyncio.get_event_loop()
         self.server_task = asyncio.create_task(
             serve.async_main(
                 ip=self.ip,
