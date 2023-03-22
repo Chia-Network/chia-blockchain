@@ -5,6 +5,7 @@ import concurrent.futures
 import functools
 import logging
 from pathlib import Path
+from typing import Dict, List
 from urllib.parse import urlparse
 
 import boto3 as boto3
@@ -24,7 +25,7 @@ region = config["aws_credentials"]["region"]
 aws_access_key_id = config["aws_credentials"]["access_key_id"]
 aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
 store_ids = config["store_ids"]
-bukets = config["buckets"]
+bukets: Dict[str, List[str]] = config["buckets"]
 urls = config["urls"]
 
 
@@ -105,7 +106,7 @@ async def get_bucket(store_id: bytes32) -> str:
     raise Exception(f"bucket not found store id {store_id.hex()}")
 
 
-async def make_app():
+async def make_app():  # type: ignore
     app = web.Application()
     app.add_routes([web.post("/check_store_id", check_store_id)])
     app.add_routes([web.post("/upload", upload)])
@@ -114,4 +115,4 @@ async def make_app():
     return app
 
 
-web.run_app(make_app(), port=8999)
+web.run_app(make_app(), port=8999)  # type: ignore
