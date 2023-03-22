@@ -1293,7 +1293,6 @@ class WalletStateManager:
                                     else:  # No DL wallet exists yet
                                         dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                                             self,
-                                            self.main_wallet,
                                         )
                                     await dl_wallet.track_new_launcher_id(
                                         child.coin.name(),

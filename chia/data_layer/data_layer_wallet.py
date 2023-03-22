@@ -137,28 +137,22 @@ class DataLayerWallet:
         return self.wallet_info.id
 
     @classmethod
-    async def create_new_dl_wallet(
-        cls,
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        name: Optional[str] = "DataLayer Wallet",
-    ) -> DataLayerWallet:
+    async def create_new_dl_wallet(cls, wallet_state_manager: WalletStateManager) -> DataLayerWallet:
         """
         This must be called under the wallet state manager lock
         """
 
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
 
         for _, w in self.wallet_state_manager.wallets.items():
             if w.type() == WalletType.DATA_LAYER:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        assert name is not None
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name,
+            "DataLayer Wallet",
             WalletType.DATA_LAYER.value,
             "",
         )
