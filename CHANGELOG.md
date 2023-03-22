@@ -17,7 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 - Python 3.11 support
 - `chia wallet check` CLI command
 - `reuse_public_key_for_change` config.yaml option to allow address reuse for change
-- `nft_id` added to the JSON output of all NFT RPC
+- `nft_id` added to the JSON output of all NFT RPCs
 - `curry` Chialisp library replaces `curry-and-treehash`
 
 ### Changed
