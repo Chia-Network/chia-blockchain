@@ -8,22 +8,24 @@
     OWNERSHIP_LAYER_MOD_HASH
     ADAPTER_MOD_HASH
     COVENANT_INITIAL_PUZZLE_HASH_HASH
-    SINGLETON_STRUCT
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH
     TP_HASH
     ; curried second
     SELF_HASH  ; tree hash of all the other hashes above
     previous_inner_puzhash  ; Truth
     previous_metadata_hash
+    my_singleton_id  ; no need to commit to this, our parent is guaranteed to be a singleton with the same ID as ours
   )
 
   (include curry.clib)
 
-  (curry_hashes (f SINGLETON_STRUCT)
+  (curry_hashes SINGLETON_MOD_HASH
     (sha256 2
-      (sha256 1 (f SINGLETON_STRUCT))
+      (sha256 1 SINGLETON_MOD_HASH)
       (sha256 2
-        (sha256 1 (f (r SINGLETON_STRUCT)))
-        (sha256 1 (r (r SINGLETON_STRUCT)))
+        (sha256 1 my_singleton_id)
+        (sha256 1 SINGLETON_LAUNCHER_HASH)
       )
     )
     (curry_hashes OWNERSHIP_LAYER_MOD_HASH

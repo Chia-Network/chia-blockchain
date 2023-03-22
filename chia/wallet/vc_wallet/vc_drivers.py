@@ -223,7 +223,6 @@ def solve_viral_backdoor(puzzle_reveal: Program, inner_solution: Program, hidden
 ########
 def create_ownership_layer_covenant_morpher(
     covenant_initial_puzzle_hash: bytes32,
-    singleton_id: bytes32,
     transfer_program_hash: bytes32,
 ) -> Program:
     """
@@ -234,7 +233,8 @@ def create_ownership_layer_covenant_morpher(
         NFT_OWNERSHIP_LAYER_HASH,
         NFT_TP_COVENANT_ADAPTER_HASH,
         Program.to(covenant_initial_puzzle_hash).get_tree_hash(),
-        Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH))),
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_HASH,
         transfer_program_hash,
     )
     return first_curry.curry(first_curry.get_tree_hash())
@@ -358,7 +358,6 @@ class VerifiedCredential:
                 curried_eve_singleton_hash,
                 create_ownership_layer_covenant_morpher(
                     curried_eve_singleton_hash,
-                    launcher_coin.name(),
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,
@@ -461,7 +460,6 @@ class VerifiedCredential:
                 curried_eve_singleton_hash,
                 create_ownership_layer_covenant_morpher(
                     curried_eve_singleton_hash,
-                    self.launcher_id,
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,
@@ -638,7 +636,10 @@ class VerifiedCredential:
             [
                 -10,
                 self.ownership_lineage_proof.to_program(),
-                [Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash()],
+                [
+                    Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
+                    self.launcher_id,
+                ],
                 [
                     provider_innerpuzhash,
                     self.coin.name(),
@@ -658,7 +659,10 @@ class VerifiedCredential:
             [
                 -10,
                 self.ownership_lineage_proof.to_program(),
-                [Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash()],
+                [
+                    Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
+                    self.launcher_id,
+                ],
                 [None] * 4,
             ]
         )
