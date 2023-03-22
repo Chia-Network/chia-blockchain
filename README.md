@@ -6,7 +6,7 @@
 |         :---:          |          :---:         |
 | ![GitHub Latest Rlease)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain&label=release&logo=github) | ![GitHub Latest Pre-Release)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain?include_prereleases&label=pre-release&logo=github) |
 
-![GitHub contributors]https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
+![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
 
 Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
 * [Proof of space and time](https://docs.google.com/document/d/1tmRIb7lgi4QfKkNaxuKOBHRmwbVlGL4f7EsBDr_5xZE/edit) based consensus which allows anyone to farm with commodity hardware
