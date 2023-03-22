@@ -4,7 +4,13 @@
 
 | Latest Release | Latest Pre-release |
 |         :---:          |          :---:         |
-| ![GitHub Latest Rlease)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain&label=release&logo=github) | ![GitHub Latest Pre-Release)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain?include_prereleases&label=pre-release&logo=github) |
+| ![GitHub Latest Rlease)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain?&label=release&logo=github) | ![GitHub Latest Pre-Release)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain?include_prereleases&label=pre-release&logo=github) |
+
+![YouTube Channel Views](https://img.shields.io/youtube/channel/views/UChFkJ3OAUvnHZdiQISWdWPA?style=social)
+
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Chia-Network/chia-blockchain?logo=GitHub)
+
+![GitHub all releases](https://img.shields.io/github/downloads/Chia-Network/chia-blockchain/total?logo=GitHub)
 
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
 
