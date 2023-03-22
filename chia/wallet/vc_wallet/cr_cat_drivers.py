@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
@@ -6,12 +8,12 @@ from clvm.casts import int_to_bytes
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable, streamable
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_MOD_HASH,
@@ -19,7 +21,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 )
 from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER_HASH
 from chia.wallet.payment import Payment
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
     NFT_TP_COVENANT_ADAPTER_HASH,
     GUARANTEED_NIL_TP,
@@ -130,8 +132,8 @@ class CRCAT:
         authorized_providers: List[bytes32],
         proofs_checker: Program,
         # Probably never need this but some tail might
-        optional_lineage_proof: Optional[LineageProof] = None
-    ) -> Tuple[Program, CoinSpend, _T_CRCAT]:
+        optional_lineage_proof: Optional[LineageProof] = None,
+    ) -> Tuple[Program, CoinSpend, CRCAT]:
         """
         Launch a new CR-CAT from XCH.
 
@@ -143,22 +145,23 @@ class CRCAT:
         new_cr_layer_hash: bytes32 = construct_cr_layer(
             authorized_providers,
             proofs_checker,
-            payment.puzzle_hash,
+            payment.puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(payment.puzzle_hash)
         new_cat_puzhash: bytes32 = construct_cat_puzzle(
             CAT_MOD,
             tail_hash,
-            new_cr_layer_hash,
+            new_cr_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(new_cr_layer_hash)
 
         eve_innerpuz: Program = Program.to(
-            (1,
+            (
+                1,
                 [
                     [51, new_cr_layer_hash, payment.amount, payment.memos],
                     [51, None, -113, tail, tail_solution],
                     [60, None],
-                    [1, authorized_providers, proofs_checker]
-                ]
+                    [1, authorized_providers, proofs_checker],
+                ],
             )
         )
         eve_cat_puzzle: Program = construct_cat_puzzle(
@@ -166,44 +169,51 @@ class CRCAT:
             tail_hash,
             eve_innerpuz,
         )
-        eve_cat_puzzle_hash: Program = eve_cat_puzzle.get_tree_hash()
+        eve_cat_puzzle_hash: bytes32 = eve_cat_puzzle.get_tree_hash()
 
         eve_coin: Coin = Coin(origin_coin.name(), eve_cat_puzzle_hash, payment.amount)
         dpuz: Program = Program.to(
-            (1,
+            (
+                1,
                 [
                     [51, eve_cat_puzzle_hash, payment.amount],
                     [61, std_hash(eve_coin.name())],
-                ]
+                ],
             )
         )
 
-        eve_proof: LineageProof = LineageProof(eve_coin.parent_coin_info, eve_innerpuz.get_tree_hash(), eve_coin.amount)
+        eve_proof: LineageProof = LineageProof(
+            eve_coin.parent_coin_info,
+            eve_innerpuz.get_tree_hash(),
+            uint64(eve_coin.amount),
+        )
 
-        return (dpuz,
-        CoinSpend(
-            eve_coin,
-            eve_cat_puzzle,
-            Program.to(  # solve_cat
-                [
-                    None,
-                    optional_lineage_proof,
-                    eve_coin.name(),
-                    coin_as_list(eve_coin),
-                    eve_proof.to_program(),
-                    0,
-                    0,
-                ]
-            )
-        ),
-        CRCAT(
-            Coin(eve_coin.name(), new_cat_puzhash, payment.amount),
-            tail_hash,
-            eve_proof,
-            authorized_providers,
-            proofs_checker,
-            payment.puzzle_hash,
-        ))
+        return (
+            dpuz,
+            CoinSpend(
+                eve_coin,
+                eve_cat_puzzle,
+                Program.to(  # solve_cat
+                    [
+                        None,
+                        optional_lineage_proof,
+                        eve_coin.name(),
+                        coin_as_list(eve_coin),
+                        eve_proof.to_program(),
+                        0,
+                        0,
+                    ]
+                ),
+            ),
+            CRCAT(
+                Coin(eve_coin.name(), new_cat_puzhash, payment.amount),
+                tail_hash,
+                eve_proof,
+                authorized_providers,
+                proofs_checker,
+                payment.puzzle_hash,
+            ),
+        )
 
     def construct_puzzle(self, inner_puzzle: Program) -> Program:
         return construct_cat_puzzle(
@@ -228,13 +238,13 @@ class CRCAT:
         if puzzle_reveal.mod != CAT_MOD:
             return False, "top most layer is not a CAT"
         layer_below_cat: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rrf"))
-        if layer_below_singleton.mod != CREDENTIAL_RESTRICTION:
+        if layer_below_cat.mod != CREDENTIAL_RESTRICTION:
             return False, "CAT is not credential restricted"
 
-        return True
+        return True, ""
 
     @classmethod
-    def get_next_from_coin_spend(cls: Type[_T_CRCAT], parent_spend: CoinSpend) -> List[_T_CRCAT]:
+    def get_next_from_coin_spend(cls: Type[_T_CRCAT], parent_spend: CoinSpend) -> List[CRCAT]:
         """
         Given a coin spend, this will return the next CR-CATs that were created as an output of that spend.
 
@@ -262,14 +272,14 @@ class CRCAT:
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
         else:
             # Otherwise the info we need will be in the puzzle reveal
-            _, _, authorized_providers_as_prog, proofs_checker, inner_puzzle = cr_layer.uncurry()[1].as_iter()
+            _, _, authorized_providers_as_prog, proofs_checker, inner_puzzle = potential_cr_layer.uncurry()[1].as_iter()
             inner_solution = solution.at("f").at("rrrrrrf")
             conditions = inner_puzzle.run(inner_solution)
             inner_puzzle_hash: bytes32 = inner_puzzle.get_tree_hash()
             lineage_inner_puzhash = construct_cr_layer(
-                authorized_providers,
+                authorized_providers_as_prog,
                 proofs_checker,
-                inner_puzzle_hash,
+                inner_puzzle_hash,  # type: ignore
             ).get_tree_hash_precalc(inner_puzzle_hash)
 
         # Convert all of the old stuff into python
@@ -283,18 +293,15 @@ class CRCAT:
         # Almost complete except the coin's full puzzle hash which we want to use the class method to calculate
         partially_completed_crcats: List[CRCAT] = [
             CRCAT(
-                Coin(
-                    coin_name,
-                    bytes32(32),
-                    uint64(condition.at("rrf").as_int())
-                ),
+                Coin(coin_name, bytes(32), uint64(condition.at("rrf").as_int())),
                 bytes32(tail_hash_as_prog.atom),
                 new_lineage_proof,
-                [authorized_providers],
+                authorized_providers,
                 proofs_checker,
                 bytes32(condition.at("rf").atom),
             )
-            for condition in conditions.as_iter() if condition.at("f").as_int() == 51
+            for condition in conditions.as_iter()
+            if condition.at("f").as_int() == 51
         ]
 
         return [
@@ -302,10 +309,10 @@ class CRCAT:
                 crcat,
                 coin=Coin(
                     crcat.coin.parent_coin_info,
-                    crcat.construct_puzzle(
-                        crcat.inner_puzzle_hash  # type: ignore
-                    ).get_tree_hash_precalc(crcat.inner_puzzle_hash),
-                    crcat.coin.amount
+                    crcat.construct_puzzle(crcat.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                        crcat.inner_puzzle_hash
+                    ),
+                    crcat.coin.amount,
                 ),
             )
             for crcat in partially_completed_crcats
@@ -350,56 +357,57 @@ class CRCAT:
                 new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").atom)
                 new_amount: uint64 = uint64(condition.at("rrf").as_int())
                 announcement_ids.append(
-                    std_hash(
-                        self.coin.name() +
-                        b"\xcd" +
-                        std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount))
-                    )
+                    std_hash(self.coin.name() + b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)))
                 )
                 new_inner_puzzle_hashes_and_amounts.append((new_inner_puzzle_hash, new_amount))
 
-        return (announcement_ids,
-        CoinSpend(
-            self.coin,
-            self.construct_puzzle(inner_puzzle),
-            Program.to(  # solve_cat
-                [
-                    solve_cr_layer(
-                        proof_of_inclusions,
-                        proof_checker_solution,
-                        provider_id,
-                        vc_launcher_id,
-                        vc_inner_puzhash,
-                        self.coin.name(),
-                        inner_solution,
-                    ),
-                    self.lineage_proof.to_program(),
-                    previous_coin_id,
-                    coin_as_list(self.coin),
-                    next_coin_proof.to_program(),
-                    previous_subtotal,
-                    extra_delta,
-                ]
-            ),
-        ),
-        [
-            CRCAT(
-                Coin(
-                    self.coin.name(),
-                    self.construct_puzzle(
-                        new_inner_puzzle_hash  # type: ignore
-                    ).get_tree_hash_precalc(new_inner_puzzle_hash),
-                    new_amount,
+        return (
+            announcement_ids,
+            CoinSpend(
+                self.coin,
+                self.construct_puzzle(inner_puzzle),
+                Program.to(  # solve_cat
+                    [
+                        solve_cr_layer(
+                            proof_of_inclusions,
+                            proof_checker_solution,
+                            provider_id,
+                            vc_launcher_id,
+                            vc_inner_puzhash,
+                            self.coin.name(),
+                            inner_solution,
+                        ),
+                        self.lineage_proof.to_program(),
+                        previous_coin_id,
+                        coin_as_list(self.coin),
+                        next_coin_proof.to_program(),
+                        previous_subtotal,
+                        extra_delta,
+                    ]
                 ),
-                self.tail_hash,
-                LineageProof(self.coin.parent_coin_info, self.inner_puzzle_hash, self.coin.amount),
-                self.authorized_providers,
-                self.proofs_checker,
-                new_inner_puzzle_hash,
-            )
-            for new_inner_puzzle_hash, new_amount in new_inner_puzzle_hashes_and_amounts
-        ])
-
+            ),
+            [
+                CRCAT(
+                    Coin(
+                        self.coin.name(),
+                        self.construct_puzzle(new_inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                            new_inner_puzzle_hash
+                        ),
+                        new_amount,
+                    ),
+                    self.tail_hash,
+                    LineageProof(
+                        self.coin.parent_coin_info,
+                        self.inner_puzzle_hash,
+                        uint64(self.coin.amount),
+                    ),
+                    self.authorized_providers,
+                    self.proofs_checker,
+                    new_inner_puzzle_hash,
+                )
+                for new_inner_puzzle_hash, new_amount in new_inner_puzzle_hashes_and_amounts
+            ],
+        )
 
     @classmethod
     def spend_many(
@@ -411,7 +419,7 @@ class CRCAT:
         provider_id: bytes32,
         vc_launcher_id: bytes32,
         vc_inner_puzhash: bytes32,
-    ) -> Tuple[List[bytes32], List[CoinSpend], List[_T_CRCAT]]:
+    ) -> Tuple[List[bytes32], List[CoinSpend], List[CRCAT]]:
         """
         Spend a multiple CR-CATs.
 
@@ -422,8 +430,9 @@ class CRCAT:
 
         def next_index(index: int) -> int:
             return 0 if index == len(inner_spends) - 1 else index + 1
+
         def prev_index(index: int) -> int:
-            return index-1
+            return index - 1
 
         sorted_inner_spends: List[Tuple[_T_CRCAT, Program, Program]] = sorted(
             inner_spends,
@@ -446,9 +455,9 @@ class CRCAT:
                 LineageProof(
                     next_crcat.coin.parent_coin_info,
                     next_crcat.construct_cr_layer(
-                        next_crcat.inner_puzzle_hash
+                        next_crcat.inner_puzzle_hash,  # type: ignore
                     ).get_tree_hash_precalc(next_crcat.inner_puzzle_hash),
-                    next_crcat.coin.amount
+                    uint64(next_crcat.coin.amount),
                 ),
                 subtotal,
                 0,  # TODO: add support for mint/melt

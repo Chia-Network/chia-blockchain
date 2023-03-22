@@ -1,9 +1,8 @@
 import pytest
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from blspy import G2Element
-from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
@@ -24,11 +23,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     solution_for_singleton,
 )
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.vc_wallet.cr_cat_drivers import (
-    CRCAT,
-    construct_cr_layer,
-    solve_cr_layer,
-)
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
     VerifiedCredential,
@@ -503,12 +498,12 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
 
         # Now lets farm a funds for some CR-CATs
         await sim.farm_block(RUN_PUZ_PUZ_PH)
-        cr_coin_1: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
-        )[0].coin
-        cr_coin_2: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
-        )[1].coin
+        cr_coin_1: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
+            0
+        ].coin
+        cr_coin_2: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
+            1
+        ].coin
 
         # Launch the CR-CATs
         AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
@@ -549,12 +544,8 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-        assert len(
-            await client.get_coin_records_by_names([cr_1.coin.name()], include_spent_coins=False)
-        ) > 0
-        assert len(
-            await client.get_coin_records_by_names([cr_2.coin.name()], include_spent_coins=False)
-        ) > 0
+        assert len(await client.get_coin_records_by_names([cr_1.coin.name()], include_spent_coins=False)) > 0
+        assert len(await client.get_coin_records_by_names([cr_2.coin.name()], include_spent_coins=False)) > 0
 
         for error in ("forget_vc", "make_banned_announcement", None):
             # The CR-CAT coin spends
