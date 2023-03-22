@@ -230,7 +230,6 @@ def create_ownership_layer_covenant_morpher(
     A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> OL -> Covenant stack
     """
     first_curry: Program = NFT_OWNERSHIP_LAYER_COVENANT_MORPHER.curry(
-        NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH,
         COVENANT_LAYER_HASH,
         NFT_OWNERSHIP_LAYER_HASH,
         NFT_TP_COVENANT_ADAPTER_HASH,
