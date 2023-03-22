@@ -1571,6 +1571,11 @@ class WalletNode:
             solution_response.response.solution,
         )
 
+    async def get_coin_spend_for_coin_state(self, coin_state: CoinState, peer: WSChiaConnection) -> CoinSpend:
+        if coin_state.spent_height is None:
+            raise ValueError("coin_state.coin must be spent coin")
+        return await self.fetch_puzzle_solution(uint32(coin_state.spent_height), coin_state.coin, peer)
+
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:

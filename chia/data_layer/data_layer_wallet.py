@@ -217,8 +217,8 @@ class DataLayerWallet:
             await self.new_launcher_spend(spend, peer, height)
         else:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id, peer)
-            launcher_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                launcher_state.spent_height, launcher_state.coin, peer
+            launcher_spend = await self.wallet_state_manager.wallet_node.get_coin_spend_for_coin_state(
+                launcher_state, peer
             )
             await self.new_launcher_spend(launcher_spend, peer)
 
