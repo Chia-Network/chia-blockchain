@@ -58,8 +58,10 @@ async def manage_connection(
         else:
             connection = await _create_connection(database=database, uri=uri, name=name)
 
-        async with connection:
+        try:
             yield connection
+        finally:
+            await connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
