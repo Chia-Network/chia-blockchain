@@ -42,6 +42,13 @@ from chia.util.ssl_check import verify_ssl_certs_and_keys
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
+class SamePeerIdError(Exception):
+    def __init__(self, peer: PeerInfo, node_id: bytes32) -> None:
+        super().__init__(f"Trying to connect to a ourselves: {peer} {node_id}")
+        self.peer = peer
+        self.node_id = node_id
+
+
 def ssl_context_for_server(
     ca_cert: Path,
     ca_key: Path,
@@ -450,7 +457,7 @@ class ChiaServer:
             der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
             if peer_id == self.node_id:
-                raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
+                raise SamePeerIdError(peer=target_node, node_id=peer_id)
 
             connection = WSChiaConnection.create(
                 self._local_type,
@@ -494,6 +501,10 @@ class ChiaServer:
             else:
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+        except SamePeerIdError as e:
+            if connection is not None:
+                await connection.close(error=Err.SELF_CONNECTION)
+            self.log.info(str(e))
         except Exception as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
