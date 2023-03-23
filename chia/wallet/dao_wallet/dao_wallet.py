@@ -10,7 +10,7 @@ from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
-
+from clvm.casts import int_from_bytes
 import chia.wallet.singleton
 
 # from chia.protocols import wallet_protocol
@@ -43,6 +43,7 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
     get_treasury_puzzle,
+    get_treasury_rules_from_puzzle,
     uncurry_proposal,
     uncurry_treasury,
 )
@@ -53,6 +54,8 @@ from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_innerpuzzle_from_puzzle,
     get_most_recent_singleton_coin_from_coin_spend,
 )
+from chia.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
+from chia.types.blockchain_format.program import INFINITE_COST
 
 # from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
@@ -421,35 +424,6 @@ class DAOWallet:
             children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
             assert children_state is not None
             child_coin = children_state.coin
-
-            #  I don't remember why the below code was originally included in the DID Wallet
-
-            # if children_state.spent_height != children_state.created_height:
-            #     dao_info = DAOInfo(
-            #         self.dao_info.treasury_id,  # treasury_id: bytes32
-            #         self.dao_info.cat_wallet_id,  # cat_wallet_id: int
-            #         self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
-            #         self.dao_info.parent_info,  # treasury_id: bytes32
-            #         children,  # current_coin
-            #         inner_puz,  # current innerpuz
-            #     )
-            #
-            #     await self.save_info(dao_info)
-            #     assert children_state.created_height
-            #     cs = await wallet_node.get_coin_state([children[0]], peer)
-            #     parent_coin = cs[0].coin
-            #     parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
-            #     assert parent_spend is not None
-            #     parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
-            #         parent_spend.puzzle_reveal.to_program()
-            #     )
-            #     assert parent_innerpuz is not None
-            #     parent_info = LineageProof(
-            #         parent_coin.parent_coin_info,
-            #         parent_innerpuz.get_tree_hash(),
-            #         uint64(parent_coin.amount),
-            #     )
-            #     await self.add_parent(child_coin.parent_coin_info, parent_info)
             if parent_coin is not None:
                 parent_parent_coin = parent_coin
             parent_coin = child_coin
@@ -463,16 +437,30 @@ class DAOWallet:
         if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
             current_inner_puz = parent_inner_puz
         else:
+            # extract the treasury solution from the full singleton solution
             inner_solution = parent_spend.solution.to_program().rest().rest().first()
+            # reconstruct the treasury puzzle
             current_inner_puz = get_new_puzzle_from_treasury_solution(parent_inner_puz, inner_solution)
+        # set the treasury rules
+        self.dao_rules = get_treasury_rules_from_puzzle(current_inner_puz)
 
         current_lineage_proof = LineageProof(
-            parent_parent_coin.parent_coin_info, parent_inner_puz.get_tree_hash(), parent_parent_coin.amount  # ...
+            parent_parent_coin.parent_coin_info, parent_inner_puz.get_tree_hash(), parent_parent_coin.amount
         )
         await self.add_parent(parent_parent_coin.name(), current_lineage_proof)
 
-        # if nonexistent, then create one
-        cat_tail_hash = get_cat_tail_hash_from_treasury_puzzle(parent_inner_puz)
+        # Hack to find the cat tail hash from the memo of the genesis spend
+        launcher_state = await wallet_node.get_coin_state([self.dao_info.treasury_id], peer)
+        genesis_coin_id = launcher_state[0].coin.parent_coin_info
+        genesis_state = await wallet_node.get_coin_state([genesis_coin_id], peer)
+        genesis_spend  = await wallet_node.fetch_puzzle_solution(genesis_state[0].spent_height, genesis_state[0].coin, peer)
+        cat_tail_hash = None
+        conds = genesis_spend.puzzle_reveal.to_program().run(genesis_spend.solution.to_program())
+        for cond in conds.as_python():
+            if (cond[0] == ConditionOpcode.CREATE_COIN) and (int_from_bytes(cond[2]) == 1):
+                cat_tail_hash = bytes32(cond[3][0])
+        assert cat_tail_hash
+
         cat_wallet = None
 
         # Get or create a cat wallet
@@ -583,7 +571,7 @@ class DAOWallet:
         if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
-        coins = await self.standard_wallet.select_coins(uint64(fee + 1))
+        coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
         if coins is None:
             return None
         # origin is normal coin which creates launcher coin
@@ -607,6 +595,7 @@ class DAOWallet:
             cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
 
         assert cat_tail_hash is not None
+
         cat_tail_info = {
             "identifier": "genesis_by_id_or_proposal",
             "treasury_id": launcher_coin.name(),
@@ -660,7 +649,7 @@ class DAOWallet:
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            uint64(1), genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
+            uint64(1), genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set, memos=[new_cat_wallet.cat_info.limitations_program_hash]
         )
 
         genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])

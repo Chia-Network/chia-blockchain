@@ -115,11 +115,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         True,
         eve_coin.name(),
     )
-    breakpoint()
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
+    cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
+    assert cat_wallet_0_bal == cat_amt * 2
 
     # Create the other user's wallet from the treasury id
     async with wallet_node_0.wallet_state_manager.lock:
@@ -133,7 +134,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     # Get the cat wallets for wallet_1
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
-    # dao_cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.dao_cat_wallet_id]
+    assert cat_wallet_1
 
     # Send some cats to the dao_cat lockup
     dao_cat_amt = uint64(100)

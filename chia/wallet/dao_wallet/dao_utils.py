@@ -11,6 +11,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.dao_wallet.dao_info import DAORules
 
+from clvm.casts import int_from_bytes
+
 # from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
@@ -187,6 +189,26 @@ def get_proposal_timer_puzzle(
     )
     return puzzle
 
+def get_treasury_rules_from_puzzle(puzzle_reveal: Program) -> DAORules:
+    curried_args = uncurry_treasury(puzzle_reveal)
+    (
+        _DAO_TREASURY_MOD_HASH,
+        _DAO_PROPOSAL_VALIDATOR_MOD,
+        proposal_timelock,
+        soft_close_length,
+        attendance_required,
+        pass_percentage,
+        self_destruct_length,
+        oracle_spend_delay,
+    ) = curried_args
+    return DAORules(
+        uint64(int_from_bytes(proposal_timelock.as_atom())),
+        uint64(int_from_bytes(soft_close_length.as_atom())),
+        uint64(int_from_bytes(attendance_required.as_atom())),
+        uint64(int_from_bytes(pass_percentage.as_atom())),
+        uint64(int_from_bytes(self_destruct_length.as_atom())),
+        uint64(int_from_bytes(oracle_spend_delay.as_atom()))
+    )
 
 # This takes the treasury puzzle and treasury solution, not the full puzzle and full solution
 # This also returns the treasury puzzle and not the full puzzle
@@ -217,7 +239,6 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     else:
         # Oracle Spend - treasury is unchanged
         return puzzle_reveal
-
 
 # This takes the proposal puzzle and proposal solution, not the full puzzle and full solution
 # This also returns the proposal puzzle and not the full puzzle
@@ -293,7 +314,7 @@ def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
 
     if mod != DAO_TREASURY_MOD:
         raise ValueError("Not a Treasury mod.")
-    return curried_args.first().as_iter()
+    return curried_args.as_iter()
 
 
 def uncurry_proposal(proposal_puzzle: Program) -> Program:

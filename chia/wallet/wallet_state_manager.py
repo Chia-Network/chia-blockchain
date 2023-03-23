@@ -70,7 +70,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import create_fullpuz, get_singleton_id_from_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -957,23 +957,11 @@ class WalletStateManager:
         coin_spend: CoinSpend,
     ):
         self.log.info("Entering dao_treasury handling in WalletStateManager")
-        (
-            singleton_struct,
-            DAO_TREASURY_MOD_HASH,
-            DAO_PROPOSAL_MOD_HASH,
-            DAO_PROPOSAL_TIMER_MOD_HASH,
-            DAO_LOCKUP_MOD_HASH,
-            CAT_MOD_HASH,
-            cat_tail_hash,
-            current_cat_issuance,
-            attendance_required_percentage,
-            proposal_pass_percentage,
-            proposal_timelock,
-        ) = uncurried_args
         for wallet in self.wallets.values():
             if wallet.type() == WalletType.DAO:
                 assert isinstance(wallet, DAOWallet)
-                if wallet.dao_info.treasury_id == singleton_struct.rest().first().as_atom():
+                singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
+                if wallet.dao_info.treasury_id == singleton_id:
                     return wallet.id(), WalletType(wallet.type())
         return None, None
 
