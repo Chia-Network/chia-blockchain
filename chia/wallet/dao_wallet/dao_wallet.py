@@ -455,10 +455,11 @@ class DAOWallet:
         genesis_state = await wallet_node.get_coin_state([genesis_coin_id], peer)
         genesis_spend  = await wallet_node.fetch_puzzle_solution(genesis_state[0].spent_height, genesis_state[0].coin, peer)
         cat_tail_hash = None
-        conds = genesis_spend.puzzle_reveal.to_program().run(genesis_spend.solution.to_program())
-        for cond in conds.as_python():
-            if (cond[0] == ConditionOpcode.CREATE_COIN) and (int_from_bytes(cond[2]) == 1):
-                cat_tail_hash = bytes32(cond[3][0])
+        conds = genesis_spend.solution.to_program().at("rfr").as_iter()
+        for cond in conds:
+            if (cond.first().as_atom() == ConditionOpcode.CREATE_COIN) and (int_from_bytes(cond.at("rrf").as_atom()) == 1):
+                cat_tail_hash = bytes32(cond.at("rrrff").as_atom())
+                break
         assert cat_tail_hash
 
         cat_wallet = None
