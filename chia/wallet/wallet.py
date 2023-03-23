@@ -90,11 +90,15 @@ class Wallet:
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            # we use height=0 here to not enable any soft-fork semantics. It
+            # will only matter once the wallet generates transactions relying on
+            # new conditions, and we can change this by then
             result: NPCResult = get_name_puzzle_conditions(
                 program,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 mempool_mode=True,
+                height=uint32(0),
             )
             self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")

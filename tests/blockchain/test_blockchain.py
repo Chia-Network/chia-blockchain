@@ -1832,6 +1832,150 @@ class TestBodyValidation:
         assert state_change.fork_height == 2
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("with_softfork2", [False, True])
+    @pytest.mark.parametrize(
+        "opcode,lock_value,expected",
+        [
+            # the 3 blocks, starting at timestamp 10000 (and height 0).
+            # each block is 10 seconds apart.
+            # the 4th block (height 3, time 10030) spends a coin with the condition specified
+            # by the test case. The coin was born in height 2 at time 10020
+            # MY BIRHT HEIGHT
+            (co.ASSERT_MY_BIRTH_HEIGHT, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 2, rbr.NEW_PEAK),  # <- coin birth height
+            (co.ASSERT_MY_BIRTH_HEIGHT, 3, rbr.INVALID_BLOCK),
+            # MY BIRHT SECONDS
+            (co.ASSERT_MY_BIRTH_SECONDS, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10019, rbr.INVALID_BLOCK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10020, rbr.NEW_PEAK),  # <- coin birth time
+            (co.ASSERT_MY_BIRTH_SECONDS, 10021, rbr.INVALID_BLOCK),
+            # SECONDS RELATIVE
+            (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),  # <- birth time
+            (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_RELATIVE, 9, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),  # <- current block time
+            (co.ASSERT_SECONDS_RELATIVE, 11, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS RELATIVE
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),  # <- birth time
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 1, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 9, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, rbr.NEW_PEAK),  # <- current block time
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 11, rbr.NEW_PEAK),
+            # HEIGHT RELATIVE
+            (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT RELATIVE
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, rbr.NEW_PEAK),
+            # HEIGHT ABSOLUTE
+            (co.ASSERT_HEIGHT_ABSOLUTE, 1, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
+            (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT ABSOLUTE
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 3, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, rbr.NEW_PEAK),
+            # SECONDS ABSOLUTE
+            # genesis timestamp is 10000 and each block is 10 seconds
+            (co.ASSERT_SECONDS_ABSOLUTE, 10019, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10020, rbr.NEW_PEAK),  # <- previous tx-block
+            (co.ASSERT_SECONDS_ABSOLUTE, 10021, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.INVALID_BLOCK),  # <- current block
+            (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS ABSOLUTE
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, rbr.INVALID_BLOCK),  # <- previous tx-block
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10021, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),  # <- current block
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10031, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
+        ],
+    )
+    async def test_timelock_conditions(self, opcode, lock_value, expected, with_softfork2, bt):
+        if with_softfork2:
+            # enable softfork2 at height 0, to make it apply to this test
+            constants = test_constants.replace(SOFT_FORK2_HEIGHT=0)
+        else:
+            constants = test_constants
+
+            # if the softfork is not active in this test, fixup all the
+            # tests to instead expect NEW_PEAK unconditionally
+            if opcode in [
+                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
+            ]:
+                expected = ReceiveBlockResult.NEW_PEAK
+
+            # before soft-fork 2, the timestamp we compared against was the
+            # current block's timestamp as opposed to the previous tx-block's
+            # timestamp. These conditions used to be valid, before the soft-fork
+            if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and lock_value > 0 and lock_value <= 10:
+                expected = ReceiveBlockResult.NEW_PEAK
+
+            if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
+                expected = ReceiveBlockResult.NEW_PEAK
+
+        async with make_empty_blockchain(constants) as b:
+
+            blocks = bt.get_consecutive_blocks(
+                3,
+                guarantee_transaction_block=True,
+                farmer_reward_puzzle_hash=bt.pool_ph,
+                pool_reward_puzzle_hash=bt.pool_ph,
+                genesis_timestamp=10000,
+                time_per_block=10,
+            )
+            for bl in blocks:
+                await _validate_and_add_block(b, bl)
+
+            wt: WalletTool = bt.get_pool_wallet_tool()
+
+            conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
+
+            coin = list(blocks[-1].get_included_reward_coins())[0]
+            tx: SpendBundle = wt.generate_signed_transaction(
+                10, wt.get_new_puzzlehash(), coin, condition_dic=conditions
+            )
+
+            blocks = bt.get_consecutive_blocks(
+                1,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                transaction_data=tx,
+                time_per_block=10,
+            )
+
+            pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+                [blocks[-1]], {}, validate_signatures=True
+            )
+            assert pre_validation_results is not None
+            assert (await b.receive_block(blocks[-1], pre_validation_results[0]))[0] == expected
+
+            if expected == ReceiveBlockResult.NEW_PEAK:
+                # ensure coin was in fact spent
+                c = await b.coin_store.get_coin_record(coin.name())
+                assert c is not None and c.spent
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
     @pytest.mark.parametrize(
         "with_garbage,expected",
@@ -1888,8 +2032,7 @@ class TestBodyValidation:
         assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
-    # soft-fork 2 is disabled (for now)
-    @pytest.mark.parametrize("with_softfork2", [False])
+    @pytest.mark.parametrize("with_softfork2", [False, True])
     @pytest.mark.parametrize("with_garbage", [True, False])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
@@ -1906,31 +2049,70 @@ class TestBodyValidation:
             (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.NEW_PEAK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10031, rbr.INVALID_BLOCK),
             # SECONDS RELATIVE
+            # genesis timestamp is 10000 and each block is 10 seconds
             (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS RELATIVE
+            # relative conditions are not allowed on ephemeral spends
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x10000000000000000, rbr.INVALID_BLOCK),
             # HEIGHT RELATIVE
             (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT RELATIVE
+            # relative conditions are not allowed on ephemeral spends
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0x100000000, rbr.INVALID_BLOCK),
             # HEIGHT ABSOLUTE
             (co.ASSERT_HEIGHT_ABSOLUTE, 2, rbr.NEW_PEAK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 3, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_ABSOLUTE, 4, rbr.INVALID_BLOCK),
+            # BEFORE HEIGHT ABSOLUTE
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 2, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 3, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, rbr.NEW_PEAK),
             # SECONDS ABSOLUTE
             # genesis timestamp is 10000 and each block is 10 seconds
-            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10020, rbr.NEW_PEAK),  # <- previous tx-block
+            (co.ASSERT_SECONDS_ABSOLUTE, 10021, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10029, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_ABSOLUTE, 10030, rbr.INVALID_BLOCK),  # <- current tx-block
             (co.ASSERT_SECONDS_ABSOLUTE, 10031, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_ABSOLUTE, 10032, rbr.INVALID_BLOCK),
+            # BEFORE SECONDS ABSOLUTE
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, rbr.INVALID_BLOCK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10021, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10031, rbr.NEW_PEAK),
+            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
     async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, with_softfork2, bt):
         if with_softfork2:
             # enable softfork2 at height 0, to make it apply to this test
             constants = test_constants.replace(SOFT_FORK2_HEIGHT=0)
+
+            # after the softfork, we don't allow any birth assertions, not
+            # relative time locks on ephemeral coins. This test is only for
+            # ephemeral coins, so these cases should always fail
+            if opcode in [
+                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+                ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+                ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+            ]:
+                expected = ReceiveBlockResult.INVALID_BLOCK
+
         else:
             constants = test_constants
 
@@ -1939,8 +2121,21 @@ class TestBodyValidation:
             if opcode in [
                 ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
                 ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
+                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
             ]:
                 expected = ReceiveBlockResult.NEW_PEAK
+
+            # before the softfork, we compared ASSERT_SECONDS_* conditions
+            # against the current block's timestamp, so we need to
+            # adjust these test cases
+            if opcode == co.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
+                expected = rbr.NEW_PEAK
+
+            if opcode == co.ASSERT_SECONDS_RELATIVE and lock_value > -10 and lock_value <= 0:
+                expected = rbr.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
 

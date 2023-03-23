@@ -11,7 +11,13 @@ from chia.types.spend_bundle import SpendBundle
 
 def cost_of_spend_bundle(spend_bundle: SpendBundle) -> int:
     program: BlockGenerator = simple_solution_generator(spend_bundle)
+
+    # always use the post soft-fork2 semantics
     npc_result: NPCResult = get_name_puzzle_conditions(
-        program, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, mempool_mode=True
+        program,
+        INFINITE_COST,
+        cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE,
+        mempool_mode=True,
+        height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT,
     )
     return npc_result.cost

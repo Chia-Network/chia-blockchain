@@ -23,6 +23,11 @@ class MempoolItem:
     # If present, this SpendBundle is not valid at or before this height
     assert_height: Optional[uint32] = None
 
+    # If presemt, this SpendBundle is not valid once the block height reaches
+    # the specified height
+    assert_before_height: Optional[uint32] = None
+    assert_before_seconds: Optional[uint64] = None
+
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost
 

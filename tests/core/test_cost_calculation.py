@@ -186,6 +186,7 @@ class TestCostCalculation:
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
             mempool_mode=True,
+            height=softfork_height,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
