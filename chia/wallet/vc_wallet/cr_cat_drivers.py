@@ -27,7 +27,7 @@ from chia.wallet.vc_wallet.vc_drivers import (
     GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
     COVENANT_LAYER_HASH,
-    NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH,
+    create_ownership_layer_covenant_morpher,
     create_did_tp,
 )
 
@@ -64,7 +64,9 @@ def construct_cr_layer(
                 )
                 .get_tree_hash_precalc(NFT_OWNERSHIP_LAYER_HASH, Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash()),
                 COVENANT_LAYER_HASH,
-                NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH,
+                create_ownership_layer_covenant_morpher(
+                    create_did_tp().get_tree_hash(),
+                ).get_tree_hash(),
                 create_did_tp().get_tree_hash(),
             ]
         ),
