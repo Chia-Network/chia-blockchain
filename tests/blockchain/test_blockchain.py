@@ -2536,11 +2536,7 @@ class TestBodyValidation:
 
         block_generator: BlockGenerator = BlockGenerator(blocks[-1].transactions_generator, [], [])
         npc_result = get_name_puzzle_conditions(
-            block_generator,
-            b.constants.MAX_BLOCK_COST_CLVM * 1000,
-            cost_per_byte=b.constants.COST_PER_BYTE,
-            mempool_mode=False,
-            height=softfork_height,
+            block_generator, b.constants.MAX_BLOCK_COST_CLVM * 1000, mempool_mode=False, height=softfork_height
         )
         err = (await b.receive_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
@@ -2599,7 +2595,6 @@ class TestBodyValidation:
         npc_result = get_name_puzzle_conditions(
             block_generator,
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
-            cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
             height=softfork_height,
         )
@@ -2624,7 +2619,6 @@ class TestBodyValidation:
         npc_result = get_name_puzzle_conditions(
             block_generator,
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
-            cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
             height=softfork_height,
         )
@@ -2649,7 +2643,6 @@ class TestBodyValidation:
         npc_result = get_name_puzzle_conditions(
             block_generator,
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
-            cost_per_byte=b.constants.COST_PER_BYTE,
             mempool_mode=False,
             height=softfork_height,
         )

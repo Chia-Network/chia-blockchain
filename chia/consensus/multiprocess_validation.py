@@ -91,7 +91,6 @@ def batch_pre_validate_blocks(
                     npc_result = get_name_puzzle_conditions(
                         block_generator,
                         min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
-                        cost_per_byte=constants.COST_PER_BYTE,
                         mempool_mode=False,
                         height=block.height,
                         constants=constants,
@@ -387,7 +386,6 @@ def _run_generator(
         npc_result: NPCResult = get_name_puzzle_conditions(
             block_generator,
             min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
-            cost_per_byte=constants.COST_PER_BYTE,
             mempool_mode=False,
             height=height,
         )

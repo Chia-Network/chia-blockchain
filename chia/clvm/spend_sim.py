@@ -65,11 +65,7 @@ class CostLogger:
     def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program,
-            INFINITE_COST,
-            cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE,
-            mempool_mode=True,
-            height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT,
+            program, INFINITE_COST, mempool_mode=True, height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT
         )
         self.cost_dict[descriptor] = npc_result.cost
         cost_to_subtract: int = 0

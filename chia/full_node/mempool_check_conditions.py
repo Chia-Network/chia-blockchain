@@ -37,7 +37,6 @@ def get_name_puzzle_conditions(
     generator: BlockGenerator,
     max_cost: int,
     *,
-    cost_per_byte: int,
     mempool_mode: bool,
     height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,

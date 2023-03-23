@@ -319,7 +319,6 @@ async def validate_block_body(
                 curr_npc_result = get_name_puzzle_conditions(
                     curr_block_generator,
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
-                    cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
                     height=curr.height,
                     constants=constants,

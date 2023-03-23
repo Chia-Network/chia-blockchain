@@ -131,11 +131,7 @@ def create_foliage(
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
             result: NPCResult = get_name_puzzle_conditions(
-                block_generator,
-                constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=constants.COST_PER_BYTE,
-                mempool_mode=True,
-                height=height,
+                block_generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height
             )
             cost = result.cost
 
