@@ -4,10 +4,13 @@
 ; return the same metadata and transfer program with no conditions
 (mod
   (
-    PROVIDER_SINGLETON_STRUCT
-    Current_Owner  ; Truth
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH
+    Metadata_hash  ; Truth
     conditions  ; Truth
     (
+      provider_id
+      metadata
       provider_innerpuzhash
       my_coin_id
       new_metadata
@@ -18,15 +21,24 @@
   (include condition_codes.clvm)
   (include curry.clib)
   (include sha256tree.clib)
+  (include utility_macros.clib)
 
   (defun-inline create_did_puzhash
     (
-        PROVIDER_SINGLETON_STRUCT
+        SINGLETON_MOD_HASH
+        SINGLETON_LAUNCHER_HASH
+        provider_id
         provider_innerpuzhash
     )
 
-    (curry_hashes_inline (f PROVIDER_SINGLETON_STRUCT)
-      (sha256tree PROVIDER_SINGLETON_STRUCT)
+    (curry_hashes_inline SINGLETON_MOD_HASH
+      (sha256 2
+        (sha256 1 SINGLETON_MOD_HASH)
+        (sha256 2
+          (sha256 1 provider_id)
+          (sha256 1 SINGLETON_LAUNCHER_HASH)
+        )
+      )
       provider_innerpuzhash
     )
   )
@@ -34,13 +46,13 @@
   ; Returning (new_metadata new_transfer_program conditions)
   (if provider_innerpuzhash
     (list
-      new_metadata
+      (if new_metadata (sha256tree new_metadata) ())
       (i new_transfer_program new_transfer_program ())
       (list
         (list ASSERT_MY_COIN_ID my_coin_id)
         (list ASSERT_PUZZLE_ANNOUNCEMENT
           (sha256
-            (create_did_puzhash PROVIDER_SINGLETON_STRUCT provider_innerpuzhash)
+            (create_did_puzhash SINGLETON_MOD_HASH SINGLETON_LAUNCHER_HASH provider_id provider_innerpuzhash)
             (sha256
               my_coin_id
               (sha256tree new_metadata)
@@ -50,6 +62,6 @@
         )
       )
     )
-    (list Current_Owner () ())
+    (list Metadata_hash () ())
   )
 )

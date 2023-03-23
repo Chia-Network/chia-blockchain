@@ -159,18 +159,18 @@ def solve_tp_covenant_adapter(
 # Update w/ DID Transfer Program #
 ##################################
 def create_did_tp(
-    did_id: bytes32,
     singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
     singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
 ) -> Program:
     return NFT_DID_TP.curry(
-        (singleton_mod_hash, (did_id, singleton_launcher_hash)),
+        singleton_mod_hash,
+        singleton_launcher_hash,
     )
 
 
-def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32]]:
+def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
     if uncurried_puzzle.mod == NFT_DID_TP:
-        return (bytes32(uncurried_puzzle.args.at("frf").as_python()),)
+        return tuple()
     else:
         return None
 
@@ -252,6 +252,7 @@ class VCLineageProof(LineageProof, Streamable):
 
 def solve_std_vc_backdoor(
     launcher_id: bytes32,
+    provider_id: bytes32,
     metadata_hash: bytes32,
     tp_hash: bytes32,
     inner_puzzle_hash: bytes32,
@@ -266,7 +267,8 @@ def solve_std_vc_backdoor(
     """
     solution: Program = Program.to(
         [
-            Program.to(launcher_id).get_tree_hash(),
+            launcher_id,
+            provider_id,
             metadata_hash,
             tp_hash,
             STANDARD_BRICK_PUZZLE_HASH_HASH,
@@ -287,9 +289,12 @@ def solve_std_vc_backdoor(
 
 
 # Launching to a VC requires a OL with a transfer program that guarantees a () metadata on the next iteration
-# (mod (_ _ (tp)) (list () tp ()))
-# (c () (c 19 (q ())))
-GUARANTEED_NIL_TP: Program = Program.to([4, None, [4, 19, [1, None]]])
+# (mod (_ _ (provider tp)) (list (sha256 2 (sha256 1 provider) (sha256 1 ())) tp ()))
+# (c
+#   (sha256 (q . 2) (sha256 (q . 1) 19) (q . 0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a))
+#   (c 43 (q ()))
+# )
+GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff0bffff0102ffff0bffff0101ff1380ffff01a04bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a80ffff04ff2bffff01ff80808080")  # noqa
 OWNERSHIP_LAYER_LAUNCHER: Program = construct_ownership_layer(
     None,
     GUARANTEED_NIL_TP,
@@ -352,7 +357,7 @@ class VerifiedCredential:
         launcher_solution = Program.to([curried_eve_singleton_hash, uint64(1), None])
 
         # Create the final puzzle for the second launch
-        inner_transfer_program: Program = create_did_tp(provider_id)
+        inner_transfer_program: Program = create_did_tp()
         transfer_program: Program = create_tp_covenant_adapter(
             create_covenant_layer(
                 curried_eve_singleton_hash,
@@ -368,7 +373,7 @@ class VerifiedCredential:
             new_inner_puzzle_hash,
         ).get_tree_hash()
         ownership_layer_hash: bytes32 = construct_ownership_layer(
-            None,
+            Program.to((provider_id, None)).get_tree_hash(),
             transfer_program,
             wrapped_inner_puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(wrapped_inner_puzzle_hash)
@@ -377,7 +382,7 @@ class VerifiedCredential:
             ownership_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(ownership_layer_hash)
         launch_dpuz: Program = Program.to(
-            (1, [[51, wrapped_inner_puzzle_hash, uint64(1), [hint, new_inner_puzzle_hash]], [-10, transfer_program]])
+            (1, [[51, wrapped_inner_puzzle_hash, uint64(1), [hint, new_inner_puzzle_hash]], [-10, provider_id, transfer_program]])
         )
         second_launcher_solution = Program.to([launch_dpuz, None])
         second_launcher_coin: Coin = Coin(
@@ -443,7 +448,7 @@ class VerifiedCredential:
 
     def construct_ownership_layer(self) -> Program:
         return construct_ownership_layer(
-            self.proof_hash,
+            Program.to((self.proof_provider, self.proof_hash)).get_tree_hash(),
             self.construct_transfer_program(),
             self.wrap_inner_with_backdoor(),
         )
@@ -453,7 +458,7 @@ class VerifiedCredential:
             self.launcher_id,
             OWNERSHIP_LAYER_LAUNCHER,
         ).get_tree_hash()
-        inner_transfer_program: Program = create_did_tp(self.proof_provider)
+        inner_transfer_program: Program = create_did_tp()
 
         return create_tp_covenant_adapter(
             create_covenant_layer(
@@ -562,8 +567,7 @@ class VerifiedCredential:
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rrrf").at("rf").as_python())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
             proof_provider = bytes32(
-                uncurry_puzzle(uncurry_puzzle(uncurry_puzzle(magic_condition.at("rf")).args.at("f")).args.at("rrf"))
-                .args.at("frf")
+                magic_condition.at("rf")
                 .as_python()
             )
         else:
@@ -578,22 +582,22 @@ class VerifiedCredential:
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
-            if magic_condition.at("rrrff") == Program.to(None):
-                proof_hash_as_prog: Program = ownership_layer.args.at("rf")
+            if magic_condition.at("rrrfrrf") == Program.to(None):
+                proof_hash_as_prog: Program = magic_condition.at("rrrfrf")
             else:
-                proof_hash_as_prog = magic_condition.at("rrrfrrf")
+                new_metadata_param = magic_condition.at("rrrfrrrrf")
+                if new_metadata_param.atom is None:
+                    proof_hash_as_prog = new_metadata_param.rest()
+                else:
+                    proof_hash_as_prog = new_metadata_param
             proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.as_python())
 
-            # Dig to transfer program to get proof provider
             proof_provider = bytes32(
-                uncurry_puzzle(
-                    uncurry_puzzle(uncurry_puzzle(ownership_layer.args.at("rrf")).args.at("f")).args.at("rrf")
-                )
-                .args.at("frf")
+                magic_condition.at("rrrff")
                 .as_python()
             )
 
-            parent_proof_hash: Program = ownership_layer.args.at("rf")
+            parent_proof_hash: bytes32 = bytes32(ownership_layer.args.at("rf").atom)
             ownership_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=create_viral_backdoor(
@@ -603,7 +607,7 @@ class VerifiedCredential:
                 amount=uint64(parent_coin.amount),
                 parent_proof_hash=None
                 if parent_proof_hash == Program.to(None)
-                else bytes32(parent_proof_hash.as_python()),
+                else parent_proof_hash,
             )
 
         new_vc: _T_VerifiedCredential = cls(
@@ -626,6 +630,7 @@ class VerifiedCredential:
         self,
         new_proof_hash: Optional[bytes32],
         provider_innerpuzhash: bytes32,
+        new_proof_provider: Optional[bytes32] = None,
     ) -> Program:
         """
         Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
@@ -641,9 +646,11 @@ class VerifiedCredential:
                     self.launcher_id,
                 ],
                 [
+                    self.proof_provider,
+                    self.proof_hash,
                     provider_innerpuzhash,
                     self.coin.name(),
-                    new_proof_hash,
+                    Program.to((self.proof_provider, new_proof_hash)),
                     None,  # TP update is not allowed because then the singleton will leave the VC protocol
                 ],
             ]
@@ -663,7 +670,14 @@ class VerifiedCredential:
                     Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
                     self.launcher_id,
                 ],
-                [None] * 4,
+                [
+                    self.proof_provider,
+                    self.proof_hash,
+                    None,
+                    None,
+                    None,
+                    None,
+                ],
             ]
         )
         return magic_condition
@@ -673,6 +687,7 @@ class VerifiedCredential:
         inner_puzzle: Program,
         inner_solution: Program,
         new_proof_hash: Optional[bytes32] = None,
+        new_proof_provider: Optional[bytes32] = None,
     ) -> Tuple[Optional[bytes32], CoinSpend, "VerifiedCredential"]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
@@ -697,7 +712,7 @@ class VerifiedCredential:
         if new_proof_hash is not None:
             expected_announcement: Optional[bytes32] = std_hash(
                 self.coin.name()
-                + Program.to(new_proof_hash).get_tree_hash()
+                + Program.to((self.proof_provider, new_proof_hash)).get_tree_hash()
                 + Program.to(None).get_tree_hash()  # TP update is banned because singleton will leave the VC protocol
             )
         else:
@@ -739,6 +754,7 @@ class VerifiedCredential:
                         self.hidden_puzzle(),
                         solve_std_vc_backdoor(
                             self.launcher_id,
+                            self.proof_provider,
                             Program.to(self.proof_hash).get_tree_hash(),
                             self.construct_transfer_program().get_tree_hash(),
                             self.inner_puzzle_hash,
@@ -782,7 +798,7 @@ class VerifiedCredential:
                 self.coin.parent_coin_info,
                 self.wrap_inner_with_backdoor().get_tree_hash(),
                 uint64(self.coin.amount),
-                self.proof_hash,
+                Program.to((self.proof_provider, self.proof_hash)).get_tree_hash(),
             ),
             self.launcher_id,
             next_inner_puzzle_hash,
