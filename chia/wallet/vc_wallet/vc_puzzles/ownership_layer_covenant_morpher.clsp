@@ -7,12 +7,12 @@
     COVENANT_MOD_HASH
     OWNERSHIP_LAYER_MOD_HASH
     ADAPTER_MOD_HASH
-    COVENANT_INITIAL_PUZZLE_HASH_HASH
     SINGLETON_MOD_HASH
     SINGLETON_LAUNCHER_HASH
     TP_HASH
     ; curried second
     SELF_HASH  ; tree hash of all the other hashes above
+    COVENANT_INITIAL_PUZZLE_HASH ; Truth
     previous_inner_puzhash  ; Truth
     previous_metadata_hash
     my_singleton_id  ; no need to commit to this, our parent is guaranteed to be a singleton with the same ID as ours
@@ -33,7 +33,7 @@
       previous_metadata_hash
       (curry_hashes ADAPTER_MOD_HASH
         (curry_hashes COVENANT_MOD_HASH
-          COVENANT_INITIAL_PUZZLE_HASH_HASH
+          (sha256 1 COVENANT_INITIAL_PUZZLE_HASH)
           (curry_hashes SELF_HASH
             (sha256 1 SELF_HASH)
           )

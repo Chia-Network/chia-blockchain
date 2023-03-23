@@ -222,7 +222,6 @@ def solve_viral_backdoor(puzzle_reveal: Program, inner_solution: Program, hidden
 # MISC #
 ########
 def create_ownership_layer_covenant_morpher(
-    covenant_initial_puzzle_hash: bytes32,
     transfer_program_hash: bytes32,
 ) -> Program:
     """
@@ -232,7 +231,6 @@ def create_ownership_layer_covenant_morpher(
         COVENANT_LAYER_HASH,
         NFT_OWNERSHIP_LAYER_HASH,
         NFT_TP_COVENANT_ADAPTER_HASH,
-        Program.to(covenant_initial_puzzle_hash).get_tree_hash(),
         SINGLETON_MOD_HASH,
         SINGLETON_LAUNCHER_HASH,
         transfer_program_hash,
@@ -364,7 +362,6 @@ class VerifiedCredential:
             create_covenant_layer(
                 curried_eve_singleton_hash,
                 create_ownership_layer_covenant_morpher(
-                    curried_eve_singleton_hash,
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,
@@ -472,7 +469,6 @@ class VerifiedCredential:
             create_covenant_layer(
                 curried_eve_singleton_hash,
                 create_ownership_layer_covenant_morpher(
-                    curried_eve_singleton_hash,
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,

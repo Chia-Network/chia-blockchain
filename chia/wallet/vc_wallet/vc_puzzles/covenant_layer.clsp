@@ -17,7 +17,7 @@
       (sha256
         (f lineage_proof)
         (if (r (r lineage_proof))  ; different logic based on whether the lineage proof is 2 or 3 elements long
-            (a PARENT_MORPHER (c (f (r lineage_proof)) morpher_solution))
+            (a PARENT_MORPHER (c INITIAL_PUZZLE_HASH (c (f (r lineage_proof)) morpher_solution)))
             INITIAL_PUZZLE_HASH
         )
         (if (r (r lineage_proof))  ; different logic based on whether the lineage proof is 2 or 3 elements long
