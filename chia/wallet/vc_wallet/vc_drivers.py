@@ -170,7 +170,7 @@ def create_did_tp(
 
 def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
     if uncurried_puzzle.mod == NFT_DID_TP:
-        return tuple()
+        return ()
     else:
         return None
 
@@ -294,7 +294,9 @@ def solve_std_vc_backdoor(
 #   (sha256 (q . 2) (sha256 (q . 1) 19) (q . 0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a))
 #   (c 43 (q ()))
 # )
-GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff0bffff0102ffff0bffff0101ff1380ffff01a04bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a80ffff04ff2bffff01ff80808080")  # noqa
+GUARANTEED_NIL_TP: Program = Program.fromhex(
+    "ff04ffff0bffff0102ffff0bffff0101ff1380ffff01a04bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a80ffff04ff2bffff01ff80808080"  # noqa
+)
 OWNERSHIP_LAYER_LAUNCHER: Program = construct_ownership_layer(
     None,
     GUARANTEED_NIL_TP,
@@ -382,7 +384,13 @@ class VerifiedCredential:
             ownership_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(ownership_layer_hash)
         launch_dpuz: Program = Program.to(
-            (1, [[51, wrapped_inner_puzzle_hash, uint64(1), [hint, new_inner_puzzle_hash]], [-10, provider_id, transfer_program]])
+            (
+                1,
+                [
+                    [51, wrapped_inner_puzzle_hash, uint64(1), [hint, new_inner_puzzle_hash]],
+                    [-10, provider_id, transfer_program],
+                ],
+            )
         )
         second_launcher_solution = Program.to([launch_dpuz, None])
         second_launcher_coin: Coin = Coin(
@@ -566,10 +574,7 @@ class VerifiedCredential:
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rrrf").at("rf").as_python())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
-            proof_provider = bytes32(
-                magic_condition.at("rf")
-                .as_python()
-            )
+            proof_provider = bytes32(magic_condition.at("rf").as_python())
         else:
             ownership_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
 
@@ -592,10 +597,7 @@ class VerifiedCredential:
                     proof_hash_as_prog = new_metadata_param
             proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.as_python())
 
-            proof_provider = bytes32(
-                magic_condition.at("rrrff")
-                .as_python()
-            )
+            proof_provider = bytes32(magic_condition.at("rrrff").as_python())
 
             parent_proof_hash: bytes32 = bytes32(ownership_layer.args.at("rf").atom)
             ownership_lineage_proof = VCLineageProof(
@@ -605,9 +607,7 @@ class VerifiedCredential:
                     inner_puzzle_hash,
                 ).get_tree_hash(),
                 amount=uint64(parent_coin.amount),
-                parent_proof_hash=None
-                if parent_proof_hash == Program.to(None)
-                else parent_proof_hash,
+                parent_proof_hash=None if parent_proof_hash == Program.to(None) else parent_proof_hash,
             )
 
         new_vc: _T_VerifiedCredential = cls(

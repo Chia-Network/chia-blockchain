@@ -193,8 +193,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"  # noqa: E501
         )
         # Create it with mock singleton info
-        transfer_program: Program = create_did_tp(MOCK_LAUNCHER_ID, MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
-        assert match_did_tp(uncurry_puzzle(transfer_program)) == (MOCK_LAUNCHER_ID,)
+        transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
+        assert match_did_tp(uncurry_puzzle(transfer_program)) == ()
         ownership_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry(None, transfer_program)
 
         await sim.farm_block(ownership_puzzle.get_tree_hash())
