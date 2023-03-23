@@ -29,7 +29,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 # from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo
+from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo, DAORules
 from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
@@ -101,6 +101,7 @@ class DAOWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount_of_cats: uint64,
+        dao_rules: DAORules,
         filter_amount: uint64 = 1,
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
@@ -129,7 +130,7 @@ class DAOWallet:
         if amount_of_cats > bal:
             raise ValueError("Not enough balance")
 
-        self.dao_info = DAOInfo(
+        self.dao_info: DAOInfo = DAOInfo(
             bytes32([0] * 32),
             0,
             0,
@@ -140,6 +141,7 @@ class DAOWallet:
             0,
             filter_amount,
         )
+        self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.DAO.value, info_as_string
@@ -148,18 +150,16 @@ class DAOWallet:
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
 
-        attendance_required_percentage = uint64(10)
-        proposal_pass_percentage = uint64(10)
-        proposal_timelock = uint64(10)
         try:
-            spend_bundle = await self.generate_new_dao(
-                amount_of_cats, attendance_required_percentage, proposal_pass_percentage, proposal_timelock, fee
+            launcher_spend = await self.generate_new_dao(
+                amount_of_cats,
+                fee,
             )
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
 
-        if spend_bundle is None:
+        if launcher_spend is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
@@ -572,16 +572,15 @@ class DAOWallet:
     async def generate_new_dao(
         self,
         amount_of_cats: uint64,
-        attendance_required_percentage: uint64,
-        proposal_pass_percentage: uint64,  # reminder that this is between 0 - 10,000
-        proposal_timelock: uint64,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
+        Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher and eve coins.
+        The eve spend has to be completed in a separate tx using 'submit_eve_spend' once the number of blocks required by deo_rules.oracle_spend_delay has passed.
         This must be called under the wallet state manager lock
         """
 
-        if proposal_pass_percentage > 10000 or proposal_pass_percentage < 0:
+        if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
@@ -652,15 +651,7 @@ class DAOWallet:
 
         await self.save_info(dao_info)
 
-        dao_treasury_puzzle = get_treasury_puzzle(
-            launcher_coin.name(),
-            cat_tail_hash,
-            amount_of_cats,
-            attendance_required_percentage,
-            proposal_pass_percentage,
-            proposal_timelock,
-        )
-
+        dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules)
         full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
 
@@ -676,40 +667,23 @@ class DAOWallet:
 
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
-        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, 1)
-        future_parent = LineageProof(
-            eve_coin.parent_coin_info,
-            dao_treasury_puzzle.get_tree_hash(),
-            uint64(eve_coin.amount),
-        )
-        eve_parent = LineageProof(
+
+        launcher_proof = LineageProof(
             bytes32(launcher_coin.parent_coin_info),
-            bytes32(launcher_coin.puzzle_hash),
+            None,
             uint64(launcher_coin.amount),
         )
-        await self.add_parent(bytes32(eve_coin.parent_coin_info), eve_parent)
-        await self.add_parent(eve_coin.name(), future_parent)
+        await self.add_parent(launcher_coin.name(), launcher_proof)
 
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        eve_spend = await self.generate_treasury_eve_spend(
-            eve_coin,
-            full_treasury_puzzle,
-            dao_treasury_puzzle,
-            launcher_coin,
-        )
-
-        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-
-        # assert self.dao_info.origin_coin is not None
-        # assert self.dao_info.current_inner is not None
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
 
         treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),  # Should this be full_treasury_puzzle_hash?
-            # MH: I don't think so, the CAT Wallet doesn't include the CAT Layer
+            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),
             amount=uint64(1),
             fee_amount=fee,
             confirmed=False,
@@ -728,16 +702,17 @@ class DAOWallet:
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
-        current_coin = Coin(eve_coin.name(), full_treasury_puzzle.get_tree_hash(), eve_coin.amount)
-        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()], [self.wallet_id])
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
+
+        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
+        await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
             self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
-            current_coin,
+            eve_coin,
             dao_treasury_puzzle,
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
@@ -745,30 +720,70 @@ class DAOWallet:
         await self.save_info(dao_info)
         return full_spend
 
-    async def generate_treasury_eve_spend(
-        self, coin: Coin, full_puzzle: Program, innerpuz: Program, origin_coin: Coin
-    ) -> SpendBundle:
-        inner_sol = Program.to(
-            [
-                coin.amount,
-                0,  # Make a payment with relative change 0, just to spend the coin
-                innerpuz.get_tree_hash(),
-                [],  # A list of messages which the treasury will parrot - assert from the proposal and also create
-                0,  # If this variable is 0 then we do the "add_money" spend case
-                0,
-            ]
+    async def generate_treasury_eve_spend(self, fee: uint64 = uint64(0)) -> TransactionRecord:
+        """
+        Create the eve spend of the treasury
+        This can only be completed after a number of blocks > oracle_spend_delay have been farmed
+        """
+        full_treasury_puzzle = curry_singleton(
+            self.dao_info.treasury_id,
+            self.dao_info.current_treasury_innerpuz
         )
-        # full solution is (lineage_proof my_amount inner_solution)
+        full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
+        launcher_id, launcher_proof = self.dao_info.parent_info[0]
+        eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
+        inner_puz = self.dao_info.current_treasury_innerpuz
+        inner_sol = Program.to([0])
         fullsol = Program.to(
             [
-                [origin_coin.parent_coin_info, origin_coin.amount],
-                coin.amount,
+                launcher_proof.to_program(),
+                eve_coin.amount,
                 inner_sol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return unsigned_spend_bundle
+        eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
+        eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
+
+        eve_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=self.dao_info.current_treasury_innerpuz.get_tree_hash(),
+            amount=uint64(1),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=eve_spend_bundle,
+            additions=eve_spend_bundle.additions(),
+            removals=eve_spend_bundle.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=bytes32(token_bytes()),
+            memos=[],
+        )
+        regular_record = dataclasses.replace(eve_record, spend_bundle=None)
+        await self.wallet_state_manager.add_pending_transaction(regular_record)
+        await self.wallet_state_manager.add_pending_transaction(eve_record)
+
+        next_proof = LineageProof(
+            eve_coin.parent_coin_info,
+            inner_puz.get_tree_hash(),
+            eve_coin.amount,
+        )
+        next_coin = Coin(
+            eve_coin.name(),
+            eve_coin.puzzle_hash,
+            eve_coin.amount
+        )
+        await self.add_parent(next_coin.name(), next_proof)
+        await self.wallet_state_manager.add_interested_coin_ids([next_coin.name()], [self.wallet_id])
+
+        dao_info = dataclasses.replace(self.dao_info, current_treasury_coin=next_coin)
+        await self.save_info(dao_info)
+
+        return eve_record
+
 
     def generate_spend_proposal(self, p2_puzzle_hash, amount) -> Program:
         if amount > self.dao_info.current_treasury_coin.amount:

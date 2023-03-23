@@ -36,3 +36,14 @@ class DAOInfo(Streamable):
     current_treasury_innerpuz: Optional[Program]
     singleton_block_height: uint32  # the block height that the current treasury singleton was created in
     filter_below_vote_amount: uint64  # we ignore proposals with fewer votes than this - defaults to 1
+
+
+@streamable
+@dataclass(frozen=True)
+class DAORules(Streamable):
+    proposal_timelock: uint64
+    soft_close_length: uint64
+    attendance_required: uint64
+    pass_percentage: uint64
+    self_destruct_length: uint64
+    oracle_spend_delay: uint64

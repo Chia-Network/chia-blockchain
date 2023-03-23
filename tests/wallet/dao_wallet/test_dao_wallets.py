@@ -15,7 +15,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
-
+from chia.wallet.dao_wallet.dao_info import DAORules
 
 puzzle_hash_0 = bytes32(32 * b"0")
 
@@ -61,15 +61,24 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+    await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
 
     cat_amt = 2000
+    dao_rules = DAORules(
+        proposal_timelock = uint64(10),
+        soft_close_length = uint64(5),
+        attendance_required = uint64(1000), # 10%
+        pass_percentage =  uint64(5100), # 51%
+        self_destruct_length = uint64(20),
+        oracle_spend_delay = uint64(10),
+    )
 
     async with wallet_node_0.wallet_state_manager.lock:
         dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
             wallet_node_0.wallet_state_manager,
             wallet,
             uint64(cat_amt * 2),
+            dao_rules,
         )
         assert dao_wallet_0 is not None
         assert dao_wallet_0.new_peak_call_count == 0
@@ -78,9 +87,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
     tx_record = tx_queue[0]
     await full_node_api.process_transaction_records(records=[tx_record])
-
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # Check the spend was successful
     treasury_id = dao_wallet_0.dao_info.treasury_id
@@ -90,6 +97,25 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         True,
         treasury_id,
     )
+
+    # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
+    for i in  range(1, 11):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    async with wallet_node_0.wallet_state_manager.lock:
+        await dao_wallet_0.generate_treasury_eve_spend()
+    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    tx_record = tx_queue[0]
+    await full_node_api.process_transaction_records(records=[tx_record])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    eve_coin = tx_record.removals[0]
+    await time_out_assert(
+        60,
+        dao_wallet_0.is_spend_retrievable,
+        True,
+        eve_coin.name(),
+    )
+    breakpoint()
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]

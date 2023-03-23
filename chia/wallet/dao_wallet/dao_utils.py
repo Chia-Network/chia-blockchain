@@ -9,6 +9,7 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_fullpuz
+from chia.wallet.dao_wallet.dao_info import DAORules
 
 # from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
@@ -51,7 +52,7 @@ def create_new_proposal_puzzle(
     treasury_id: bytes32,
     proposed_puzzle_hash: bytes32,
 ) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     puzzle: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD_HASH,
@@ -69,29 +70,16 @@ def create_new_proposal_puzzle(
     return puzzle
 
 
-def get_treasury_puzzle(
-    treasury_id: bytes32,
-    proposal_timelock: uint64,
-    soft_close_length: uint64,
-    attendance_required_percentage: uint64,
-    proposal_pass_percentage: uint64,
-    proposal_self_destruct_length: uint64,
-    oracle_spend_delay: uint64    
-) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_PUZHASH)))
+def get_treasury_puzzle(dao_rules: DAORules) -> Program:
     puzzle = DAO_TREASURY_MOD.curry(
-        Program.to(
-            [
-                DAO_TREASURY_MOD_HASH,
-                DAO_PROPOSAL_VALIDATOR_MOD,
-                proposal_timelock,
-                soft_close_length,
-                attendance_required_percentage,
-                proposal_pass_percentage,
-                proposal_self_destruct_length,
-                oracle_spend_delay,
-            ]
-        )
+        DAO_TREASURY_MOD_HASH,
+        DAO_PROPOSAL_VALIDATOR_MOD,
+        dao_rules.proposal_timelock,
+        dao_rules.soft_close_length,
+        dao_rules.attendance_required,
+        dao_rules.pass_percentage,
+        dao_rules.self_destruct_length,
+        dao_rules.oracle_spend_delay,
     )
     return puzzle
 
@@ -131,7 +119,7 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
     (
         _PROPOSAL_MOD_HASH,
         _SINGLETON_MOD_HASH,
-        _SINGLETON_LAUNCHER_PUZHASH,
+        _SINGLETON_LAUNCHER_HASH,
         _LOCKUP_MOD_HASH,
         _CAT_MOD_HASH,
         _CAT_TAIL_HASH,
@@ -146,7 +134,7 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
     (
         _PROPOSAL_MOD_HASH,
         _SINGLETON_MOD_HASH,
-        _SINGLETON_LAUNCHER_PUZHASH,
+        _SINGLETON_LAUNCHER_HASH,
         _LOCKUP_MOD_HASH,
         _CAT_MOD_HASH,
         _CAT_TAIL_HASH,
@@ -165,7 +153,7 @@ def get_proposal_puzzle(
     spend_or_update_flag: str,
     innerpuz: Program,
 ) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     puzzle = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD_HASH,
@@ -188,7 +176,7 @@ def get_proposal_timer_puzzle(
     proposal_id: bytes32,
     treasury_id: bytes32,
 ) -> Program:
-    parent_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
+    parent_singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     puzzle: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
@@ -334,13 +322,13 @@ def uncurry_lockup(lockup_puzzle: Program) -> Program:
 
 def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program:
     puzzle = DAO_CAT_TAIL.curry(
-        genesis_coin_id, treasury_id, SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_PUZHASH, DAO_PROPOSAL_MOD_HASH
+        genesis_coin_id, treasury_id, SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH, DAO_PROPOSAL_MOD_HASH
     )
     return puzzle
 
 
 def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_PUZHASH)))
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
 
 
