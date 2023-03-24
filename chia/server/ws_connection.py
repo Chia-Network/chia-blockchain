@@ -261,9 +261,10 @@ class WSChiaConnection:
     def log_stack(self, message: str) -> None:
         lines = [
             f"{self.peer_host} -- {line}"
-            for line in ["WSChiaConnection.log_stack():", message + "\n", *traceback.format_stack()]
+            for batch in ["WSChiaConnection.log_stack():", message, *traceback.format_stack()]
+            for line in batch.splitlines()
         ]
-        self.log.debug("".join(lines))
+        self.log.debug("\n".join(lines))
 
     async def close(
         self,
@@ -633,7 +634,9 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+            self.log_stack(
+                message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+            )
             asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
@@ -642,12 +645,16 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+            self.log_stack(
+                message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+            )
             asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
-                self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+                self.log_stack(
+                    message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+                )
                 asyncio.create_task(self.close(log_stack=False))
                 await asyncio.sleep(3)
                 return None
@@ -670,7 +677,10 @@ class WSChiaConnection:
                     )
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     self.log_stack(
-                        message=f"WSChiaConnection._read_one_message() closing due to {message.type} (and more)"
+                        message=(
+                            "WSChiaConnection._read_one_message() closing due to"
+                            + f" {WSMsgType(message.type).name} (and more)"
+                        ),
                     )
                     asyncio.create_task(self.close(300, log_stack=False))
                     await asyncio.sleep(3)
@@ -686,17 +696,24 @@ class WSChiaConnection:
             self.log.error(f"WebSocket Error: {message}")
             if message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
                 self.log_stack(
-                    message=f"WSChiaConnection._read_one_message() closing due to {message.type} {message.data.code}"
+                    message=(
+                        "WSChiaConnection._read_one_message() closing due to"
+                        + f" {WSMsgType(message.type).name} {message.data.code}"
+                    ),
                 )
                 asyncio.create_task(self.close(300, log_stack=False))
             else:
-                self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+                self.log_stack(
+                    message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+                )
                 asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
-            self.log_stack(message="WSChiaConnection._read_one_message() closing due to unexpected message type")
+            self.log_stack(
+                message=f"WSChiaConnection._read_one_message() closing due to unexpected message type {message.type}"
+            )
             asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         return None
