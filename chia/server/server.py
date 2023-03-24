@@ -478,7 +478,8 @@ class ChiaServer:
                 connection_type_str = connection.connection_type.name.lower()
             self.log.info(f"Connected with {connection_type_str} {target_node}")
             if is_feeler:
-                asyncio.create_task(connection.close())
+                connection.log_stack(message="ChiaServer.start_client() closing since it is a feeler connection")
+                asyncio.create_task(connection.close(log_stack=False))
             return True
         except client_exceptions.ClientConnectorError as e:
             self.log.info(f"{e}")

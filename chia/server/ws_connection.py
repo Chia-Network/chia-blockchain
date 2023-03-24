@@ -258,24 +258,30 @@ class WSChiaConnection:
         self.inbound_task = asyncio.create_task(self.inbound_handler())
         self.incoming_message_task = asyncio.create_task(self.incoming_message_handler())
 
+    def log_stack(self, message: str) -> None:
+        lines = [
+            f"{self.peer_host} -- {line}"
+            for line in ["WSChiaConnection.log_stack():", message + "\n", *traceback.format_stack()]
+        ]
+        self.log.debug("".join(lines))
+
     async def close(
         self,
         ban_time: int = 0,
         ws_close_code: WSCloseCode = WSCloseCode.OK,
         error: Optional[Err] = None,
+        log_stack: bool = True,
     ) -> None:
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
-        lines = [
-            f"{self.peer_host} -- {line}"
-            for line in [
-                f"entering WSChiaConnection.close(ban_time={ban_time}, ws_close_code={ws_close_code}, error={error})\n",
-                *traceback.format_stack(),
-            ]
-        ]
-        self.log.debug("".join(lines))
+        if log_stack:
+            stack_message = (
+                f"entering WSChiaConnection.close(ban_time={ban_time},"
+                + f" ws_close_code={ws_close_code}, error={error})"
+            )
+            self.log_stack(message=stack_message)
 
         if self.closed:
             state = "already closed"
@@ -611,7 +617,8 @@ class WSChiaConnection:
         except asyncio.TimeoutError:
             # self.ws._closed if we didn't receive a ping / pong
             if self.ws.closed:
-                asyncio.create_task(self.close())
+                self.log_stack(message="WSChiaCOnnection._read_one_message() closing since websocket is closed")
+                asyncio.create_task(self.close(log_stack=False))
                 await asyncio.sleep(3)
                 return None
             return None
@@ -626,7 +633,8 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            asyncio.create_task(self.close())
+            self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+            asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.debug(
@@ -634,11 +642,13 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            asyncio.create_task(self.close())
+            self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+            asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
-                asyncio.create_task(self.close())
+                self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+                asyncio.create_task(self.close(log_stack=False))
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.BINARY:
@@ -659,7 +669,10 @@ class WSChiaConnection:
                         f"message: {message_type}"
                     )
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
-                    asyncio.create_task(self.close(300))
+                    self.log_stack(
+                        message=f"WSChiaConnection._read_one_message() closing due to {message.type} (and more)"
+                    )
+                    asyncio.create_task(self.close(300, log_stack=False))
                     await asyncio.sleep(3)
                     return None
                 else:
@@ -672,14 +685,19 @@ class WSChiaConnection:
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
             if message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
-                asyncio.create_task(self.close(300))
+                self.log_stack(
+                    message=f"WSChiaConnection._read_one_message() closing due to {message.type} {message.data.code}"
+                )
+                asyncio.create_task(self.close(300, log_stack=False))
             else:
-                asyncio.create_task(self.close())
+                self.log_stack(message=f"WSChiaConnection._read_one_message() closing due to {message.type}")
+                asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
-            asyncio.create_task(self.close())
+            self.log_stack(message="WSChiaConnection._read_one_message() closing due to unexpected message type")
+            asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         return None
 
