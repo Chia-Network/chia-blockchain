@@ -111,7 +111,6 @@ class WalletNode:
     peer_task: Optional[asyncio.Task] = None
     logged_in: bool = False
     _keychain_proxy: Optional[KeychainProxy] = None
-    height_to_time: Dict[uint32, uint64] = dataclasses.field(default_factory=dict)
     # Peers that we have long synced to
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
@@ -1009,17 +1008,12 @@ class WalletNode:
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
         a transaction block
         """
-        if height in self.height_to_time:
-            return self.height_to_time[height]
-
         for cache in self.untrusted_caches.values():
             cache_ts: Optional[uint64] = cache.get_height_timestamp(height)
             if cache_ts is not None:
                 return cache_ts
 
-        peers: List[WSChiaConnection] = self.get_full_node_peers_in_order()
-        last_tx_block: Optional[HeaderBlock] = None
-        for peer in peers:
+        for peer in self.get_full_node_peers_in_order():
             last_tx_block = await fetch_last_tx_from_peer(height, peer)
             if last_tx_block is None:
                 continue
