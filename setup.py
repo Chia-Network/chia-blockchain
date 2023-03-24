@@ -119,7 +119,6 @@ kwargs = dict(
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",
-        "chia.wallet.settings",
         "chia.wallet.trading",
         "chia.wallet.util",
         "chia.ssl",
