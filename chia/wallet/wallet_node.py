@@ -36,7 +36,6 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof
 from chia.util.chunks import chunks
 from chia.util.config import (
@@ -95,26 +94,18 @@ class WalletNode:
 
     log: logging.Logger = logging.getLogger(__name__)
 
-    # Normal operation data
-    cached_blocks: Dict = dataclasses.field(default_factory=dict)
-    future_block_hashes: Dict = dataclasses.field(default_factory=dict)
-
     # Sync data
-    proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[StateChangedProtocol] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
     _weight_proof_handler: Optional[WalletWeightProofHandler] = None
     _server: Optional[ChiaServer] = None
-    wsm_close_task: Optional[asyncio.Task] = None
     sync_task: Optional[asyncio.Task] = None
     logged_in_fingerprint: Optional[int] = None
-    peer_task: Optional[asyncio.Task] = None
     logged_in: bool = False
     _keychain_proxy: Optional[KeychainProxy] = None
     # Peers that we have long synced to
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
-    wallet_peers_initialized: bool = False
     valid_wp_cache: Dict[bytes32, Any] = dataclasses.field(default_factory=dict)
     untrusted_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
     # in Untrusted mode wallet might get the state update before receiving the block
@@ -128,7 +119,6 @@ class WalletNode:
     # Duration in seconds
     wallet_tx_resend_timeout_secs: int = 1800
     _new_peak_queue: Optional[NewPeakQueue] = None
-    full_node_peer: Optional[PeerInfo] = None
 
     _shut_down: bool = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None
@@ -387,7 +377,6 @@ class WalletNode:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
             if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
                 await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
-                self.wsm_close_task = None
         return True
 
     def _close(self):
