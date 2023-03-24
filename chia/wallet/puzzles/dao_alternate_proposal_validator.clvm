@@ -7,8 +7,6 @@
     LOCKUP_MOD_HASH
     TREASURY_MOD_HASH
     CAT_TAIL_HASH
-    SPEND_P2_SINGLETON_MOD_HASH
-    P2_SINGLETON_PUZHASH
     attendance_required
     pass_margin  ; this is a percentage 0 - 10,000 - 51% would be 5100
     (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag)
@@ -16,7 +14,6 @@
       proposal_id
       total_votes
       yes_votes
-      spend_amount
     )
     conditions
   )
@@ -59,8 +56,8 @@
                                      (sha256 ONE proposal_yes_votes)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE CAT_TAIL_HASH)
-                       		     (sha256 ONE LOCKUP_MOD_HASH)
-                        	     (sha256 ONE TREASURY_MOD_HASH)
+                             		     (sha256 ONE LOCKUP_MOD_HASH)
+                              	     (sha256 ONE TREASURY_MOD_HASH)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
@@ -68,32 +65,26 @@
     )
   )
 
-  (defun-inline calculate_safe_payment_hash (
-    SPEND_P2_SINGLETON_MOD_HASH
-    conditions
-    spend_amount
-    p2_singleton_puzhash
-    )
-    (puzzle-hash-of-curried-function SPEND_P2_SINGLETON_MOD_HASH
-    				     (sha256 ONE p2_singleton_puzhash)
-				     (sha256 ONE spend_amount)
-				     (sha256tree conditions)
-    )
-  )
-
-  (defun check_spend_conditions (SPEND_P2_SINGLETON_MOD_HASH conditions spend_amount p2_singleton_puzhash delegated_puzzle_hash)
-    (assert
-      (=
-        delegated_puzzle_hash
-        (calculate_safe_payment_hash SPEND_P2_SINGLETON_MOD_HASH (r (r (r conditions))) spend_amount p2_singleton_puzhash)
+  (defun assert_recreating_self (SINGLETON_STRUCT conditions)
+    (if conditions
+      (c
+        (f conditions)
+        (if (= (f (f conditions)) CREATE_COIN)
+          (if (logand (f (r (r (f conditions)))) 1)
+            (c
+              (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r (f conditions)))))
+              (assert_recreating_self SINGLETON_STRUCT (r conditions))
+            )
+            (assert_recreating_self SINGLETON_STRUCT (r conditions))
+          )
+          (assert_recreating_self SINGLETON_STRUCT (r conditions))
+        )
       )
-      ;; return the conditions
-      conditions
+      ()
     )
   )
 
   (defun check_update_conditions (SINGLETON_STRUCT conditions)
-    ; QUESTION: Is this only used for updating the treasury?
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (c
@@ -123,7 +114,7 @@
 
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
-    (> total_votes attendance_required)  ; TODO: we might want to change this to storing total cats and calculating like below
+    (> total_votes attendance_required)  ; TODO: we might want to change this to storing total cats and calculating like with yes votes
     (> yes_votes (calculate_win_percentage total_votes pass_margin))
     (=
       announcement_source
@@ -147,12 +138,12 @@
     )
     ; then execute the check method depending on whether we're in spend, update, or dangerous mode
     (if (= spend_or_update_flag "s")
-      (check_spend_conditions SPEND_P2_SINGLETON_MOD_HASH conditions spend_amount P2_SINGLETON_PUZHASH delegated_puzzle_hash)
+      (assert_recreating_self SINGLETON_STRUCT conditions)
       (if (= spend_or_update_flag "u")
         (check_update_conditions SINGLETON_STRUCT conditions ())
       	(if (= spend_or_update_flag "d")
       	  (check_dangerous_conditions SINGLETON_STRUCT conditions)
-      	  ()
+      	  (x)  ; unrecognised proposal type indentifier
       	)
       )
     )

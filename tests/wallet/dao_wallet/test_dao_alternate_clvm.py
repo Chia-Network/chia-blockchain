@@ -388,7 +388,6 @@ def test_validator() -> None:
         DAO_TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         SPEND_P2_SINGLETON_MOD_HASH,
-        p2_singleton_puzhash,
     )
 
     # (announcement_source delegated_puzzle_hash announcement_args)
@@ -498,7 +497,6 @@ def test_spend_p2_singleton() -> None:
         DAO_TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         SPEND_P2_SINGLETON_MOD_HASH,
-        p2_singleton_puzhash,
     )
     proposal: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
@@ -553,7 +551,6 @@ def test_treasury() -> None:
         DAO_TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         SPEND_P2_SINGLETON_MOD_HASH,
-        p2_singleton_puzhash,
     )
 
     # PROPOSAL_VALIDATOR
@@ -735,7 +732,6 @@ def test_proposal_innerpuz() -> None:
         DAO_TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         SPEND_P2_SINGLETON_MOD_HASH,
-        p2_singleton_puzhash,
     )
 
     treasury_inner_puz: Program = DAO_TREASURY_MOD.curry(
