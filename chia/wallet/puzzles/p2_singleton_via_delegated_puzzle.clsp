@@ -1,4 +1,10 @@
-(mod (SINGLETON_STRUCT singleton_inner_puzhash delegated_puzzle delegated_solution)
+(mod (
+  SINGLETON_STRUCT
+  singleton_inner_puzhash
+  delegated_puzzle
+  delegated_solution
+  my_id
+)
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -12,9 +18,18 @@
 
 
   (c
-    (list ASSERT_PUZZLE_ANNOUNCEMENT (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzhash) (sha256tree delegated_puzzle))
+    (list
+      ASSERT_PUZZLE_ANNOUNCEMENT
+      (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzhash)
+      (sha256tree (list my_id (sha256tree delegated_puzzle)))
+    )
     (c
       (list CREATE_COIN_ANNOUNCEMENT '$')
-      (a delegated_puzzle delegated_solution))
+      (c
+        (list ASSERT_MY_ID my_id)
+        (a delegated_puzzle delegated_solution)
+      )
+    )
+
   )
 )
