@@ -10,7 +10,7 @@
     SINGLETON_LAUNCHER_HASH_HASH
     OWNERSHIP_LAYER_MOD_HASH
     VIRAL_BACKDOOR_MOD_HASH
-    DEFAULT_TRANSFER_PROGRAM
+    DEFAULT_TRANSFER_PROGRAM_HASH
     ; most of the specific information is solved rather than curried in because we don't care about committing to it
     launcher_id
     provider_id
@@ -67,7 +67,7 @@
         provider_innerpuzhash
         my_coin_id
         new_metadata
-        DEFAULT_TRANSFER_PROGRAM
+        DEFAULT_TRANSFER_PROGRAM_HASH
       )
     )
   )

@@ -98,7 +98,7 @@ STANDARD_BRICK_PUZZLE: Program = load_clvm_maybe_recompile(
     Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
     NFT_OWNERSHIP_LAYER_HASH,
     VIRAL_BACKDOOR_HASH,
-    ACS_TRANSFER_PROGRAM,
+    ACS_TRANSFER_PROGRAM.get_tree_hash(),
 )
 STANDARD_BRICK_PUZZLE_HASH: bytes32 = STANDARD_BRICK_PUZZLE.get_tree_hash()
 STANDARD_BRICK_PUZZLE_HASH_HASH: bytes32 = Program.to(STANDARD_BRICK_PUZZLE_HASH).get_tree_hash()
@@ -406,7 +406,7 @@ class VerifiedCredential:
                 [
                     [51, wrapped_inner_puzzle_hash, uint64(1), memos],
                     [1, new_inner_puzzle_hash],
-                    [-10, provider_id, transfer_program],
+                    [-10, provider_id, transfer_program.get_tree_hash()],
                 ],
             )
         )
@@ -730,7 +730,7 @@ class VerifiedCredential:
             expected_announcement: Optional[bytes32] = std_hash(
                 self.coin.name()
                 + Program.to((self.proof_provider, new_proof_hash)).get_tree_hash()
-                + Program.to(None).get_tree_hash()  # TP update is banned because singleton will leave the VC protocol
+                + b""  # TP update is banned because singleton will leave the VC protocol
             )
         else:
             expected_announcement = None

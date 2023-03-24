@@ -14,7 +14,7 @@
       provider_innerpuzhash
       my_coin_id
       new_metadata
-      new_transfer_program
+      new_transfer_program_hash
     )
   )
 
@@ -43,11 +43,11 @@
     )
   )
 
-  ; Returning (new_metadata new_transfer_program conditions)
+  ; Returning (new_metadata new_transfer_program_hash conditions)
   (if provider_innerpuzhash
     (list
       (if new_metadata (sha256tree new_metadata) ())
-      (i new_transfer_program new_transfer_program ())
+      (i new_transfer_program_hash new_transfer_program_hash ())
       (list
         (list ASSERT_MY_COIN_ID my_coin_id)
         (list ASSERT_PUZZLE_ANNOUNCEMENT
@@ -56,7 +56,7 @@
             (sha256
               my_coin_id
               (sha256tree new_metadata)
-              (sha256tree new_transfer_program)
+              new_transfer_program_hash
             )
           )
         )
