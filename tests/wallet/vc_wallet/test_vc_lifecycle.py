@@ -797,3 +797,5 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             )
             > 0
         )
+
+        raise ValueError("Don't remove this until the ownership layer for NFTs is changed back to v1")
