@@ -578,7 +578,7 @@ class TestCATTrades:
         bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
         program = simple_solution_generator(bundle)
         result: NPCResult = get_name_puzzle_conditions(
-            program, INFINITE_COST, cost_per_byte=0, mempool_mode=True, height=softfork_height
+            program, INFINITE_COST, mempool_mode=True, height=softfork_height
         )
         assert result.error is None
 

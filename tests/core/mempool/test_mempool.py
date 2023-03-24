@@ -1970,9 +1970,7 @@ def generator_condition_tester(
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
     generator = BlockGenerator(program, [], [])
     print(f"len: {len(bytes(program))}")
-    npc_result: NPCResult = get_name_puzzle_conditions(
-        generator, max_cost, cost_per_byte=COST_PER_BYTE, mempool_mode=mempool_mode, height=height
-    )
+    npc_result: NPCResult = get_name_puzzle_conditions(generator, max_cost, mempool_mode=mempool_mode, height=height)
     return npc_result
 
 
@@ -2151,7 +2149,7 @@ class TestGeneratorConditions:
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
+            generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 2

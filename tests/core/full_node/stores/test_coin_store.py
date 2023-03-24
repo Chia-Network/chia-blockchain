@@ -96,11 +96,7 @@ class TestCoinStoreWithBlocks:
                     if block.transactions_generator is not None:
                         block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [], [])
                         npc_result = get_name_puzzle_conditions(
-                            block_gen,
-                            bt.constants.MAX_BLOCK_COST_CLVM,
-                            cost_per_byte=bt.constants.COST_PER_BYTE,
-                            mempool_mode=False,
-                            height=softfork_height,
+                            block_gen, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:

@@ -60,7 +60,6 @@ def validate_clvm_and_signature(
     the NPCResult and a cache of the new pairings validated (if not error)
     """
 
-    cost_per_byte = constants.COST_PER_BYTE
     additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
 
     try:
@@ -68,7 +67,7 @@ def validate_clvm_and_signature(
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True, constants=constants, height=height
+            program, max_cost, mempool_mode=True, constants=constants, height=height
         )
 
         if result.error is not None:
