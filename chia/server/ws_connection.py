@@ -268,10 +268,24 @@ class WSChiaConnection:
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
+        lines = [
+            f"{self.peer_host} -- {line}"
+            for line in [
+                f"entering WSChiaConnection.close(ban_time={ban_time}, ws_close_code={ws_close_code}, error={error})\n",
+                *traceback.format_stack(),
+            ]
+        ]
+        self.log.debug("".join(lines))
+
+        if self.closed:
+            state = "already closed"
+        else:
+            state = "not yet closed"
+        self.log.debug(f"Closing connection for {self.peer_host} ({state})")
+
         if self.closed:
             # always try to call the callback even for closed connections
             with log_exceptions(self.log, consume=True):
-                self.log.debug(f"Closing already closed connection for {self.peer_host}")
                 if self.close_callback is not None:
                     self.close_callback(self, ban_time, closed_connection=True)
             self._close_event.set()
