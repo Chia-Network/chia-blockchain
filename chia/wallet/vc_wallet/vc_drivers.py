@@ -331,7 +331,7 @@ class VerifiedCredential:
         origin_coin: Coin,
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
-        hint: bytes32,
+        memos: List[bytes32],
     ) -> Tuple[Program, List[CoinSpend], _T_VerifiedCredential]:
         """
         Launch a VC.
@@ -340,7 +340,7 @@ class VerifiedCredential:
         change will automatically go back to the coin's puzzle hash.
         provider_id: The DID of the proof provider (the entity who is responsible for adding/removing proofs to the vc)
         new_inner_puzzle_hash: the innermost puzzle hash once the VC is created
-        hint: The first memo to use (other memos are spoken for)
+        memos: The memos to use on the payment to the singleton
 
         Returns a delegated puzzle to run (with any solution), a list of spends to push with the origin transaction,
         and an instance of this class representing the expected state after all relevant spends have been pushed and
@@ -384,7 +384,8 @@ class VerifiedCredential:
             (
                 1,
                 [
-                    [51, wrapped_inner_puzzle_hash, uint64(1), [hint, new_inner_puzzle_hash]],
+                    [51, wrapped_inner_puzzle_hash, uint64(1), memos],
+                    [1, new_inner_puzzle_hash],
                     [-10, provider_id, transfer_program],
                 ],
             )
@@ -565,10 +566,10 @@ class VerifiedCredential:
             dsol: Program = solution.at("rrf").at("f").at("rf")
 
             conditions: Iterator[Program] = dpuz.run(dsol).as_iter()
-            new_singleton_condition: Program = next(
-                c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
+            remark_condition: Program = next(
+                c for c in conditions if c.at("f").as_int() == 1
             )
-            inner_puzzle_hash = bytes32(new_singleton_condition.at("rrrf").at("rf").as_python())
+            inner_puzzle_hash = bytes32(remark_condition.at("rf").as_python())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
             proof_provider = bytes32(magic_condition.at("rf").as_python())
         else:
@@ -578,7 +579,7 @@ class VerifiedCredential:
             inner_puzzle: Program = solution.at("rrf").at("f").at("rf")
             inner_solution: Program = solution.at("rrf").at("f").at("rrf")
             conditions = inner_puzzle.run(inner_solution).as_iter()
-            new_singleton_condition = next(
+            new_singleton_condition: Program = next(
                 c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
