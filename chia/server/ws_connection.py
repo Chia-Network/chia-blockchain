@@ -251,6 +251,7 @@ class WSChiaConnection:
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
+            self.version = inbound_handshake.software_version
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
@@ -379,7 +380,8 @@ class WSChiaConnection:
             if self.received_message_callback is not None:
                 await self.received_message_callback(self)
             self.log.debug(
-                f"<- {ProtocolMessageTypes(full_message.type).name} from peer {self.peer_node_id} {self.peer_host}"
+                f"<- {ProtocolMessageTypes(full_message.type).name} from peer"
+                + f" {self.peer_node_id} {self.peer_host} {self.version!r}"
             )
             message_type = ProtocolMessageTypes(full_message.type).name
 
@@ -562,7 +564,9 @@ class WSChiaConnection:
         if message.id in self.request_results:
             result = self.request_results[message.id]
             assert result is not None
-            self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
+            self.log.debug(
+                f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port} {self.version!r}"
+            )
             self.request_results.pop(message.id)
 
         return result
@@ -609,7 +613,10 @@ class WSChiaConnection:
                 )
 
         await self.ws.send_bytes(encoded)
-        self.log.debug(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.debug(
+            f"-> {ProtocolMessageTypes(message.type).name} to peer"
+            + f" {self.peer_host} {self.peer_node_id} {self.version!r}"
+        )
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
