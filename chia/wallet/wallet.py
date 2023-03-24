@@ -18,7 +18,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -117,8 +117,8 @@ class Wallet:
         return uint128(total_amount)
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.STANDARD_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.STANDARD_WALLET
 
     def id(self) -> uint32:
         return self.wallet_id

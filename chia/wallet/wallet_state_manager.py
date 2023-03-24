@@ -38,7 +38,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -340,7 +340,7 @@ class WalletStateManager:
                 intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
                 intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(self.private_key)
                 for index in range(start_index, last_index):
-                    if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
+                    if target_wallet.type() == WalletType.POOLING_WALLET:
                         continue
 
                     # Hardened
@@ -356,7 +356,7 @@ class WalletStateManager:
                             uint32(index),
                             puzzlehash,
                             pubkey,
-                            WalletType(target_wallet.type()),
+                            target_wallet.type(),
                             uint32(target_wallet.id()),
                             True,
                         )
@@ -378,7 +378,7 @@ class WalletStateManager:
                             uint32(index),
                             puzzlehash_unhardened,
                             pubkey_unhardened,
-                            WalletType(target_wallet.type()),
+                            target_wallet.type(),
                             uint32(target_wallet.id()),
                             False,
                         )
@@ -770,7 +770,7 @@ class WalletStateManager:
                     self, self.main_wallet, bytes(tail_hash).hex()[2:]
                 )
                 wallet_id = cat_wallet.id()
-                wallet_type = WalletType(cat_wallet.type())
+                wallet_type = cat_wallet.type()
             else:
                 # Found unacknowledged CAT, save it in the database.
                 await self.interested_store.add_unacknowledged_token(
@@ -862,7 +862,7 @@ class WalletStateManager:
                     assert isinstance(wallet, DIDWallet)
                     assert wallet.did_info.origin_coin is not None
                     if origin_coin.name() == wallet.did_info.origin_coin.name():
-                        return wallet.id(), WalletType(wallet.type())
+                        return wallet.id(), wallet.type()
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
                 self.main_wallet,
@@ -872,7 +872,7 @@ class WalletStateManager:
                 f"DID {encode_puzzle_hash(launch_id, AddressType.DID.hrp(self.config))}",
             )
             wallet_id = did_wallet.id()
-            wallet_type = WalletType(did_wallet.type())
+            wallet_type = did_wallet.type()
             self.state_changed("wallet_created", wallet_id, {"did_id": did_wallet.get_my_DID()})
         return wallet_id, wallet_type
 
@@ -1080,7 +1080,7 @@ class WalletStateManager:
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
                                 wallet_id = potential_dl.id()
-                                wallet_type = WalletType(potential_dl.type())
+                                wallet_type = potential_dl.type()
 
                     if wallet_id is None or wallet_type is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
@@ -1380,7 +1380,7 @@ class WalletStateManager:
                                     uint32(coin_state.spent_height),
                                     [],
                                     pool_wallet.id(),
-                                    WalletType(pool_wallet.type()),
+                                    pool_wallet.type(),
                                     peer,
                                     coin_name,
                                 )
@@ -1447,8 +1447,7 @@ class WalletStateManager:
             if wallet_id not in self.wallets.keys():
                 self.log.warning(f"Do not have wallet {wallet_id} for puzzle_hash {puzzle_hash}")
                 return None
-            wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
-            return uint32(wallet_id), wallet_type
+            return uint32(wallet_id), self.wallets[uint32(wallet_id)].type()
         return None
 
     async def coin_added(
@@ -1789,7 +1788,7 @@ class WalletStateManager:
 
     async def new_peak(self, peak: wallet_protocol.NewPeakWallet):
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == uint8(WalletType.POOLING_WALLET):
+            if wallet.type() == WalletType.POOLING_WALLET:
                 assert isinstance(wallet, PoolWallet)
                 await wallet.new_peak(uint64(peak.height))
         current_time = int(time.time())
