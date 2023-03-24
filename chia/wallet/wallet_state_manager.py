@@ -216,35 +216,36 @@ class WalletStateManager:
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
-            if wallet_info.type == WalletType.STANDARD_WALLET:
+            wallet_type = WalletType(wallet_info.type)
+            if wallet_type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(self, wallet_info)
-            elif wallet_info.type == WalletType.CAT:
+            elif wallet_type == WalletType.CAT:
                 wallet = await CATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.DECENTRALIZED_ID:
+            elif wallet_type == WalletType.DECENTRALIZED_ID:
                 wallet = await DIDWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.NFT:
+            elif wallet_type == WalletType.NFT:
                 wallet = await NFTWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.POOLING_WALLET:
+            elif wallet_type == WalletType.POOLING_WALLET:
                 wallet = await PoolWallet.create_from_db(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.DATA_LAYER:
+            elif wallet_type == WalletType.DATA_LAYER:
                 wallet = await DataLayerWallet.create(
                     self,
                     self.main_wallet,
