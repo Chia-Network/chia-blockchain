@@ -975,9 +975,9 @@ async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expec
     assert still_in_pool != expect_eviction
 
 
-@pytest.mark.asyncio
-async def test_double_spend_with_higher_fee() -> None:
+class TestReplaceByFee:
     def make_test_spendbundle(
+        self,
         coin: Coin,
         *,
         fee: int = 0,
@@ -989,6 +989,7 @@ async def test_double_spend_with_higher_fee() -> None:
         return spend_bundle_from_conditions(conditions, coin)
 
     async def send_spendbundle(
+        self,
         mempool_manager: MempoolManager,
         sb: SpendBundle,
         expected_result: Tuple[MempoolInclusionStatus, Optional[Err]] = (MempoolInclusionStatus.SUCCESS, None),
@@ -997,71 +998,106 @@ async def test_double_spend_with_higher_fee() -> None:
         assert (result[1], result[2]) == expected_result
 
     async def make_and_send_spendbundle(
+        self,
         mempool_manager: MempoolManager,
         coin: Coin,
         *,
         fee: int = 0,
         expected_result: Tuple[MempoolInclusionStatus, Optional[Err]] = (MempoolInclusionStatus.SUCCESS, None),
     ) -> SpendBundle:
-        sb = make_test_spendbundle(coin, fee=fee)
-        await send_spendbundle(mempool_manager, sb, expected_result)
+        sb = self.make_test_spendbundle(coin, fee=fee)
+        await self.send_spendbundle(mempool_manager, sb, expected_result)
         return sb
 
-    def assert_sb_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
+    def assert_sb_in_pool(self, mempool_manager: MempoolManager, sb: SpendBundle) -> None:
         assert sb == mempool_manager.get_spendbundle(sb.name())
 
-    def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
+    def assert_sb_not_in_pool(self, mempool_manager: MempoolManager, sb: SpendBundle) -> None:
         assert mempool_manager.get_spendbundle(sb.name()) is None
 
-    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
-    sb1_1 = await make_and_send_spendbundle(mempool_manager, coins[0])
+    @pytest.mark.asyncio
+    async def test_insufficient_fee_increase(self) -> None:
+        mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+        sb1_1 = await self.make_and_send_spendbundle(mempool_manager, coins[0])
+        sb1_2 = await self.make_and_send_spendbundle(
+            mempool_manager, coins[0], fee=1, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+        )
+        # The old spendbundle must stay
+        self.assert_sb_in_pool(mempool_manager, sb1_1)
+        self.assert_sb_not_in_pool(mempool_manager, sb1_2)
 
-    # Replace by fee with insufficient fee increase
-    expected_result = (MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
-    sb1_2 = await make_and_send_spendbundle(mempool_manager, coins[0], fee=1, expected_result=expected_result)
-    # The old spendbundle must stay
-    assert_sb_in_pool(mempool_manager, sb1_1)
-    assert_sb_not_in_pool(mempool_manager, sb1_2)
+    @pytest.mark.asyncio
+    async def test_sufficient_fee_increase(self) -> None:
+        mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+        sb1_1 = await self.make_and_send_spendbundle(mempool_manager, coins[0])
+        sb1_2 = await self.make_and_send_spendbundle(mempool_manager, coins[0], fee=MEMPOOL_MIN_FEE_INCREASE)
+        # sb1_1 gets replaced with sb1_2
+        self.assert_sb_not_in_pool(mempool_manager, sb1_1)
+        self.assert_sb_in_pool(mempool_manager, sb1_2)
 
-    # Replace by fee with sufficiently high fee increase
-    sb1_3 = await make_and_send_spendbundle(mempool_manager, coins[0], fee=MEMPOOL_MIN_FEE_INCREASE)
-    # sb1_1 gets replaced with sb1_3
-    assert_sb_not_in_pool(mempool_manager, sb1_1)
-    assert_sb_in_pool(mempool_manager, sb1_3)
+    @pytest.mark.asyncio
+    async def test_superset(self) -> None:
+        # Aggregated spendbundle sb12 replaces sb1 since it spends a superset
+        # of coins spent in sb1
+        mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+        sb1 = await self.make_and_send_spendbundle(mempool_manager, coins[0])
+        sb2 = self.make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE)
+        sb12 = SpendBundle.aggregate([sb2, sb1])
+        await self.send_spendbundle(mempool_manager, sb12)
+        self.assert_sb_in_pool(mempool_manager, sb12)
+        self.assert_sb_not_in_pool(mempool_manager, sb1)
 
-    # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
-    # of coins spent in sb1_3
-    sb2 = make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE)
-    sb12 = SpendBundle.aggregate([sb2, sb1_3])
-    await send_spendbundle(mempool_manager, sb12)
-    assert_sb_in_pool(mempool_manager, sb12)
-    assert_sb_not_in_pool(mempool_manager, sb1_3)
+    @pytest.mark.asyncio
+    async def test_superset_violation(self) -> None:
+        mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+        sb1 = self.make_test_spendbundle(coins[0])
+        sb2 = self.make_test_spendbundle(coins[1])
+        sb12 = SpendBundle.aggregate([sb1, sb2])
+        await self.send_spendbundle(mempool_manager, sb12)
+        self.assert_sb_in_pool(mempool_manager, sb12)
+        # sb23 must not replace existing sb12 as the former does not spend all
+        # coins that are spent in the latter (specifically, the first coin)
+        sb3 = self.make_test_spendbundle(coins[2], fee=MEMPOOL_MIN_FEE_INCREASE)
+        sb23 = SpendBundle.aggregate([sb2, sb3])
+        await self.send_spendbundle(
+            mempool_manager, sb23, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+        )
+        self.assert_sb_in_pool(mempool_manager, sb12)
+        self.assert_sb_not_in_pool(mempool_manager, sb23)
 
-    # sb23 must not replace existing sb12 as the former does not spend all
-    # coins that are spent in the latter (specifically, the first coin)
-    sb3 = make_test_spendbundle(coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
-    sb23 = SpendBundle.aggregate([sb2, sb3])
-    expected_result = (MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
-    await send_spendbundle(mempool_manager, sb23, expected_result)
-    assert_sb_in_pool(mempool_manager, sb12)
-    assert_sb_not_in_pool(mempool_manager, sb23)
+    @pytest.mark.asyncio
+    async def test_total_fpc_decrease(self) -> None:
+        mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+        sb1 = self.make_test_spendbundle(coins[0])
+        sb2 = self.make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+        sb12 = SpendBundle.aggregate([sb1, sb2])
+        await self.send_spendbundle(mempool_manager, sb12)
+        sb3 = await self.make_and_send_spendbundle(mempool_manager, coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+        self.assert_sb_in_pool(mempool_manager, sb12)
+        self.assert_sb_in_pool(mempool_manager, sb3)
+        # sb1234 should not be in pool as it decreases total fees per cost
+        sb4 = self.make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE)
+        sb1234 = SpendBundle.aggregate([sb12, sb3, sb4])
+        await self.send_spendbundle(
+            mempool_manager, sb1234, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+        )
+        self.assert_sb_not_in_pool(mempool_manager, sb1234)
 
-    # Adding non-conflicting sb3 should succeed
-    sb3 = await make_and_send_spendbundle(mempool_manager, coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
-    assert_sb_in_pool(mempool_manager, sb3)
-
-    # sb1234_1 should not be in pool as it decreases total fees per cost
-    sb4_1 = make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE)
-    sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
-    expected_result = (MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
-    await send_spendbundle(mempool_manager, sb1234_1, expected_result)
-    assert_sb_not_in_pool(mempool_manager, sb1234_1)
-
-    # sb1234_2 has a higher fee per cost than its conflicts and should get
-    # into the mempool
-    sb4_2 = make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
-    sb1234_2 = SpendBundle.aggregate([sb12, sb3, sb4_2])
-    await send_spendbundle(mempool_manager, sb1234_2)
-    assert_sb_in_pool(mempool_manager, sb1234_2)
-    assert_sb_not_in_pool(mempool_manager, sb12)
-    assert_sb_not_in_pool(mempool_manager, sb3)
+    @pytest.mark.asyncio
+    async def test_sufficient_total_fpc_increase(self) -> None:
+        mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+        sb1 = self.make_test_spendbundle(coins[0])
+        sb2 = self.make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+        sb12 = SpendBundle.aggregate([sb1, sb2])
+        await self.send_spendbundle(mempool_manager, sb12)
+        sb3 = await self.make_and_send_spendbundle(mempool_manager, coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+        self.assert_sb_in_pool(mempool_manager, sb12)
+        self.assert_sb_in_pool(mempool_manager, sb3)
+        # sb1234 has a higher fee per cost than its conflicts and should get
+        # into the mempool
+        sb4 = self.make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE * 3)
+        sb1234 = SpendBundle.aggregate([sb12, sb3, sb4])
+        await self.send_spendbundle(mempool_manager, sb1234)
+        self.assert_sb_in_pool(mempool_manager, sb1234)
+        self.assert_sb_not_in_pool(mempool_manager, sb12)
+        self.assert_sb_not_in_pool(mempool_manager, sb3)
