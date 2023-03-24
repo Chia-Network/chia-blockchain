@@ -47,8 +47,7 @@ def construct_cr_layer(
     proofs_checker: Program,
     inner_puzzle: Program,
 ) -> Program:
-    return CREDENTIAL_RESTRICTION.curry(
-        CREDENTIAL_RESTRICTION_HASH,
+    first_curry: Program = CREDENTIAL_RESTRICTION.curry(
         Program.to(
             [
                 SINGLETON_MOD_HASH,
@@ -72,8 +71,8 @@ def construct_cr_layer(
         ),
         authorized_providers,
         proofs_checker,
-        inner_puzzle,
     )
+    return first_curry.curry(first_curry.get_tree_hash(), inner_puzzle)
 
 
 def match_cr_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[List[bytes32], Program, Program]]:
