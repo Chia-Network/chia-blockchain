@@ -191,87 +191,119 @@ class WSChiaConnection:
         server_port: int,
         local_type: NodeType,
     ) -> None:
-        outbound_handshake = make_msg(
-            ProtocolMessageTypes.handshake,
-            Handshake(
-                network_id,
-                protocol_version,
-                chia_full_version_str(),
-                uint16(server_port),
-                uint8(local_type.value),
-                self.local_capabilities_for_handshake,
-            ),
-        )
-        if self.is_outbound:
-            await self._send_message(outbound_handshake)
-            inbound_handshake_msg = await self._read_one_message()
-            if inbound_handshake_msg is None:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
+        try:
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version,
+                    chia_full_version_str(),
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
+            if self.is_outbound:
+                await self._send_message(outbound_handshake)
+                inbound_handshake_msg = await self._read_one_message()
+                if inbound_handshake_msg is None:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+                inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
-            # Handle case of invalid ProtocolMessageType
-            try:
-                message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+                # Handle case of invalid ProtocolMessageType
+                try:
+                    message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
+                except Exception:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if message_type != ProtocolMessageTypes.handshake:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+                if message_type != ProtocolMessageTypes.handshake:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if inbound_handshake.network_id != network_id:
-                raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+                if inbound_handshake.network_id != network_id:
+                    raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            self.version = inbound_handshake.software_version
-            self.protocol_version = inbound_handshake.protocol_version
-            self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
-            # "1" means capability is enabled
-            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+                self.version = inbound_handshake.software_version
+                self.protocol_version = inbound_handshake.protocol_version
+                self.peer_server_port = inbound_handshake.server_port
+                self.connection_type = NodeType(inbound_handshake.node_type)
+                # "1" means capability is enabled
+                self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+            else:
+                try:
+                    message = await self._read_one_message()
+                except Exception:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+                if message is None:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+                # Handle case of invalid ProtocolMessageType
+                try:
+                    message_type = ProtocolMessageTypes(message.type)
+                except Exception:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+                if message_type != ProtocolMessageTypes.handshake:
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+                inbound_handshake = Handshake.from_bytes(message.data)
+                if inbound_handshake.network_id != network_id:
+                    raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+                await self._send_message(outbound_handshake)
+                self.peer_server_port = inbound_handshake.server_port
+                self.connection_type = NodeType(inbound_handshake.node_type)
+                self.version = inbound_handshake.software_version
+                # "1" means capability is enabled
+                self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+
+            self.outbound_task = asyncio.create_task(self.outbound_handler())
+            self.inbound_task = asyncio.create_task(self.inbound_handler())
+            self.incoming_message_task = asyncio.create_task(self.incoming_message_handler())
+        except:  # noqa E722
+            self.log.debug(
+                f"handshake done: failed with {self.peer_host} {self.peer_port} peer version: {self.version!r}"
+            )
+            raise
         else:
-            try:
-                message = await self._read_one_message()
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+            self.log.debug(
+                f"handshake done: succeeded with {self.peer_host} {self.peer_port} peer version: {self.version!r}"
+            )
 
-            if message is None:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            # Handle case of invalid ProtocolMessageType
-            try:
-                message_type = ProtocolMessageTypes(message.type)
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            if message_type != ProtocolMessageTypes.handshake:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            inbound_handshake = Handshake.from_bytes(message.data)
-            if inbound_handshake.network_id != network_id:
-                raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-            await self._send_message(outbound_handshake)
-            self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
-            # "1" means capability is enabled
-            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
-
-        self.outbound_task = asyncio.create_task(self.outbound_handler())
-        self.inbound_task = asyncio.create_task(self.inbound_handler())
-        self.incoming_message_task = asyncio.create_task(self.incoming_message_handler())
+    def log_stack(self, message: str) -> None:
+        lines = [
+            f"{self.peer_host} -- {line}"
+            for batch in [f"WSChiaConnection.log_stack(): version {self.version}", message, *traceback.format_stack()]
+            for line in batch.splitlines()
+        ]
+        self.log.debug("\n".join(lines))
 
     async def close(
         self,
         ban_time: int = 0,
         ws_close_code: WSCloseCode = WSCloseCode.OK,
         error: Optional[Err] = None,
+        log_stack: bool = True,
     ) -> None:
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
+        if log_stack:
+            stack_message = (
+                f"entering WSChiaConnection.close(ban_time={ban_time},"
+                + f" ws_close_code={ws_close_code}, error={error})"
+            )
+            self.log_stack(message=stack_message)
+
+        if self.closed:
+            state = "already closed"
+        else:
+            state = "not yet closed"
+        self.log.debug(f"Closing connection for {self.peer_host} ({state})")
+
         if self.closed:
             # always try to call the callback even for closed connections
             with log_exceptions(self.log, consume=True):
-                self.log.debug(f"Closing already closed connection for {self.peer_host}")
                 if self.close_callback is not None:
                     self.close_callback(self, ban_time, closed_connection=True)
             self._close_event.set()
@@ -358,7 +390,8 @@ class WSChiaConnection:
             if self.received_message_callback is not None:
                 await self.received_message_callback(self)
             self.log.debug(
-                f"<- {ProtocolMessageTypes(full_message.type).name} from peer {self.peer_node_id} {self.peer_host}"
+                f"<- {ProtocolMessageTypes(full_message.type).name} from peer"
+                + f" {self.peer_node_id} {self.peer_host} peer version: {self.version!r}"
             )
             message_type = ProtocolMessageTypes(full_message.type).name
 
@@ -541,7 +574,10 @@ class WSChiaConnection:
         if message.id in self.request_results:
             result = self.request_results[message.id]
             assert result is not None
-            self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
+            self.log.debug(
+                f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}"
+                + f" peer version: {self.version!r}"
+            )
             self.request_results.pop(message.id)
 
         return result
@@ -588,7 +624,10 @@ class WSChiaConnection:
                 )
 
         await self.ws.send_bytes(encoded)
-        self.log.debug(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.debug(
+            f"-> {ProtocolMessageTypes(message.type).name} to peer"
+            + f" {self.peer_host} {self.peer_node_id} peer version: {self.version!r}"
+        )
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
@@ -597,7 +636,8 @@ class WSChiaConnection:
         except asyncio.TimeoutError:
             # self.ws._closed if we didn't receive a ping / pong
             if self.ws.closed:
-                asyncio.create_task(self.close())
+                self.log_stack(message="WSChiaCOnnection._read_one_message() closing since websocket is closed")
+                asyncio.create_task(self.close(log_stack=False))
                 await asyncio.sleep(3)
                 return None
             return None
@@ -612,7 +652,10 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            asyncio.create_task(self.close())
+            self.log_stack(
+                message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+            )
+            asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.debug(
@@ -620,11 +663,17 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            asyncio.create_task(self.close())
+            self.log_stack(
+                message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+            )
+            asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
-                asyncio.create_task(self.close())
+                self.log_stack(
+                    message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+                )
+                asyncio.create_task(self.close(log_stack=False))
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.BINARY:
@@ -645,7 +694,13 @@ class WSChiaConnection:
                         f"message: {message_type}"
                     )
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
-                    asyncio.create_task(self.close(300))
+                    self.log_stack(
+                        message=(
+                            "WSChiaConnection._read_one_message() closing due to"
+                            + f" {WSMsgType(message.type).name} (and more)"
+                        ),
+                    )
+                    asyncio.create_task(self.close(300, log_stack=False))
                     await asyncio.sleep(3)
                     return None
                 else:
@@ -658,14 +713,26 @@ class WSChiaConnection:
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
             if message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
-                asyncio.create_task(self.close(300))
+                self.log_stack(
+                    message=(
+                        "WSChiaConnection._read_one_message() closing due to"
+                        + f" {WSMsgType(message.type).name} {message.data.code}"
+                    ),
+                )
+                asyncio.create_task(self.close(300, log_stack=False))
             else:
-                asyncio.create_task(self.close())
+                self.log_stack(
+                    message=f"WSChiaConnection._read_one_message() closing due to {WSMsgType(message.type).name}"
+                )
+                asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
-            asyncio.create_task(self.close())
+            self.log_stack(
+                message=f"WSChiaConnection._read_one_message() closing due to unexpected message type {message.type}"
+            )
+            asyncio.create_task(self.close(log_stack=False))
             await asyncio.sleep(3)
         return None
 
