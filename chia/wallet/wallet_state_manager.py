@@ -5,7 +5,6 @@ import json
 import logging
 import multiprocessing.context
 import time
-from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
@@ -32,7 +31,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
@@ -66,7 +64,6 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -103,8 +100,6 @@ class WalletStateManager:
     nft_store: WalletNftStore
     basic_store: KeyValStore
 
-    start_index: int
-
     # Makes sure only one asyncio thread is changing the blockchain state at one time
     lock: asyncio.Lock
 
@@ -112,11 +107,9 @@ class WalletStateManager:
 
     # TODO Don't allow user to send tx until wallet is synced
     _sync_target: Optional[uint32]
-    genesis: FullBlock
 
     state_changed_callback: Optional[StateChangedProtocol] = None
     pending_tx_callback: Optional[Callable]
-    puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
     db_wrapper: DBWrapper2
 
@@ -126,8 +119,6 @@ class WalletStateManager:
 
     trade_manager: TradeManager
     notification_manager: NotificationManager
-    new_wallet: bool
-    user_settings: UserSettings
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
     interested_store: WalletInterestedStore
@@ -154,7 +145,6 @@ class WalletStateManager:
         name: str = None,
     ):
         self = WalletStateManager()
-        self.new_wallet = False
         self.config = config
         self.constants = constants
         self.server = server
@@ -188,7 +178,6 @@ class WalletStateManager:
         self.basic_store = await KeyValStore.create(self.db_wrapper)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
-        self.user_settings = await UserSettings.create(self.basic_store)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
@@ -254,9 +243,6 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         return self
-
-    def get_public_key(self, index: uint32) -> G1Element:
-        return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
@@ -473,18 +459,6 @@ class WalletStateManager:
         Callback to be called when new pending transaction enters the store
         """
         self.pending_tx_callback = callback
-
-    def set_coin_with_puzzlehash_created_callback(self, puzzlehash: bytes32, callback: Callable):
-        """
-        Callback to be called when new coin is seen with specified puzzlehash
-        """
-        self.puzzle_hash_created_callbacks[puzzlehash] = callback
-
-    async def puzzle_hash_created(self, coin: Coin):
-        callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
-        if callback is None:
-            return None
-        await callback(coin)
 
     def state_changed(self, state: str, wallet_id: Optional[int] = None, data_object: Optional[Dict[str, Any]] = None):
         """
@@ -1662,14 +1636,6 @@ class WalletStateManager:
     async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:
         records = await self.coin_store.get_coin_records(**kwargs)
         return [await self.get_coin_record_by_wallet_record(record) for record in records.values()]
-
-    async def is_addition_relevant(self, addition: Coin):
-        """
-        Check whether we care about a new addition (puzzle_hash). Returns true if we
-        control this puzzle hash.
-        """
-        result = await self.puzzle_store.puzzle_hash_exists(addition.puzzle_hash)
-        return result
 
     async def get_wallet_for_coin(self, coin_id: bytes32) -> Optional[WalletProtocol]:
         coin_record = await self.coin_store.get_coin_record(coin_id)
