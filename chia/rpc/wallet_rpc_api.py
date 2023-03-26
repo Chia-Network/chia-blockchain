@@ -71,6 +71,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -211,6 +212,8 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            # Verified Credential
+            "/vc_mint_vc": self.vc_mint_vc,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -242,6 +245,7 @@ class WalletRpcApi:
             "added_stray_cat",
             "pending_transaction",
             "tx_update",
+            "wallet_removed",
             "new_on_chain_notification",
         }:
             payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
@@ -985,13 +989,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Set[Coin] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
+            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            )
+            exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = set()
 
@@ -1480,21 +1481,37 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Optional[Set[Coin]] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
+            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            )
+            exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = None
+        cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
+            request.get("extra_delta", None),
+            request.get("tail_reveal", None),
+            request.get("tail_solution", None),
+        )
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None
+        if cat_discrepancy_params != (None, None, None):
+            if None in cat_discrepancy_params:
+                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
+            else:
+                assert cat_discrepancy_params[0] is not None
+                assert cat_discrepancy_params[1] is not None
+                assert cat_discrepancy_params[2] is not None
+                cat_discrepancy = (
+                    cat_discrepancy_params[0],  # mypy sanitization
+                    Program.fromhex(cat_discrepancy_params[1]),
+                    Program.fromhex(cat_discrepancy_params[2]),
+                )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     fee,
+                    cat_discrepancy=cat_discrepancy,
                     coins=coins,
                     memos=memos if memos else None,
                     min_coin_amount=min_coin_amount,
@@ -3369,3 +3386,56 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    ##########################################################################################
+    # Verified Credential
+    ##########################################################################################
+    async def vc_mint_vc(self, request) -> Dict:
+        """
+        Mint a verified credential using the assigned DID
+        :param request:
+        :return:
+        """
+        did_id = decode_puzzle_hash(request["did_id"])
+        target_address = request.get("target_address", None)
+        puzhash: Optional[bytes32] = None
+        if target_address is not None:
+            puzhash = decode_puzzle_hash(target_address)
+        # get
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(
+                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
+            )
+        vc_record, tx_list = await vc_wallet.launch_new_vc(did_id, puzhash, uint64(request.get("fee", 0)))
+        for tx in tx_list:
+            await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {
+            "vc_record": vc_record.to_json_dict(),
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_list],
+        }
+
+    async def vc_get_vc(self, request) -> Dict:
+        """
+        Given a launcher ID get the verified credential
+        :param request:
+        :return:
+        """
+        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request["vc_id"])
+        return {"vc_record": vc_record}
+
+    async def vc_get_vc_list(self, request) -> Dict:
+        """
+        Get a list of verified credentials
+        :param request:
+        :return:
+        """
+        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(
+            request.get("start", 0), request.get("count", 50)
+        )
+        return {"vc_records": vc_list}
