@@ -440,6 +440,9 @@ class DataLayer:
             res, full_tree_path, diff_path = await write_files_for_root(
                 self.data_store, tree_id, root, self.server_files_location
             )
+            if not res:
+                self.log.error("failed to write files")
+                break
             if uploader is not None:
                 request_json = {"id": tree_id.hex(), "full_tree_path": str(full_tree_path), "diff_path": str(diff_path)}
                 async with aiohttp.ClientSession() as session:
