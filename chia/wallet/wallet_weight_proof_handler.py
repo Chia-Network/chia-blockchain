@@ -18,7 +18,7 @@ from chia.util.setproctitle import getproctitle, setproctitle
 log = logging.getLogger(__name__)
 
 
-def _create_shutdown_file() -> IO:
+def _create_shutdown_file() -> IO[bytes]:
     return tempfile.NamedTemporaryFile(prefix="chia_wallet_weight_proof_handler_executor_shutdown_trigger")
 
 
@@ -30,16 +30,16 @@ class WalletWeightProofHandler:
     ):
         self._constants = constants
         self._num_processes = 4
-        self._executor_shutdown_tempfile: IO = _create_shutdown_file()
+        self._executor_shutdown_tempfile: IO[bytes] = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
             self._num_processes,
             mp_context=multiprocessing_context,
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         )
-        self._weight_proof_tasks: List[asyncio.Task] = []
+        self._weight_proof_tasks: List[asyncio.Task[Tuple[bool, List[BlockRecord]]]] = []
 
-    def cancel_weight_proof_tasks(self):
+    def cancel_weight_proof_tasks(self) -> None:
         for task in self._weight_proof_tasks:
             if not task.done():
                 task.cancel()
@@ -56,7 +56,7 @@ class WalletWeightProofHandler:
             log.error("weight proof failed sub epoch data validation")
             return False, [], []
         validate_from = get_fork_ses_idx(old_proof, weight_proof)
-        task: asyncio.Task = asyncio.create_task(
+        task = asyncio.create_task(
             validate_weight_proof_inner(
                 self._constants,
                 self._executor,
