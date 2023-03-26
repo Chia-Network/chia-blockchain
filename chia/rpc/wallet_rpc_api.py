@@ -296,7 +296,7 @@ class WalletRpcApi:
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend = await self.service.wallet_state_manager.wallet_node.get_coin_spend_for_coin_state(
+        coin_spend = await self.service.wallet_state_manager.wallet_node.fetch_coin_spend_for_coin_state(
             parent_coin_state, peer
         )
         return coin_spend, coin_state
@@ -821,7 +821,7 @@ class WalletRpcApi:
                     [tr.additions[0].parent_coin_info], peer=peer
                 )
                 assert len(coin_state_list) == 1
-                coin_spend = await self.service.wallet_state_manager.wallet_node.get_coin_spend_for_coin_state(
+                coin_spend = await self.service.wallet_state_manager.wallet_node.fetch_coin_spend_for_coin_state(
                     coin_state_list[0], peer
                 )
                 tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))

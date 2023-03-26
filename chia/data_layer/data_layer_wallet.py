@@ -217,7 +217,7 @@ class DataLayerWallet:
             await self.new_launcher_spend(spend, peer, height)
         else:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id, peer)
-            launcher_spend = await self.wallet_state_manager.wallet_node.get_coin_spend_for_coin_state(
+            launcher_spend = await self.wallet_state_manager.wallet_node.fetch_coin_spend_for_coin_state(
                 launcher_state, peer
             )
             await self.new_launcher_spend(launcher_spend, peer)
@@ -279,7 +279,7 @@ class DataLayerWallet:
         ] = await self.wallet_state_manager.coin_store.get_coin_record(new_singleton.name())
         while new_singleton_coin_record is not None and new_singleton_coin_record.spent_block_height > 0:
             # We've already synced this before, so we need to sort of force a resync
-            parent_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            parent_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_coin_spend(
                 new_singleton_coin_record.spent_block_height, new_singleton, peer
             )
             await self.singleton_removed(parent_spend, new_singleton_coin_record.spent_block_height)
@@ -829,7 +829,7 @@ class DataLayerWallet:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_coin_spend(
                 height, parent_state.coin, peer
             )
             assert parent_spend is not None

@@ -170,7 +170,7 @@ class NFTWallet:
             return
         assert coin_states
         parent_coin = coin_states[0].coin
-        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
+        cs = await wallet_node.fetch_coin_spend(height, parent_coin, peer)
         assert cs is not None
         await self.puzzle_solution_received(cs, peer)
 

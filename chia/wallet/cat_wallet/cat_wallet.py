@@ -347,7 +347,7 @@ class CATWallet:
                     [coin.parent_coin_info], peer=peer
                 )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await self.wallet_state_manager.wallet_node.get_coin_spend_for_coin_state(
+                coin_spend = await self.wallet_state_manager.wallet_node.fetch_coin_spend_for_coin_state(
                     coin_state[0], peer
                 )
                 await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)

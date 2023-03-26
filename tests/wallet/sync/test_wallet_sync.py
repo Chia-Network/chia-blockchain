@@ -1184,10 +1184,10 @@ class TestWalletSync:
 
             return new_func
 
-        def flaky_fetch_puzzle_solution(node, func):
+        def flaky_fetch_coin_spend(node, func):
             async def new_func(*args, **kwargs):
-                if node.puzzle_solution_flaky:
-                    node.puzzle_solution_flaky = False
+                if node.coin_spend_flaky:
+                    node.coin_spend_flaky = False
                     raise PeerRequestException()
                 else:
                     return await func(*args, **kwargs)
@@ -1227,15 +1227,13 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             wallet_node.coin_state_retry_seconds = 1
             wallet_node.coin_state_flaky = True
-            wallet_node.puzzle_solution_flaky = True
+            wallet_node.coin_spend_flaky = True
             wallet_node.fetch_children_flaky = True
             wallet_node.get_timestamp_flaky = True
             wallet_node.db_flaky = True
 
             wallet_node.get_coin_state = flaky_get_coin_state(wallet_node, wallet_node.get_coin_state)
-            wallet_node.fetch_puzzle_solution = flaky_fetch_puzzle_solution(
-                wallet_node, wallet_node.fetch_puzzle_solution
-            )
+            wallet_node.fetch_coin_spend = flaky_fetch_coin_spend(wallet_node, wallet_node.fetch_coin_spend)
             wallet_node.fetch_children = flaky_fetch_children(wallet_node, wallet_node.fetch_children)
             wallet_node.get_timestamp_for_height = flaky_get_timestamp(
                 wallet_node, wallet_node.get_timestamp_for_height
@@ -1278,7 +1276,7 @@ class TestWalletSync:
             await assert_coin_state_retry()
 
             assert not wallet_node.coin_state_flaky
-            assert not wallet_node.puzzle_solution_flaky
+            assert not wallet_node.coin_spend_flaky
             assert not wallet_node.fetch_children_flaky
             assert not wallet_node.get_timestamp_flaky
             assert not wallet_node.db_flaky

@@ -505,7 +505,7 @@ class DIDWallet:
 
                 await self.save_info(did_info)
                 assert children_state.created_height
-                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
+                parent_spend = await wallet_node.fetch_coin_spend(children_state.created_height, parent_coin, peer)
                 assert parent_spend is not None
                 parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
                 assert parent_innerpuz is not None

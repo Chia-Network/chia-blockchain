@@ -1556,7 +1556,7 @@ class WalletNode:
             peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
         return True
 
-    async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
+    async def fetch_coin_spend(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
         solution_response = await peer.call_api(
             FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
@@ -1571,10 +1571,10 @@ class WalletNode:
             solution_response.response.solution,
         )
 
-    async def get_coin_spend_for_coin_state(self, coin_state: CoinState, peer: WSChiaConnection) -> CoinSpend:
+    async def fetch_coin_spend_for_coin_state(self, coin_state: CoinState, peer: WSChiaConnection) -> CoinSpend:
         if coin_state.spent_height is None:
             raise ValueError("coin_state.coin must be spent coin")
-        return await self.fetch_puzzle_solution(uint32(coin_state.spent_height), coin_state.coin, peer)
+        return await self.fetch_coin_spend(uint32(coin_state.spent_height), coin_state.coin, peer)
 
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
