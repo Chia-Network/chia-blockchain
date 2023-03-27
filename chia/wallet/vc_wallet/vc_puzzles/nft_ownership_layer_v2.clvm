@@ -12,8 +12,6 @@
   (include curry-and-treehash.clinc)
   (include utility_macros.clib)
 
-  (defconstant NEW_OWNER_CONDITION -10)
-
   (defun-inline nft_ownership_layer_puzzle_hash
     (
       NFT_OWNERSHIP_LAYER_MOD_HASH
@@ -30,7 +28,7 @@
       )
   )
 
-  (defun construct_end_conditions
+  (defun-inline construct_end_conditions
     (
       NFT_OWNERSHIP_LAYER_MOD_HASH
       TRANSFER_PROGRAM
@@ -89,7 +87,7 @@
                     (list odd_args tp_output (f conditions))
                 )
                 ; else - condition is not a create coin
-                (if (= (f (f conditions)) NEW_OWNER_CONDITION)
+                (if (= (f (f conditions)) -10)  ; -10 is "magic" opcode for running transfer program
                     (assert (not tp_output)
                       ; then
                       (list
