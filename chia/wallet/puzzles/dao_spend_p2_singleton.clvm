@@ -33,7 +33,7 @@
             (+ total (f (r (f p2_singleton_list))))
           )
           (if (> total SPEND_AMOUNT)
-            (c (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT)) CONDITIONS)
+            (c (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT)) output)
             (x)
           )
         )

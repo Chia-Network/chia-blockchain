@@ -318,15 +318,8 @@
                   		self_destruct_time
                       oracle_spend_delay
             	      )
-            	      (sha256tree
-            	        (list
-                		  (f (r SINGLETON_STRUCT))
-                		  vote_coin_ids_or_proposal_timelock_length
-                		  soft_close_length
-                		  lockup_innerpuzhashes_or_attendance_required
-                		  previous_votes_or_pass_margin)
-            	      )
-            	    )
+                		(f (r SINGLETON_STRUCT))  ; directed at singleton, but most values are implicitly announced in the puzzle
+                  )
             	  )
             	  (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_ids_or_proposal_timelock_length)
             	)

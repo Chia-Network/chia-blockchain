@@ -51,24 +51,14 @@
   )
 
   (if proposal_flag
-    ; if we're checking a proposal
+    ; if we're checking a proposal (testing if it has passed)
     (assert (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
       ; Merge the treasury conditions with the proposal validator conditions
       ; If the update case then the validator returns the new treasury create coin
       ; If the spend case then we need to recreate the treasury outselves
     	; treasury specific conditions
     	(c
-    	  (list CREATE_PUZZLE_ANNOUNCEMENT
-    	    (sha256tree
-    	      (list
-          		(f proposal_validator_solution)
-          		PROPOSAL_LENGTH
-          		PROPOSAL_SOFTCLOSE_LENGTH
-          		ATTENDANCE_REQUIRED
-          		PASS_MARGIN
-    	      )
-    	    )
-    	  )
+    	  (list CREATE_PUZZLE_ANNOUNCEMENT (f proposal_validator_solution)) ; specify the proposal we're talking about
     	  (c
     	    ; also announce the oracle info so proposals can close if treasury is being spammed
     	    (list CREATE_PUZZLE_ANNOUNCEMENT 0) ; the arguments are secured implicitly in the puzzle of the treasury
