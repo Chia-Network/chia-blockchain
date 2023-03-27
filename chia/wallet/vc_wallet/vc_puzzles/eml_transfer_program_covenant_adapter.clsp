@@ -3,7 +3,7 @@
 (mod
   (
     COVENANT_LAYER
-    Current_Owner  ; Truth
+    METADATA  ; Truth
     conditions  ; Truth
     (
       lineage_proof
@@ -24,7 +24,7 @@
       lineage_proof
       morpher_solution
       ; Covenant layer doesn't know about truths so we need to pass those down to the inner tp solution
-      (list Current_Owner conditions inner_solution)
+      (list METADATA conditions inner_solution)
     )
   ))
 )

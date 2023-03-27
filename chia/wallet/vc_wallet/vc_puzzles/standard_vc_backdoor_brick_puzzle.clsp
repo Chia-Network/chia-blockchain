@@ -19,7 +19,7 @@
     inner_puzzle_hash
     my_amount
     ownership_lineage_proof  ; need to solve the covenant layer one last time
-    previous_proof_hash_hash  ; like metadata_hash above but for the previous coin
+    previous_metadata_hash  ; like metadata_hash above but for the previous coin
     (
         provider_innerpuzhash  ; DID needs to authorize the transfer program (and therefore this backdoor)
         my_coin_id
@@ -61,7 +61,7 @@
     (list
       -10
       ownership_lineage_proof  ; for covenant layer
-      (list previous_proof_hash_hash launcher_id)  ; for covenant layer parent morpher
+      (list previous_metadata_hash launcher_id)  ; for covenant layer parent morpher
       (list  ; for transfer program
         provider_innerpuzhash
         my_coin_id

@@ -36,7 +36,7 @@ from chia.wallet.vc_wallet.vc_drivers import (
     match_viral_backdoor,
     solve_viral_backdoor,
     create_std_parent_morpher,
-    construct_ownership_layer,
+    construct_extigent_metadata_layer,
 )
 
 
@@ -185,7 +185,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
 @pytest.mark.asyncio
 async def test_did_tp(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        # Make a mock ownership layer
+        # Make a mock extigent metadata layer
         # Prepends new metadata and new transfer program as REMARK condition to conditions of TP
         # (mod (METADATA TP solution) (a (q . (c (c (q . 1) (c 2 (c 5 ()))) 11)) (a TP (list METADATA () solution))))
         # (a (q 4 (c (q . 1) (c 2 (c 5 ()))) 11) (a 5 (c 2 (c () (c 11 ())))))
@@ -195,18 +195,18 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # Create it with mock singleton info
         transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
         assert match_did_tp(uncurry_puzzle(transfer_program)) == ()
-        ownership_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry(None, transfer_program)
+        eml_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry(None, transfer_program)
 
-        await sim.farm_block(ownership_puzzle.get_tree_hash())
-        ownership_coin: Coin = (
+        await sim.farm_block(eml_puzzle.get_tree_hash())
+        eml_coin: Coin = (
             await client.get_coin_records_by_puzzle_hashes(
-                [ownership_puzzle.get_tree_hash()], include_spent_coins=False
+                [eml_puzzle.get_tree_hash()], include_spent_coins=False
             )
         )[0].coin
 
         # Define parameters for next few spend attempts
         provider_innerpuzhash: bytes32 = ACS_PH
-        my_coin_id: bytes32 = ownership_coin.name()
+        my_coin_id: bytes32 = eml_coin.name()
         new_metadata: Program = Program.to("SUCCESS")
         new_tp: Program = Program.to("NEW TP")
         bad_data: bytes32 = bytes32([0] * 32)
@@ -216,8 +216,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             SpendBundle(
                 [
                     CoinSpend(
-                        ownership_coin,
-                        ownership_puzzle,
+                        eml_coin,
+                        eml_puzzle,
                         Program.to(
                             [
                                 solve_did_tp(
@@ -251,8 +251,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             SpendBundle(
                 [
                     CoinSpend(
-                        ownership_coin,
-                        ownership_puzzle,
+                        eml_coin,
+                        eml_puzzle,
                         Program.to(
                             [
                                 solve_did_tp(
@@ -277,8 +277,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             SpendBundle(
                 [
                     CoinSpend(
-                        ownership_coin,
-                        ownership_puzzle,
+                        eml_coin,
+                        eml_puzzle,
                         Program.to(
                             [
                                 solve_did_tp(
@@ -782,7 +782,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         # Verify the end state
         new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
             vc.launcher_id,
-            construct_ownership_layer(
+            construct_extigent_metadata_layer(
                 None,
                 ACS_TRANSFER_PROGRAM,
                 ACS,

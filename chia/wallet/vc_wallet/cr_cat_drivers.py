@@ -22,12 +22,12 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 from chia.wallet.payment import Payment
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
-    NFT_OWNERSHIP_LAYER_HASH,
-    NFT_TP_COVENANT_ADAPTER_HASH,
+    EXTIGENT_METADATA_LAYER_HASH,
+    EML_TP_COVENANT_ADAPTER_HASH,
     GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
     COVENANT_LAYER_HASH,
-    create_ownership_layer_covenant_morpher,
+    create_eml_covenant_morpher,
     create_did_tp,
 )
 
@@ -56,25 +56,25 @@ def construct_cr_layer(
                         SINGLETON_LAUNCHER_HASH,
                     ),
                     (
-                        NFT_OWNERSHIP_LAYER_HASH,
-                        NFT_TP_COVENANT_ADAPTER_HASH,
+                        EXTIGENT_METADATA_LAYER_HASH,
+                        EML_TP_COVENANT_ADAPTER_HASH,
                     ),
                 ),
                 (
-                    Program.to(NFT_OWNERSHIP_LAYER_HASH)
+                    Program.to(EXTIGENT_METADATA_LAYER_HASH)
                     .curry(
-                        Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash(),
+                        Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
                         Program.to(None),
                         GUARANTEED_NIL_TP,
                         GUARANTEED_NIL_TP.get_tree_hash(),
                         P2_ANNOUNCED_DELEGATED_PUZZLE,
                     )
-                    .get_tree_hash_precalc(NFT_OWNERSHIP_LAYER_HASH, Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash()),
+                    .get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH, Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash()),
                     (
                         Program.to(int_to_bytes(2) + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)),
                         Program.to(
                             ([4,
-                                (1, create_ownership_layer_covenant_morpher(create_did_tp().get_tree_hash())),
+                                (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
                                 [4,
                                     (1, create_did_tp()),
                                     1

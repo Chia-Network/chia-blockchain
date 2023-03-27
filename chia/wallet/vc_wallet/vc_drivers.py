@@ -22,28 +22,12 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
-# TEMP
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
-    "nft_ownership_layer_v2.clvm",
+# Mods
+EXTIGENT_METADATA_LAYER = load_clvm_maybe_recompile(
+    "exigent_metadata_layer.clvm",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 )
-NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
-def construct_ownership_layer(
-    current_owner: Optional[bytes32],
-    transfer_program: Program,
-    inner_puzzle: Program,
-) -> Program:
-    return NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER_HASH,
-        current_owner,
-        transfer_program,
-        transfer_program.get_tree_hash(),
-        inner_puzzle,
-    )
-
-
-# Mods
 P2_ANNOUNCED_DELEGATED_PUZZLE: Program = load_clvm_maybe_recompile(
     "p2_announced_delegated_puzzle.clsp",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
@@ -57,34 +41,35 @@ STD_COVENANT_PARENT_MORPHER: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 )
-NFT_TP_COVENANT_ADAPTER: Program = load_clvm_maybe_recompile(
-    "nft_transfer_program_covenant_adapter.clsp",
+EML_TP_COVENANT_ADAPTER: Program = load_clvm_maybe_recompile(
+    "eml_transfer_program_covenant_adapter.clsp",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 )
-NFT_DID_TP: Program = load_clvm_maybe_recompile(
-    "nft_update_metadata_with_DID.clsp",
+EML_DID_TP: Program = load_clvm_maybe_recompile(
+    "eml_update_metadata_with_DID.clsp",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 )
-NFT_OWNERSHIP_LAYER_COVENANT_MORPHER: Program = load_clvm_maybe_recompile(
-    "ownership_layer_covenant_morpher.clsp",
+EXTIGENT_METADATA_LAYER_COVENANT_MORPHER: Program = load_clvm_maybe_recompile(
+    "eml_covenant_morpher.clsp",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 )
 VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
     "viral_backdoor.clsp", package_or_requirement="chia.wallet.vc_wallet.vc_puzzles", include_standard_libraries=True
 )
-# (mod (Current_Owner conditions . solution) (if solution solution (list Current_Owner () ())))
+# (mod (METADATA conditions . solution) (if solution solution (list METADATA () ())))
 # (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
 ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
 
 # Hashes
+EXTIGENT_METADATA_LAYER_HASH = EXTIGENT_METADATA_LAYER.get_tree_hash()
 P2_ANNOUNCED_DELEGATED_PUZZLE_HASH: bytes32 = P2_ANNOUNCED_DELEGATED_PUZZLE.get_tree_hash()
 COVENANT_LAYER_HASH: bytes32 = COVENANT_LAYER.get_tree_hash()
 STD_COVENANT_PARENT_MORPHER_HASH: bytes32 = STD_COVENANT_PARENT_MORPHER.get_tree_hash()
-NFT_TP_COVENANT_ADAPTER_HASH: bytes32 = NFT_TP_COVENANT_ADAPTER.get_tree_hash()
-NFT_OWNERSHIP_LAYER_COVENANT_MORPHER_HASH: bytes32 = NFT_OWNERSHIP_LAYER_COVENANT_MORPHER.get_tree_hash()
+EML_TP_COVENANT_ADAPTER_HASH: bytes32 = EML_TP_COVENANT_ADAPTER.get_tree_hash()
+EXTIGENT_METADATA_LAYER_COVENANT_MORPHER_HASH: bytes32 = EXTIGENT_METADATA_LAYER_COVENANT_MORPHER.get_tree_hash()
 VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
 
 
@@ -96,7 +81,7 @@ STANDARD_BRICK_PUZZLE: Program = load_clvm_maybe_recompile(
 ).curry(
     SINGLETON_MOD_HASH,
     Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
-    NFT_OWNERSHIP_LAYER_HASH,
+    EXTIGENT_METADATA_LAYER_HASH,
     VIRAL_BACKDOOR_HASH,
     ACS_TRANSFER_PROGRAM.get_tree_hash(),
 )
@@ -152,11 +137,11 @@ def create_std_parent_morpher(initial_puzzle_hash: bytes32) -> Program:
 # Covenant Adapter #
 ####################
 def create_tp_covenant_adapter(covenant_layer: Program) -> Program:
-    return NFT_TP_COVENANT_ADAPTER.curry(covenant_layer)
+    return EML_TP_COVENANT_ADAPTER.curry(covenant_layer)
 
 
 def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[Program]]:
-    if uncurried_puzzle.mod == NFT_TP_COVENANT_ADAPTER:
+    if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER:
         return uncurried_puzzle.args.at("f")
     else:
         return None
@@ -182,14 +167,14 @@ def create_did_tp(
     singleton_mod_hash: bytes32 = SINGLETON_MOD_HASH,
     singleton_launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
 ) -> Program:
-    return NFT_DID_TP.curry(
+    return EML_DID_TP.curry(
         singleton_mod_hash,
         singleton_launcher_hash,
     )
 
 
 def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
-    if uncurried_puzzle.mod == NFT_DID_TP:
+    if uncurried_puzzle.mod == EML_DID_TP:
         return ()
     else:
         return None
@@ -241,28 +226,42 @@ def solve_viral_backdoor(puzzle_reveal: Program, inner_solution: Program, hidden
 ########
 # MISC #
 ########
-def create_ownership_layer_covenant_morpher(
+def create_eml_covenant_morpher(
     transfer_program_hash: bytes32,
 ) -> Program:
     """
-    A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> OL -> Covenant stack
+    A PARENT_MORPHER for use in the covenant layer that proves the parent is a singleton -> EML -> Covenant stack
     """
-    first_curry: Program = NFT_OWNERSHIP_LAYER_COVENANT_MORPHER.curry(
+    first_curry: Program = EXTIGENT_METADATA_LAYER_COVENANT_MORPHER.curry(
         COVENANT_LAYER_HASH,
-        NFT_OWNERSHIP_LAYER_HASH,
-        NFT_TP_COVENANT_ADAPTER_HASH,
+        EXTIGENT_METADATA_LAYER_HASH,
+        EML_TP_COVENANT_ADAPTER_HASH,
         SINGLETON_MOD_HASH,
-        SINGLETON_LAUNCHER_HASH,
+        Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
         transfer_program_hash,
     )
     return first_curry.curry(first_curry.get_tree_hash())
+
+
+def construct_extigent_metadata_layer(
+    metadata: Optional[bytes32],
+    transfer_program: Program,
+    inner_puzzle: Program,
+) -> Program:
+    return EXTIGENT_METADATA_LAYER.curry(
+        EXTIGENT_METADATA_LAYER_HASH,
+        metadata,
+        transfer_program,
+        transfer_program.get_tree_hash(),
+        inner_puzzle,
+    )
 
 
 @streamable
 @dataclass(frozen=True)
 class VCLineageProof(LineageProof, Streamable):
     """
-    The covenant layer for ownership layers requires to be passed the previous parent's metadata too
+    The covenant layer for extigent metadata layers requires to be passed the previous parent's metadata too
     """
 
     parent_proof_hash: Optional[bytes32] = None
@@ -274,7 +273,7 @@ def solve_std_vc_backdoor(
     tp_hash: bytes32,
     inner_puzzle_hash: bytes32,
     amount: uint64,
-    ownership_lineage_proof: VCLineageProof,
+    eml_lineage_proof: VCLineageProof,
     provider_innerpuzhash: bytes32,
     coin_id: bytes32,
     new_metadata: Program,
@@ -290,8 +289,8 @@ def solve_std_vc_backdoor(
             STANDARD_BRICK_PUZZLE_HASH_HASH,
             inner_puzzle_hash,
             amount,
-            ownership_lineage_proof.to_program(),
-            Program.to(ownership_lineage_proof.parent_proof_hash),
+            eml_lineage_proof.to_program(),
+            Program.to(eml_lineage_proof.parent_proof_hash),
             Program.to(
                 [
                     provider_innerpuzhash,
@@ -308,7 +307,7 @@ def solve_std_vc_backdoor(
 # (mod (_ _ (provider tp)) (list (c provider ()) tp ()))
 # (c (c 19 ()) (c 43 (q ())))
 GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff04ff13ff8080ffff04ff2bffff01ff80808080")
-OWNERSHIP_LAYER_LAUNCHER: Program = construct_ownership_layer(
+OWNERSHIP_LAYER_LAUNCHER: Program = construct_extigent_metadata_layer(
     None,
     GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
@@ -332,7 +331,7 @@ class VerifiedCredential:
 
     coin: Coin
     singleton_lineage_proof: LineageProof
-    ownership_lineage_proof: VCLineageProof
+    eml_lineage_proof: VCLineageProof
     launcher_id: bytes32
     inner_puzzle_hash: bytes32
     proof_provider: bytes32
@@ -374,7 +373,7 @@ class VerifiedCredential:
         transfer_program: Program = create_tp_covenant_adapter(
             create_covenant_layer(
                 curried_eve_singleton_hash,
-                create_ownership_layer_covenant_morpher(
+                create_eml_covenant_morpher(
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,
@@ -384,15 +383,15 @@ class VerifiedCredential:
             STANDARD_BRICK_PUZZLE_HASH,
             new_inner_puzzle_hash,
         ).get_tree_hash()
-        ownership_layer_hash: bytes32 = construct_ownership_layer(
+        metadata_layer_hash: bytes32 = construct_extigent_metadata_layer(
             Program.to((provider_id, None)),
             transfer_program,
             wrapped_inner_puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(wrapped_inner_puzzle_hash)
         curried_singleton_hash: Program = puzzle_for_singleton(
             launcher_coin.name(),
-            ownership_layer_hash,  # type: ignore
-        ).get_tree_hash_precalc(ownership_layer_hash)
+            metadata_layer_hash,  # type: ignore
+        ).get_tree_hash_precalc(metadata_layer_hash)
         launch_dpuz: Program = Program.to(
             (
                 1,
@@ -462,11 +461,11 @@ class VerifiedCredential:
     def construct_puzzle(self) -> Program:
         return puzzle_for_singleton(
             self.launcher_id,
-            self.construct_ownership_layer(),
+            self.construct_extigent_metadata_layer(),
         )
 
-    def construct_ownership_layer(self) -> Program:
-        return construct_ownership_layer(
+    def construct_extigent_metadata_layer(self) -> Program:
+        return construct_extigent_metadata_layer(
             Program.to((self.proof_provider, self.proof_hash)),
             self.construct_transfer_program(),
             self.wrap_inner_with_backdoor(),
@@ -482,7 +481,7 @@ class VerifiedCredential:
         return create_tp_covenant_adapter(
             create_covenant_layer(
                 curried_eve_singleton_hash,
-                create_ownership_layer_covenant_morpher(
+                create_eml_covenant_morpher(
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,
@@ -509,13 +508,13 @@ class VerifiedCredential:
         if puzzle_reveal.mod != SINGLETON_MOD:
             return False, "top most layer is not a singleton"
         layer_below_singleton: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rf"))
-        if layer_below_singleton.mod != NFT_OWNERSHIP_LAYER:
-            return False, "layer below singleton is not an ownership layer"
+        if layer_below_singleton.mod != EXTIGENT_METADATA_LAYER:
+            return False, "layer below singleton is not an extigent metadata layer"
 
         # Need to validate both transfer program...
         full_transfer_program_as_prog: Program = layer_below_singleton.args.at("rrf")
         full_transfer_program: UncurriedPuzzle = uncurry_puzzle(full_transfer_program_as_prog)
-        if full_transfer_program.mod != NFT_TP_COVENANT_ADAPTER:
+        if full_transfer_program.mod != EML_TP_COVENANT_ADAPTER:
             # This is the first spot we'll run into trouble if we're examining a VC being launched
             # Break off to that logic here
             if full_transfer_program_as_prog == GUARANTEED_NIL_TP:
@@ -530,17 +529,17 @@ class VerifiedCredential:
         if adapted_transfer_program.mod != COVENANT_LAYER:
             return False, "transfer program is adapted to covenant layer, but covenant layer did not follow"
         morpher: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rf"))
-        if morpher.mod != NFT_OWNERSHIP_LAYER_COVENANT_MORPHER:
-            return False, "covenant for ownership layer does not match the one expected for VCs"
+        if morpher.mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER:
+            return False, "covenant for extigent metadata layer does not match the one expected for VCs"
         inner_transfer_program: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rrf"))
-        if inner_transfer_program.mod != NFT_DID_TP:
-            return False, "transfer program for ownership layer was not the standard VC transfer program"
+        if inner_transfer_program.mod != EML_DID_TP:
+            return False, "transfer program for extigent metadata layer was not the standard VC transfer program"
 
-        # ...and layer below ownership
-        layer_below_ownership: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrf"))
-        if layer_below_ownership.mod != VIRAL_BACKDOOR:
+        # ...and layer below EML
+        layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrf"))
+        if layer_below_eml.mod != VIRAL_BACKDOOR:
             return False, "VC did not have a provider backdoor"
-        hidden_puzzle_hash: bytes32 = layer_below_ownership.args.at("rf")
+        hidden_puzzle_hash: bytes32 = layer_below_eml.args.at("rf")
         if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
             return False, "VC did not have the standard method to brick in its backdoor hidden puzzle slot"
 
@@ -571,7 +570,7 @@ class VerifiedCredential:
         )
         if layer_below_singleton == OWNERSHIP_LAYER_LAUNCHER:
             proof_hash: Optional[bytes32] = None
-            ownership_lineage_proof: VCLineageProof = VCLineageProof(
+            eml_lineage_proof: VCLineageProof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info, amount=uint64(parent_coin.amount)
             )
             # See what conditions were output by the launcher dpuz and dsol
@@ -586,7 +585,7 @@ class VerifiedCredential:
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
             proof_provider = bytes32(magic_condition.at("rf").as_python())
         else:
-            ownership_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
+            metadata_layer: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton)
 
             # Dig to find the inner puzzle / inner solution and extract next inner puzhash and proof hash
             inner_puzzle: Program = solution.at("rrf").at("f").at("rf")
@@ -598,7 +597,7 @@ class VerifiedCredential:
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
             if magic_condition.at("rrrff") == Program.to(None):
-                proof_hash_as_prog: Program = ownership_layer.args.at("rfr")
+                proof_hash_as_prog: Program = metadata_layer.args.at("rfr")
             else:
                 new_metadata_param = magic_condition.at("rrrfrrf")
                 if new_metadata_param.atom is None:
@@ -608,10 +607,10 @@ class VerifiedCredential:
 
             proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.as_python())
 
-            proof_provider = bytes32(ownership_layer.args.at("rff").atom)
+            proof_provider = bytes32(metadata_layer.args.at("rff").atom)
 
-            parent_proof_hash: bytes32 = ownership_layer.args.at("rf").get_tree_hash()
-            ownership_lineage_proof = VCLineageProof(
+            parent_proof_hash: bytes32 = metadata_layer.args.at("rf").get_tree_hash()
+            eml_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=create_viral_backdoor(
                     STANDARD_BRICK_PUZZLE_HASH,
@@ -624,7 +623,7 @@ class VerifiedCredential:
         new_vc: _T_VerifiedCredential = cls(
             coin,
             singleton_lineage_proof,
-            ownership_lineage_proof,
+            eml_lineage_proof,
             launcher_id,
             inner_puzzle_hash,
             proof_provider,
@@ -651,9 +650,9 @@ class VerifiedCredential:
         magic_condition: Program = Program.to(
             [
                 -10,
-                self.ownership_lineage_proof.to_program(),
+                self.eml_lineage_proof.to_program(),
                 [
-                    Program.to(self.ownership_lineage_proof.parent_proof_hash),
+                    Program.to(self.eml_lineage_proof.parent_proof_hash),
                     self.launcher_id,
                 ],
                 [
@@ -668,15 +667,15 @@ class VerifiedCredential:
 
     def standard_magic_condition(self) -> Program:
         """
-        Returns the standard magic condition that needs to be returned to the ownership layer. Returning this condition
+        Returns the standard magic condition that needs to be returned to the metadata layer. Returning this condition
         from the inner puzzle will leave the proof hash and transfer program the same.
         """
         magic_condition: Program = Program.to(
             [
                 -10,
-                self.ownership_lineage_proof.to_program(),
+                self.eml_lineage_proof.to_program(),
                 [
-                    Program.to(self.ownership_lineage_proof.parent_proof_hash),
+                    Program.to(self.eml_lineage_proof.parent_proof_hash),
                     self.launcher_id,
                 ],
                 [
@@ -707,7 +706,7 @@ class VerifiedCredential:
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
             Program.to(
-                [  # solve ownership layer
+                [  # solve EML
                     solve_viral_backdoor(
                         inner_puzzle,
                         inner_solution,
@@ -756,7 +755,7 @@ class VerifiedCredential:
             self.singleton_lineage_proof,
             uint64(self.coin.amount),
             Program.to(
-                [  # solve ownership layer
+                [  # solve EML
                     solve_viral_backdoor(
                         self.hidden_puzzle(),
                         solve_std_vc_backdoor(
@@ -765,7 +764,7 @@ class VerifiedCredential:
                             self.construct_transfer_program().get_tree_hash(),
                             self.inner_puzzle_hash,
                             uint64(self.coin.amount),
-                            self.ownership_lineage_proof,
+                            self.eml_lineage_proof,
                             provider_innerpuzhash,
                             self.coin.name(),
                             Program.to(None),
@@ -797,7 +796,7 @@ class VerifiedCredential:
             Coin(self.coin.name(), bytes32([0] * 32), next_amount),
             LineageProof(
                 self.coin.parent_coin_info,
-                self.construct_ownership_layer().get_tree_hash(),
+                self.construct_extigent_metadata_layer().get_tree_hash(),
                 uint64(self.coin.amount),
             ),
             VCLineageProof(
