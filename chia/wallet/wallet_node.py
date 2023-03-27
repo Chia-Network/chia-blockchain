@@ -117,6 +117,7 @@ class WalletNode:
     LONG_SYNC_THRESHOLD: int = 300
     last_wallet_tx_resend_time: int = 0
     # Duration in seconds
+    coin_state_retry_seconds: int = 10
     wallet_tx_resend_timeout_secs: int = 1800
     _new_peak_queue: Optional[NewPeakQueue] = None
 
@@ -362,7 +363,6 @@ class WalletNode:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
         self.last_wallet_tx_resend_time = int(time.time())
-        self.last_state_retry_time = int(time.time())
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
@@ -466,41 +466,40 @@ class WalletNode:
     async def _retry_failed_states(self):
         while not self._shut_down:
             try:
-                await asyncio.sleep(5)
-                current_time = time.time()
-                if self.last_state_retry_time < current_time - 10:
-                    self.last_state_retry_time = current_time
-                    if self.wallet_state_manager is None:
-                        continue
-                    states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
-                    for state, peer_id, fork_height in states_to_retry:
-                        matching_peer = tuple(
-                            p for p in self.server.get_connections(NodeType.FULL_NODE) if p.peer_node_id == peer_id
-                        )
-                        if len(matching_peer) == 0:
-                            peer = self.get_full_node_peer()
-                            if peer is None:
-                                self.log.info(f"disconnected from all peers, cannot retry state: {state}")
-                                continue
-                            else:
-                                self.log.info(
-                                    f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
-                                )
+                if self.wallet_state_manager is None:
+                    continue
+                states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
+                for state, peer_id, fork_height in states_to_retry:
+                    matching_peer = tuple(
+                        p for p in self.server.get_connections(NodeType.FULL_NODE) if p.peer_node_id == peer_id
+                    )
+                    if len(matching_peer) == 0:
+                        peer = self.get_full_node_peer()
+                        if peer is None:
+                            self.log.info(f"disconnected from all peers, cannot retry state: {state}")
+                            continue
                         else:
-                            peer = matching_peer[0]
-                        async with self.wallet_state_manager.db_wrapper.writer():
-                            self.log.info(f"retrying coin_state: {state}")
-                            try:
-                                await self.wallet_state_manager.add_coin_states(
-                                    [state], peer, None if fork_height == 0 else fork_height
-                                )
-                            except Exception as e:
-                                self.log.exception(f"Exception while adding states.. : {e}")
-                            else:
-                                await self.wallet_state_manager.blockchain.clean_block_records()
+                            self.log.info(
+                                f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
+                            )
+                    else:
+                        peer = matching_peer[0]
+                    async with self.wallet_state_manager.db_wrapper.writer():
+                        self.log.info(f"retrying coin_state: {state}")
+                        try:
+                            await self.wallet_state_manager.add_coin_states(
+                                [state], peer, None if fork_height == 0 else fork_height
+                            )
+                        except Exception as e:
+                            self.log.exception(f"Exception while adding states.. : {e}")
+                        else:
+                            await self.wallet_state_manager.blockchain.clean_block_records()
             except asyncio.CancelledError:
                 self.log.info("Retry task cancelled, exiting.")
                 raise
+            finally:
+                if not self._shut_down:
+                    await asyncio.sleep(self.coin_state_retry_seconds)
 
     async def _process_new_subscriptions(self):
         while not self._shut_down:
