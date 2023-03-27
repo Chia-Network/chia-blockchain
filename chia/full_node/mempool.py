@@ -29,6 +29,7 @@ class MempoolRemoveReason(Enum):
     CONFLICT = 1
     BLOCK_INCLUSION = 2
     POOL_FULL = 3
+    EXPIRED = 4
 
 
 @dataclass(frozen=True)
@@ -61,12 +62,20 @@ class Mempool:
                 cost INT NOT NULL,
                 fee INT NOT NULL,
                 assert_height INT,
+                assert_before_height INT,
+                assert_before_seconds INT,
                 fee_per_cost REAL{generated})
                 """
             )
             self._db_conn.execute("CREATE INDEX fee_sum ON tx(fee)")
             self._db_conn.execute("CREATE INDEX cost_sum ON tx(cost)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
+            self._db_conn.execute(
+                "CREATE INDEX assert_before_height ON tx(assert_before_height) WHERE assert_before_height != NULL"
+            )
+            self._db_conn.execute(
+                "CREATE INDEX assert_before_seconds ON tx(assert_before_seconds) WHERE assert_before_seconds != NULL"
+            )
 
             # This table maps coin IDs to spend bundles hashes
             self._db_conn.execute(
@@ -174,6 +183,21 @@ class Mempool:
         else:
             return 0
 
+    def new_tx_block(self, block_height: uint32, timestamp: uint64) -> None:
+        """
+        Remove all items that became invalid because of this new height and
+        timestamp. (we don't know about which coins were spent in this new block
+        here, so those are handled separately)
+        """
+        with self._db_conn:
+            cursor = self._db_conn.execute(
+                "SELECT name FROM tx WHERE assert_before_seconds <= ? OR assert_before_height <= ?",
+                (timestamp, block_height),
+            )
+            to_remove = [bytes32(row[0]) for row in cursor]
+
+        self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+
     def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
         """
         Removes an item from the mempool.
@@ -232,12 +256,28 @@ class Mempool:
 
             if SQLITE_NO_GENERATED_COLUMNS:
                 self._db_conn.execute(
-                    "INSERT INTO tx VALUES(?, ?, ?, ?, ?)",
-                    (item.name, item.cost, item.fee, item.assert_height, item.fee / item.cost),
+                    "INSERT INTO tx VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        item.name,
+                        item.cost,
+                        item.fee,
+                        item.assert_height,
+                        item.assert_before_height,
+                        item.assert_before_seconds,
+                        item.fee / item.cost,
+                    ),
                 )
             else:
                 self._db_conn.execute(
-                    "INSERT INTO tx VALUES(?, ?, ?, ?)", (item.name, item.cost, item.fee, item.assert_height)
+                    "INSERT INTO tx VALUES(?, ?, ?, ?, ?, ?)",
+                    (
+                        item.name,
+                        item.cost,
+                        item.fee,
+                        item.assert_height,
+                        item.assert_before_height,
+                        item.assert_before_seconds,
+                    ),
                 )
 
             all_coin_spends = [(s.coin_id, item.name) for s in item.npc_result.conds.spends]

@@ -21,7 +21,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -123,8 +123,8 @@ class NFTWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.NFT)
+    def type(cls) -> WalletType:
+        return WalletType.NFT
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -347,6 +347,11 @@ class NFTWallet:
             # For a DID enabled NFT wallet it cannot mint NFT0. Mint NFT1 instead.
             did_id = self.did_id
         amount = uint64(1)
+        # ensure percentage is uint16
+        try:
+            percentage = uint16(percentage)
+        except ValueError:
+            raise ValueError("Percentage must be lower than 655%")
         coins = await self.standard_wallet.select_coins(uint64(amount + fee))
         if coins is None:
             return None
@@ -637,7 +642,6 @@ class NFTWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
-
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
@@ -843,16 +847,23 @@ class NFTWallet:
         for asset, amount in royalty_nft_asset_dict.items():  # royalty enabled NFTs
             transfer_info = driver_dict[asset].also().also()  # type: ignore
             assert isinstance(transfer_info, PuzzleInfo)
+            royalty_percentage_raw = transfer_info["transfer_program"]["royalty_percentage"]
+            assert royalty_percentage_raw is not None
+            # clvm encodes large ints as bytes
+            if isinstance(royalty_percentage_raw, bytes):
+                royalty_percentage = int_from_bytes(royalty_percentage_raw)
+            else:
+                royalty_percentage = int(royalty_percentage_raw)
             if amount > 0:
                 required_royalty_info.append(
                     (
                         asset,
                         bytes32(transfer_info["transfer_program"]["royalty_address"]),
-                        uint16(transfer_info["transfer_program"]["royalty_percentage"]),
+                        uint16(royalty_percentage),
                     )
                 )
             else:
-                offered_royalty_percentages[asset] = uint16(transfer_info["transfer_program"]["royalty_percentage"])
+                offered_royalty_percentages[asset] = uint16(royalty_percentage)
 
         royalty_payments: Dict[Optional[bytes32], List[Tuple[bytes32, Payment]]] = {}
         for asset, amount in fungible_asset_dict.items():  # offered fungible items
@@ -924,6 +935,7 @@ class NFTWallet:
         additional_bundles: List[SpendBundle] = []
         # standard pays the fee if possible
         fee_left_to_pay: uint64 = uint64(0) if None in offer_dict and offer_dict[None] < 0 else fee
+
         for asset, amount in offer_dict.items():
             if amount < 0:
                 if asset is None:
@@ -1266,7 +1278,7 @@ class NFTWallet:
         """
         # get DID Wallet
         for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 if self.get_did() == bytes32.from_hexstr(wallet.get_my_DID()):
                     did_wallet = wallet
                     break

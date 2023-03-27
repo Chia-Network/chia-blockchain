@@ -3,8 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-import traceback
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 from typing_extensions import Literal
 
@@ -138,10 +137,9 @@ class TradeManager:
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
-        our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
-            primary_coin_ids
-        )
-        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records]
+        # TODO: Add `WalletCoinStore.get_coins`.
+        our_coin_records = await self.wallet_state_manager.coin_store.get_coin_records(primary_coin_ids)
+        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records.values()]
         our_additions: List[Coin] = list(
             filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
         )
@@ -177,7 +175,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
                 self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
-    async def get_locked_coins(self, wallet_id: Optional[int] = None) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -191,13 +189,13 @@ class TradeManager:
         for trade_offer in all_pending:
             coins_of_interest.extend([c.name() for c in trade_offer.coins_of_interest])
 
-        result = {}
-        coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)
-        for record in coin_records:
-            if wallet_id is None or record.wallet_id == wallet_id:
-                result[record.name()] = record
-
-        return result
+        # TODO:
+        #  - No need to get the coin records here, we are only interested in the coin_id on the call site.
+        #  - The cast here is required for now because TradeManager.wallet_state_manager is hinted as Any.
+        return cast(
+            Dict[bytes32, WalletCoinRecord],
+            await self.wallet_state_manager.coin_store.get_coin_records(coins_of_interest),
+        )
 
     async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
@@ -210,6 +208,10 @@ class TradeManager:
     async def cancel_pending_offer(self, trade_id: bytes32) -> None:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED)
         self.wallet_state_manager.state_changed("offer_cancelled")
+
+    async def fail_pending_offer(self, trade_id: bytes32) -> None:
+        await self.trade_store.set_status(trade_id, TradeStatus.FAILED)
+        self.wallet_state_manager.state_changed("offer_failed")
 
     async def cancel_pending_offer_safely(
         self, trade_id: bytes32, fee: uint64 = uint64(0)
@@ -597,8 +599,7 @@ class TradeManager:
             return True, offer, None
 
         except Exception as e:
-            tb = traceback.format_exc()
-            self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
+            self.log.exception("Error creating trade offer")
             return False, None, str(e)
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
@@ -763,7 +764,7 @@ class TradeManager:
         success, take_offer, error = result
 
         complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
-        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
+        self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)

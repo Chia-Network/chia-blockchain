@@ -18,7 +18,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -50,12 +50,12 @@ from chia.wallet.wallet_info import WalletInfo
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
 
-
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
+    wallet_info: WalletInfo
     wallet_state_manager: Any
     log: logging.Logger
     wallet_id: uint32
@@ -91,11 +91,11 @@ class Wallet:
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            # we use height=0 here to not enable any soft-fork semantics. It
+            # will only matter once the wallet generates transactions relying on
+            # new conditions, and we can change this by then
             result: NPCResult = get_name_puzzle_conditions(
-                program,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                mempool_mode=True,
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=uint32(0)
             )
             self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
@@ -114,8 +114,8 @@ class Wallet:
         return uint128(total_amount)
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.STANDARD_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.STANDARD_WALLET
 
     def id(self) -> uint32:
         return self.wallet_id
@@ -356,7 +356,7 @@ class Wallet:
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction, got {total_amount}")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             if total_amount > total_balance:
@@ -375,15 +375,27 @@ class Wallet:
             )
         elif exclude_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
+
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
-
+        self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
         change = spend_value - total_amount
         if negative_change_allowed:
             change = max(0, change)
-
-        assert change >= 0
+        # only kicks in if fee is missing
+        if change < 0 and fee + amount == total_amount:
+            fee_coins = await self.select_coins(
+                # change already includes fee amount
+                uint64(abs(change)),
+                excluded_coin_amounts=exclude_coin_amounts,
+                exclude=([] if exclude_coins is None else list(exclude_coins)) + list(coins or []),
+            )
+            coins = coins.union(fee_coins)
+            spend_value = sum([coin.amount for coin in coins])
+            self.log.info(f"Updated spend_value is {spend_value} and total_amount is {total_amount}")
+            change = spend_value - total_amount
+        assert change >= 0, f"change is negative: {change}"
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}

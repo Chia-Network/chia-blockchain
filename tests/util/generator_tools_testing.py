@@ -12,7 +12,7 @@ from chia.util.ints import uint32
 
 
 def run_and_get_removals_and_additions(
-    block: FullBlock, max_cost: int, *, cost_per_byte: int, height: uint32, mempool_mode=False
+    block: FullBlock, max_cost: int, *, height: uint32, mempool_mode=False
 ) -> Tuple[List[bytes32], List[Coin]]:
     removals: List[bytes32] = []
     additions: List[Coin] = []
@@ -23,11 +23,7 @@ def run_and_get_removals_and_additions(
 
     if block.transactions_generator is not None:
         npc_result = get_name_puzzle_conditions(
-            BlockGenerator(block.transactions_generator, [], []),
-            max_cost,
-            cost_per_byte=cost_per_byte,
-            mempool_mode=mempool_mode,
-            height=height,
+            BlockGenerator(block.transactions_generator, [], []), max_cost, mempool_mode=mempool_mode, height=height
         )
         assert npc_result.error is None
         rem, add = tx_removals_and_additions(npc_result.conds)

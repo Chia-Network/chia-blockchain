@@ -23,7 +23,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -37,6 +37,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -1613,3 +1614,79 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     async with dbw.writer() as conn:
         await conn.execute("DROP TABLE testing_schema")
     assert await wallet_node.reset_sync_db(db_path, fingerprint)
+
+
+@pytest.mark.asyncio
+async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_node: WalletNode = env.wallet_1.node
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    full_node_api: FullNodeSimulator = env.full_node.api
+    full_node_rpc: FullNodeRpcClient = env.full_node.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1, 1)
+
+    # Send to a CAT with an anyone can spend TAIL
+    our_ph: bytes32 = await env.wallet_1.wallet.get_new_puzzlehash()
+    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), Program.to(1))
+    addr = encode_puzzle_hash(
+        cat_puzzle.get_tree_hash(),
+        "txch",
+    )
+    tx_amount = uint64(100)
+
+    tx = await client.send_transaction(1, tx_amount, addr)
+    transaction_id = tx.name
+    spend_bundle = tx.spend_bundle
+    assert spend_bundle is not None
+
+    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    # Do the eve spend back to our wallet
+    cat_coin = next(c for c in spend_bundle.additions() if c.amount == tx_amount)
+    eve_spend = SpendBundle(
+        [
+            CoinSpend(
+                cat_coin,
+                cat_puzzle,
+                Program.to(
+                    [
+                        Program.to([[51, our_ph, tx_amount], [51, None, -113, None, None]]),
+                        None,
+                        cat_coin.name(),
+                        coin_as_list(cat_coin),
+                        [cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_coin.amount],
+                        0,
+                        0,
+                    ]
+                ),
+            )
+        ],
+        G2Element(),
+    )
+    await full_node_rpc.push_tx(eve_spend)
+    await farm_transaction(full_node_api, wallet_node, eve_spend)
+
+    # Make sure we have the CAT
+    res = await client.create_wallet_for_existing_cat(Program.to(None).get_tree_hash())
+    assert res["success"]
+    cat_wallet_id = res["wallet_id"]
+    await time_out_assert(20, get_confirmed_balance, tx_amount, client, cat_wallet_id)
+
+    # Attempt to melt it fully
+    tx = await client.cat_spend(
+        cat_wallet_id,
+        amount=uint64(0),
+        inner_address=encode_puzzle_hash(our_ph, "txch"),
+        cat_discrepancy=(tx_amount * -1, Program.to(None), Program.to(None)),
+    )
+    transaction_id = tx.name
+    spend_bundle = tx.spend_bundle
+    assert spend_bundle is not None
+
+    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    await time_out_assert(20, get_confirmed_balance, 0, client, cat_wallet_id)
