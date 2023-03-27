@@ -491,7 +491,7 @@ class WalletNode:
                         async with self.wallet_state_manager.db_wrapper.writer():
                             self.log.info(f"retrying coin_state: {state}")
                             try:
-                                await self.wallet_state_manager.new_coin_state(
+                                await self.wallet_state_manager.add_coin_states(
                                     [state], peer, None if fork_height == 0 else fork_height
                                 )
                             except Exception as e:
@@ -850,7 +850,7 @@ class WalletNode:
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
                             try:
-                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
+                                await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height)
                             except Exception as e:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -881,7 +881,7 @@ class WalletNode:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
                         self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        await self.wallet_state_manager.add_coin_states(states, peer, fork_height)
                     except Exception as e:
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")

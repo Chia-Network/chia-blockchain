@@ -988,7 +988,7 @@ class WalletStateManager:
             wallet_type = WalletType.NFT
         return wallet_id, wallet_type
 
-    async def new_coin_state(
+    async def add_coin_states(
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
@@ -1008,10 +1008,12 @@ class WalletStateManager:
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
-        local_records = await self.coin_store.get_coin_records([st.coin.name() for st in coin_states])
+        coin_names = [coin_state.coin.name() for coin_state in coin_states]
+        local_records = await self.coin_store.get_coin_records(coin_names)
 
-        for coin_state in coin_states:
-            local_record = local_records.get(coin_state.coin.name())
+        for coin_name, coin_state in zip(coin_names, coin_states):
+            self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
+            local_record = local_records.get(coin_name)
             rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
@@ -1019,12 +1021,9 @@ class WalletStateManager:
                     # This only succeeds if we don't raise out of the transaction
                     await self.retry_store.remove_state(coin_state)
 
-                    existing: Optional[WalletCoinRecord]
-                    coin_name: bytes32 = coin_state.coin.name()
                     wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                         coin_state.coin.puzzle_hash
                     )
-                    self.log.debug("%s: %s", coin_name, coin_state)
 
                     # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
                     if local_record is not None:
@@ -1051,7 +1050,7 @@ class WalletStateManager:
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
                             if (
-                                await potential_dl.get_singleton_record(coin_state.coin.name()) is not None
+                                await potential_dl.get_singleton_record(coin_name) is not None
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
                                 wallet_id = potential_dl.id()
@@ -1069,7 +1068,7 @@ class WalletStateManager:
                         ph_to_index_cache.put(coin_state.coin.puzzle_hash, derivation_index)
                         if derivation_index > used_up_to:
                             await self.puzzle_store.set_used_up_to(derivation_index)
-                            used_up_to = max(used_up_to, derivation_index)
+                            used_up_to = derivation_index
 
                     if coin_state.created_height is None:
                         # TODO implements this coin got reorged
@@ -1090,8 +1089,8 @@ class WalletStateManager:
 
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
-                        self.log.debug("Coin Removed: %s", coin_state)
-                        children: Optional[List[CoinState]] = None
+                        self.log.debug("Coin spent: %s", coin_state)
+                        children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
                         record = local_record
                         if record is None:
                             farmer_reward = False
@@ -1150,10 +1149,6 @@ class WalletStateManager:
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
 
-                            children = await self.wallet_node.fetch_children(
-                                coin_name, peer=peer, fork_height=fork_height
-                            )
-                            assert children is not None
                             additions = [state.coin for state in children]
                             if len(children) > 0:
                                 fee = 0
@@ -1284,11 +1279,6 @@ class WalletStateManager:
                                 await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
 
                         # Check if a child is a singleton launcher
-                        if children is None:
-                            children = await self.wallet_node.fetch_children(
-                                coin_name, peer=peer, fork_height=fork_height
-                            )
-                        assert children is not None
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
                                 continue
@@ -1306,7 +1296,7 @@ class WalletStateManager:
                                 pool_state = solution_to_pool_state(launcher_spend)
                                 assert pool_state is not None
                             except (AssertionError, ValueError) as e:
-                                self.log.debug(f"Not a pool wallet launcher {e}")
+                                self.log.debug(f"Not a pool wallet launcher {e}, child: {child}")
                                 matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
                                 if (
                                     matched
@@ -1364,7 +1354,7 @@ class WalletStateManager:
                     else:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
-                self.log.exception(f"Error adding state... {e}")
+                self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
