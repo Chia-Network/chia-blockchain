@@ -16,7 +16,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
@@ -1219,7 +1219,7 @@ class WalletNode:
         for block in blocks:
             # Set blockchain to the latest peak
             res, err = await self.wallet_state_manager.blockchain.receive_block(block)
-            if res == ReceiveBlockResult.INVALID_BLOCK:
+            if res == AddBlockResult.INVALID_BLOCK:
                 raise ValueError(err)
 
         return fork_height

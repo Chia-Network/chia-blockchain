@@ -6,7 +6,7 @@ from typing import List, Optional, Set, Tuple
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -346,15 +346,11 @@ class TestCoinStoreWithBlocks:
 
                 for reorg_block in blocks_reorg_chain:
                     if reorg_block.height < initial_block_count - 10:
-                        await _validate_and_add_block(
-                            b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                        )
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
                     elif reorg_block.height < initial_block_count:
-                        await _validate_and_add_block(
-                            b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN
-                        )
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
                     elif reorg_block.height >= initial_block_count:
-                        await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.NEW_PEAK)
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.NEW_PEAK)
                         if reorg_block.is_transaction_block():
                             coins = reorg_block.get_included_reward_coins()
                             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
