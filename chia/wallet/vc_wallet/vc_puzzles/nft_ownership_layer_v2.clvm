@@ -1,7 +1,7 @@
 (mod
   (
     NFT_OWNERSHIP_LAYER_MOD_HASH
-    CURRENT_OWNER
+    METADATA
     TRANSFER_PROGRAM
     TRANSFER_PROGRAM_HASH  ; we also include the hash for efficiency's sake
     INNER_PUZZLE
@@ -23,7 +23,7 @@
         inner_puzzle_hash
         (sha256 ONE TRANSFER_PROGRAM_HASH)
         TRANSFER_PROGRAM_HASH
-        (sha256 ONE new_owner)
+        (sha256tree new_owner)
         (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
       )
   )
@@ -58,7 +58,7 @@
       NFT_OWNERSHIP_LAYER_MOD_HASH
       TRANSFER_PROGRAM
       TRANSFER_PROGRAM_HASH
-      CURRENT_OWNER
+      METADATA
       all_conditions
       conditions
       (
@@ -74,7 +74,7 @@
             NFT_OWNERSHIP_LAYER_MOD_HASH
             TRANSFER_PROGRAM
             TRANSFER_PROGRAM_HASH
-            CURRENT_OWNER
+            METADATA
             all_conditions
             (r conditions)
             (if (= (f (f conditions)) CREATE_COIN)
@@ -92,7 +92,7 @@
                       ; then
                       (list
                         odd_args
-                        (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions))))
+                        (a TRANSFER_PROGRAM (list METADATA all_conditions (r (f conditions))))
                         ()
                       )
                     )
@@ -119,14 +119,14 @@
       NFT_OWNERSHIP_LAYER_MOD_HASH
       TRANSFER_PROGRAM
       TRANSFER_PROGRAM_HASH
-      CURRENT_OWNER
+      METADATA
       conditions
     )
     (wrap_odd_create_coins
       NFT_OWNERSHIP_LAYER_MOD_HASH
       TRANSFER_PROGRAM
       TRANSFER_PROGRAM_HASH
-      CURRENT_OWNER
+      METADATA
       conditions
       conditions
       (list () () ())
@@ -138,7 +138,7 @@
     NFT_OWNERSHIP_LAYER_MOD_HASH
     TRANSFER_PROGRAM
     TRANSFER_PROGRAM_HASH
-    CURRENT_OWNER
+    METADATA
     (a INNER_PUZZLE inner_solution)
   )
 )

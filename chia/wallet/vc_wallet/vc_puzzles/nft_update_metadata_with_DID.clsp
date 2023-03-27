@@ -6,11 +6,9 @@
   (
     SINGLETON_MOD_HASH
     SINGLETON_LAUNCHER_HASH
-    Metadata_hash  ; Truth
+    (provider_id . metadata)  ; Truth
     conditions  ; Truth
     (
-      provider_id
-      metadata
       provider_innerpuzhash
       my_coin_id
       new_metadata
@@ -48,7 +46,7 @@
   ; Returning (new_metadata new_transfer_program_hash conditions)
   (if provider_innerpuzhash
     (list
-      (if new_metadata (sha256tree new_metadata) ())
+      (if new_metadata new_metadata ())
       (i new_transfer_program_hash new_transfer_program_hash ())
       (list
         (list ASSERT_MY_COIN_ID my_coin_id)
@@ -64,6 +62,6 @@
         )
       )
     )
-    (list Metadata_hash () ())
+    (list (c provider_id metadata) () ())
   )
 )

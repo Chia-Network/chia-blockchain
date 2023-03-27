@@ -270,7 +270,6 @@ class VCLineageProof(LineageProof, Streamable):
 
 def solve_std_vc_backdoor(
     launcher_id: bytes32,
-    provider_id: bytes32,
     metadata_hash: bytes32,
     tp_hash: bytes32,
     inner_puzzle_hash: bytes32,
@@ -286,14 +285,13 @@ def solve_std_vc_backdoor(
     solution: Program = Program.to(
         [
             launcher_id,
-            provider_id,
             metadata_hash,
             tp_hash,
             STANDARD_BRICK_PUZZLE_HASH_HASH,
             inner_puzzle_hash,
             amount,
             ownership_lineage_proof.to_program(),
-            Program.to(ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
+            Program.to(ownership_lineage_proof.parent_proof_hash),
             Program.to(
                 [
                     provider_innerpuzhash,
@@ -307,14 +305,9 @@ def solve_std_vc_backdoor(
 
 
 # Launching to a VC requires a OL with a transfer program that guarantees a () metadata on the next iteration
-# (mod (_ _ (provider tp)) (list (sha256 2 (sha256 1 provider) (sha256 1 ())) tp ()))
-# (c
-#   (sha256 (q . 2) (sha256 (q . 1) 19) (q . 0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a))
-#   (c 43 (q ()))
-# )
-GUARANTEED_NIL_TP: Program = Program.fromhex(
-    "ff04ffff0bffff0102ffff0bffff0101ff1380ffff01a04bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a80ffff04ff2bffff01ff80808080"  # noqa
-)
+# (mod (_ _ (provider tp)) (list (c provider ()) tp ()))
+# (c (c 19 ()) (c 43 (q ())))
+GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff04ff13ff8080ffff04ff2bffff01ff80808080")
 OWNERSHIP_LAYER_LAUNCHER: Program = construct_ownership_layer(
     None,
     GUARANTEED_NIL_TP,
@@ -392,7 +385,7 @@ class VerifiedCredential:
             new_inner_puzzle_hash,
         ).get_tree_hash()
         ownership_layer_hash: bytes32 = construct_ownership_layer(
-            Program.to((provider_id, None)).get_tree_hash(),
+            Program.to((provider_id, None)),
             transfer_program,
             wrapped_inner_puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(wrapped_inner_puzzle_hash)
@@ -474,7 +467,7 @@ class VerifiedCredential:
 
     def construct_ownership_layer(self) -> Program:
         return construct_ownership_layer(
-            Program.to((self.proof_provider, self.proof_hash)).get_tree_hash(),
+            Program.to((self.proof_provider, self.proof_hash)),
             self.construct_transfer_program(),
             self.wrap_inner_with_backdoor(),
         )
@@ -604,19 +597,20 @@ class VerifiedCredential:
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
-            if magic_condition.at("rrrfrrf") == Program.to(None):
-                proof_hash_as_prog: Program = magic_condition.at("rrrfrf")
+            if magic_condition.at("rrrff") == Program.to(None):
+                proof_hash_as_prog: Program = ownership_layer.args.at("rfr")
             else:
-                new_metadata_param = magic_condition.at("rrrfrrrrf")
+                new_metadata_param = magic_condition.at("rrrfrrf")
                 if new_metadata_param.atom is None:
                     proof_hash_as_prog = new_metadata_param.rest()
                 else:
                     proof_hash_as_prog = new_metadata_param
+
             proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.as_python())
 
-            proof_provider = bytes32(magic_condition.at("rrrff").as_python())
+            proof_provider = bytes32(ownership_layer.args.at("rff").atom)
 
-            parent_proof_hash: bytes32 = bytes32(ownership_layer.args.at("rf").atom)
+            parent_proof_hash: bytes32 = ownership_layer.args.at("rf").get_tree_hash()
             ownership_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=create_viral_backdoor(
@@ -659,12 +653,10 @@ class VerifiedCredential:
                 -10,
                 self.ownership_lineage_proof.to_program(),
                 [
-                    Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
+                    Program.to(self.ownership_lineage_proof.parent_proof_hash),
                     self.launcher_id,
                 ],
                 [
-                    self.proof_provider,
-                    self.proof_hash,
                     provider_innerpuzhash,
                     self.coin.name(),
                     Program.to((self.proof_provider, new_proof_hash)),
@@ -684,12 +676,10 @@ class VerifiedCredential:
                 -10,
                 self.ownership_lineage_proof.to_program(),
                 [
-                    Program.to(self.ownership_lineage_proof.parent_proof_hash).get_tree_hash(),
+                    Program.to(self.ownership_lineage_proof.parent_proof_hash),
                     self.launcher_id,
                 ],
                 [
-                    self.proof_provider,
-                    self.proof_hash,
                     None,
                     None,
                     None,
@@ -771,8 +761,7 @@ class VerifiedCredential:
                         self.hidden_puzzle(),
                         solve_std_vc_backdoor(
                             self.launcher_id,
-                            self.proof_provider,
-                            Program.to(self.proof_hash).get_tree_hash(),
+                            Program.to((self.proof_provider, self.proof_hash)).get_tree_hash(),
                             self.construct_transfer_program().get_tree_hash(),
                             self.inner_puzzle_hash,
                             uint64(self.coin.amount),

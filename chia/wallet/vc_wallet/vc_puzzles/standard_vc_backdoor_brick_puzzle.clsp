@@ -13,7 +13,6 @@
     DEFAULT_TRANSFER_PROGRAM_HASH
     ; most of the specific information is solved rather than curried in because we don't care about committing to it
     launcher_id
-    provider_id
     metadata_hash
     tp_hash
     this_hash_hash  ; the hash of this puzzle with all of its curried arguments hashed AGAIN with (sha256 1 this_hash)
@@ -46,7 +45,7 @@
         )
         (curry_hashes OWNERSHIP_LAYER_MOD_HASH
           (sha256 ONE OWNERSHIP_LAYER_MOD_HASH)
-          (sha256 ONE (sha256 TWO (sha256 ONE provider_id) metadata_hash))
+          metadata_hash
           tp_hash
           (sha256 ONE tp_hash)
           (curry_hashes VIRAL_BACKDOOR_MOD_HASH
@@ -64,8 +63,6 @@
       ownership_lineage_proof  ; for covenant layer
       (list previous_proof_hash_hash launcher_id)  ; for covenant layer parent morpher
       (list  ; for transfer program
-        provider_id
-        metadata_hash
         provider_innerpuzhash
         my_coin_id
         new_metadata
