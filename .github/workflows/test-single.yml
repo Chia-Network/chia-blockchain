@@ -63,6 +63,7 @@ jobs:
             matrix: '3.7'
             exclude_from:
               limited: True
+              main: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
@@ -71,6 +72,7 @@ jobs:
             matrix: '3.8'
             exclude_from:
               limited: True
+              main: True
           - name: '3.9'
             file_name: '3.9'
             action: '3.9'
@@ -85,6 +87,7 @@ jobs:
             matrix: '3.10'
             exclude_from:
               limited: True
+              main: True
           - name: '3.11'
             file_name: '3.11'
             action: '3.11'
@@ -93,6 +96,7 @@ jobs:
             matrix: '3.11'
             exclude_from:
               limited: True
+              main: True
         exclude:
           - os:
               matrix: macos
