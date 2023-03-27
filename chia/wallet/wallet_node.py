@@ -107,7 +107,7 @@ class WalletNode:
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
     valid_wp_cache: Dict[bytes32, Any] = dataclasses.field(default_factory=dict)
-    untrusted_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
+    peer_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
     # in Untrusted mode wallet might get the state update before receiving the block
     race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
     race_cache_hashes: List[Tuple[uint32, bytes32]] = dataclasses.field(default_factory=list)
@@ -175,13 +175,13 @@ class WalletNode:
         return self._keychain_proxy
 
     def get_cache_for_peer(self, peer) -> PeerRequestCache:
-        if peer.peer_node_id not in self.untrusted_caches:
-            self.untrusted_caches[peer.peer_node_id] = PeerRequestCache()
-        return self.untrusted_caches[peer.peer_node_id]
+        if peer.peer_node_id not in self.peer_caches:
+            self.peer_caches[peer.peer_node_id] = PeerRequestCache()
+        return self.peer_caches[peer.peer_node_id]
 
     def rollback_request_caches(self, reorg_height: int):
         # Everything after reorg_height should be removed from the cache
-        for cache in self.untrusted_caches.values():
+        for cache in self.peer_caches.values():
             cache.clear_after_height(reorg_height)
 
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
@@ -632,8 +632,8 @@ class WalletNode:
             self.local_node_synced = False
             self.initialize_wallet_peers()
 
-        if peer.peer_node_id in self.untrusted_caches:
-            self.untrusted_caches.pop(peer.peer_node_id)
+        if peer.peer_node_id in self.peer_caches:
+            self.peer_caches.pop(peer.peer_node_id)
         if peer.peer_node_id in self.synced_peers:
             self.synced_peers.remove(peer.peer_node_id)
         if peer.peer_node_id in self.node_peaks:
@@ -997,7 +997,7 @@ class WalletNode:
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
         a transaction block
         """
-        for cache in self.untrusted_caches.values():
+        for cache in self.peer_caches.values():
             cache_ts: Optional[uint64] = cache.get_height_timestamp(height)
             if cache_ts is not None:
                 return cache_ts
