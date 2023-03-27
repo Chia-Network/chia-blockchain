@@ -147,7 +147,7 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
     assert node.logged_in_fingerprint == fingerprint
     assert node.get_last_used_fingerprint() == fingerprint
 
-    node.log_out()  # type: ignore
+    node.log_out()
 
     assert node.logged_in is False
     assert node.logged_in_fingerprint is None
@@ -319,7 +319,7 @@ async def test_get_balance(
         return full_node_server.node_id in wallet_node.synced_peers
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
-        wallet_node._close()  # type: ignore[no-untyped-call] # WalletNode needs hinting here
+        wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
 
