@@ -55,6 +55,7 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
+    wallet_info: WalletInfo
     wallet_state_manager: Any
     log: logging.Logger
     wallet_id: uint32

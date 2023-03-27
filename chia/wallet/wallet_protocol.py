@@ -10,6 +10,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_info import WalletInfo
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -63,6 +64,7 @@ class WalletProtocol(Protocol):
     def get_name(self) -> str:
         ...
 
+    wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
