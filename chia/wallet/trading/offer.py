@@ -79,7 +79,7 @@ class Offer:
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
     _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
-    final_spend_bundle: Optional[SpendBundle] = None
+    _final_spend_bundle: Optional[SpendBundle] = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -154,8 +154,6 @@ class Offer:
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
-        object.__setattr__(self, "final_spend_bundle", self.to_spend_bundle())
-        object.__setattr__(self, "_offered_coins", self._get_offered_coins())
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -246,6 +244,11 @@ class Offer:
         return offered_coins
 
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+        try:
+            if self._offered_coins is not None:
+                return self._offered_coins
+        except AttributeError:
+            object.__setattr__(self, "_offered_coins", self._get_offered_coins())
         return self._offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
@@ -541,9 +544,12 @@ class Offer:
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self._bundle])
 
     def to_spend_bundle(self) -> SpendBundle:
-        if self.final_spend_bundle:
-            return self.final_spend_bundle
-        # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
+        try:
+            if self._final_spend_bundle is not None:
+                return self._final_spend_bundle
+        except AttributeError:
+            pass
+        # Before we serialize this as a SpendBundle, we need to serialize the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
             puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD
@@ -565,12 +571,14 @@ class Offer:
                 )
             )
 
-        return SpendBundle.aggregate(
+        sb = SpendBundle.aggregate(
             [
                 SpendBundle(additional_coin_spends, G2Element()),
                 self._bundle,
             ]
         )
+        object.__setattr__(self, "_final_spend_bundle", sb)
+        return sb
 
     @classmethod
     def from_spend_bundle(cls, bundle: SpendBundle) -> Offer:
@@ -607,6 +615,11 @@ class Offer:
 
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Offer):
+            return False # don't attempt to compare against unrelated types
+        return self.name() == other.name()
 
     def compress(self, version: Optional[int] = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
