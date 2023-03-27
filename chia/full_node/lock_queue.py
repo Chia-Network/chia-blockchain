@@ -1,88 +1,81 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
-from types import TracebackType
-from typing import Awaitable, Callable
+from typing import Any, AsyncIterator, Generic, Optional, Set, TypeVar
+
+from typing_extensions import Protocol
 
 log = logging.getLogger(__name__)
 
 
+class _Comparable(Protocol):
+    def __lt__(self, other: Any) -> bool:
+        ...
+
+
+_T_Comparable = TypeVar("_T_Comparable", bound=_Comparable)
+
+
 @dataclasses.dataclass(frozen=True, order=True)
-class PrioritizedCallable:
-    priority: int
-    af: Callable[[], Awaitable[object]] = dataclasses.field(compare=False)
+class _Element(Generic[_T_Comparable]):
+    priority: _T_Comparable
+    ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event, compare=False)
 
 
-class LockQueue:
+@dataclasses.dataclass()
+class LockQueue(Generic[_T_Comparable]):
     """
-    The purpose of this class is to be able to control access to a lock, and give priority to certain clients
-    (LockClients). To use it, create a lock and clients:
-    ```
-    my_lock = LockQueue(asyncio.Lock())
-    client_a = LockClient(0, my_lock)
-    client_b = LockClient(1, my_lock)
+    The purpose of this class is to be able to control access to a lock, and give
+    priority to certain requests.  Lower values are given access first.  To use it,
+    create a lock and use the `.acquire()` context manager method:
 
-    async with client_a:
+    ```
+    my_lock = LockQueue[int]()
+
+    async with my_lock.acquire(priority=0):
+       ...
+    async with my_lock.acquire(priority=1):
        ...
     ```
 
-    The clients can be used like normal async locks, but the higher priority (lower number) will always go first.
-    Must be created under an asyncio running loop, and close and await_closed should be called.
+    Must be created while an asyncio loop is running.
     """
 
-    def __init__(self, inner_lock: asyncio.Lock):
-        self._inner_lock: asyncio.Lock = inner_lock
-        self._task_queue: asyncio.PriorityQueue[PrioritizedCallable] = asyncio.PriorityQueue()
-        self._run_task = asyncio.create_task(self._run())
-        self._release_event = asyncio.Event()
+    _queue: asyncio.PriorityQueue[_Element[_T_Comparable]] = dataclasses.field(default_factory=asyncio.PriorityQueue)
+    _active: Optional[_Element[_T_Comparable]] = None
+    cancelled: Set[_Element[_T_Comparable]] = dataclasses.field(default_factory=set)
 
-    async def put(self, priority: int, callback: Callable[[], Awaitable[object]]) -> None:
-        await self._task_queue.put(PrioritizedCallable(priority=priority, af=callback))
+    @contextlib.asynccontextmanager
+    async def acquire(self, priority: _T_Comparable) -> AsyncIterator[None]:
+        element = _Element(priority=priority)
 
-    async def acquire(self) -> None:
-        await self._inner_lock.acquire()
+        await self._queue.put(element)
+        await self._process()
 
-    def release(self) -> None:
-        self._inner_lock.release()
-        self._release_event.set()
-
-    async def _run(self) -> None:
         try:
-            while True:
-                prioritized_callback = await self._task_queue.get()
-                self._release_event = asyncio.Event()
-                await self.acquire()
-                await prioritized_callback.af()
-                await self._release_event.wait()
-        except asyncio.CancelledError:
-            log.debug("LockQueue._run() cancelled")
+            try:
+                await element.ready_event.wait()
+            except:  # noqa: E722
+                self.cancelled.add(element)
+                raise
+            yield
+        finally:
+            if self._active is element:
+                self._active = None
+            await self._process()
 
-    def close(self) -> None:
-        self._run_task.cancel()
+    async def _process(self) -> None:
+        if self._active is not None or self._queue.empty():
+            return
 
-    async def await_closed(self) -> None:
-        await self._run_task
+        while True:
+            element = await self._queue.get()
+            if element not in self.cancelled:
+                break
+            self.cancelled.remove(element)
 
-
-class LockClient:
-    def __init__(self, priority: int, queue: LockQueue):
-        self._priority = priority
-        self._queue = queue
-
-    async def __aenter__(self) -> None:
-        called: asyncio.Event = asyncio.Event()
-
-        # Use a parameter default to avoid a closure
-        async def callback(called_inner: asyncio.Event = called) -> None:
-            called_inner.set()
-
-        await self._queue.put(priority=self._priority, callback=callback)
-        await called.wait()
-
-    async def __aexit__(
-        self, typ: type[BaseException] | None, value: BaseException | None, traceback: TracebackType | None
-    ) -> bool | None:
-        self._queue.release()
-        return None
+        self._active = element
+        element.ready_event.set()

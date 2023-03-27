@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import enum
 import logging
 import multiprocessing
 import traceback
@@ -29,6 +30,7 @@ from chia.consensus.multiprocess_validation import (
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.lock_queue import LockQueue
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -77,6 +79,12 @@ class StateChangeSummary:
     new_rewards: List[Coin]
 
 
+class BlockchainLockPriority(enum.IntEnum):
+    # lower values are higher priority
+    low = 1
+    high = 0
+
+
 class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
 
@@ -102,7 +110,7 @@ class Blockchain(BlockchainInterface):
     _shut_down: bool
 
     # Lock to prevent simultaneous reads and writes
-    lock: asyncio.Lock
+    lock_queue: LockQueue[BlockchainLockPriority]
     compact_proof_lock: asyncio.Lock
 
     @staticmethod
@@ -122,7 +130,9 @@ class Blockchain(BlockchainInterface):
         in the consensus constants config.
         """
         self = Blockchain()
-        self.lock = asyncio.Lock()  # External lock handled by full node
+        # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
+        # be validated first.
+        self.lock_queue = LockQueue()
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()
