@@ -40,7 +40,7 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -69,7 +69,6 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.clawback.cb_puzzles import generate_clawback_spend_bundle, match_clawback_puzzle
-from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -1156,7 +1155,6 @@ class WalletStateManager:
         return None, None
 
     async def add_coin_states(
-
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
