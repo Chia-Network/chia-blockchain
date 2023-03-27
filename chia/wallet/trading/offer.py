@@ -618,7 +618,7 @@ class Offer:
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Offer):
-            return False # don't attempt to compare against unrelated types
+            return False  # don't attempt to compare against unrelated types
         return self.name() == other.name()
 
     def compress(self, version: Optional[int] = None) -> bytes:
