@@ -360,7 +360,7 @@ class PoolWallet:
         await pool_wallet.update_pool_config()
 
         p2_puzzle_hash: bytes32 = (await pool_wallet.get_current_state()).p2_singleton_puzzle_hash
-        await wallet_state_manager.add_new_wallet(pool_wallet, pool_wallet.wallet_id, create_puzzle_hashes=False)
+        await wallet_state_manager.add_new_wallet(pool_wallet)
         await wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [pool_wallet.wallet_id])
 
         return pool_wallet

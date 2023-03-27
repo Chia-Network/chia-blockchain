@@ -125,7 +125,7 @@ class CATWallet:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
 
-        await self.wallet_state_manager.add_new_wallet(self, self.id())
+        await self.wallet_state_manager.add_new_wallet(self)
 
         # If the new CAT name wasn't originally provided, we used a temporary name before issuance
         # since we didn't yet know the TAIL. Now we know the TAIL, we can update the name
@@ -207,7 +207,7 @@ class CATWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        await self.wallet_state_manager.add_new_wallet(self, self.id())
+        await self.wallet_state_manager.add_new_wallet(self)
         return self
 
     @classmethod
