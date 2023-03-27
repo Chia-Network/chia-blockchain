@@ -387,7 +387,7 @@ class WalletNode:
         self.log_in(private_key)
         self.wallet_state_manager.state_changed("sync_changed")
 
-        # Populate the balance caches of the RPC interface for all wallets
+        # Populate the balance caches for all wallets
         for wallet_id in self.wallet_state_manager.wallets:
             await self.get_balance(wallet_id)
 
