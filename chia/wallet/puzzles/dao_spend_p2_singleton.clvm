@@ -1,6 +1,5 @@
 (mod (
   CONDITIONS
-  SPEND_AMOUNT
   P2_SINGLETON_PUZHASH
   p2_singleton_parent_amount_list
 )
@@ -12,19 +11,19 @@
 
   (include condition_codes.clvm)
 
-  (defun merge_list (list_a list_b)
-    (if list_a
-      (c (f list_a) (merge_list (r list_a) list_b))
-      list_b
-    )
-  )
+  ; (defun merge_list (list_a list_b)
+  ;   (if list_a
+  ;     (c (f list_a) (merge_list (r list_a) list_b))
+  ;     list_b
+  ;   )
+  ; )
 
   (defun loop_through_list (SPEND_AMOUNT P2_SINGLETON_PUZHASH p2_calculated p2_singleton_list total output)
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT p2_calculated)
       (c
         (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
-        (if p2_singleton_list
+        (if (r p2_singleton_list)
           (loop_through_list
             SPEND_AMOUNT
             P2_SINGLETON_PUZHASH
@@ -41,10 +40,17 @@
     )
   )
 
+  (defun sum_create_coins (conditions)
+    (if conditions
+      (+ (if (= (f (f conditions)) CREATE_COIN) (f (r (r (f conditions)))) 0) (sum_create_coins (r conditions)))
+      0
+    )
+  )
+
 
   ; main
   (loop_through_list
-    SPEND_AMOUNT
+    (sum_create_coins CONDITIONS)
     P2_SINGLETON_PUZHASH
     (sha256 (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
     (r p2_singleton_parent_amount_list)

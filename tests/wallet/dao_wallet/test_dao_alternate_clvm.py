@@ -371,7 +371,7 @@ def test_validator() -> None:
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
 
-    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, p2_singleton_puzhash)
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
     spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
     output_conds = spend_p2_singleton.run(spend_p2_singleton_solution)
@@ -474,7 +474,7 @@ def test_spend_p2_singleton() -> None:
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
 
-    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, p2_singleton_puzhash)
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
     solution = Program.to([[[parent_id, locked_amount]]])
 
