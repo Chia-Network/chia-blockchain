@@ -24,7 +24,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -254,8 +254,8 @@ class CATWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.CAT)
+    def type(cls) -> WalletType:
+        return WalletType.CAT
 
     def id(self) -> uint32:
         return self.wallet_info.id

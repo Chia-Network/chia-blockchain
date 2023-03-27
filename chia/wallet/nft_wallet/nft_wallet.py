@@ -21,7 +21,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -123,8 +123,8 @@ class NFTWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.NFT)
+    def type(cls) -> WalletType:
+        return WalletType.NFT
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -1304,7 +1304,7 @@ class NFTWallet:
         """
         # get DID Wallet
         for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 if self.get_did() == bytes32.from_hexstr(wallet.get_my_DID()):
                     did_wallet = wallet
                     break

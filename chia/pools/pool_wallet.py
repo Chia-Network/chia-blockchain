@@ -45,7 +45,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
@@ -119,8 +119,8 @@ class PoolWallet:
     """
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.POOLING_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.POOLING_WALLET
 
     def id(self) -> uint32:
         return self.wallet_info.id
