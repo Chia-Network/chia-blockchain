@@ -3,9 +3,12 @@ from __future__ import annotations
 import sqlite3
 from typing import Dict, List, Optional, Set
 
+from aiosqlite import Cursor
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2, execute_fetchone
+from chia.util.chunks import chunks
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2, execute_fetchone
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -64,18 +67,30 @@ class WalletCoinStore:
             )
             return int(0 if row is None else row[0])
 
-    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
+    async def get_multiple_coin_records(
+        self, coin_names: List[bytes32], maximum_query_size: int = SQLITE_MAX_VARIABLE_NUMBER
+    ) -> List[WalletCoinRecord]:
         """Return WalletCoinRecord(s) that have a coin name in the specified list"""
         if len(coin_names) == 0:
             return []
 
-        as_hexes = [cn.hex() for cn in coin_names]
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
-            )
+        coins: List[WalletCoinRecord] = []
 
-        return [self.coin_record_from_row(row) for row in rows]
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursors: List[Cursor] = []
+            for names_chunk in chunks(coin_names, maximum_query_size):
+                as_hexes = tuple(cn.hex() for cn in names_chunk)
+                cursors.append(
+                    await conn.execute(
+                        f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
+                    )
+                )
+
+            for cursor in cursors:
+                for row in await cursor.fetchall():
+                    coins.append(self.coin_record_from_row(row))
+
+        return coins
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:

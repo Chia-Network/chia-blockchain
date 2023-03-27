@@ -268,6 +268,37 @@ async def test_get_multiple_coin_records() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_multiple_coin_records_chunking() -> None:
+    # faster testing of chunking than using an actual sql limit that we can't control
+    maximum_query_size = 50
+    extra_count = 10
+    unrequested_count = 5
+    # three chunks worth
+    requested_coin_count = (2 * maximum_query_size) + extra_count
+    total_coin_count = requested_coin_count + unrequested_count
+    coins = [Coin(token_bytes(32), token_bytes(32), uint64(12312)) for _ in range(total_coin_count)]
+    records = [
+        WalletCoinRecord(coin, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0) for coin in coins
+    ]
+
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletCoinStore.create(db_wrapper)
+
+        for record in records:
+            await store.add_coin_record(record)
+
+        coins_to_query = coins[:requested_coin_count]
+        names_to_query = [coin.name() for coin in coins_to_query]
+        expected_records = set(records[:requested_coin_count])
+        returned_records = await store.get_multiple_coin_records(
+            coin_names=names_to_query,
+            maximum_query_size=maximum_query_size,
+        )
+
+    assert set(returned_records) == expected_records
+
+
+@pytest.mark.asyncio
 async def test_delete_coin_record() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
