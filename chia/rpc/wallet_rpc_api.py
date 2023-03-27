@@ -792,6 +792,8 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await self.service.get_balance(wallet_id)
         wallet_balance = balance.to_json_dict()
+        wallet_balance["wallet_id"] = wallet_id
+        wallet_balance["wallet_type"] = wallet.type()
         if self.service.logged_in_fingerprint is not None:
             wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
         if wallet.type() == WalletType.CAT:
