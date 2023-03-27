@@ -19,8 +19,28 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     puzzle_for_singleton,
     solution_for_singleton,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER, NFT_OWNERSHIP_LAYER_HASH, construct_ownership_layer
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+
+
+# TEMP
+NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
+    "nft_ownership_layer_v2.clvm",
+    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
+    include_standard_libraries=True,
+)
+NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
+def construct_ownership_layer(
+    current_owner: Optional[bytes32],
+    transfer_program: Program,
+    inner_puzzle: Program,
+) -> Program:
+    return NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER_HASH,
+        current_owner,
+        transfer_program,
+        transfer_program.get_tree_hash(),
+        inner_puzzle,
+    )
 
 
 # Mods

@@ -15,7 +15,6 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.nft_wallet.nft_puzzles import construct_ownership_layer
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     launch_conditions_and_coinsol,
@@ -37,6 +36,7 @@ from chia.wallet.vc_wallet.vc_drivers import (
     match_viral_backdoor,
     solve_viral_backdoor,
     create_std_parent_morpher,
+    construct_ownership_layer,
 )
 
 
@@ -797,5 +797,3 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             )
             > 0
         )
-
-        raise ValueError("Don't remove this until the ownership layer for NFTs is changed back to v1")

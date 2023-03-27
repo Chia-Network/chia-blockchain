@@ -40,6 +40,15 @@
           TP_HASH
         )
       )
+      (sha256 1 (curry_hashes ADAPTER_MOD_HASH
+        (curry_hashes COVENANT_MOD_HASH
+          (sha256 1 COVENANT_INITIAL_PUZZLE_HASH)
+          (curry_hashes SELF_HASH
+            (sha256 1 SELF_HASH)
+          )
+          TP_HASH
+        )
+      ))
       previous_inner_puzhash
     )
   )

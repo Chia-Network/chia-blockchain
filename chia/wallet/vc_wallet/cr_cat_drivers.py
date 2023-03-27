@@ -19,10 +19,10 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_MOD_HASH,
     SINGLETON_LAUNCHER_HASH,
 )
-from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER_HASH
 from chia.wallet.payment import Payment
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
+    NFT_OWNERSHIP_LAYER_HASH,
     NFT_TP_COVENANT_ADAPTER_HASH,
     GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
@@ -66,6 +66,7 @@ def construct_cr_layer(
                         Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash(),
                         Program.to(None),
                         GUARANTEED_NIL_TP,
+                        GUARANTEED_NIL_TP.get_tree_hash(),
                         P2_ANNOUNCED_DELEGATED_PUZZLE,
                     )
                     .get_tree_hash_precalc(NFT_OWNERSHIP_LAYER_HASH, Program.to(NFT_OWNERSHIP_LAYER_HASH).get_tree_hash()),
