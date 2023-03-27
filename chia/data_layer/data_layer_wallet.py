@@ -163,9 +163,7 @@ class DataLayerWallet:
             WalletType.DATA_LAYER.value,
             "",
         )
-        self.wallet_id = uint8(self.wallet_info.id)
-
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
 
         return self
 

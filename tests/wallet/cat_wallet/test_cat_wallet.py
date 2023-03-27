@@ -62,7 +62,7 @@ class TestCATWallet:
             )
             # The next 2 lines are basically a noop, it just adds test coverage
             cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, cat_wallet.wallet_info)
-            await wallet_node.wallet_state_manager.add_new_wallet(cat_wallet, cat_wallet.id())
+            await wallet_node.wallet_state_manager.add_new_wallet(cat_wallet)
 
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
