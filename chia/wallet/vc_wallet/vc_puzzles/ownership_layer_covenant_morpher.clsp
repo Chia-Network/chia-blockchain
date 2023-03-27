@@ -20,31 +20,33 @@
 
   (include curry.clib)
 
+  (defconstant ONE 1)
+
   (curry_hashes SINGLETON_MOD_HASH
-    (sha256 2
-      (sha256 1 SINGLETON_MOD_HASH)
-      (sha256 2
-        (sha256 1 my_singleton_id)
-        (sha256 1 SINGLETON_LAUNCHER_HASH)
+    (sha256 TWO
+      (sha256 ONE SINGLETON_MOD_HASH)
+      (sha256 TWO
+        (sha256 ONE my_singleton_id)
+        (sha256 ONE SINGLETON_LAUNCHER_HASH)
       )
     )
     (curry_hashes OWNERSHIP_LAYER_MOD_HASH
-      (sha256 1 OWNERSHIP_LAYER_MOD_HASH)
+      (sha256 ONE OWNERSHIP_LAYER_MOD_HASH)
       previous_metadata_hash
       (curry_hashes ADAPTER_MOD_HASH
         (curry_hashes COVENANT_MOD_HASH
-          (sha256 1 COVENANT_INITIAL_PUZZLE_HASH)
+          (sha256 ONE COVENANT_INITIAL_PUZZLE_HASH)
           (curry_hashes SELF_HASH
-            (sha256 1 SELF_HASH)
+            (sha256 ONE SELF_HASH)
           )
           TP_HASH
         )
       )
-      (sha256 1 (curry_hashes ADAPTER_MOD_HASH
+      (sha256 ONE (curry_hashes ADAPTER_MOD_HASH
         (curry_hashes COVENANT_MOD_HASH
-          (sha256 1 COVENANT_INITIAL_PUZZLE_HASH)
+          (sha256 ONE COVENANT_INITIAL_PUZZLE_HASH)
           (curry_hashes SELF_HASH
-            (sha256 1 SELF_HASH)
+            (sha256 ONE SELF_HASH)
           )
           TP_HASH
         )

@@ -23,6 +23,8 @@
   (include sha256tree.clib)
   (include utility_macros.clib)
 
+  (defconstant ONE 1)
+
   (defun-inline create_did_puzhash
     (
         SINGLETON_MOD_HASH
@@ -32,11 +34,11 @@
     )
 
     (curry_hashes_inline SINGLETON_MOD_HASH
-      (sha256 2
-        (sha256 1 SINGLETON_MOD_HASH)
-        (sha256 2
-          (sha256 1 provider_id)
-          (sha256 1 SINGLETON_LAUNCHER_HASH)
+      (sha256 TWO
+        (sha256 ONE SINGLETON_MOD_HASH)
+        (sha256 TWO
+          (sha256 ONE provider_id)
+          (sha256 ONE SINGLETON_LAUNCHER_HASH)
         )
       )
       provider_innerpuzhash

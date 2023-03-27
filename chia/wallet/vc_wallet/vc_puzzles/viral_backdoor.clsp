@@ -17,6 +17,8 @@
   (include sha256tree.clib)
   (include utility_macros.clib)
 
+  (defconstant ONE 1)
+
   (defun-inline wrap_puzhash
     (
       THIS_MOD_HASH
@@ -25,9 +27,9 @@
     )
 
     (curry_hashes_inline THIS_MOD_HASH
-      (sha256 1 THIS_MOD_HASH)
-      (sha256 1 HIDDEN_PUZZLE_HASH)
-      (sha256 1 new_inner_puzzle_hash)
+      (sha256 ONE THIS_MOD_HASH)
+      (sha256 ONE HIDDEN_PUZZLE_HASH)
+      (sha256 ONE new_inner_puzzle_hash)
     )
   )
 

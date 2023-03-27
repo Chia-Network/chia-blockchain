@@ -23,7 +23,7 @@
     )
       (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
         inner_puzzle_hash
-        (sha256 1 TRANSFER_PROGRAM_HASH)
+        (sha256 ONE TRANSFER_PROGRAM_HASH)
         TRANSFER_PROGRAM_HASH
         (sha256 ONE new_owner)
         (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
