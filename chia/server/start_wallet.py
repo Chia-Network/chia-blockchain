@@ -64,11 +64,11 @@ def create_wallet_service(
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
     return Service(
-        server_listen_ports=[service_config["port"]],
         root_path=root_path,
         config=config,
         node=node,
         peer_api=peer_api,
+        listen=False,
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,

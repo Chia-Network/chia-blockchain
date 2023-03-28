@@ -264,26 +264,26 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start_server(self, prefer_ipv6: bool, on_connect: Optional[ConnectionCallback] = None) -> None:
+    async def start_server(
+        self, listen: bool, prefer_ipv6: bool, on_connect: Optional[ConnectionCallback] = None
+    ) -> None:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
         if self.gc_task is None:
             self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
 
-        if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
-            return None
-
-        self.on_connect = on_connect
-        self.webserver = await WebServer.create(
-            hostname="",
-            port=uint16(self._port),
-            routes=[web.get("/ws", self.incoming_connection)],
-            ssl_context=self.ssl_context,
-            prefer_ipv6=prefer_ipv6,
-            logger=self.log,
-        )
-        self._port = int(self.webserver.listen_port)
-        self.log.info(f"Started listening on port: {self._port}")
+        if listen:
+            self.on_connect = on_connect
+            self.webserver = await WebServer.create(
+                hostname="",
+                port=uint16(self._port),
+                routes=[web.get("/ws", self.incoming_connection)],
+                ssl_context=self.ssl_context,
+                prefer_ipv6=prefer_ipv6,
+                logger=self.log,
+            )
+            self._port = int(self.webserver.listen_port)
+            self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request: web.Request) -> web.StreamResponse:
         if getattr(self.node, "crawl", None) is not None:

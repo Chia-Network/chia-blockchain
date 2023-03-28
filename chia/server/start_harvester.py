@@ -49,11 +49,11 @@ def create_harvester_service(
         node_type=NodeType.HARVESTER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         connect_peers=[] if farmer_peer is None else [farmer_peer],
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        listen=False,
     )
 
 

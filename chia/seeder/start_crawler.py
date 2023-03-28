@@ -54,11 +54,13 @@ def create_full_node_crawler_service(
         advertised_port=service_config["port"],
         service_name="full_node",
         upnp_ports=[],
-        server_listen_ports=[service_config["port"]],
         on_connect_callback=crawler.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        # TODO: should the crawler being listening?
+        #       isn't there code for this and/or the introducer that just closes all incoming connections?
+        # listen=False,
     )
 
 

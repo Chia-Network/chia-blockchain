@@ -59,7 +59,6 @@ def create_full_node_service(
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
-        server_listen_ports=[service_config["port"]],
         on_connect_callback=full_node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
