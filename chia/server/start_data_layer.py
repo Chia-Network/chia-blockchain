@@ -51,7 +51,6 @@ def create_data_layer_service(
         rpc_info = (DataLayerRpcApi, cast(int, service_config["rpc_port"]))
 
     return Service(
-        server_listen_ports=[service_config["port"]],
         root_path=root_path,
         config=config,
         node=data_layer,

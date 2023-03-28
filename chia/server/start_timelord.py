@@ -57,7 +57,6 @@ def create_timelord_service(
         node_type=NodeType.TIMELORD,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
         network_id=network_id,
         rpc_info=rpc_info,
