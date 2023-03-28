@@ -1240,8 +1240,10 @@ class TestWalletSync:
             wallet_node.get_timestamp_for_height = flaky_get_timestamp(
                 wallet_node, wallet_node.get_timestamp_for_height
             )
-            wallet_node.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash = flaky_info_for_puzhash(
-                wallet_node, wallet_node.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash
+            wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash = (
+                flaky_info_for_puzhash(
+                    wallet_node, wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash
+                )
             )
 
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
