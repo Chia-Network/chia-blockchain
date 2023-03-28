@@ -1283,12 +1283,9 @@ class WalletStateManager:
                                     and inner_puzhash is not None
                                     and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
                                 ):
-                                    for _, wallet in self.wallets.items():
-                                        if wallet.type() == WalletType.DATA_LAYER.value:
-                                            assert isinstance(wallet, DataLayerWallet)
-                                            dl_wallet = wallet
-                                            break
-                                    else:  # No DL wallet exists yet
+                                    try:
+                                        dl_wallet = self.get_dl_wallet()
+                                    except ValueError:
                                         dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                                             self,
                                         )
