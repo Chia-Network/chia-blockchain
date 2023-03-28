@@ -45,7 +45,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
@@ -119,8 +119,8 @@ class PoolWallet:
     """
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.POOLING_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.POOLING_WALLET
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -360,7 +360,7 @@ class PoolWallet:
         await pool_wallet.update_pool_config()
 
         p2_puzzle_hash: bytes32 = (await pool_wallet.get_current_state()).p2_singleton_puzzle_hash
-        await wallet_state_manager.add_new_wallet(pool_wallet, pool_wallet.wallet_id, create_puzzle_hashes=False)
+        await wallet_state_manager.add_new_wallet(pool_wallet)
         await wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [pool_wallet.wallet_id])
 
         return pool_wallet

@@ -515,6 +515,9 @@ wallet:
   connect_to_unknown_peers: True
 
   initial_num_public_keys: 425
+  reuse_public_key_for_change:
+    #Add your wallet fingerprint here, this is an example.
+    "2999502625": False
 
   dns_servers: *dns_servers
 

@@ -127,9 +127,7 @@ class TestROM:
         cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(
-            gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
-        )
+        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, mempool_mode=False, height=softfork_height)
         assert npc_result.error is None
         assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
             len(bytes(gen.program)) * COST_PER_BYTE
