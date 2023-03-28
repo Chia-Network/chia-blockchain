@@ -541,7 +541,7 @@ def test_treasury() -> None:
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
 
-    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, p2_singleton_puzhash)
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
     spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
 
@@ -555,12 +555,14 @@ def test_treasury() -> None:
         CAT_TAIL_HASH,
     )
 
+    # TREASURY_MOD_HASH
     # PROPOSAL_VALIDATOR
     # PROPOSAL_LENGTH
     # PROPOSAL_SOFTCLOSE_LENGTH
     # ATTENDANCE_REQUIRED
-    # PASS_MARGIN
-    # PROPOSAL_SELF_DESTRUCT_TIME
+    # PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
+    # PROPOSAL_SELF_DESTRUCT_TIME ; time in seconds after which proposals can be automatically closed
+    # ORACLE_SPEND_DELAY  ; timelock delay for oracle spend
     self_destruct_time = 1000
     full_treasury_puz: Program = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD.get_tree_hash(),
@@ -579,6 +581,20 @@ def test_treasury() -> None:
     # proposal_validator_solution
     # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
     # delegated_solution  ; this is not secure unless the delegated puzzle secures it
+
+    # Curry vals:
+    # SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH ; proposal timer needs to know which proposal created it, AND
+    # CAT_MOD_HASH
+    # TREASURY_MOD_HASH
+    # LOCKUP_MOD_HASH
+    # CAT_TAIL_HASH
+    # TREASURY_ID
+    # YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+    # TOTAL_VOTES  ; how many people responded
+    # SPEND_OR_UPDATE_FLAG  ; this is one of 's', 'u', 'd' - other types may be added in the future
+    # PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
     proposal: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD_HASH,
@@ -599,6 +615,8 @@ def test_treasury() -> None:
     solution: Program = Program.to([0])
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
+
+    # Run a passed proposal spend
     # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     # proposal_validator_solution
     # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
@@ -613,7 +631,7 @@ def test_treasury() -> None:
         ]
     )
     conds = full_treasury_puz.run(solution)
-    assert len(conds.as_python()) == 7 + len(conditions)
+    assert len(conds.as_python()) == 6 + len(conditions)
 
 
 def test_lockup() -> None:
@@ -721,7 +739,7 @@ def test_proposal_innerpuz() -> None:
     locked_amount = 100000
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
-    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, spend_amount, p2_singleton_puzhash)
+    spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, p2_singleton_puzhash)
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
     spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
 
