@@ -3114,9 +3114,6 @@ class WalletRpcApi:
             raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        if dl_wallet is None:
-            raise ValueError("The DataLayer wallet has not been initialized")
-
         await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
         return {}
 
