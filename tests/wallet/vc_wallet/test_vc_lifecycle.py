@@ -195,7 +195,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # Create it with mock singleton info
         transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
         assert match_did_tp(uncurry_puzzle(transfer_program)) == ()
-        eml_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry(None, transfer_program)
+        eml_puzzle: Program = MOCK_OWNERSHIP_LAYER.curry((MOCK_LAUNCHER_ID, None), transfer_program)
 
         await sim.farm_block(eml_puzzle.get_tree_hash())
         eml_coin: Coin = (
@@ -205,8 +205,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # Define parameters for next few spend attempts
         provider_innerpuzhash: bytes32 = ACS_PH
         my_coin_id: bytes32 = eml_coin.name()
-        new_metadata: Program = Program.to("SUCCESS")
-        new_tp: Program = Program.to("NEW TP")
+        new_metadata: Program = Program.to((MOCK_LAUNCHER_ID, "SUCCESS"))
+        new_tp_hash: Program = Program.to("NEW TP").get_tree_hash()
         bad_data: bytes32 = bytes32([0] * 32)
 
         # Try to update metadata and tp without any announcement
@@ -222,7 +222,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                                     bad_data,
                                     my_coin_id,
                                     new_metadata,
-                                    new_tp,
+                                    new_tp_hash,
                                 )
                             ]
                         ),
@@ -241,7 +241,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         did_authorization_spend: CoinSpend = CoinSpend(
             did_coin,
             MOCK_SINGLETON,
-            Program.to([[[62, std_hash(my_coin_id + new_metadata.get_tree_hash() + new_tp.get_tree_hash())]]]),
+            Program.to([[[62, std_hash(my_coin_id + new_metadata.get_tree_hash() + new_tp_hash)]]]),
         )
 
         # Try to pass the wrong coin id
@@ -257,7 +257,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                                     provider_innerpuzhash,
                                     bad_data,
                                     new_metadata,
-                                    new_tp,
+                                    new_tp_hash,
                                 )
                             ]
                         ),
@@ -283,7 +283,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                                     provider_innerpuzhash,
                                     my_coin_id,
                                     new_metadata,
-                                    new_tp,
+                                    new_tp_hash,
                                 )
                             ]
                         ),
@@ -304,7 +304,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             .as_iter()
             if condition.first() == Program.to(1)
         )
-        assert remark_condition == Program.to([1, new_metadata, new_tp])
+        assert remark_condition == Program.to([1, new_metadata, new_tp_hash])
 
 
 @pytest.mark.asyncio
