@@ -24,7 +24,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
@@ -125,7 +125,7 @@ class CATWallet:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
 
-        await self.wallet_state_manager.add_new_wallet(self, self.id())
+        await self.wallet_state_manager.add_new_wallet(self)
 
         # If the new CAT name wasn't originally provided, we used a temporary name before issuance
         # since we didn't yet know the TAIL. Now we know the TAIL, we can update the name
@@ -207,7 +207,7 @@ class CATWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        await self.wallet_state_manager.add_new_wallet(self, self.id())
+        await self.wallet_state_manager.add_new_wallet(self)
         return self
 
     @classmethod
@@ -254,8 +254,8 @@ class CATWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.CAT)
+    def type(cls) -> WalletType:
+        return WalletType.CAT
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -289,11 +289,11 @@ class CATWallet:
             assert txs[0].spend_bundle
             program: BlockGenerator = simple_solution_generator(txs[0].spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            # we use height=0 here to not enable any soft-fork semantics. It
+            # will only matter once the wallet generates transactions relying on
+            # new conditions, and we can change this by then
             result: NPCResult = get_name_puzzle_conditions(
-                program,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                mempool_mode=True,
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=uint32(0)
             )
             self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for CAT wallet: {self.cost_of_single_tx}")
@@ -625,7 +625,7 @@ class CATWallet:
         self,
         payments: List[Payment],
         fee: uint64 = uint64(0),
-        cat_discrepancy: Optional[Tuple[int, Program]] = None,  # (extra_delta, limitations_solution)
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
@@ -646,9 +646,9 @@ class CATWallet:
             puzzle_announcements_bytes = None
 
         if cat_discrepancy is not None:
-            extra_delta, limitations_solution = cat_discrepancy
+            extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
-            extra_delta, limitations_solution = 0, Program.to([])
+            extra_delta, tail_reveal, tail_solution = 0, Program.to([]), Program.to([])
         payment_amount: int = sum([p.amount for p in payments])
         starting_amount: int = payment_amount - extra_delta
         if reuse_puzhash is None:
@@ -707,12 +707,6 @@ class CATWallet:
                 change_puzhash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": change_puzhash, "amount": uint64(change), "memos": []})
 
-        limitations_program_reveal = Program.to([])
-        if self.cat_info.my_tail is None:
-            assert cat_discrepancy is None
-        elif cat_discrepancy is not None:
-            limitations_program_reveal = self.cat_info.my_tail
-
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
         chia_tx = None
@@ -765,6 +759,11 @@ class CATWallet:
                     primaries=[],
                     coin_announcements_to_assert={announcement.name()},
                 )
+            if cat_discrepancy is not None:
+                # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
+                innersol = Program.to(
+                    [[], (1, Program.to([51, None, -113, tail_reveal, tail_solution]).cons(innersol.at("rfr"))), []]
+                )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
@@ -773,10 +772,10 @@ class CATWallet:
                 self.cat_info.limitations_program_hash,
                 inner_puzzle,
                 innersol,
-                limitations_solution=limitations_solution,
+                limitations_solution=tail_solution,
                 extra_delta=extra_delta,
                 lineage_proof=lineage_proof,
-                limitations_program_reveal=limitations_program_reveal,
+                limitations_program_reveal=tail_reveal,
             )
             spendable_cat_list.append(new_spendable_cat)
 
@@ -809,6 +808,7 @@ class CATWallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_cat_coins: Optional[Set[Coin]] = None,
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         reuse_puzhash: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
@@ -831,6 +831,7 @@ class CATWallet:
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
+            cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,

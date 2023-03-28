@@ -106,7 +106,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         self.log.debug(f"Received {len(request.peer_list)} peers")
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), True)
+            await self.full_node.full_node_peers.add_peers(request.peer_list, peer.get_peer_info(), True)
         return None
 
     @api_request(peer_required=True)
@@ -115,7 +115,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         self.log.debug(f"Received {len(request.peer_list)} peers from introducer")
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
+            await self.full_node.full_node_peers.add_peers(request.peer_list, peer.get_peer_info(), False)
 
         await peer.close()
         return None
@@ -1107,7 +1107,6 @@ class FullNodeAPI:
                     get_name_puzzle_conditions,
                     block_generator,
                     self.full_node.constants.MAX_BLOCK_COST_CLVM,
-                    cost_per_byte=self.full_node.constants.COST_PER_BYTE,
                     mempool_mode=False,
                     height=request.height,
                 ),

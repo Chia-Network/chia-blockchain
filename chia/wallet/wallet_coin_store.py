@@ -64,19 +64,6 @@ class WalletCoinStore:
             )
             return int(0 if row is None else row[0])
 
-    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
-        """Return WalletCoinRecord(s) that have a coin name in the specified list"""
-        if len(coin_names) == 0:
-            return []
-
-        as_hexes = [cn.hex() for cn in coin_names]
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
-            )
-
-        return [self.coin_record_from_row(row) for row in rows]
-
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
         if name is None:
@@ -137,7 +124,7 @@ class WalletCoinStore:
         include_spent_coins: bool = True,
         start_height: uint32 = uint32(0),
         end_height: uint32 = uint32((2**32) - 1),
-    ) -> List[Optional[WalletCoinRecord]]:
+    ) -> Dict[bytes32, WalletCoinRecord]:
         """Returns CoinRecord with specified coin id."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
@@ -155,7 +142,7 @@ class WalletCoinStore:
             coin_name = bytes32.fromhex(row[0])
             ret[coin_name] = record
 
-        return [ret.get(name) for name in coin_names]
+        return ret
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
