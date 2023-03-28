@@ -164,6 +164,7 @@ seeder:
 
 harvester:
   # The harvester server (if run) will run on this port
+  # TODO: this seems to be used, but i don't have the port open.  not sure what's going on
   port: 8448
   farmer_peer:
     host: *self_hostname
@@ -218,9 +219,6 @@ farmer:
   full_node_peer:
     host: *self_hostname
     port: 8444
-  harvester_peer:
-    host: *self_hostname
-    port: 8448
 
   pool_public_keys: []
 
@@ -424,18 +422,9 @@ full_node:
     - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
-  farmer_peer:
-      host: *self_hostname
-      port: 8447
-  timelord_peer:
-      host: *self_hostname
-      port: 8446
   introducer_peer:
       host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
-  wallet_peer:
-    host: *self_hostname
-    port: 8449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
