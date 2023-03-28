@@ -1021,13 +1021,14 @@ class WalletStateManager:
                         wallet_identifier = await self.determine_coin_type(peer, coin_state, fork_height)
                         try:
                             dl_wallet = self.get_dl_wallet()
+                        except ValueError:
+                            pass
+                        else:
                             if (
                                 await dl_wallet.get_singleton_record(coin_name) is not None
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
-                        except ValueError:
-                            pass
 
                     if wallet_identifier is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
