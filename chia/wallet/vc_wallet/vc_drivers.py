@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from typing import Iterator, List, Optional, Tuple, Type, TypeVar
 
@@ -5,22 +7,22 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.util.ints import uint64
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER, NFT_OWNERSHIP_LAYER_HASH, construct_ownership_layer
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    SINGLETON_MOD,
-    SINGLETON_MOD_HASH,
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
+    SINGLETON_MOD,
+    SINGLETON_MOD_HASH,
     generate_launcher_coin,
     puzzle_for_singleton,
     solution_for_singleton,
 )
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
-
 
 # Mods
 EXTIGENT_METADATA_LAYER = load_clvm_maybe_recompile(
@@ -321,8 +323,9 @@ OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
 _T_VerifiedCredential = TypeVar("_T_VerifiedCredential", bound="VerifiedCredential")
 
 
+@streamable
 @dataclass(frozen=True)
-class VerifiedCredential:
+class VerifiedCredential(Streamable):
     """
     This class serves as the main driver for the entire VC puzzle stack. Given the information below, it can sync and
     spend VerifiedCredentials in any specified manner. Trying to sync from a spend that this class did not create will
@@ -344,6 +347,7 @@ class VerifiedCredential:
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
         memos: List[bytes32],
+        fee: uint64 = uint64(0),
     ) -> Tuple[Program, List[CoinSpend], _T_VerifiedCredential]:
         """
         Launch a VC.
@@ -408,11 +412,11 @@ class VerifiedCredential:
             curried_eve_singleton_hash,
             uint64(1),
         )
-
         create_launcher_conditions = Program.to(
             [
                 [51, SINGLETON_LAUNCHER_HASH, 1],
-                [51, origin_coin.puzzle_hash, origin_coin.amount - 1],
+                [51, origin_coin.puzzle_hash, origin_coin.amount - fee - 1],
+                [52, fee],
                 [61, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())],
                 [61, std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())],
             ]
