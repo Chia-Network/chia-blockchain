@@ -468,8 +468,13 @@ def test_spend_p2_singleton() -> None:
     singleton_inner_hash = Program.to(1).get_tree_hash()
     deleg_puz = Program.to(1)
     deleg_conds = Program.to([[51, 0xCAFEF00D, 1000]])
-    conds = p2_singleton.run(Program.to([singleton_inner_hash, deleg_puz, deleg_conds]))
-    assert len(conds.as_python()) == 3
+    # singleton_inner_puzhash
+    # delegated_puzzle
+    # delegated_solution
+    # my_id
+    p2_singleton_id = Program.to("p2_singleton_coin").get_tree_hash()
+    conds = p2_singleton.run(Program.to([singleton_inner_hash, deleg_puz, deleg_conds, p2_singleton_id]))
+    assert len(conds.as_python()) == 4
 
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
