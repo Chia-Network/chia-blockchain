@@ -190,7 +190,7 @@ class CRCAT:
                     [51, new_cr_layer_hash, payment.amount, payment.memos],
                     [51, None, -113, tail, tail_solution],
                     [60, None],
-                    [1, authorized_providers, proofs_checker],
+                    [1, payment.puzzle_hash, authorized_providers, proofs_checker],
                 ],
             )
         )
@@ -287,22 +287,26 @@ class CRCAT:
 
         # Get info by uncurrying
         _, tail_hash_as_prog, potential_cr_layer = puzzle.uncurry()[1].as_iter()
-        if puzzle.uncurry()[0] != CREDENTIAL_RESTRICTION:
+        new_inner_puzzle_hash: Optional[bytes32] = None
+        if potential_cr_layer.uncurry()[0].uncurry()[0] != CREDENTIAL_RESTRICTION:
             # If the previous spend is not a CR-CAT:
             # we look for a remark condition that tells us the authorized_providers and proofs_checker
             inner_solution: Program = solution.at("f")
             conditions: Program = potential_cr_layer.run(inner_solution)
             for condition in conditions.as_iter():
                 if condition.at("f") == Program.to(1):
-                    authorized_providers_as_prog: Program = condition.at("rf")
-                    proofs_checker: Program = condition.at("rrf")
+                    new_inner_puzzle_hash = bytes32(condition.at("rf").atom)
+                    authorized_providers_as_prog: Program = condition.at("rrf")
+                    proofs_checker: Program = condition.at("rrrf")
                     break
             else:
                 raise ValueError("Previous spend was not a CR-CAT, nor did it properly remark the CR params")
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
         else:
             # Otherwise the info we need will be in the puzzle reveal
-            _, _, authorized_providers_as_prog, proofs_checker, inner_puzzle = potential_cr_layer.uncurry()[1].as_iter()
+            cr_first_curry, self_hash_and_innerpuz = potential_cr_layer.uncurry()
+            _, authorized_providers_as_prog, proofs_checker = cr_first_curry.uncurry()[1].as_iter()
+            _, inner_puzzle = self_hash_and_innerpuz.as_iter()
             inner_solution = solution.at("f").at("rrrrrrf")
             conditions = inner_puzzle.run(inner_solution)
             inner_puzzle_hash: bytes32 = inner_puzzle.get_tree_hash()
@@ -328,10 +332,10 @@ class CRCAT:
                 new_lineage_proof,
                 authorized_providers,
                 proofs_checker,
-                bytes32(condition.at("rf").atom),
+                bytes32(condition.at("rf").atom) if new_inner_puzzle_hash is None else new_inner_puzzle_hash,
             )
             for condition in conditions.as_iter()
-            if condition.at("f").as_int() == 51
+            if condition.at("f").as_int() == 51 and condition.at("rrf") != Program.to(-113)
         ]
 
         return [
@@ -428,7 +432,9 @@ class CRCAT:
                     self.tail_hash,
                     LineageProof(
                         self.coin.parent_coin_info,
-                        self.inner_puzzle_hash,
+                        self.construct_cr_layer(self.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
+                            self.inner_puzzle_hash
+                        ),
                         uint64(self.coin.amount),
                     ),
                     self.authorized_providers,
@@ -520,14 +526,15 @@ class ProofsChecker:
     flags: List[str]
 
     def as_program(self) -> Program:
+        def byte_sort_flags(f1: str, f2: str) -> int:
+            return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.to(None) else -1
+
         return PROOF_FLAGS_CHECKER.curry(
             [
                 Program.to((flag, 1))
                 for flag in sorted(
                     self.flags,
-                    key=functools.cmp_to_key(
-                        lambda f1, f2: 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.to(None) else -1
-                    ),
+                    key=functools.cmp_to_key(byte_sort_flags),
                 )
             ]
         )

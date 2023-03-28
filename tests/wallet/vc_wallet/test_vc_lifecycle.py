@@ -392,223 +392,6 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         assert len(await client.get_coin_records_by_puzzle_hashes([wrapped_brick_hash], include_spent_coins=False)) > 0
 
 
-# TODO: Should probably merge this with the test below
-@pytest.mark.asyncio
-async def test_cr_layer(cost_logger: CostLogger) -> None:
-    async with sim_and_client() as (sim, client):
-        RUN_PUZ_PUZ: Program = Program.to([2, 1, None])  # (a 1 ()) takes a puzzle as its solution and runs it with ()
-        RUN_PUZ_PUZ_PH: bytes32 = RUN_PUZ_PUZ.get_tree_hash()
-        await sim.farm_block(RUN_PUZ_PUZ_PH)
-        vc_fund_coin: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
-        )[0].coin
-        did_fund_coin: Coin = (
-            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
-        )[1].coin
-
-        # Gotta make a DID first
-        conditions, launcher_spend = launch_conditions_and_coinsol(
-            did_fund_coin,
-            ACS,
-            [],
-            uint64(1),
-        )
-        await client.push_tx(
-            SpendBundle(
-                [
-                    CoinSpend(
-                        did_fund_coin,
-                        RUN_PUZ_PUZ,
-                        Program.to((1, conditions)),
-                    ),
-                    launcher_spend,
-                ],
-                G2Element(),
-            )
-        )
-        await sim.farm_block()
-        launcher_id: bytes32 = launcher_spend.coin.name()
-        did: Coin = (await client.get_coin_records_by_parent_ids([launcher_id], include_spent_coins=False))[0].coin
-
-        # Now let's launch the VC
-        vc: VerifiedCredential
-        dpuz, coin_spends, vc = VerifiedCredential.launch(
-            vc_fund_coin,
-            launcher_id,
-            ACS_PH,
-            [bytes32([0] * 32)],
-        )
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            cost_logger.add_cost(
-                "Launch VC",
-                SpendBundle(
-                    [
-                        CoinSpend(
-                            vc_fund_coin,
-                            RUN_PUZ_PUZ,
-                            dpuz,
-                        ),
-                        *coin_spends,
-                    ],
-                    G2Element(),
-                ),
-            )
-        )
-        await sim.farm_block()
-        assert result == (MempoolInclusionStatus.SUCCESS, None)
-
-        # Update the proofs with a proper announcement
-        NEW_PROOFS: Program = Program.to((("test", True), ("test2", True)))
-        NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
-        expected_announcement, update_spend, vc = vc.do_spend(
-            ACS,
-            Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
-            new_proof_hash=NEW_PROOF_HASH,
-        )
-        await client.push_tx(
-            cost_logger.add_cost(
-                "Update VC proofs (eve covenant spend) - DID providing announcement",
-                SpendBundle(
-                    [
-                        CoinSpend(
-                            did,
-                            puzzle_for_singleton(
-                                launcher_id,
-                                ACS,
-                            ),
-                            solution_for_singleton(
-                                LineageProof(
-                                    parent_name=launcher_spend.coin.parent_coin_info,
-                                    amount=uint64(launcher_spend.coin.amount),
-                                ),
-                                uint64(did.amount),
-                                Program.to([[51, ACS_PH, did.amount], [62, expected_announcement]]),
-                            ),
-                        ),
-                        update_spend,
-                    ],
-                    G2Element(),
-                ),
-            )
-        )
-        assert result == (MempoolInclusionStatus.SUCCESS, None)
-        await sim.farm_block()
-
-        # Now lets farm a funds for some CR-CATs
-        await sim.farm_block(RUN_PUZ_PUZ_PH)
-        cr_coin_1: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
-            0
-        ].coin
-        cr_coin_2: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
-            1
-        ].coin
-
-        # Launch the CR-CATs
-        proofs_checker: ProofsChecker = ProofsChecker(["test", "test2"])
-        AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
-        dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
-            cr_coin_1,
-            Payment(ACS_PH, uint64(cr_coin_1.amount), []),
-            Program.to(None),
-            Program.to(None),
-            AUTHORIZED_PROVIDERS,
-            proofs_checker.as_program(),
-        )
-        dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
-            cr_coin_2,
-            Payment(ACS_PH, uint64(cr_coin_2.amount), []),
-            Program.to(None),
-            Program.to(None),
-            AUTHORIZED_PROVIDERS,
-            proofs_checker.as_program(),
-        )
-        result = await client.push_tx(
-            SpendBundle(
-                [
-                    CoinSpend(
-                        cr_coin_1,
-                        RUN_PUZ_PUZ,
-                        dpuz_1,
-                    ),
-                    CoinSpend(
-                        cr_coin_2,
-                        RUN_PUZ_PUZ,
-                        dpuz_2,
-                    ),
-                    launch_crcat_spend_1,
-                    launch_crcat_spend_2,
-                ],
-                G2Element(),
-            )
-        )
-        assert result == (MempoolInclusionStatus.SUCCESS, None)
-        await sim.farm_block()
-        assert len(await client.get_coin_records_by_names([cr_1.coin.name()], include_spent_coins=False)) > 0
-        assert len(await client.get_coin_records_by_names([cr_2.coin.name()], include_spent_coins=False)) > 0
-
-        for error in ("forget_vc", "make_banned_announcement", None):
-            # The CR-CAT coin spends
-            expected_announcements, cr_cat_spends, new_crcats = CRCAT.spend_many(
-                [
-                    (
-                        cr_1,
-                        ACS,
-                        Program.to(
-                            [
-                                [51, ACS_PH, cr_1.coin.amount],
-                                *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
-                            ]
-                        ),
-                    ),
-                    (
-                        cr_2,
-                        ACS,
-                        Program.to([[51, ACS_PH, cr_2.coin.amount]]),
-                    ),
-                ],
-                NEW_PROOFS,
-                Program.to(None),
-                launcher_id,
-                vc.launcher_id,
-                vc.wrap_inner_with_backdoor().get_tree_hash(),
-            )
-
-            # Try to spend the coin to ourselves
-            _, auth_spend, new_vc = vc.do_spend(
-                ACS,
-                Program.to(
-                    [
-                        [51, ACS_PH, vc.coin.amount],
-                        [62, cr_1.expected_announcement()],
-                        [62, cr_2.expected_announcement()],
-                        *([61, a] for a in expected_announcements),
-                        vc.standard_magic_condition(),
-                    ]
-                ),
-            )
-
-            result = await client.push_tx(
-                cost_logger.add_cost(
-                    "CR-CATx2 w/ VC announcement, ACS Proof Checker",
-                    SpendBundle(
-                        [
-                            *cr_cat_spends,
-                            *([auth_spend] if error != "forget_vc" else []),
-                        ],
-                        G2Element(),
-                    ),
-                )
-            )
-            if error is None:
-                assert result == (MempoolInclusionStatus.SUCCESS, None)
-                vc = new_vc
-                await sim.farm_block()
-            elif error == "forget_vc":
-                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-            elif error == "make_banned_announcement":
-                assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("test_syncing", [True, False])
 async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None:
@@ -680,7 +463,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
         # Update the proofs with a proper announcement
-        NEW_PROOF_HASH: bytes32 = bytes32([4] * 32)
+        NEW_PROOFS: Program = Program.to((("test", True), ("test2", True)))
+        NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
             Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
@@ -728,19 +512,126 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             vc = VerifiedCredential.get_next_from_coin_spend(update_spend)
             assert VerifiedCredential.is_vc(uncurry_puzzle(update_spend.puzzle_reveal.to_program()))
 
-        # Now do a mundane spend just to prove that the coin can be spent WITHOUT DID
-        _, mundane_spend, vc = vc.do_spend(
-            ACS,
-            Program.to([[51, ACS_PH, vc.coin.amount], vc.standard_magic_condition()]),
+        # Now lets farm a funds for some CR-CATs
+        await sim.farm_block(RUN_PUZ_PUZ_PH)
+        cr_coin_1: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
+            0
+        ].coin
+        cr_coin_2: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
+            1
+        ].coin
+
+        # Launch the CR-CATs
+        proofs_checker: ProofsChecker = ProofsChecker(["test", "test2"])
+        AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
+        dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
+            cr_coin_1,
+            Payment(ACS_PH, uint64(cr_coin_1.amount), []),
+            Program.to(None),
+            Program.to(None),
+            AUTHORIZED_PROVIDERS,
+            proofs_checker.as_program(),
+        )
+        dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
+            cr_coin_2,
+            Payment(ACS_PH, uint64(cr_coin_2.amount), []),
+            Program.to(None),
+            Program.to(None),
+            AUTHORIZED_PROVIDERS,
+            proofs_checker.as_program(),
         )
         result = await client.push_tx(
-            cost_logger.add_cost("Mundane VC spend - one create coin", SpendBundle([mundane_spend], G2Element()))
+            SpendBundle(
+                [
+                    CoinSpend(
+                        cr_coin_1,
+                        RUN_PUZ_PUZ,
+                        dpuz_1,
+                    ),
+                    CoinSpend(
+                        cr_coin_2,
+                        RUN_PUZ_PUZ,
+                        dpuz_2,
+                    ),
+                    launch_crcat_spend_1,
+                    launch_crcat_spend_2,
+                ],
+                G2Element(),
+            )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         if test_syncing:
-            vc = VerifiedCredential.get_next_from_coin_spend(mundane_spend)
-            assert VerifiedCredential.is_vc(uncurry_puzzle(mundane_spend.puzzle_reveal.to_program()))
+            cr_1 = CRCAT.get_next_from_coin_spend(launch_crcat_spend_1)[0]
+            cr_2 = CRCAT.get_next_from_coin_spend(launch_crcat_spend_2)[0]
+        assert len(await client.get_coin_records_by_names([cr_1.coin.name()], include_spent_coins=False)) > 0
+        assert len(await client.get_coin_records_by_names([cr_2.coin.name()], include_spent_coins=False)) > 0
+
+        for error in ("forget_vc", "make_banned_announcement", None):
+            # The CR-CAT coin spends
+            expected_announcements, cr_cat_spends, new_crcats = CRCAT.spend_many(
+                [
+                    (
+                        cr_1,
+                        ACS,
+                        Program.to(
+                            [
+                                [51, ACS_PH, cr_1.coin.amount],
+                                *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
+                            ]
+                        ),
+                    ),
+                    (
+                        cr_2,
+                        ACS,
+                        Program.to([[51, ACS_PH, cr_2.coin.amount]]),
+                    ),
+                ],
+                NEW_PROOFS,
+                Program.to(None),
+                launcher_id,
+                vc.launcher_id,
+                vc.wrap_inner_with_backdoor().get_tree_hash(),
+            )
+
+            # Try to spend the coin to ourselves
+            _, auth_spend, new_vc = vc.do_spend(
+                ACS,
+                Program.to(
+                    [
+                        [51, ACS_PH, vc.coin.amount],
+                        [62, cr_1.expected_announcement()],
+                        [62, cr_2.expected_announcement()],
+                        *([61, a] for a in expected_announcements),
+                        vc.standard_magic_condition(),
+                    ]
+                ),
+            )
+
+            result = await client.push_tx(
+                cost_logger.add_cost(
+                    "CR-CATx2 w/ VC announcement, Standard Proof Checker (2 flags)",
+                    SpendBundle(
+                        [
+                            *cr_cat_spends,
+                            *([auth_spend] if error != "forget_vc" else []),
+                        ],
+                        G2Element(),
+                    ),
+                )
+            )
+            if error is None:
+                assert result == (MempoolInclusionStatus.SUCCESS, None)
+                if test_syncing:
+                    new_crcats = [crcat for spend in cr_cat_spends for crcat in CRCAT.get_next_from_coin_spend(spend)]
+                    vc = VerifiedCredential.get_next_from_coin_spend(auth_spend)
+                else:
+                    vc = new_vc
+                await sim.farm_block()
+            elif error == "forget_vc":
+                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+            elif error == "make_banned_announcement":
+                assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
         # Yoink the coin away from the inner puzzle
         new_did = (await client.get_coin_records_by_parent_ids([did.name()], include_spent_coins=False))[0].coin
@@ -795,4 +686,12 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 )
             )
             > 0
+        )
+        assert (
+            len(
+                await client.get_coin_records_by_names(
+                    [crcat.coin.name() for crcat in new_crcats], include_spent_coins=False
+                )
+            )
+            == 2
         )
