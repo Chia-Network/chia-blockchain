@@ -199,9 +199,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 
         await sim.farm_block(eml_puzzle.get_tree_hash())
         eml_coin: Coin = (
-            await client.get_coin_records_by_puzzle_hashes(
-                [eml_puzzle.get_tree_hash()], include_spent_coins=False
-            )
+            await client.get_coin_records_by_puzzle_hashes([eml_puzzle.get_tree_hash()], include_spent_coins=False)
         )[0].coin
 
         # Define parameters for next few spend attempts
@@ -438,7 +436,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
             vc_fund_coin,
             launcher_id,
             ACS_PH,
-            bytes32([0] * 32),
+            [bytes32([0] * 32)],
         )
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(
@@ -654,7 +652,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             vc_fund_coin,
             launcher_id,
             ACS_PH,
-            bytes32([0] * 32),
+            [bytes32([0] * 32)],
         )
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(

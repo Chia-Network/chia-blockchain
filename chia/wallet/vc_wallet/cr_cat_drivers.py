@@ -69,17 +69,23 @@ def construct_cr_layer(
                         GUARANTEED_NIL_TP.get_tree_hash(),
                         P2_ANNOUNCED_DELEGATED_PUZZLE,
                     )
-                    .get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH, Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash()),
+                    .get_tree_hash_precalc(
+                        EXTIGENT_METADATA_LAYER_HASH, Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash()
+                    ),
                     (
-                        Program.to(int_to_bytes(2) + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)),
                         Program.to(
-                            ([4,
-                                (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
-                                [4,
-                                    (1, create_did_tp()),
-                                    1
-                                ]
-                            ], None)
+                            int_to_bytes(2)
+                            + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
+                        ),
+                        Program.to(
+                            (
+                                [
+                                    4,
+                                    (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
+                                    [4, (1, create_did_tp()), 1],
+                                ],
+                                None,
+                            )
                         ).get_tree_hash(),
                     ),
                 ),

@@ -578,9 +578,7 @@ class VerifiedCredential:
             dsol: Program = solution.at("rrf").at("f").at("rf")
 
             conditions: Iterator[Program] = dpuz.run(dsol).as_iter()
-            remark_condition: Program = next(
-                c for c in conditions if c.at("f").as_int() == 1
-            )
+            remark_condition: Program = next(c for c in conditions if c.at("f").as_int() == 1)
             inner_puzzle_hash = bytes32(remark_condition.at("rf").as_python())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
             proof_provider = bytes32(magic_condition.at("rf").as_python())
