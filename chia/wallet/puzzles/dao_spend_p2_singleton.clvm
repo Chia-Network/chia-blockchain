@@ -23,7 +23,7 @@
       (list CREATE_PUZZLE_ANNOUNCEMENT p2_calculated)
       (c
         (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
-        (if (r p2_singleton_list)
+        (if p2_singleton_list
           (loop_through_list
             SPEND_AMOUNT
             P2_SINGLETON_PUZHASH
