@@ -11,7 +11,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.nft_wallet.nft_puzzles import NFT_OWNERSHIP_LAYER, NFT_OWNERSHIP_LAYER_HASH, construct_ownership_layer
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
