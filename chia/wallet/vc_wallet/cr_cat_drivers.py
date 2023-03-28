@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
@@ -39,6 +41,11 @@ CREDENTIAL_RESTRICTION: Program = load_clvm_maybe_recompile(
     include_standard_libraries=True,
 )
 CREDENTIAL_RESTRICTION_HASH: bytes32 = CREDENTIAL_RESTRICTION.get_tree_hash()
+PROOF_FLAGS_CHECKER: Program = load_clvm_maybe_recompile(
+    "flag_proofs_checker.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
+    include_standard_libraries=True,
+)
 
 
 # Basic drivers
@@ -506,3 +513,21 @@ class CRCAT:
         The announcement a VC must make to this CAT in order to spend it
         """
         return std_hash(self.coin.name() + b"\xca")
+
+
+@dataclass(frozen=True)
+class ProofsChecker:
+    flags: List[str]
+
+    def as_program(self) -> Program:
+        return PROOF_FLAGS_CHECKER.curry(
+            [
+                Program.to((flag, 1))
+                for flag in sorted(
+                    self.flags,
+                    key=functools.cmp_to_key(
+                        lambda f1, f2: 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.to(None) else -1
+                    ),
+                )
+            ]
+        )

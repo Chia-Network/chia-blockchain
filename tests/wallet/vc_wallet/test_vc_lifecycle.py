@@ -22,7 +22,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     solution_for_singleton,
 )
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
     VerifiedCredential,
@@ -458,7 +458,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # Update the proofs with a proper announcement
-        NEW_PROOFS: Program = Program.to((("test", True), ("test2", False)))
+        NEW_PROOFS: Program = Program.to((("test", True), ("test2", True)))
         NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
@@ -504,6 +504,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
         ].coin
 
         # Launch the CR-CATs
+        proofs_checker: ProofsChecker = ProofsChecker(["test", "test2"])
         AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
         dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
             cr_coin_1,
@@ -511,7 +512,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
             Program.to(None),
             Program.to(None),
             AUTHORIZED_PROVIDERS,
-            Program.to((1, 1)),
+            proofs_checker.as_program(),
         )
         dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
             cr_coin_2,
@@ -519,7 +520,7 @@ async def test_cr_layer(cost_logger: CostLogger) -> None:
             Program.to(None),
             Program.to(None),
             AUTHORIZED_PROVIDERS,
-            Program.to((1, 1)),
+            proofs_checker.as_program(),
         )
         result = await client.push_tx(
             SpendBundle(
