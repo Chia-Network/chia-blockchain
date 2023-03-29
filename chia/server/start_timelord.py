@@ -62,6 +62,7 @@ def create_timelord_service(
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        listen=False,
     )
 
 

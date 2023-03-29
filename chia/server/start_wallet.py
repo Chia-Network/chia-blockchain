@@ -69,6 +69,7 @@ def create_wallet_service(
         config=config,
         node=node,
         peer_api=peer_api,
+        listen=False,
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,

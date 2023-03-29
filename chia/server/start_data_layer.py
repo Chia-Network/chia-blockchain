@@ -65,6 +65,7 @@ def create_data_layer_service(
         max_request_body_size=service_config.get("rpc_server_max_request_body_size", 26214400),
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        listen=False,
     )
 
 

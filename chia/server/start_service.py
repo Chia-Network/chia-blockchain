@@ -62,6 +62,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+        listen: bool = True,
     ) -> None:
         self.root_path = root_path
         self.config = config
@@ -76,6 +77,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
+        self._listen = listen
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
@@ -151,7 +153,11 @@ class Service(Generic[_T_RpcServiceProtocol]):
             for port in self._upnp_ports:
                 self.upnp.remap(port)
 
-        await self._server.start_server(self.config.get("prefer_ipv6", False), self._on_connect_callback)
+        await self._server.start_server(
+            listen=self._listen,
+            prefer_ipv6=self.config.get("prefer_ipv6", False),
+            on_connect=self._on_connect_callback,
+        )
         self._advertised_port = self._server.get_port()
 
         for peer in self._reconnect_tasks.keys():
