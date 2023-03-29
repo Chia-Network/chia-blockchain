@@ -172,6 +172,7 @@ def create_did_tp(
         singleton_mod_hash,
         singleton_launcher_hash,
     )
+EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
 
 
 def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
@@ -521,8 +522,7 @@ class VerifiedCredential(Streamable):
             # This is the first spot we'll run into trouble if we're examining a VC being launched
             # Break off to that logic here
             if full_transfer_program_as_prog == GUARANTEED_NIL_TP:
-                launcher_puzzle: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrf"))
-                if launcher_puzzle != P2_ANNOUNCED_DELEGATED_PUZZLE:
+                if layer_below_singleton.args.at("rrrrf") != P2_ANNOUNCED_DELEGATED_PUZZLE:
                     return False, "tp indicates VC is launching, but it does not have the correct inner puzzle"
                 else:
                     return True, ""
@@ -532,14 +532,13 @@ class VerifiedCredential(Streamable):
         if adapted_transfer_program.mod != COVENANT_LAYER:
             return False, "transfer program is adapted to covenant layer, but covenant layer did not follow"
         morpher: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rf"))
-        if morpher.mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER:
+        if uncurry_puzzle(morpher.mod).mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER:
             return False, "covenant for extigent metadata layer does not match the one expected for VCs"
-        inner_transfer_program: UncurriedPuzzle = uncurry_puzzle(adapted_transfer_program.args.at("rrf"))
-        if inner_transfer_program.mod != EML_DID_TP:
+        if uncurry_puzzle(adapted_transfer_program.args.at("rrf")).mod != EML_DID_TP:
             return False, "transfer program for extigent metadata layer was not the standard VC transfer program"
 
         # ...and layer below EML
-        layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrf"))
+        layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrrf"))
         if layer_below_eml.mod != VIRAL_BACKDOOR:
             return False, "VC did not have a provider backdoor"
         hidden_puzzle_hash: bytes32 = layer_below_eml.args.at("rf")
