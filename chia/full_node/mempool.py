@@ -54,7 +54,7 @@ class Mempool:
             # assert_height may be NIL
             generated = ""
             if not SQLITE_NO_GENERATED_COLUMNS:
-                generated = " GENERATED ALWAYS AS (fee / cost) VIRTUAL"
+                generated = " GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
 
             self._db_conn.execute(
                 f"""CREATE TABLE tx(
