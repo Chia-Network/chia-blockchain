@@ -115,6 +115,7 @@ class WalletRpcApi:
             "/farm_block": self.farm_block,  # Only when node simulator is running
             "/get_timestamp_for_height": self.get_timestamp_for_height,
             "/set_auto_claim": self.set_auto_claim,
+            "/get_auto_claim": self.get_auto_claim,
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
             "/get_initial_freeze_period": self.get_initial_freeze_period,
@@ -584,6 +585,19 @@ class WalletRpcApi:
             request.get("min_amount", self.service.config.get("auto_claim_min_amount", 0)),
             request.get("batch_size", self.service.config.get("auto_claim_coin_size", 50)),
         )
+
+    async def get_auto_claim(self, request) -> EndpointResult:
+        """
+        Get auto claim merkle coins config
+        :param request: None
+        :return:
+        """
+        return {
+            "auto_claim": self.service.wallet_state_manager.config.get("auto_claim", True),
+            "auto_claim_tx_fee": self.service.wallet_state_manager.config.get("auto_claim_tx_fee", 0),
+            "auto_claim_min_amount": self.service.wallet_state_manager.config.get("auto_claim_min_amount", 0),
+            "auto_claim_coin_size": self.service.wallet_state_manager.config.get("auto_claim_coin_size", 50),
+        }
 
     ##########################################################################################
     # Wallet Management
