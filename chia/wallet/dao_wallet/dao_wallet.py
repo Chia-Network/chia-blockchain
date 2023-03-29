@@ -600,7 +600,7 @@ class DAOWallet:
         assert cat_tail_hash is not None
 
         cat_tail_info = {
-            "identifier": "genesis_by_id_or_proposal",
+            "identifier": "genesis_by_id_or_singleton",
             "treasury_id": launcher_coin.name(),
             "coins": different_coins,
         }
