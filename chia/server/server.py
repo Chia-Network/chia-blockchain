@@ -265,7 +265,10 @@ class ChiaServer:
                 del self.banned_peers[peer_ip]
 
     async def start_server(
-        self, listen: bool, prefer_ipv6: bool, on_connect: Optional[ConnectionCallback] = None
+        self,
+        listen: bool,
+        prefer_ipv6: bool,
+        on_connect: Optional[ConnectionCallback] = None,
     ) -> None:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
