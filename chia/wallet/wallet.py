@@ -19,7 +19,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.action_manager.action_aliases import DirectPayment
 from chia.wallet.action_manager.protocols import (
     ActionAlias,
@@ -69,6 +69,7 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
+    wallet_info: WalletInfo
     wallet_state_manager: Any
     log: logging.Logger
     wallet_id: uint32
@@ -104,11 +105,11 @@ class Wallet:
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            # we use height=0 here to not enable any soft-fork semantics. It
+            # will only matter once the wallet generates transactions relying on
+            # new conditions, and we can change this by then
             result: NPCResult = get_name_puzzle_conditions(
-                program,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                mempool_mode=True,
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=uint32(0)
             )
             self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
@@ -127,8 +128,8 @@ class Wallet:
         return uint128(total_amount)
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.STANDARD_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.STANDARD_WALLET
 
     def id(self) -> uint32:
         return self.wallet_id

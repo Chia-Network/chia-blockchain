@@ -125,7 +125,7 @@ class WalletNodeAPI:
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ):
         if self.wallet_node.wallet_peers is not None:
-            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
+            await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), False)
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
@@ -136,7 +136,7 @@ class WalletNodeAPI:
             return None
 
         self.log.info(f"Wallet received {len(request.peer_list)} peers.")
-        await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+        await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), True)
 
         return None
 

@@ -52,13 +52,11 @@ def create_wallet_service(
     fnp = service_config.get("full_node_peer")
 
     if fnp:
-        node.full_node_peer = PeerInfo(
-            str(get_host_addr(fnp["host"], prefer_ipv6=config.get("prefer_ipv6", False))), fnp["port"]
-        )
-        connect_peers = [node.full_node_peer]
+        connect_peers = [
+            PeerInfo(str(get_host_addr(fnp["host"], prefer_ipv6=config.get("prefer_ipv6", False))), fnp["port"])
+        ]
     else:
         connect_peers = []
-        node.full_node_peer = None
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
     rpc_info: Optional[RpcInfo] = None

@@ -30,7 +30,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -1484,12 +1484,31 @@ class WalletRpcApi:
             exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = None
+        cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
+            request.get("extra_delta", None),
+            request.get("tail_reveal", None),
+            request.get("tail_solution", None),
+        )
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None
+        if cat_discrepancy_params != (None, None, None):
+            if None in cat_discrepancy_params:
+                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
+            else:
+                assert cat_discrepancy_params[0] is not None
+                assert cat_discrepancy_params[1] is not None
+                assert cat_discrepancy_params[2] is not None
+                cat_discrepancy = (
+                    cat_discrepancy_params[0],  # mypy sanitization
+                    Program.fromhex(cat_discrepancy_params[1]),
+                    Program.fromhex(cat_discrepancy_params[2]),
+                )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     fee,
+                    cat_discrepancy=cat_discrepancy,
                     coins=coins,
                     memos=memos if memos else None,
                     min_coin_amount=min_coin_amount,
@@ -2056,7 +2075,7 @@ class WalletRpcApi:
                 pass
 
             wallet_id = did_wallet.id()
-            wallet_type = WalletType(did_wallet.type())
+            wallet_type = did_wallet.type()
             assert coin_state.created_height is not None
             coin_record: WalletCoinRecord = WalletCoinRecord(
                 coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
@@ -2570,7 +2589,7 @@ class WalletRpcApi:
         did_wallets_by_did_id: Dict[bytes32, uint32] = {}
 
         for wallet in all_wallets:
-            if wallet.type() == uint8(WalletType.DECENTRALIZED_ID):
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 assert isinstance(wallet, DIDWallet)
                 if wallet.did_info.origin_coin is not None:
                     did_wallets_by_did_id[wallet.did_info.origin_coin.name()] = wallet.id()

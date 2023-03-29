@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from clvm_tools.binutils import disassemble
-
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -45,8 +43,8 @@ class MetadataOuterPuzzle:
             _, metadata, updater_hash, inner_puzzle = curried_args
             constructor_dict = {
                 "type": "metadata",
-                "metadata": disassemble(metadata),
-                "updater_hash": "0x" + updater_hash.as_python().hex(),
+                "metadata": metadata,
+                "updater_hash": "0x" + updater_hash.as_atom().hex(),
             }
             next_constructor = self._match(uncurry_puzzle(inner_puzzle))
             if next_constructor is not None:
