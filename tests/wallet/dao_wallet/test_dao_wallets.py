@@ -97,7 +97,6 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         True,
         treasury_id,
     )
-
     # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
     for i in  range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
@@ -176,8 +175,8 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert cat_wallet_1_bal == cat_amt
 
     assert dao_wallet_0.apply_state_transition_call_count == 0
-    # Add money to the Treasury -- see dao_treasury.clvm, add money spend case
 
+    # Add money to the Treasury -- see dao_treasury.clvm, add money spend case
     funding_amt = uint64(10000000000)
     funding_tx = await dao_wallet_0.create_add_money_to_treasury_spend(funding_amt)
     funding_sb = funding_tx.spend_bundle
@@ -187,6 +186,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
+    breakpoint()
     # await asyncio.sleep(10)
     # Verify apply_state_transition is called after a spend to the Treasury Singleton
     assert dao_wallet_0.apply_state_transition_call_count == 1

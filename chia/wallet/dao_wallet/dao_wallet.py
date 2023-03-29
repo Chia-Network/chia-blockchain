@@ -30,7 +30,8 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, ProposalInfo, DAORules
-from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL
+from chia.wallet.dao_wallet.dao_utils import (
+    # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
     SINGLETON_LAUNCHER,
@@ -40,6 +41,7 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_finished_state_puzzle,
     get_new_puzzle_from_proposal_solution,
     get_new_puzzle_from_treasury_solution,
+    get_p2_singleton_puzhash,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
     get_treasury_puzzle,
@@ -957,97 +959,33 @@ class DAOWallet:
         return
 
     async def create_add_money_to_treasury_spend(
-        self, amount: uint64, fee: uint64 = uint64(0)
+        self, amount: uint64, fee: uint64 = uint64(0), wallet_id: int = 1
     ) -> Optional[TransactionRecord]:
-        # make sure we're generating an odd output amount
-        if amount + self.dao_info.current_treasury_coin.amount % 2 == 0:
-            amount -= 1
-        new_amount_change = amount
-        new_amount_total = amount + self.dao_info.current_treasury_coin.amount
-
-        # get the treasury puzzle and check that it matches out current coin
-        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
-        full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
-        assert full_treasury_puzzle_hash == self.dao_info.current_treasury_coin.puzzle_hash
-
-        # Create the treasury solution for our new amount
-        inner_sol = Program.to(
-            [
-                self.dao_info.current_treasury_coin.amount,
-                new_amount_change,
-                self.dao_info.current_treasury_innerpuz.get_tree_hash(),
-                [],  # Announcement_messages
-                0,  # do the "add_money" spend case
-                0,
-            ]
-        )
-        lineage_proof = [
-            info[1]
-            for info in self.dao_info.parent_info
-            if info[0] == self.dao_info.current_treasury_coin.parent_coin_info
-        ][0]
-        fullsol = Program.to(
-            [
-                lineage_proof.to_program(),
-                self.dao_info.current_treasury_coin.amount,
-                inner_sol,
-            ]
-        )
-        treasury_coin_spend = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puzzle, fullsol)
-        treasury_sb = SpendBundle([treasury_coin_spend], G2Element())
-
-        # Create the puzzle announcement and xch spend
-        announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([new_amount_change, 0]).get_tree_hash()
-        announcement_set.add(Announcement(self.dao_info.current_treasury_coin.puzzle_hash, announcement_message).name())
-
-        xch_sb = await self.standard_wallet.create_spend_bundle_relative_chia(
-            -new_amount_change, fee=fee, puzzle_announcements_to_assert=announcement_set
-        )
-
-        full_spend = SpendBundle.aggregate([treasury_sb, xch_sb])
-
-        treasury_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=self.dao_info.current_treasury_innerpuz.get_tree_hash(),
-            amount=uint64(new_amount_change),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=[],
-        )
-        await self.wallet_state_manager.add_pending_transaction(treasury_record)
-
-        # Update dao_info with the new coin
-        current_coin = Coin(
-            self.dao_info.current_treasury_coin.name(), full_treasury_puzzle.get_tree_hash(), new_amount_total
-        )
-        await self.wallet_state_manager.add_interested_coin_ids([current_coin.name()], [self.wallet_id])
-
-        # MH: We should do this on receiving the coin instead of sending the spend incase our spend doesn't go through
-        # dao_info = DAOInfo(
-        #     self.dao_info.treasury_id,
-        #     self.dao_info.cat_wallet_id,
-        #     self.dao_info.dao_cat_wallet_id,
-        #     self.dao_info.proposals_list,
-        #     self.dao_info.parent_info,
-        #     current_coin,
-        #     self.dao_info.current_treasury_innerpuz,
-        #     self.dao_info.singleton_block_height,
-        #     self.dao_info.filter_below_vote_amount,
-        # )
-        # await self.save_info(dao_info)
-
-        return treasury_record
+        # TODO: Do we need to ensure the p2_singleton amount is odd?
+        # set up the p2_singleton
+        funding_wallet = self.wallet_state_manager.wallets[wallet_id]
+        if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
+            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+            tx_record = await funding_wallet.generate_signed_transaction(
+                amount,
+                p2_singleton_puzhash,
+                fee=fee,
+            )
+        elif funding_wallet.type() == WalletType.CAT.value:
+            asset_id = bytes32.from_hexstr(funding_wallet.get_asset_id())
+            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id)
+            tx_record = await funding_wallet.generate_signed_transaction(
+                [amount],
+                [p2_singleton_puzhash],
+                fee=fee,
+            )
+        else:
+            raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
+        created_coin = [coin for coin in tx_record.additions if coin.amount == amount][0]
+        # TODO: How are we going to track p2_singletons
+        await self.wallet_state_manager.add_interested_coin_id([created_coin.name()])
+        await self.wallet_state_manager.add_pending_transaction(tx_record)
+        return tx_record
 
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)
@@ -1057,6 +995,11 @@ class DAOWallet:
 
     async def get_max_send_amount(self, records: Set[WalletCoinRecord] = None) -> uint128:
         return uint128(0)
+
+    async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
+        # TODO: Pull coins from DB once they're being stored
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id)
+        return
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")

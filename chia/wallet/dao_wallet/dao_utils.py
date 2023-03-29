@@ -85,6 +85,14 @@ def get_treasury_puzzle(dao_rules: DAORules) -> Program:
     )
     return puzzle
 
+def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32]) -> bytes32:
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
+    inner_puzzle = P2_SINGLETON_MOD.curry(singleton_struct)
+    if asset_type:
+        puzzle = CAT_MOD.curry(CAT_MOD_HASH, asset_id, inner_puzzle)
+        return puzzle.get_tree_hash()
+    else:
+        return inner_puzzle.get_tree_hash()
 
 def get_lockup_puzzle(cat_tail_hash: bytes32, previous_votes_list: List[bytes32], innerpuz: Program) -> Program:
     puzzle: Program = DAO_LOCKUP_MOD.curry(
