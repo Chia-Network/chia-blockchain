@@ -127,7 +127,6 @@ logging: &logging
 
 seeder:
   # The fake full node used for crawling will run on this port.
-  # TODO: do we actually process incoming connections?
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
@@ -164,9 +163,6 @@ seeder:
       private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
-  # The harvester server (if run) will run on this port
-  # TODO: we don't actually listen
-#  port: 8448
   farmer_peer:
     host: *self_hostname
     port: 8447
@@ -253,9 +249,6 @@ timelord_launcher:
 
 
 timelord:
-  # The timelord server (if run) will run on this port
-  # TODO: we don't actually listen
-#  port: 8446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -466,7 +459,6 @@ ui:
 
 introducer:
   host: *self_hostname
-  # TODO: do we actually process incoming connections?
   port: 8445
   max_peers_to_send: 20
   # The introducer will only return peers it has seen in the last
@@ -481,8 +473,6 @@ introducer:
     public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  # we don't actually listen
-#  port: 8449
   rpc_port: 9256
 
   enable_profiler: False
@@ -581,10 +571,6 @@ wallet:
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
-
-  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
-  # TODO: we don't have a public api...
-#  port: 8561
   wallet_peer:
     host: localhost
     port: 9256

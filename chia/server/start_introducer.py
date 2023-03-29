@@ -42,9 +42,6 @@ def create_introducer_service(
         network_id=network_id,
         advertised_port=advertised_port,
         connect_to_daemon=connect_to_daemon,
-        # TODO: should the introducer listen?
-        #       isn't there code elsewhere to reject all connections that should get cleaned up?
-        listen=False,
     )
 
 

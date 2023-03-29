@@ -58,9 +58,6 @@ def create_full_node_crawler_service(
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        # TODO: should the crawler being listening?
-        #       isn't there code for this and/or the introducer that just closes all incoming connections?
-        # listen=False,
     )
 
 
