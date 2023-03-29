@@ -233,8 +233,9 @@ async def dump_transactions(args: dict, wallet_client: WalletRpcClient, fingerpr
     writer.writeheader()
 
     if len(wallet_ids) == 0:
+        supported_wallet_types = {WalletType.STANDARD_WALLET, WalletType.CAT}
         wallet_ids = [
-            wallet["id"] for wallet in await wallet_client.get_wallets() if wallet["type"] != WalletType.POOLING_WALLET
+            wallet["id"] for wallet in await wallet_client.get_wallets() if wallet["type"] in supported_wallet_types
         ]
 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
