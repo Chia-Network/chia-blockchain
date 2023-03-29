@@ -736,7 +736,7 @@ def test_proposal_innerpuz() -> None:
     p2_singleton = P2_SINGLETON_MOD.curry(treasury_singleton_struct)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
-    locked_amount = 100000
+    locked_amount = 100001
     spend_amount = 1100
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(conditions, p2_singleton_puzhash)
@@ -837,4 +837,4 @@ def test_proposal_innerpuz() -> None:
         for cond in treasury_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     ]
     proposal_apas = [cond.vars[0] for cond in proposal_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT]]
-    assert treasury_cpas[0] == proposal_apas[0]
+    assert treasury_cpas[0] == proposal_apas[1]
