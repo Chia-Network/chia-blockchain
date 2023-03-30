@@ -137,7 +137,7 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         _CAT_TAIL_HASH,
         ACTIVE_VOTES,
         _INNERPUZ,
-    ) = curried_args
+    ) = list(curried_args.as_iter())
     return ACTIVE_VOTES
 
 
@@ -152,7 +152,7 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         _CAT_TAIL_HASH,
         _ACTIVE_VOTES,
         INNERPUZ,
-    ) = curried_args
+    ) = list(curried_args.as_iter())
     return INNERPUZ
 
 
