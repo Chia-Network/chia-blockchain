@@ -16,7 +16,7 @@ DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clvm")
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
-DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_proposal.clvm")
+DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clvm")
 DAO_SPEND_PROPOSAL: Program = load_clvm("dao_spend_proposal.clvm")
 
 
