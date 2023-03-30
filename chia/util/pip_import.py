@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from typing import Any, Optional
 
 
-def pip_import(module, pypi_name=None):
+def pip_import(module: str, pypi_name: Optional[str] = None) -> Any:
     """
     Return None if we can't import or install it.
     """
