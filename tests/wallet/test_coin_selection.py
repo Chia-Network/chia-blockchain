@@ -10,7 +10,7 @@ import pytest
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash, std_hash_raw
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import (
     check_for_exact_match,
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 def int_to_hash(i: int) -> bytes32:
-    return std_hash_raw(i.to_bytes(length=2, byteorder="big", signed=False))
+    return std_hash(i.to_bytes(length=2, byteorder="big", signed=False))
 
 
 class TestCoinSelection:

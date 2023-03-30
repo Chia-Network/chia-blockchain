@@ -5,7 +5,7 @@ from typing import List, Union
 from chia_rs import Coin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash, std_hash_raw
+from chia.util.hash import std_hash
 from chia.util.ints import uint64
 
 __all__ = ["Coin", "coin_as_list", "hash_coin_ids"]
@@ -25,4 +25,4 @@ def hash_coin_ids(coin_ids: List[bytes32]) -> bytes32:
     for name in coin_ids:
         buffer.extend(name)
 
-    return std_hash_raw(buffer)
+    return std_hash(buffer)
