@@ -4,6 +4,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
+from chia.wallet.dao_wallet.dao_utils import get_p2_singleton_puzhash
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 
@@ -433,3 +434,11 @@ def test_proposal_innerpuz() -> None:
     for cond in treasury_conds.as_python():
         if cond[0] == apa:
             assert bytes32(cond[1]) in cpas
+
+def test_get_p2_singleton_puzhash() -> None:
+    treasury_id = bytes32(b"1"*32)
+    asset_id = bytes32(b'2'*32)
+    p2_singleton_puzhash_cat = get_p2_singleton_puzhash(treasury_id, asset_id=asset_id)
+    assert p2_singleton_puzhash_cat == bytes32.from_hexstr("fecd127f8c2278762f60f2a6404b2c662c7b997c12580053bec76f8e18f90092")
+    p2_singleton_puzhash_xch = get_p2_singleton_puzhash(treasury_id, asset_id=None)
+    assert p2_singleton_puzhash_xch == bytes32.from_hexstr("737acc0525748e6a7c4ea8f485a2964029c58ad5d9b72e68d4e3b16b862388f3")

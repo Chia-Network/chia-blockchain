@@ -965,7 +965,7 @@ class DAOWallet:
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[wallet_id]
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
-            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
             tx_record = await funding_wallet.generate_signed_transaction(
                 amount,
                 p2_singleton_puzhash,
@@ -973,7 +973,7 @@ class DAOWallet:
             )
         elif funding_wallet.type() == WalletType.CAT.value:
             asset_id = bytes32.from_hexstr(funding_wallet.get_asset_id())
-            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id)
+            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
             tx_record = await funding_wallet.generate_signed_transaction(
                 [amount],
                 [p2_singleton_puzhash],
@@ -998,7 +998,7 @@ class DAOWallet:
 
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
         # TODO: Pull coins from DB once they're being stored
-        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id)
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         return
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
