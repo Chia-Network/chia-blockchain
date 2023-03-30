@@ -4,7 +4,7 @@ import asyncio
 import logging
 import sys
 from secrets import token_bytes
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, Optional, Tuple
 
 import pytest
 
@@ -47,7 +47,7 @@ async def farm_blocks_until(
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
-    return len(await wallet.get_current_nfts())
+    return await wallet.get_nft_count()
 
 
 @pytest.mark.parametrize(
@@ -55,13 +55,13 @@ async def get_nft_count(wallet: NFTWallet) -> int:
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -122,7 +122,7 @@ async def test_nft_offer_sell_nft(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
     royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -162,8 +162,7 @@ async def test_nft_offer_sell_nft(
 
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
+    assert await nft_wallet_taker.get_nft_count() == 0
 
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
@@ -209,9 +208,7 @@ async def test_nft_offer_sell_nft(
     assert tx_records is not None
 
     async def maker_0_taker_1() -> bool:
-        return (
-            len(await nft_wallet_maker.get_current_nfts()) == 0 and len(await nft_wallet_taker.get_current_nfts()) == 1
-        )
+        return await nft_wallet_maker.get_nft_count() == 0 and await nft_wallet_taker.get_nft_count() == 1
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
@@ -232,13 +229,13 @@ async def test_nft_offer_sell_nft(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_request_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -297,7 +294,7 @@ async def test_nft_offer_request_nft(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_taker
     royalty_puzhash = ph_taker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
         wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
@@ -337,11 +334,10 @@ async def test_nft_offer_request_nft(
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    assert len(coins_maker) == 0
     coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 1
 
+    assert await nft_wallet_maker.get_nft_count() == 0
     nft_to_request = coins_taker[0]
     nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_request.full_puzzle))
 
@@ -388,9 +384,7 @@ async def test_nft_offer_request_nft(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
     async def maker_1_taker_0() -> bool:
-        return (
-            len(await nft_wallet_maker.get_current_nfts()) == 1 and len(await nft_wallet_taker.get_current_nfts()) == 0
-        )
+        return await nft_wallet_maker.get_nft_count() == 1 and await nft_wallet_taker.get_nft_count() == 0
 
     await farm_blocks_until(maker_1_taker_0, full_node_api, ph_token)
 
@@ -407,13 +401,13 @@ async def test_nft_offer_request_nft(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_did_to_did(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -472,7 +466,7 @@ async def test_nft_offer_sell_did_to_did(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
     royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -532,12 +526,9 @@ async def test_nft_offer_sell_did_to_did(
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
-
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
-
+    assert await nft_wallet_taker.get_nft_count() == 0
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
@@ -580,9 +571,9 @@ async def test_nft_offer_sell_did_to_did(
 
     async def maker_0_taker_1() -> bool:
         return (
-            len(await nft_wallet_maker.get_current_nfts()) == 0
+            await nft_wallet_maker.get_nft_count() == 0
             and len(wallet_taker.wallet_state_manager.wallets) == 4
-            and len(await wallet_taker.wallet_state_manager.wallets[4].get_current_nfts()) == 1
+            and await wallet_taker.wallet_state_manager.wallets[4].get_nft_count() == 1
         )
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
@@ -591,7 +582,7 @@ async def test_nft_offer_sell_did_to_did(
     # assert nnew nft wallet is created for taker
     await time_out_assert(20, len, 4, wallet_taker.wallet_state_manager.wallets)
     await time_out_assert(20, get_nft_count, 1, wallet_taker.wallet_state_manager.wallets[4])
-    assert (await wallet_taker.wallet_state_manager.wallets[4].get_current_nfts())[0].nft_id == nft_to_offer_asset_id
+    assert await wallet_taker.wallet_state_manager.wallets[4].nft_store.get_nft_by_id(nft_to_offer_asset_id) is not None
     # assert payments and royalties
     expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
     expected_maker_balance = funds - 2 - maker_fee + xch_requested + expected_royalty
@@ -605,13 +596,13 @@ async def test_nft_offer_sell_did_to_did(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -672,7 +663,7 @@ async def test_nft_offer_sell_nft_for_cat(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
     royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -1271,13 +1262,19 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,royalty_pts",
+    [
+        (True, (200, 500, 500)),
+        (False, (200, 500, 500)),
+        (False, (0, 0, 0)),  # test that we can have 0 royalty
+        (False, (10000, 10001, 10005)),  # tests 100% royalty is not allowed
+        (False, (100000, 10001, 10005)),  # 1000% shouldn't work
+    ],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_complex_nft_offer(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, royalty_pts: Tuple[int, int, int]
 ) -> None:
     """
     This test is going to create an offer where the maker offers 1 NFT and 1 CAT for 2 NFTs, an XCH and a CAT
@@ -1295,7 +1292,6 @@ async def test_complex_nft_offer(
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
-
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -1316,18 +1312,32 @@ async def test_complex_nft_offer(
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    blocks_needed = 3
+    if not forwards_compat:
+        for i in range(blocks_needed):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    else:
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
 
     funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
-    funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)])
+    if forwards_compat:
+        funds_taker = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)]
+        )
+    else:
+        funds_taker = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, 3 + blocks_needed)
+            ]
+        )
 
     await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
     await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
     await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
     await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
-
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
@@ -1383,16 +1393,17 @@ async def test_complex_nft_offer(
     await time_out_assert(30, cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
     await time_out_assert(30, cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
     await time_out_assert(30, cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
-
     did_id_maker = bytes32.fromhex(did_wallet_maker.get_my_DID())
     did_id_taker = bytes32.fromhex(did_wallet_taker.get_my_DID())
     target_puzhash_maker = ph_maker
     target_puzhash_taker = ph_taker
     royalty_puzhash_maker = ph_maker
     royalty_puzhash_taker = ph_taker
-    royalty_basis_pts_maker = uint16(200)
-    royalty_basis_pts_taker_1 = uint16(500)
-    royalty_basis_pts_taker_2 = uint16(500)
+    royalty_basis_pts_maker, royalty_basis_pts_taker_1, royalty_basis_pts_taker_2 = (
+        royalty_pts[0],
+        uint16(royalty_pts[1]),
+        uint16(royalty_pts[2]),
+    )
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
@@ -1406,14 +1417,25 @@ async def test_complex_nft_offer(
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
         ]
     )
+    if royalty_basis_pts_maker > 65535:
+        with pytest.raises(ValueError):
+            await nft_wallet_maker.generate_new_nft(
+                metadata,
+                target_puzhash_maker,
+                royalty_puzhash_maker,
+                royalty_basis_pts_maker,  # type: ignore
+                did_id_maker,
+            )
+        return
+    else:
+        sb_maker = await nft_wallet_maker.generate_new_nft(
+            metadata,
+            target_puzhash_maker,
+            royalty_puzhash_maker,
+            uint16(royalty_basis_pts_maker),
+            did_id_maker,
+        )
 
-    sb_maker = await nft_wallet_maker.generate_new_nft(
-        metadata,
-        target_puzhash_maker,
-        royalty_puzhash_maker,
-        royalty_basis_pts_maker,
-        did_id_maker,
-    )
     sb_taker_1 = await nft_wallet_taker.generate_new_nft(
         metadata,
         target_puzhash_taker,
@@ -1462,9 +1484,14 @@ async def test_complex_nft_offer(
     nft_to_offer_asset_id_maker: bytes32 = maker_nfts[0].nft_id
     nft_to_offer_asset_id_taker_1: bytes32 = taker_nfts[0].nft_id
     nft_to_offer_asset_id_taker_2: bytes32 = taker_nfts[1].nft_id
-    XCH_REQUESTED = 2000000000000
-    CAT_REQUESTED = 100000
-    FEE = uint64(2000000000000)
+    if royalty_basis_pts_maker > 60000:
+        XCH_REQUESTED = 20000
+        CAT_REQUESTED = 1000
+        FEE = uint64(20000)
+    else:
+        XCH_REQUESTED = 2000000000000
+        CAT_REQUESTED = 100000
+        FEE = uint64(2000000000000)
 
     complex_nft_offer = {
         nft_to_offer_asset_id_maker: -1,
@@ -1506,12 +1533,21 @@ async def test_complex_nft_offer(
         assert error is None
         assert success
         assert trade_make is not None
-
-    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
-        wallet_node_taker.get_full_node_peer(),
-        fee=FEE,
-    )
+    if royalty_basis_pts_maker == 10000:
+        with pytest.raises(ValueError):
+            trade_take, tx_records = await trade_manager_taker.respond_to_offer(
+                old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+                wallet_node_taker.get_full_node_peer(),
+                fee=FEE,
+            )
+        # all done for this test
+        return
+    else:
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            wallet_node_taker.get_full_node_peer(),
+            fee=FEE,
+        )
     assert trade_take is not None
     assert tx_records is not None
     await full_node_api.process_transaction_records(records=tx_records)
@@ -1519,7 +1555,7 @@ async def test_complex_nft_offer(
     # Now let's make sure the final wallet state is correct
     maker_royalty_summary = NFTWallet.royalty_calculation(
         {
-            nft_to_offer_asset_id_maker: (royalty_puzhash_maker, royalty_basis_pts_maker),
+            nft_to_offer_asset_id_maker: (royalty_puzhash_maker, uint16(royalty_basis_pts_maker)),
         },
         {
             None: uint64(XCH_REQUESTED),
@@ -1574,8 +1610,8 @@ async def test_complex_nft_offer(
     )
     maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
     taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
-    await time_out_assert(30, len, 2, maker_nfts)
-    await time_out_assert(30, len, 1, taker_nfts)
+    assert len(maker_nfts) == 2
+    assert len(taker_nfts) == 1
 
     assert nft_to_offer_asset_id_maker == taker_nfts[0].nft_id
     assert nft_to_offer_asset_id_taker_1 in [nft.nft_id for nft in maker_nfts]
@@ -1654,9 +1690,6 @@ async def test_complex_nft_offer(
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )
-    maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
-    taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
-    await time_out_assert(30, len, 3, maker_nfts)
-    await time_out_assert(30, len, 0, taker_nfts)
-
-    assert nft_to_offer_asset_id_maker in [nft.nft_id for nft in maker_nfts]
+    assert await basic_nft_wallet_maker.get_nft_count() == 3
+    assert await basic_nft_wallet_taker.get_nft_count() == 0
+    assert await basic_nft_wallet_maker.nft_store.get_nft_by_id(nft_to_offer_asset_id_maker) is not None

@@ -3,6 +3,8 @@ name: 📦🚀 Build Installer - Linux DEB AMD64
 on:
   workflow_dispatch:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
       - 'long_lived/**'
       - main
@@ -10,6 +12,8 @@ on:
   release:
     types: [published]
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
       - '**'
 

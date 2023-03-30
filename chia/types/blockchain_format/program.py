@@ -15,7 +15,7 @@ from chia.util.hash import std_hash
 
 from .tree_hash import sha256_treehash
 
-INFINITE_COST = 0x7FFFFFFFFFFFFFFF
+INFINITE_COST = 11000000000
 
 
 class Program(SExp):

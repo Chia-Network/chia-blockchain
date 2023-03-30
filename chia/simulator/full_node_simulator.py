@@ -190,7 +190,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis], {}, validate_signatures=True
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.receive_block(genesis, pre_validation_results[0])
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -239,7 +239,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis], {}, validate_signatures=True
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.receive_block(genesis, pre_validation_results[0])
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
