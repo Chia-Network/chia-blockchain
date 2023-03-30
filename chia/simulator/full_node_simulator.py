@@ -12,7 +12,6 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
@@ -131,7 +130,7 @@ class FullNodeSimulator(FullNodeAPI):
                     config["simulator"]["auto_farm"] = self.auto_farm
                 save_config(self.bt.root_path, "config.yaml", config)
             self.config = config
-            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost > 0:
+            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost() > 0:
                 # if mempool is not empty and auto farm was just enabled, farm a block
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
@@ -191,7 +190,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis], {}, validate_signatures=True
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.receive_block(genesis, pre_validation_results[0])
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -225,8 +224,7 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=current_time,
                 previous_generator=self.full_node.full_node_store.previous_generator,
             )
-            rr = RespondBlock(more[-1])
-        await self.full_node.respond_block(rr)
+        await self.full_node.add_block(more[-1])
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
@@ -241,7 +239,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis], {}, validate_signatures=True
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.receive_block(genesis, pre_validation_results[0])
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -272,8 +270,7 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=current_time,
                 time_per_block=time_per_block,
             )
-            rr: RespondBlock = RespondBlock(more[-1])
-        await self.full_node.respond_block(rr)
+        await self.full_node.add_block(more[-1])
 
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
         new_index = request.new_index
@@ -297,7 +294,7 @@ class FullNodeSimulator(FullNodeAPI):
         )
 
         for block in more_blocks:
-            await self.full_node.respond_block(RespondBlock(block))
+            await self.full_node.add_block(block)
 
     async def farm_blocks_to_puzzlehash(
         self,

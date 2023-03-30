@@ -78,7 +78,7 @@ async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32
         dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
         dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
         dot_pair_boxes.append(
-            f"node [shape = box]; " f"{{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
+            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
         )
 
     lines = [

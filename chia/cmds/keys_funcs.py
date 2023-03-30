@@ -17,7 +17,7 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
+from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -40,7 +40,7 @@ def unlock_keyring() -> None:
         sys.exit(1)
 
 
-def generate_and_print():
+def generate_and_print() -> str:
     """
     Generates a seed for a private key, and prints the mnemonic to the terminal.
     """
@@ -52,7 +52,7 @@ def generate_and_print():
     return mnemonic
 
 
-def generate_and_add(label: Optional[str]):
+def generate_and_add(label: Optional[str]) -> None:
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
     """
@@ -61,7 +61,7 @@ def generate_and_add(label: Optional[str]):
     query_and_add_private_key_seed(mnemonic=generate_mnemonic(), label=label)
 
 
-def query_and_add_private_key_seed(mnemonic: Optional[str], label: Optional[str] = None):
+def query_and_add_private_key_seed(mnemonic: Optional[str], label: Optional[str] = None) -> None:
     unlock_keyring()
     if mnemonic is None:
         mnemonic = input("Enter the mnemonic you want to use: ")
@@ -72,7 +72,7 @@ def query_and_add_private_key_seed(mnemonic: Optional[str], label: Optional[str]
     add_private_key_seed(mnemonic, label)
 
 
-def add_private_key_seed(mnemonic: str, label: Optional[str]):
+def add_private_key_seed(mnemonic: str, label: Optional[str]) -> None:
     """
     Add a private key seed to the keyring, with the given mnemonic and an optional label.
     """
@@ -127,7 +127,7 @@ def delete_key_label(fingerprint: int) -> None:
 
 def show_keys(
     root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool, fingerprint: Optional[int]
-):
+) -> None:
     """
     Prints all keys and mnemonics (if available).
     """
@@ -153,8 +153,8 @@ def show_keys(
             msg = "Showing all public and private keys"
         print(msg)
 
-    def process_key_data(key_data):
-        key = {}
+    def process_key_data(key_data: KeyData) -> Dict[str, Any]:
+        key: Dict[str, Any] = {}
         sk = key_data.private_key
         if key_data.label is not None:
             key["label"] = key_data.label
@@ -178,7 +178,7 @@ def show_keys(
             key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
         return key
 
-    keys = map(process_key_data, all_keys)
+    keys = [process_key_data(key) for key in all_keys]
 
     if json_output:
         print(json.dumps({"keys": list(keys)}))
@@ -199,7 +199,7 @@ def show_keys(
                 print(key["mnemonic"])
 
 
-def delete(fingerprint: int):
+def delete(fingerprint: int) -> None:
     """
     Delete a key by its public key fingerprint (which is an integer).
     """
@@ -246,7 +246,7 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
     current_sk: PrivateKey = master_sk
 
     # Derive keys along the path
-    for (current_index, derivation_type) in index_and_derivation_types:
+    for current_index, derivation_type in index_and_derivation_types:
         if derivation_type == DerivationType.NONOBSERVER:
             current_sk = _derive_path(current_sk, [current_index])
         elif derivation_type == DerivationType.OBSERVER:
@@ -257,7 +257,7 @@ def derive_sk_from_hd_path(master_sk: PrivateKey, hd_path_root: str) -> Tuple[Pr
     return (current_sk, "m/" + "/".join(path) + "/")
 
 
-def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, json_output: bool):
+def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, json_output: bool) -> None:
     sk: PrivateKey = derive_sk_from_hd_path(private_key, hd_path)[0]
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
     signing_mode: SigningMode = (
@@ -283,7 +283,7 @@ def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, js
         print(f"Signing Mode: {signing_mode.value}")
 
 
-def verify(message: str, public_key: str, signature: str, as_bytes: bool):
+def verify(message: str, public_key: str, signature: str, as_bytes: bool) -> None:
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
@@ -297,7 +297,7 @@ def as_bytes_from_signing_mode(signing_mode_str: str) -> bool:
         return False
 
 
-def _clear_line_part(n: int):
+def _clear_line_part(n: int) -> None:
     # Move backward, overwrite with spaces, then move backward again
     sys.stdout.write("\b" * n)
     sys.stdout.write(" " * n)
@@ -384,7 +384,7 @@ def _search_derived(
         if len(found_items) > 0 and show_progress:
             print()
 
-        for (term, found_item, found_item_type) in found_items:
+        for term, found_item, found_item_type in found_items:
             # Update remaining_search_terms and found_search_terms
             del remaining_search_terms[term]
             found_search_terms.append(term)
@@ -440,7 +440,7 @@ def search_derive(
     search_private_key = "private_key" in search_types
 
     if prefix is None:
-        config: Dict = load_config(root_path, "config.yaml")
+        config: Dict[str, Any] = load_config(root_path, "config.yaml")
         selected: str = config["selected_network"]
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
@@ -572,13 +572,13 @@ def derive_wallet_address(
     prefix: Optional[str],
     non_observer_derivation: bool,
     show_hd_path: bool,
-):
+) -> None:
     """
     Generate wallet addresses using keys derived from the provided private key.
     """
 
     if prefix is None:
-        config: Dict = load_config(root_path, "config.yaml")
+        config: Dict[str, Any] = load_config(root_path, "config.yaml")
         selected: str = config["selected_network"]
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     path_indices: List[int] = [12381, 8444, 2]
@@ -602,10 +602,10 @@ def derive_wallet_address(
             print(f"Wallet address {i}: {address}")
 
 
-def private_key_string_repr(private_key: PrivateKey):
+def private_key_string_repr(private_key: PrivateKey) -> str:
     """Print a PrivateKey in a human-readable formats"""
 
-    s: str = str(private_key)
+    s = str(private_key)
     return s[len("<PrivateKey ") : s.rfind(">")] if s.startswith("<PrivateKey ") else s
 
 
@@ -618,7 +618,7 @@ def derive_child_key(
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
-):
+) -> None:
     """
     Derive child keys from the provided master key.
     """
@@ -689,7 +689,7 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
     return None
 
 
-def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]):
+def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Optional[PrivateKey]:
     """
     Get a private key with the specified fingerprint. If fingerprint is not
     specified, prompt the user to select a key.

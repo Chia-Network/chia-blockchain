@@ -77,11 +77,7 @@ class TestCostCalculation:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
 
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=False,
-            height=softfork_height,
+            program, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
 
         assert npc_result.error is None
@@ -138,27 +134,20 @@ class TestCostCalculation:
         )
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(pk))
         disassembly = binutils.disassemble(puzzle)
+        unknown_opcode = "15"
         program = SerializedProgram.from_bytes(
             binutils.assemble(
                 f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
-                f"  (() (q . ((48 '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
+                f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
             ).as_bin()
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=True,
-            height=softfork_height,
+            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=False,
-            height=softfork_height,
+            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
 
@@ -181,18 +170,11 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=True,
+            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=False,
-            height=softfork_height,
+            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
 
@@ -206,11 +188,7 @@ class TestCostCalculation:
         with assert_runtime(seconds=0.5, label=request.node.name):
             generator = BlockGenerator(program, [], [])
             npc_result = get_name_puzzle_conditions(
-                generator,
-                test_constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=test_constants.COST_PER_BYTE,
-                mempool_mode=False,
-                height=softfork_height,
+                generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
             )
 
         assert npc_result.error is None
@@ -218,7 +196,6 @@ class TestCostCalculation:
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
-
         block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
         disassembly = binutils.disassemble(block)
         # this is a valid generator program except the first clvm
@@ -232,22 +209,14 @@ class TestCostCalculation:
 
         # ensure we fail if the program exceeds the cost
         generator = BlockGenerator(program, [], [])
-        npc_result: NPCResult = get_name_puzzle_conditions(
-            generator,
-            10000000,
-            cost_per_byte=0,
-            mempool_mode=False,
-            height=softfork_height,
-        )
+        npc_result = get_name_puzzle_conditions(generator, 10000000, mempool_mode=False, height=softfork_height)
 
         assert npc_result.error is not None
         assert npc_result.cost == 0
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
-        npc_result = get_name_puzzle_conditions(
-            generator, 23000000, cost_per_byte=0, mempool_mode=False, height=softfork_height
-        )
+        npc_result = get_name_puzzle_conditions(generator, 23000000, mempool_mode=False, height=softfork_height)
 
         assert npc_result.error is None
         assert npc_result.cost > 10000000
@@ -257,7 +226,7 @@ class TestCostCalculation:
     async def test_standard_tx(self, request: pytest.FixtureRequest):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
-            "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
+            "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
         )
         puzzle_program = SerializedProgram.from_bytes(
             p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))
@@ -280,7 +249,6 @@ class TestCostCalculation:
 @pytest.mark.asyncio
 @pytest.mark.benchmark
 async def test_get_puzzle_and_solution_for_coin_performance():
-
     from clvm.casts import int_from_bytes
 
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD

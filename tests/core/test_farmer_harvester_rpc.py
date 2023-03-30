@@ -500,10 +500,10 @@ async def test_farmer_get_harvester_plots_endpoints(
     await wait_for_plot_sync(receiver, last_sync_id)
 
     for page_size in [1, int(total_count / 2), total_count - 1, total_count, total_count + 1, 100]:
-        request = dataclasses.replace(request, page_size=uint32(page_size))
+        request = dataclasses.replace(request, page_size=uint32(page_size))  # type: ignore[type-var]
         expected_page_count = ceil(total_count / page_size)
         for page in range(expected_page_count):
-            request = dataclasses.replace(request, page=uint32(page))
+            request = dataclasses.replace(request, page=uint32(page))  # type: ignore[type-var]
             await wait_for_synced_receiver(farmer_service._api.farmer, harvester_id)
             page_result = await endpoint(farmer_rpc_client, request)
             offset = page * page_size

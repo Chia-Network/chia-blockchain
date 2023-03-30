@@ -143,7 +143,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
 
         for block in blocks:
             results = PreValidationResult(None, uint64(1), None, False)
-            result, err, _ = await bc.receive_block(block, results)
+            result, err, _ = await bc.add_block(block, results)
             assert err is None
     finally:
         await db_wrapper.close()
@@ -151,7 +151,6 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
 
 @pytest.mark.asyncio
 async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlock]) -> None:
-
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)
 

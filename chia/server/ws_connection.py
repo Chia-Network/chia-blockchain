@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import math
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -28,7 +29,6 @@ from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
 from chia.util.log_exceptions import log_exceptions
-from chia.util.logging import TimedDuplicateFilter
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
@@ -39,6 +39,10 @@ LENGTH_BYTES: int = 4
 
 WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
+
+
+def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]:
+    return {message_type: -math.inf for message_type in ProtocolMessageTypes}
 
 
 class ConnectionClosedCallbackProtocol(Protocol):
@@ -110,6 +114,11 @@ class WSChiaConnection:
     version: str = field(default_factory=str)
     protocol_version: str = field(default_factory=str)
 
+    log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
+        default_factory=create_default_last_message_time_dict,
+        repr=False,
+    )
+
     @classmethod
     def create(
         cls,
@@ -128,7 +137,6 @@ class WSChiaConnection:
         local_capabilities_for_handshake: List[Tuple[uint16, str]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
-
         assert ws._writer is not None
         peername = ws._writer.transport.get_extra_info("peername")
 
@@ -350,7 +358,7 @@ class WSChiaConnection:
             if self.received_message_callback is not None:
                 await self.received_message_callback(self)
             self.log.debug(
-                f"<- {ProtocolMessageTypes(full_message.type).name} from peer " f"{self.peer_node_id} {self.peer_host}"
+                f"<- {ProtocolMessageTypes(full_message.type).name} from peer {self.peer_node_id} {self.peer_host}"
             )
             message_type = ProtocolMessageTypes(full_message.type).name
 
@@ -560,10 +568,13 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         ):
             if not is_localhost(self.peer_host):
-                msg = f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
-                f"peer: {self.peer_host}"
-                self.log.debug(msg)
-                self.log.addFilter(TimedDuplicateFilter(msg, 60))
+                message_type = ProtocolMessageTypes(message.type)
+                last_time = self.log_rate_limit_last_time[message_type]
+                now = time.monotonic()
+                self.log_rate_limit_last_time[message_type] = now
+                if now - last_time >= 60:
+                    msg = f"Rate limiting ourselves. message type: {message_type.name}, peer: {self.peer_host}"
+                    self.log.debug(msg)
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:

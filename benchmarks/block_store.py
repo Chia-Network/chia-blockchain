@@ -39,8 +39,7 @@ NUM_ITERS = 20000
 random.seed(123456789)
 
 
-async def run_add_block_benchmark(version: int):
-
+async def run_add_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
     db_wrapper: DBWrapper2 = await setup_db("block-store-benchmark.db", version)
 
@@ -73,7 +72,6 @@ async def run_add_block_benchmark(version: int):
             print("profiling add_full_block", end="")
 
         for height in range(block_height, block_height + NUM_ITERS):
-
             is_transaction = transaction_block_counter == 0
             fees = uint64(random.randint(0, 150000))
             farmer_coin, pool_coin = rewards(uint32(height))

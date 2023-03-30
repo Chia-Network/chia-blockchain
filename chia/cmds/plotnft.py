@@ -10,7 +10,7 @@ from chia.cmds.cmds_util import execute_with_wallet
 MAX_CMDLINE_FEE = Decimal(0.5)
 
 
-def validate_fee(ctx, param, value):
+def validate_fee(ctx: click.Context, param: click.Parameter, value: str) -> str:
     try:
         fee = Decimal(value)
     except ValueError:

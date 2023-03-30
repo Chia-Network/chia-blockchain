@@ -23,6 +23,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64
+from chia.util.network import get_host_addr
 from chia.util.path import path_from_root
 
 log = logging.getLogger(__name__)
@@ -100,7 +101,6 @@ class Crawler:
 
     async def connect_task(self, peer):
         async def peer_action(peer: WSChiaConnection):
-
             peer_info = peer.get_peer_info()
             version = peer.get_version()
             if peer_info is not None and version is not None:
@@ -126,7 +126,12 @@ class Crawler:
             await peer.close()
 
         try:
-            connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+            connected = await self.create_client(
+                PeerInfo(
+                    str(get_host_addr(peer.ip_address, prefer_ipv6=self.config.get("prefer_ipv6", False))), peer.port
+                ),
+                peer_action,
+            )
             if not connected:
                 await self.crawl_store.peer_failed_to_connect(peer)
         except Exception as e:
