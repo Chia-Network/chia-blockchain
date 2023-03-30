@@ -116,7 +116,7 @@ class VCStore:
                     record.vc.coin.puzzle_hash.hex(),
                     bytes(uint64(record.vc.coin.amount)),
                     bytes(record.vc.singleton_lineage_proof),
-                    bytes(record.vc.ownership_lineage_proof),
+                    bytes(record.vc.eml_lineage_proof),
                     record.vc.inner_puzzle_hash.hex(),
                     record.vc.proof_provider.hex(),
                     None if record.vc.proof_hash is None else record.vc.proof_hash.hex(),

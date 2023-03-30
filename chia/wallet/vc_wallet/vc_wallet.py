@@ -15,7 +15,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -60,7 +60,7 @@ class VCWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.store = wallet_state_manager.vc_store
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), "")
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, False)
+        await self.wallet_state_manager.add_new_wallet(self)
         return self
 
     @staticmethod
@@ -79,8 +79,8 @@ class VCWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.VC.value)
+    def type(cls) -> WalletType:
+        return WalletType.VC
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -135,7 +135,7 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")
         # Mint VC
-        coins = await self.standard_wallet.select_coins(uint64(2) + fee, min_coin_amount=uint64(2) + fee)
+        coins = await self.standard_wallet.select_coins(uint64(2 + fee), min_coin_amount=uint64(2 + fee))
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")
         if inner_puzzle_hash is None:
@@ -145,7 +145,7 @@ class VCWallet:
             original_coin,
             provider_did,
             inner_puzzle_hash,
-            inner_puzzle_hash,
+            [inner_puzzle_hash],
         )
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
