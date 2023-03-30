@@ -45,14 +45,14 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 def ssl_context_for_server(
     ca_cert: Path,
     ca_key: Path,
-    private_cert_path: Path,
-    private_key_path: Path,
+    cert_path: Path,
+    key_path: Path,
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
 ) -> ssl.SSLContext:
     if check_permissions:
-        verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
+        verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
@@ -71,7 +71,7 @@ def ssl_context_for_server(
             "ECDHE-RSA-AES128-SHA256"
         )
     )
-    ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
+    ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
 
@@ -176,30 +176,40 @@ class ChiaServer:
             # Authenticated clients
             private_cert_path, private_key_path = private_ssl_paths(root_path, config)
             ssl_client_context = ssl_context_for_client(
-                ca_private_crt_path, ca_private_key_path, private_cert_path, private_key_path
+                ca_cert=ca_private_crt_path,
+                ca_key=ca_private_key_path,
+                private_cert_path=private_cert_path,
+                private_key_path=private_key_path,
             )
         else:
             # Public clients
             public_cert_path, public_key_path = public_ssl_paths(root_path, config)
             ssl_client_context = ssl_context_for_client(
-                chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path
+                ca_cert=chia_ca_crt_path,
+                ca_key=chia_ca_key_path,
+                private_cert_path=public_cert_path,
+                private_key_path=public_key_path,
             )
 
         if local_type in authenticated_server_types:
             # Authenticated servers
             private_cert_path, private_key_path = private_ssl_paths(root_path, config)
             ssl_context = ssl_context_for_server(
-                ca_private_crt_path,
-                ca_private_key_path,
-                private_cert_path,
-                private_key_path,
+                ca_cert=ca_private_crt_path,
+                ca_key=ca_private_key_path,
+                cert_path=private_cert_path,
+                key_path=private_key_path,
                 log=log,
             )
         else:
             # Public servers
             public_cert_path, public_key_path = public_ssl_paths(root_path, config)
             ssl_context = ssl_context_for_server(
-                chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path, log=log
+                ca_cert=chia_ca_crt_path,
+                ca_key=chia_ca_key_path,
+                cert_path=public_cert_path,
+                key_path=public_key_path,
+                log=log,
             )
 
         node_id_cert_path = private_cert_path if public_cert_path is None else public_cert_path
@@ -309,19 +319,19 @@ class ChiaServer:
         connection: Optional[WSChiaConnection] = None
         try:
             connection = WSChiaConnection.create(
-                self._local_type,
-                ws,
-                self.api,
-                self._port,
-                self.log,
-                False,
-                self.received_message_callback,
-                request.remote,
-                self.connection_closed,
-                peer_id,
-                self._inbound_rate_limit_percent,
-                self._outbound_rate_limit_percent,
-                self._local_capabilities_for_handshake,
+                local_type=self._local_type,
+                ws=ws,
+                api=self.api,
+                server_port=self._port,
+                log=self.log,
+                is_outbound=False,
+                received_message_callback=self.received_message_callback,
+                peer_host=request.remote,
+                close_callback=self.connection_closed,
+                peer_id=peer_id,
+                inbound_rate_limit_percent=self._inbound_rate_limit_percent,
+                outbound_rate_limit_percent=self._outbound_rate_limit_percent,
+                local_capabilities_for_handshake=self._local_capabilities_for_handshake,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -453,19 +463,19 @@ class ChiaServer:
                 raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
 
             connection = WSChiaConnection.create(
-                self._local_type,
-                ws,
-                self.api,
-                self._port,
-                self.log,
-                True,
-                self.received_message_callback,
-                target_node.host,
-                self.connection_closed,
-                peer_id,
-                self._inbound_rate_limit_percent,
-                self._outbound_rate_limit_percent,
-                self._local_capabilities_for_handshake,
+                local_type=self._local_type,
+                ws=ws,
+                api=self.api,
+                server_port=self._port,
+                log=self.log,
+                is_outbound=True,
+                received_message_callback=self.received_message_callback,
+                peer_host=target_node.host,
+                close_callback=self.connection_closed,
+                peer_id=peer_id,
+                inbound_rate_limit_percent=self._inbound_rate_limit_percent,
+                outbound_rate_limit_percent=self._outbound_rate_limit_percent,
+                local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 session=session,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
@@ -560,9 +570,9 @@ class ChiaServer:
                 for _, connection in self.all_connections.items():
                     if connection.connection_type is node_type:
                         await connection.close(
-                            self.invalid_protocol_ban_seconds,
-                            WSCloseCode.INTERNAL_ERROR,
-                            Err.INTERNAL_PROTOCOL_ERROR,
+                            ban_time=self.invalid_protocol_ban_seconds,
+                            ws_close_code=WSCloseCode.INTERNAL_ERROR,
+                            error=Err.INTERNAL_PROTOCOL_ERROR,
                         )
                 raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
 
