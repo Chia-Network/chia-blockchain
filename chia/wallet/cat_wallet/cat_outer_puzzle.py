@@ -35,7 +35,7 @@ class CATOuterPuzzle:
         _, tail_hash, inner_puzzle = args
         constructor_dict = {
             "type": "CAT",
-            "tail": "0x" + tail_hash.as_python().hex(),
+            "tail": "0x" + tail_hash.atom.hex(),
         }
         next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:

@@ -21,7 +21,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -49,7 +49,6 @@ from chia.wallet.trading.offer import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
@@ -99,7 +98,7 @@ class NFTWallet:
         self.nft_store = wallet_state_manager.nft_store
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
         self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
         return self
 
@@ -123,8 +122,8 @@ class NFTWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.NFT)
+    def type(cls) -> WalletType:
+        return WalletType.NFT
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -373,7 +372,7 @@ class NFTWallet:
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(), b"", p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
             )
-            self.log.debug("Got back ownership inner puzzle: %s", disassemble(inner_puzzle))
+            self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
             inner_puzzle = p2_inner_puzzle
@@ -1304,7 +1303,7 @@ class NFTWallet:
         """
         # get DID Wallet
         for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 if self.get_did() == bytes32.from_hexstr(wallet.get_my_DID()):
                     did_wallet = wallet
                     break

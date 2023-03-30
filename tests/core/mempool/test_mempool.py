@@ -372,23 +372,25 @@ class TestMempoolManager:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
+            # the mempool rules don't allow relative height- or time conditions on
+            # ephemeral spends
             (co.ASSERT_MY_BIRTH_HEIGHT, -1, mis.FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, mis.FAILED),
             (co.ASSERT_MY_BIRTH_HEIGHT, 5, mis.FAILED),
-            (co.ASSERT_MY_BIRTH_HEIGHT, 6, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 6, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, -1, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10049, mis.FAILED),
-            (co.ASSERT_MY_BIRTH_SECONDS, 10050, mis.SUCCESS),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10050, mis.FAILED),
             (co.ASSERT_MY_BIRTH_SECONDS, 10051, mis.FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, -2, mis.SUCCESS),
-            (co.ASSERT_SECONDS_RELATIVE, -1, mis.SUCCESS),
-            (co.ASSERT_SECONDS_RELATIVE, 0, mis.SUCCESS),
+            (co.ASSERT_SECONDS_RELATIVE, -2, mis.FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, -1, mis.FAILED),
+            (co.ASSERT_SECONDS_RELATIVE, 0, mis.FAILED),
             (co.ASSERT_SECONDS_RELATIVE, 1, mis.FAILED),
-            (co.ASSERT_HEIGHT_RELATIVE, -2, mis.SUCCESS),
-            (co.ASSERT_HEIGHT_RELATIVE, -1, mis.SUCCESS),
-            (co.ASSERT_HEIGHT_RELATIVE, 0, mis.PENDING),
-            (co.ASSERT_HEIGHT_RELATIVE, 1, mis.PENDING),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, 0, mis.FAILED),
+            (co.ASSERT_HEIGHT_RELATIVE, 1, mis.FAILED),
             # the absolute height and seconds tests require fresh full nodes to
             # run the test on. The fixture (one_node_one_block) creates a block,
             # then condition_tester2 creates another 3 blocks
@@ -1968,9 +1970,7 @@ def generator_condition_tester(
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
     generator = BlockGenerator(program, [], [])
     print(f"len: {len(bytes(program))}")
-    npc_result: NPCResult = get_name_puzzle_conditions(
-        generator, max_cost, cost_per_byte=COST_PER_BYTE, mempool_mode=mempool_mode, height=height
-    )
+    npc_result: NPCResult = get_name_puzzle_conditions(generator, max_cost, mempool_mode=mempool_mode, height=height)
     return npc_result
 
 
@@ -2149,7 +2149,7 @@ class TestGeneratorConditions:
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
+            generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 2
@@ -2192,18 +2192,10 @@ class TestGeneratorConditions:
         coins = npc_result.conds.spends[0].create_coin
         assert coins == [(puzzle_hash_1.encode("ascii"), 5, hint.encode("ascii"))]
 
-    @pytest.mark.parametrize(
-        "mempool,height",
-        [
-            (True, None),
-            (False, 2300000),
-            (False, 3630000),
-            (False, 3830000),
-        ],
-    )
-    def test_unknown_condition(self, mempool: bool, height: uint32):
+    @pytest.mark.parametrize("mempool", [True, False])
+    def test_unknown_condition(self, mempool: bool, softfork_height: uint32):
         for c in ['(2 100 "foo" "bar")', "(100)", "(4 1) (2 2) (3 3)", '("foobar")']:
-            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=height)
+            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=softfork_height)
             print(npc_result)
             if mempool:
                 assert npc_result.error == Err.INVALID_CONDITION.value

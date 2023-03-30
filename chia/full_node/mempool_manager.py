@@ -5,8 +5,9 @@ import logging
 import time
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
+from dataclasses import dataclass
 from multiprocessing.context import BaseContext
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
 from blspy import GTElement
 from chiabip158 import PyBIP158
@@ -59,7 +60,6 @@ def validate_clvm_and_signature(
     the NPCResult and a cache of the new pairings validated (if not error)
     """
 
-    cost_per_byte = constants.COST_PER_BYTE
     additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
 
     try:
@@ -67,7 +67,7 @@ def validate_clvm_and_signature(
         program = simple_solution_generator(bundle)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True, constants=constants, height=height
+            program, max_cost, mempool_mode=True, constants=constants, height=height
         )
 
         if result.error is not None:
@@ -93,25 +93,54 @@ def validate_clvm_and_signature(
     return None, bytes(result), new_cache_entries
 
 
+@dataclass
+class TimelockConditions:
+    assert_height: uint32 = uint32(0)
+    assert_before_height: Optional[uint32] = None
+    assert_before_seconds: Optional[uint64] = None
+
+
 def compute_assert_height(
     removal_coin_records: Dict[bytes32, CoinRecord],
     conds: SpendBundleConditions,
-) -> uint32:
+) -> TimelockConditions:
     """
-    Computes the most restrictive height assertion in the spend bundle. Relative
-    height assertions are resolved using the confirmed heights from the coin
-    records.
+    Computes the most restrictive height- and seconds assertion in the spend bundle.
+    Relative heights and times are resolved using the confirmed heights and
+    timestamps from the coin records.
     """
 
-    height: uint32 = uint32(conds.height_absolute)
+    ret = TimelockConditions()
+    ret.assert_height = uint32(conds.height_absolute)
+    ret.assert_before_height = (
+        uint32(conds.before_height_absolute) if conds.before_height_absolute is not None else None
+    )
+    ret.assert_before_seconds = (
+        uint64(conds.before_seconds_absolute) if conds.before_seconds_absolute is not None else None
+    )
 
     for spend in conds.spends:
-        if spend.height_relative is None:
-            continue
-        h = uint32(removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.height_relative)
-        height = max(height, h)
+        if spend.height_relative is not None:
+            h = uint32(removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.height_relative)
+            ret.assert_height = max(ret.assert_height, h)
 
-    return height
+        if spend.before_height_relative is not None:
+            h = uint32(
+                removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.before_height_relative
+            )
+            if ret.assert_before_height is not None:
+                ret.assert_before_height = min(ret.assert_before_height, h)
+            else:
+                ret.assert_before_height = h
+
+        if spend.before_seconds_relative is not None:
+            s = uint64(removal_coin_records[bytes32(spend.coin_id)].timestamp + spend.before_seconds_relative)
+            if ret.assert_before_seconds is not None:
+                ret.assert_before_seconds = min(ret.assert_before_seconds, s)
+            else:
+                ret.assert_before_seconds = s
+
+    return ret
 
 
 class MempoolManager:
@@ -472,23 +501,31 @@ class MempoolManager:
                 log.warning(f"{spend.puzzle_hash.hex()} != {coin_record.coin.puzzle_hash.hex()}")
                 return Err.WRONG_PUZZLE_HASH, None, []
 
-        chialisp_height = (
-            self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
-        )
-
+        # the height and time we pass in here represent the previous transaction
+        # block's height and timestamp. In the mempool, the most recent peak
+        # block we've received will be the previous transaction block, from the
+        # point-of-view of the next block to be farmed. Therefore we pass in the
+        # current peak's height and timestamp
         assert self.peak.timestamp is not None
         tl_error: Optional[Err] = mempool_check_time_locks(
             removal_record_dict,
             npc_result.conds,
-            uint32(chialisp_height),
+            self.peak.height,
             self.peak.timestamp,
         )
 
-        assert_height: Optional[uint32] = None
-        if tl_error:
-            assert_height = compute_assert_height(removal_record_dict, npc_result.conds)
+        timelocks: TimelockConditions = compute_assert_height(removal_record_dict, npc_result.conds)
 
-        potential = MempoolItem(new_spend, uint64(fees), npc_result, spend_name, first_added_height, assert_height)
+        potential = MempoolItem(
+            new_spend,
+            uint64(fees),
+            npc_result,
+            spend_name,
+            first_added_height,
+            timelocks.assert_height,
+            timelocks.assert_before_height,
+            timelocks.assert_before_seconds,
+        )
 
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
@@ -528,8 +565,7 @@ class MempoolManager:
                 return Err.DOUBLE_SPEND, set()
             # 2. Checks if there's a mempool conflict
             items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(removal.name())
-            for item in items:
-                conflicts.add(item)
+            conflicts.update(items)
 
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, conflicts
@@ -567,6 +603,7 @@ class MempoolManager:
         """
         if new_peak is None:
             return []
+        # we're only interested in transaction blocks
         if new_peak.is_transaction_block is False:
             return []
         if self.peak == new_peak:
@@ -574,6 +611,8 @@ class MempoolManager:
         assert new_peak.timestamp is not None
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: List[MempoolItemInfo] = []
+
+        self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -644,6 +683,17 @@ class MempoolManager:
         return items
 
 
+T = TypeVar("T", uint32, uint64)
+
+
+def optional_min(a: Optional[T], b: Optional[T]) -> Optional[T]:
+    return min((v for v in [a, b] if v is not None), default=None)
+
+
+def optional_max(a: Optional[T], b: Optional[T]) -> Optional[T]:
+    return max((v for v in [a, b] if v is not None), default=None)
+
+
 def can_replace(
     conflicting_items: Set[MempoolItem],
     removal_names: Set[bytes32],
@@ -659,6 +709,9 @@ def can_replace(
 
     conflicting_fees = 0
     conflicting_cost = 0
+    assert_height: Optional[uint32] = None
+    assert_before_height: Optional[uint32] = None
+    assert_before_seconds: Optional[uint64] = None
     for item in conflicting_items:
         conflicting_fees += item.fee
         conflicting_cost += item.cost
@@ -673,6 +726,10 @@ def can_replace(
                 log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                 return False
 
+        assert_height = optional_max(assert_height, item.assert_height)
+        assert_before_height = optional_min(assert_before_height, item.assert_before_height)
+        assert_before_seconds = optional_min(assert_before_seconds, item.assert_before_seconds)
+
     # New item must have higher fee per cost
     conflicting_fees_per_cost = conflicting_fees / conflicting_cost
     if new_item.fee_per_cost <= conflicting_fees_per_cost:
@@ -686,6 +743,31 @@ def can_replace(
     fee_increase = new_item.fee - conflicting_fees
     if fee_increase < MEMPOOL_MIN_FEE_INCREASE:
         log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
+        return False
+
+    # New item may not have a different effective height/time lock (time-lock rule)
+    if new_item.assert_height != assert_height:
+        log.debug(
+            "Rejecting conflicting tx due to changing ASSERT_HEIGHT constraints %s -> %s",
+            assert_height,
+            new_item.assert_height,
+        )
+        return False
+
+    if new_item.assert_before_height != assert_before_height:
+        log.debug(
+            "Rejecting conflicting tx due to changing ASSERT_BEFORE_HEIGHT constraints %s -> %s",
+            assert_before_height,
+            new_item.assert_before_height,
+        )
+        return False
+
+    if new_item.assert_before_seconds != assert_before_seconds:
+        log.debug(
+            "Rejecting conflicting tx due to changing ASSERT_BEFORE_SECONDS constraints %s -> %s",
+            assert_before_seconds,
+            new_item.assert_before_seconds,
+        )
         return False
 
     log.info(f"Replacing conflicting tx in mempool. New tx fee: {new_item.fee}, old tx fees: {conflicting_fees}")

@@ -279,7 +279,7 @@ class WebSocketServer:
         return ws
 
     async def send_all_responses(self, connections: Set[WebSocketResponse], response: str) -> None:
-        for connection in connections:
+        for connection in connections.copy():
             try:
                 await connection.send_str(response)
             except Exception as e:
