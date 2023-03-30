@@ -89,18 +89,18 @@ def ssl_context_for_root(
 def ssl_context_for_client(
     ca_cert: Path,
     ca_key: Path,
-    private_cert_path: Path,
-    private_key_path: Path,
+    cert_path: Path,
+    key_path: Path,
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
 ) -> ssl.SSLContext:
     if check_permissions:
-        verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
+        verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
-    ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
+    ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
 
@@ -178,8 +178,8 @@ class ChiaServer:
             ssl_client_context = ssl_context_for_client(
                 ca_cert=ca_private_crt_path,
                 ca_key=ca_private_key_path,
-                private_cert_path=private_cert_path,
-                private_key_path=private_key_path,
+                cert_path=private_cert_path,
+                key_path=private_key_path,
             )
         else:
             # Public clients
@@ -187,8 +187,8 @@ class ChiaServer:
             ssl_client_context = ssl_context_for_client(
                 ca_cert=chia_ca_crt_path,
                 ca_key=chia_ca_key_path,
-                private_cert_path=public_cert_path,
-                private_key_path=public_key_path,
+                cert_path=public_cert_path,
+                key_path=public_key_path,
             )
 
         if local_type in authenticated_server_types:
