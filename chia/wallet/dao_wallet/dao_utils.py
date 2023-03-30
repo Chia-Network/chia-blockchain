@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Tuple
 
 from clvm.casts import int_from_bytes
 
@@ -28,7 +28,7 @@ DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_alternate_proposal_validato
 DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
 DAO_TREASURY_MOD: Program = load_clvm("dao_alternate_treasury.clvm")
 DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
-SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton.clvm")
+SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clvm")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
@@ -81,6 +81,36 @@ def get_treasury_puzzle(dao_rules: DAORules) -> Program:
         dao_rules.self_destruct_length,
         dao_rules.oracle_spend_delay,
     )
+    return puzzle
+
+
+def create_announcement_condition_for_nft_spend(
+    treasury_id: bytes32,
+    nft_id: bytes32,
+    target_address: bytes32
+) -> Tuple[Program, Program]:
+    # TODO: this delegated puzzle does not actually work with NFTs - need to copy more of the code later
+    delegated_puzzle = Program.to([(1, [[51, target_address, 1]])])
+    announcement_condition = Program.to([62, Program.to([nft_id, delegated_puzzle.get_tree_hash()]).get_tree_hash()])
+    return announcement_condition, delegated_puzzle
+
+
+def get_spend_p2_singleton_puzzle(
+    treasury_id: bytes32,
+    xch_conditions: [Optional[List]],
+    asset_conditions: [Optional[List[Tuple]]]
+) -> Program:
+    # CAT_MOD_HASH
+    # CONDITIONS  - this may also include announcements to spend an NFT
+    # LIST_OF_TAILHASH_CONDITIONS
+    # P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+    puzzle: Program = SPEND_P2_SINGLETON_MOD.curry([
+        CAT_MOD_HASH,
+        xch_conditions,
+        asset_conditions,
+        P2_SINGLETON_MOD.curry(treasury_id),
+    ])
+
     return puzzle
 
 

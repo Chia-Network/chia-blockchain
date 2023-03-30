@@ -37,7 +37,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     SINGLETON_LAUNCHER,
     curry_singleton,
     generate_cat_tail,
-    get_cat_tail_hash_from_treasury_puzzle,
+    # get_cat_tail_hash_from_treasury_puzzle,
     get_finished_state_puzzle,
     get_new_puzzle_from_proposal_solution,
     get_new_puzzle_from_treasury_solution,
@@ -48,6 +48,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_rules_from_puzzle,
     uncurry_proposal,
     uncurry_treasury,
+    get_spend_p2_singleton_puzzle,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -350,51 +351,9 @@ class DAOWallet:
 
     async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"DAO wallet has been notified that coin was added: {coin.name()}:{coin}")
+        self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
+        # self.log.info(f"DAOWallet.coin_added() is unused.")
         return
-        # TODO: this is wrong and needs changing
-        # await self.apply_state_transition(self, new_state: CoinSpend, block_height: uint32)
-        # new_info = DAOInfo(
-        #     self.dao_info.origin_coin,
-        #     self.dao_info.backup_ids,
-        #     self.dao_info.num_of_backup_ids_needed,
-        #     self.dao_info.parent_info,
-        #     inner_puzzle,
-        #     None,
-        #     None,
-        #     None,
-        #     False,
-        #     self.dao_info.metadata,
-        # )
-        # await self.save_info(new_info)
-
-        # future_parent = LineageProof(
-        #     coin.parent_coin_info,
-        #     inner_puzzle.get_tree_hash(),
-        #     uint64(coin.amount),
-        # )
-
-        # await self.add_parent(coin.name(), future_parent)
-        # parent = self.get_parent_for_coin(coin)
-        # if parent is None:
-        #     parent_state: CoinState = (
-        #         await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
-        #     )[0]
-        #     assert parent_state.spent_height is not None
-        #     puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-        #         coin.parent_coin_info, uint32(parent_state.spent_height)
-        #     )
-        #     response = await peer.request_puzzle_solution(puzzle_solution_request)
-        #     req_puz_sol = response.response
-        #     assert req_puz_sol.puzzle is not None
-        #     parent_innerpuz = singleton.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
-        #     assert parent_innerpuz is not None
-        #     parent_info = LineageProof(
-        #         parent_state.coin.parent_coin_info,
-        #         parent_innerpuz.get_tree_hash(),
-        #         uint64(parent_state.coin.amount),
-        #     )
-        #     await self.add_parent(coin.parent_coin_info, parent_info)
 
     async def is_spend_retrievable(self, coin_id):
         wallet_node: Any = self.wallet_state_manager.wallet_node
@@ -776,19 +735,22 @@ class DAOWallet:
 
         return eve_record
 
-
-    def generate_spend_proposal(self, p2_puzzle_hash, amount) -> Program:
-        if amount > self.dao_info.current_treasury_coin.amount:
-            raise ValueError("The proposed spend amount is greater than the treasury balance")
-        # relative_change = self.dao_info.current_treasury_coin.amount - amount
-        # TODO: create_dao_spend_proposal has gone AWOL
-        # puzzle = create_dao_spend_proposal(
-        #     p2_puzzle_hash,
-        #     amount,
-        #     self.dao_info.current_treasury_coin.puzzle_hash,
-        #     relative_change
-        # )
-        puzzle = Program.to()
+    def generate_simple_proposal_innerpuz(
+        self,
+        recipient_address: bytes32,
+        amount: uint64,
+        asset_type: Optional[bytes32] = None,
+    ) -> Program:
+        # TODO: reimplement this when we have an idea what our DAOs funds are
+        # if amount > self.dao_info.current_treasury_coin.amount:
+        #     raise ValueError("The proposed spend amount is greater than the treasury balance")
+        if asset_type is not None:
+            conditions = []
+            asset_conditions_list = []
+        else:
+            conditions = Program.to([[51, recipient_address, amount]])
+            asset_conditions_list = []
+        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)
         return puzzle
 
     async def generate_new_proposal(self, proposed_puzzle_hash, fee):

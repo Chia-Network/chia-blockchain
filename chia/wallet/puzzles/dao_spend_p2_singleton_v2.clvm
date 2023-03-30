@@ -17,6 +17,7 @@
   ; if you don't, your proposal might be invalidated if the p2_singleton coins get spent
 
   (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
 
   (defun loop_through_list (
     SPEND_AMOUNT
@@ -127,7 +128,7 @@
         P2_SINGLETON_PUZHASH
         (r LIST_OF_TAILHASH_CONDITIONS)
         LIST_OF_TAILHASH_CONDITIONS
-        (r p2_singleton_parent_amount_list)
+        (r p2_singleton_tailhash_parent_amount_list)
         (for_each_asset
           CAT_MOD_HASH
           (if
@@ -140,7 +141,7 @@
           )
           P2_SINGLETON_PUZHASH
           (f (f p2_singleton_tailhash_parent_amount_list))  ; tail_hash
-          (r (f p2_singleton_parent_amount_list))  ; list of ((parent amount) (parent amount)...)
+          (r (f p2_singleton_tailhash_parent_amount_list))  ; list of ((parent amount) (parent amount)...)
           0  ; current total - initialise as 0
           (sum_create_coins (f (r (f LIST_OF_TAILHASH_CONDITIONS))))
           output  ; add new conditions to previous calculated output conditions
