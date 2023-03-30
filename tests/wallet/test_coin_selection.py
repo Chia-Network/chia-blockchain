@@ -10,7 +10,7 @@ import pytest
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash
+from chia.util.hash import std_hash, std_hash_raw
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import (
     check_for_exact_match,
@@ -23,6 +23,10 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 log = logging.getLogger(__name__)
+
+
+def int_to_hash(i: int) -> bytes32:
+    return std_hash_raw(i.to_bytes(length=2, byteorder="big", signed=False))
 
 
 class TestCoinSelection:
@@ -108,7 +112,7 @@ class TestCoinSelection:
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         # make sure coins are not identical.
@@ -129,7 +133,7 @@ class TestCoinSelection:
         for i in range(100):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(2000)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(2000)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         spendable_amount = uint128(spendable_amount + 2000 * 100)
@@ -154,14 +158,14 @@ class TestCoinSelection:
         for i in range(5):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(5000)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(5000)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
 
         for i in range(10000):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
@@ -192,7 +196,7 @@ class TestCoinSelection:
         for i in range(10000):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         for target_amount in [50000, 10001, 10000, 9999]:
@@ -215,7 +219,7 @@ class TestCoinSelection:
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         # make sure coins are not identical.
@@ -436,13 +440,13 @@ class TestCoinSelection:
         for i in range(500):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         for i in range(1, 90):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(i * 10)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, int_to_hash(i), uint64(i * 10)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         # make sure coins are not identical.
