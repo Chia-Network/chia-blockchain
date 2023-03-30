@@ -1919,7 +1919,7 @@ def create_test_foliage(
 
         generator_hash = bytes32([0] * 32)
         if block_generator is not None:
-            generator_hash = std_hash(block_generator.program)
+            generator_hash = std_hash(bytes(block_generator.program))
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):

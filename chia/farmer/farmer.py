@@ -302,8 +302,10 @@ class Farmer:
     ) -> Optional[Dict[str, Any]]:
         authentication_token = get_current_authentication_token(authentication_token_timeout)
         message: bytes32 = std_hash(
-            AuthenticationPayload(
-                "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+            bytes(
+                AuthenticationPayload(
+                    "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+                )
             )
         )
         signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
@@ -637,8 +639,10 @@ class Farmer:
 
                 authentication_token = get_current_authentication_token(authentication_token_timeout)
                 message: bytes32 = std_hash(
-                    AuthenticationPayload(
-                        "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+                    bytes(
+                        AuthenticationPayload(
+                            "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
+                        )
                     )
                 )
                 signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
