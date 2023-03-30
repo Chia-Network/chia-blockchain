@@ -1009,11 +1009,10 @@ async def test_assert_before_expiration(
             assert False
 
 
-def make_test_spendbundle(coin: Coin, *, fee: int = 0) -> SpendBundle:
-    conditions = [
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - fee)],
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
-    ]
+def make_test_spendbundle(coin: Coin, *, fee: int = 0, eligible_spend: bool = False) -> SpendBundle:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - fee)]]
+    if not eligible_spend:
+        conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH])
     return spend_bundle_from_conditions(conditions, coin)
 
 
@@ -1137,6 +1136,36 @@ async def test_sufficient_total_fpc_increase() -> None:
     assert_sb_in_pool(mempool_manager, sb1234)
     assert_sb_not_in_pool(mempool_manager, sb12)
     assert_sb_not_in_pool(mempool_manager, sb3)
+
+
+@pytest.mark.asyncio
+async def test_replace_with_extra_eligible_coin() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1234 = SpendBundle.aggregate([make_test_spendbundle(coins[i]) for i in range(4)])
+    await send_spendbundle(mempool_manager, sb1234)
+    assert_sb_in_pool(mempool_manager, sb1234)
+    # Replace sb1234 with sb1234_2 which spends an eligible coin additionally
+    eligible_sb = make_test_spendbundle(coins[4], fee=MEMPOOL_MIN_FEE_INCREASE, eligible_spend=True)
+    sb1234_2 = SpendBundle.aggregate([sb1234, eligible_sb])
+    await send_spendbundle(mempool_manager, sb1234_2)
+    assert_sb_not_in_pool(mempool_manager, sb1234)
+    assert_sb_in_pool(mempool_manager, sb1234_2)
+
+
+@pytest.mark.asyncio
+async def test_replacing_one_with_an_eligible_coin() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb123 = SpendBundle.aggregate([make_test_spendbundle(coins[i]) for i in range(3)])
+    eligible_sb = make_test_spendbundle(coins[3], eligible_spend=True)
+    sb123e = SpendBundle.aggregate([sb123, eligible_sb])
+    await send_spendbundle(mempool_manager, sb123e)
+    assert_sb_in_pool(mempool_manager, sb123e)
+    # Replace sb123e with sb123e4
+    sb4 = make_test_spendbundle(coins[4], fee=MEMPOOL_MIN_FEE_INCREASE)
+    sb123e4 = SpendBundle.aggregate([sb123e, sb4])
+    await send_spendbundle(mempool_manager, sb123e4)
+    assert_sb_not_in_pool(mempool_manager, sb123e)
+    assert_sb_in_pool(mempool_manager, sb123e4)
 
 
 def test_run_for_cost_and_additions_created_coin_amount_0() -> None:
