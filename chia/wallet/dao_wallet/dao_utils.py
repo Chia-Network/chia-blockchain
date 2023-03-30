@@ -10,8 +10,6 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_fullpuz
 
-# from chia.wallet.uncurried_puzzle import UncurriedPuzzle
-
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
@@ -437,7 +435,8 @@ def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
 def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
     """
         Given a puzzle test if it's a Treasury, if it is, return the curried arguments
-    :param puzzle: Puzzle
+    :param mod: Puzzle
+    :param curried_args: Puzzle
     :return: Curried parameters
     """
     try:
@@ -453,10 +452,11 @@ def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
-def match_proposal_puzzle(mod: Program, curried_args: Program) -> Program:
+def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Program]:
     """
         Given a puzzle test if it's a Proposal, if it is, return the curried arguments
     :param puzzle: Puzzle
+    :param curried_args: Puzzle
     :return: Curried parameters
     """
     try:
