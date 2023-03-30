@@ -9,6 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
@@ -109,3 +110,16 @@ class TransactionRecord(Streamable):
             if memo is not None
         }
         return formatted
+
+    def is_valid(self) -> bool:
+        past_receipts = self.sent_to
+        if len(past_receipts) < 6:
+            # we haven't tried enough peers yet
+            return True
+        if any([x[0] for x in past_receipts if x[0] == MempoolInclusionStatus.SUCCESS.value]):
+            # we managed to push it to mempool at least once
+            return True
+        if any([x[1] for x in past_receipts if x[1] in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)]):
+            # we tried to push it to mempool and got a fee error so it's a temporary error
+            return True
+        return False

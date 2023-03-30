@@ -99,12 +99,15 @@ def load_serialized_clvm(
                 # Establish whether the size is zero on entry
                 full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
                 output = full_path.parent / hex_filename
-                search_paths = [full_path.parent]
-                if include_standard_libraries:
-                    # we can't get the dir, but we can get a file then get its parent.
-                    chia_puzzles_path = pathlib.Path(pkg_resources.resource_filename(__name__, "__init__.py")).parent
-                    search_paths.append(chia_puzzles_path)
-                compile_clvm(full_path, output, search_paths=search_paths)
+                if not output.exists() or os.stat(full_path).st_mtime > os.stat(output).st_mtime:
+                    search_paths = [full_path.parent]
+                    if include_standard_libraries:
+                        # we can't get the dir, but we can get a file then get its parent.
+                        chia_puzzles_path = pathlib.Path(
+                            pkg_resources.resource_filename(__name__, "__init__.py")
+                        ).parent
+                        search_paths.append(chia_puzzles_path)
+                    compile_clvm(full_path, output, search_paths=search_paths)
 
         except NotImplementedError:
             # pyinstaller doesn't support `pkg_resources.resource_exists`
