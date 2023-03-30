@@ -214,6 +214,9 @@ class WalletRpcApi:
             "/dl_delete_mirror": self.dl_delete_mirror,
             # Verified Credential
             "/vc_mint_vc": self.vc_mint_vc,
+            "/vc_get_vc": self.vc_mint_vc,
+            "/vc_get_vc_list": self.vc_mint_vc,
+            "/vc_spend_vc": self.vc_mint_vc,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -3401,7 +3404,7 @@ class WalletRpcApi:
         puzhash: Optional[bytes32] = None
         if target_address is not None:
             puzhash = decode_puzzle_hash(target_address)
-        # get
+        # get VC wallet
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.VC:
                 assert isinstance(wallet, VCWallet)
@@ -3439,3 +3442,48 @@ class WalletRpcApi:
             request.get("start", 0), request.get("count", 50)
         )
         return {"vc_records": vc_list}
+
+    async def vc_spend_vc(self, request) -> Dict:
+        """
+        Spend a verified credential
+        :param request:
+        :return:
+        """
+        vc_id: bytes32 = bytes32.from_hexstr(request["vc_id"])
+        new_puzhash: Optional[bytes32] = None
+        if "new_puzhash" in request:
+            new_puzhash = bytes32.from_hexstr(request["new_puzhash"])
+
+        new_proof_hash: Optional[bytes32] = None
+        if "new_proof_hash" in request:
+            new_proof_hash = bytes32.from_hexstr(request["new_proof_hash"])
+
+        provider_inner_puzhash: Optional[bytes32] = None
+        if "provider_inner_puzhash" in request:
+            provider_inner_puzhash = bytes32.from_hexstr(request["provider_inner_puzhash"])
+
+        # get VC wallet
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(
+                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
+            )
+        txs = await vc_wallet.generate_signed_transaction(
+            vc_id,
+            uint64(request.get("fee", 0)),
+            new_puzhash,
+            new_proof_hash=new_proof_hash,
+            provider_inner_puzhash=provider_inner_puzhash,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        for tx in txs:
+            await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }

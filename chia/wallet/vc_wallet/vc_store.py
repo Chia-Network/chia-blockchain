@@ -26,7 +26,7 @@ class VCRecord(Streamable):
 def _row_to_vc_record(row: Row) -> VCRecord:
     return VCRecord(
         VerifiedCredential(
-            Coin(bytes32.from_hexstr(row[2]), bytes32.from_hexstr(row[3]), row[4]),
+            Coin(bytes32.from_hexstr(row[2]), bytes32.from_hexstr(row[3]), uint64.from_bytes(row[4])),
             LineageProof.from_bytes(row[5]),
             VCLineageProof.from_bytes(row[6]),
             bytes32.from_hexstr(row[0]),
@@ -92,23 +92,9 @@ class VCStore:
         If a record with the same launcher ID exists, it will only be replaced if the new record has a higher
         confirmation height.
         """
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            columns = (
-                "launcher_id",
-                "coin_id",
-                "parent_coin_info",
-                "puzzle_hash",
-                "amount",
-                "singleton_lineage_proof",
-                "ownership_lineage_proof",
-                "inner_puzzle_hash",
-                "proof_provider",
-                "proof_hash",
-                "confirmed_height",
-            )
             await conn.execute(
-                f"INSERT or REPLACE INTO vc_records ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT or REPLACE INTO vc_records VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.vc.launcher_id.hex(),
                     record.vc.coin.name().hex(),

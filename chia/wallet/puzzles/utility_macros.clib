@@ -24,14 +24,6 @@
       0)
   )
 
-  ; take two lists and merge them into one
-  (defun merge_list (list_a list_b)
-    (if list_a
-      (c (f list_a) (merge_list (r list_a) list_b))
-      list_b
-    )
-  )
-
   (defun in (atom list_a)
     (if list_a
         (i (= atom (f list_a))

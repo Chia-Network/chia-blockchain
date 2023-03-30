@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from blspy import G1Element
 from chia_rs.chia_rs import CoinState
 
 from chia.server.ws_connection import WSChiaConnection
@@ -14,63 +15,58 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.payment import Payment
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-    solution_for_conditions,
-)
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
-if TYPE_CHECKING:
-    from chia.wallet.wallet_state_manager import WalletStateManager
+_T_VCWallet = TypeVar("_T_VCWallet", bound="VCWallet")
 
 
 class VCWallet:
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
-    wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+    wallet_state_manager: Any  # pylint: disable=used-before-assignment
     log: logging.Logger
     standard_wallet: Wallet
     wallet_info: WalletInfo
     store: VCStore
 
-    @staticmethod
+    @classmethod
     async def create_new_vc_wallet(
-        wallet_state_manager: WalletStateManager,
+        cls: Type[_T_VCWallet],
+        wallet_state_manager: Any,
         wallet: Wallet,
         name: Optional[str] = None,
-    ) -> VCWallet:
-        self = VCWallet()
+    ) -> _T_VCWallet:
+        self = cls()
         self.wallet_state_manager = wallet_state_manager
         self.standard_wallet = wallet
         name = "VCWallet" if name is None else name
         self.log = logging.getLogger(name if name else __name__)
         self.store = wallet_state_manager.vc_store
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), "")
-        await self.wallet_state_manager.add_new_wallet(self)
+        await self.wallet_state_manager.add_new_wallet(self, False)
         return self
 
-    @staticmethod
+    @classmethod
     async def create(
-        wallet_state_manager: WalletStateManager,
+        cls: Type[_T_VCWallet],
+        wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
-    ) -> VCWallet:
-        self = VCWallet()
+    ) -> _T_VCWallet:
+        self = cls()
         self.wallet_state_manager = wallet_state_manager
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else wallet_info.name)
@@ -103,6 +99,17 @@ class VCWallet:
         vc = VerifiedCredential.get_next_from_coin_spend(cs)
         vc_record: VCRecord = VCRecord(vc, height)
         await self.store.add_or_replace_vc_record(vc_record)
+
+    async def remove_coin(self, coin: Coin, height: uint32) -> None:
+        """
+        remove the VC if it is transferred to another key
+        :param coin:
+        :param height:
+        :return:
+        """
+        vc_record: Optional[VCRecord] = await self.store.get_vc_record_by_coin_id(coin.name())
+        if vc_record is not None:
+            await self.store.delete_vc_record(vc_record.vc.launcher_id)
 
     async def get_vc_record_for_launcher_id(self, launcher_id: bytes32) -> VCRecord:
         """
@@ -181,19 +188,16 @@ class VCWallet:
 
         return vc_record, [tx]
 
-    async def generate_signed_transaction(  # type: ignore[empty-body]
+    async def generate_signed_transaction(
         self,
-        payments: List[Payment],
+        vc_id: bytes32,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,  # must be pre-selected
-        vc_coin: Optional[VerifiedCredential] = None,  # must match selected coin
+        new_inner_puzhash: Optional[bytes32] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        coin_announcements_to_make: Optional[Set[bytes]] = None,
-        puzzle_announcements_to_make: Optional[Set[bytes]] = None,
-        ignore_max_send_amount: bool = False,
         new_proof_hash: Optional[bytes32] = None,  # Requires that this key posesses the DID to update the specified VC
-        trade_prices_list: Optional[Program] = None,
+        provider_inner_puzhash: Optional[bytes32] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         """
         Entry point for two standard actions:
@@ -203,43 +207,125 @@ class VCWallet:
         Returns a 1 - 3 TransactionRecord objects depending on whether or not there's a fee and whether or not there's
         a DID announcement involved.
         """
-        # TODO - VCWallet: Implement this
-        ...
+        # Find verified credential
+        vc_record = await self.get_vc_record_for_launcher_id(vc_id)
+        if vc_record.confirmed_at_height == 0:
+            raise ValueError(f"Verified credential {vc_id.hex()} is not confirmed, please try again later.")
+        inner_puzhash: bytes32 = vc_record.vc.inner_puzzle_hash
+        inner_puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(inner_puzhash)
+        if new_inner_puzhash is None:
+            new_inner_puzhash = inner_puzhash
+        if coin_announcements_to_consume is not None:
+            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
+        else:
+            coin_announcements_bytes = None
 
-    async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: Optional[List[bytes32]] = None) -> SpendBundle:
-        if puzzle_hashes is None:
-            puzzle_hashes = []
-        sigs: List[G2Element] = []
-        for spend in spend_bundle.coin_spends:
-            pks = {}
-            for ph in puzzle_hashes:
-                keys = await self.wallet_state_manager.get_keys(ph)
-                assert keys
-                pks[bytes(keys[0])] = private = keys[1]
-                synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                synthetic_pk = synthetic_secret_key.get_g1()
-                pks[bytes(synthetic_pk)] = synthetic_secret_key
-            error, conditions, cost = conditions_dict_for_solution(
-                spend.puzzle_reveal.to_program(),
-                spend.solution.to_program(),
+        if puzzle_announcements_to_consume is not None:
+            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
+        else:
+            puzzle_announcements_bytes = None
+
+        primaries: List[AmountWithPuzzlehash] = [
+            {"puzzlehash": new_inner_puzhash, "amount": uint64(vc_record.vc.coin.amount), "memos": [new_inner_puzhash]}
+        ]
+
+        if fee > 0:
+            announcement_to_make = vc_record.vc.coin.name()
+            chia_tx = await self.create_tandem_xch_tx(
+                fee, Announcement(vc_record.vc.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
+            )
+        else:
+            announcement_to_make = None
+            chia_tx = None
+        if new_proof_hash is not None:
+            if provider_inner_puzhash is None:
+                raise ValueError(f"Provider inner puzzle hash is required for update VC {vc_id.hex()} proof.")
+            magic_condition = vc_record.vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
+        else:
+            magic_condition = vc_record.vc.standard_magic_condition()
+        innersol: Program = self.standard_wallet.make_solution(
+            primaries=primaries,
+            coin_announcements=None if announcement_to_make is None else set((announcement_to_make,)),
+            coin_announcements_to_assert=coin_announcements_bytes,
+            puzzle_announcements_to_assert=puzzle_announcements_bytes,
+            magic_conditions=[magic_condition],
+        )
+        did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
+        spend_bundles = [
+            await sign_coin_spends(
+                [coin_spend],
+                self.standard_wallet.secret_key_store.secret_key_for_public_key,
+                self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
             )
-            if conditions is not None:
-                for pk, msg in pkm_pairs_for_conditions_dict(
-                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                ):
-                    try:
-                        sk = pks.get(pk)
-                        if sk:
-                            self.log.debug("Found key, signing for pk: %s", pk)
-                            sigs.append(AugSchemeMPL.sign(sk, msg))
-                        else:
-                            self.log.warning("Couldn't find key for: %s", pk)
-                    except AssertionError:
-                        raise ValueError("This spend bundle cannot be signed by the NFT wallet")
+        ]
+        if did_announcement is not None:
+            # Need to spend DID
+            for _, wallet in self.wallet_state_manager.wallets.items():
+                if wallet.type() == WalletType.DECENTRALIZED_ID:
+                    assert isinstance(wallet, DIDWallet)
+                    if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
+                        self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
+                        did_bundle = await wallet.create_message_spend(puzzle_announcements={bytes(did_announcement)})
+                        spend_bundles.append(did_bundle)
+                        break
+            else:
+                raise ValueError(f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}.")
+        tx_list: List[TransactionRecord] = []
+        if chia_tx is not None and chia_tx.spend_bundle is not None:
+            spend_bundles.append(chia_tx.spend_bundle)
+            tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
+        spend_bundle = SpendBundle.aggregate(spend_bundles)
+        now = uint64(int(time.time()))
+        add_list: List[Coin] = list(spend_bundle.additions())
+        rem_list: List[Coin] = list(spend_bundle.removals())
+        tx_list.append(
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=now,
+                to_puzzle_hash=new_inner_puzhash,
+                amount=uint64(1),
+                fee_amount=uint64(fee),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=add_list,
+                removals=rem_list,
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=spend_bundle.name(),
+                memos=list(compute_memos(spend_bundle).items()),
+            )
+        )
+        return tx_list
 
-        agg_sig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
+    async def create_tandem_xch_tx(
+        self,
+        fee: uint64,
+        announcement_to_assert: Optional[Announcement] = None,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> TransactionRecord:
+        chia_coins = await self.standard_wallet.select_coins(fee)
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
+        chia_tx = await self.standard_wallet.generate_signed_transaction(
+            uint64(0),
+            (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
+            fee=fee,
+            coins=chia_coins,
+            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+            reuse_puzhash=reuse_puzhash,
+        )
+        assert chia_tx.spend_bundle is not None
+        return chia_tx
 
     async def select_coins(
         self,
@@ -278,3 +364,9 @@ class VCWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = VCWallet()

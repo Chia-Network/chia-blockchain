@@ -677,6 +677,8 @@ class WalletStateManager:
         is_vc, err_msg = VerifiedCredential.is_vc(uncurried)
         if is_vc:
             return await self.handle_vc(coin_spend)
+        else:
+            self.log.error(err_msg)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None, None
@@ -1010,8 +1012,9 @@ class WalletStateManager:
             vc.inner_puzzle_hash
         )
         if derivation_record is None:
-            self.log.info(f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet.")
+            self.log.warning(f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet.")
             return None, None
+        self.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.VC):
             return wallet_info.id, WalletType.VC
         else:
@@ -1308,6 +1311,10 @@ class WalletStateManager:
                             if coin_state.spent_height is not None:
                                 nft_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=NFTWallet)
                                 await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
+                        elif record.wallet_type == WalletType.VC:
+                            if coin_state.spent_height is not None:
+                                vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
+                                await vc_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
 
                         # Check if a child is a singleton launcher
                         for child in children:
@@ -1715,9 +1722,10 @@ class WalletStateManager:
                 name,
             )
 
-    async def add_new_wallet(self, wallet: WalletProtocol) -> None:
+    async def add_new_wallet(self, wallet: WalletProtocol, create_puzhash: bool = True) -> None:
         self.wallets[wallet.id()] = wallet
-        await self.create_more_puzzle_hashes()
+        if create_puzhash:
+            await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(
