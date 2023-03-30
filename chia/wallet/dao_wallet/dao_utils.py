@@ -367,10 +367,10 @@ def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
 # This is for use in the WalletStateManager to determine the type of coin received
 def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
     """
-            Given a puzzle test if it's a Treasury, if it is, return the curried arguments
-        :param mod: Puzzle
-        :param curried_args: Puzzle
-        :return: Curried parameters
+    Given a puzzle test if it's a Treasury, if it is, return the curried arguments
+    :param mod: Puzzle
+    :param curried_args: Puzzle
+    :return: Curried parameters
     """
     try:
         if mod == SINGLETON_MOD:
