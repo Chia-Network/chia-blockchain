@@ -14,7 +14,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.dao_wallet.dao_utils import DAO_PROPOSAL_MOD, SINGLETON_LAUNCHER, SINGLETON_MOD
+from chia.wallet.dao_wallet.dao_utils import SINGLETON_LAUNCHER, SINGLETON_MOD
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -24,7 +24,7 @@ GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clvm")
 GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clvm")
 DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clvm")
-GENESIS_BY_ID_OR_PROPOSAL_MOD = load_clvm_maybe_recompile("genesis_by_coin_id_or_proposal.clvm")
+GENESIS_BY_ID_OR_SINGLETON_MOD = load_clvm_maybe_recompile("genesis_by_coin_id_or_singleton.clvm")
 
 
 class LimitationsProgram:
@@ -193,14 +193,14 @@ class DelegatedLimitations(LimitationsProgram):
         )
 
 
-class GenesisByIdOrProposal(LimitationsProgram):
+class GenesisByIdOrSingleton(LimitationsProgram):
     """
     This TAIL allows for another TAIL to be used, as long as a signature of that TAIL's puzzlehash is included.
     """
 
     @staticmethod
     def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
-        if uncurried_mod == GENESIS_BY_ID_OR_PROPOSAL_MOD:
+        if uncurried_mod == GENESIS_BY_ID_OR_SINGLETON_MOD:
             genesis_id = curried_args.first()
             return True, [genesis_id]
         else:
@@ -208,12 +208,9 @@ class GenesisByIdOrProposal(LimitationsProgram):
 
     @staticmethod
     def construct(args: List[Program]) -> Program:
-        return GENESIS_BY_ID_OR_PROPOSAL_MOD.curry(
+        return GENESIS_BY_ID_OR_SINGLETON_MOD.curry(
             args[0],
             args[1],
-            args[2],
-            args[3],
-            args[4],
         )
 
     @staticmethod
@@ -236,17 +233,17 @@ class GenesisByIdOrProposal(LimitationsProgram):
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
         # GENESIS_ID
-        # DAO_TREASURY_ID
-        # SINGLETON_MOD_HASH
-        # SINGLETON_LAUNCHER_PUZHASH
-        # DAO_PROPOSAL_MOD_HASH
+        # TREASURY_SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
         tail: Program = cls.construct(
             [
                 origin_id,
-                tail_info["treasury_id"],
-                Program.to(SINGLETON_MOD.get_tree_hash()),
-                Program.to(SINGLETON_LAUNCHER.get_tree_hash()),
-                Program.to(DAO_PROPOSAL_MOD.get_tree_hash()),
+                (
+                    tail_info["treasury_id"],
+                    (
+                        Program.to(SINGLETON_MOD.get_tree_hash()),
+                        Program.to(SINGLETON_LAUNCHER.get_tree_hash())
+                    )
+                ),
             ]
         )
 
@@ -295,7 +292,7 @@ ALL_LIMITATIONS_PROGRAMS: Dict[str, Any] = {
     "genesis_by_puzhash": GenesisByPuzhash,
     "everything_with_signature": EverythingWithSig,
     "delegated_limitations": DelegatedLimitations,
-    "genesis_by_id_or_proposal": GenesisByIdOrProposal,
+    "genesis_by_id_or_singleton": GenesisByIdOrSingleton,
 }
 
 

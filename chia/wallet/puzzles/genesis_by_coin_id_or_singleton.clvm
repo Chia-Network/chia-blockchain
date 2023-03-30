@@ -5,15 +5,16 @@
 ; The genesis_id is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
 (mod (
       GENESIS_ID
-      TREASURY_SINGLETON_STRUCT
-      TREASURY_MOD_HASH
+      SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
       Truths
       parent_is_cat
       lineage_proof
       delta
       inner_conditions
       ( ; solution
-        treasury_curry_vals
+        singleton_inner_puzhash
+        parent_parent_id
+        parent_amount
       )
     )
 
@@ -27,27 +28,6 @@
        )
     )
 
-    (defun-inline create_treasury_puzhash (
-      SINGLETON_STRUCT
-      TREASURY_MOD_HASH
-      (
-        PROPOSAL_VALIDATOR_HASH
-        MONEY_RECEIVER_HASH
-        PROPOSAL_LENGTH
-        PROPOSAL_SOFTCLOSE_LENGTH
-      )
-    )
-      (calculate_singleton_puzzle_hash
-        SINGLETON_STRUCT
-        (puzzle-hash-of-curried-function TREASURY_MOD_HASH
-                                         (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
-                                         (sha256 ONE PROPOSAL_LENGTH)
-                                         MONEY_RECEIVER_HASH
-                                         PROPOSAL_VALIDATOR_HASH
-        )
-      )
-    )
-
     (if delta
         (x)
         (if (= (my_parent_cat_truth Truths) GENESIS_ID)
@@ -55,10 +35,10 @@
           (if
             (=
               (my_parent_cat_truth Truths)
-              (create_treasury_puzhash
-                SINGLETON_STRUCT
-                TREASURY_MOD_HASH
-                treasury_curry_vals
+              (sha256
+                parent_parent_id
+                (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash)
+                parent_amount
               )
             )
             ()
