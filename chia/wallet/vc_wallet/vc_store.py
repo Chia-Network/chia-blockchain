@@ -160,9 +160,7 @@ class VCStore:
         :return:
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = list(
-                await conn.execute_fetchall(f"SELECT * from vc_records LIMIT ? OFFSET ? ", (count, start_index))
-            )
+            rows = list(await conn.execute_fetchall("SELECT * from vc_records LIMIT ? OFFSET ? ", (count, start_index)))
         return [_row_to_vc_record(row) for row in rows]
 
     async def delete_vc_record(self, launcher_id: bytes32) -> None:

@@ -1,7 +1,8 @@
-import pytest
+from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
+import pytest
 from blspy import G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
@@ -9,8 +10,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -26,19 +27,18 @@ from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
     VerifiedCredential,
-    create_covenant_layer,
-    match_covenant_layer,
-    solve_covenant_layer,
-    create_did_tp,
-    match_did_tp,
-    solve_did_tp,
-    create_viral_backdoor,
-    match_viral_backdoor,
-    solve_viral_backdoor,
-    create_std_parent_morpher,
     construct_extigent_metadata_layer,
+    create_covenant_layer,
+    create_did_tp,
+    create_std_parent_morpher,
+    create_viral_backdoor,
+    match_covenant_layer,
+    match_did_tp,
+    match_viral_backdoor,
+    solve_covenant_layer,
+    solve_did_tp,
+    solve_viral_backdoor,
 )
-
 
 ACS: Program = Program.to([3, (1, "entropy"), 1, None])
 ACS_PH: bytes32 = ACS.get_tree_hash()

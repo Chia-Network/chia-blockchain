@@ -1,7 +1,8 @@
-import pytest
+from __future__ import annotations
 
 from typing import Optional, Tuple
 
+import pytest
 from blspy import G2Element
 
 from chia.clvm.spend_sim import sim_and_client
@@ -9,19 +10,19 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.puzzles.p2_puzzle_w_auth import (
-    create_p2_puzzle_w_auth,
-    match_p2_puzzle_w_auth,
-    solve_p2_puzzle_w_auth,
     create_did_puzzle_authorizer,
+    create_p2_puzzle_w_auth,
     match_did_puzzle_authorizer,
+    match_p2_puzzle_w_auth,
     solve_did_puzzle_authorizer,
+    solve_p2_puzzle_w_auth,
 )
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 ACS: Program = Program.to([3, (1, "entropy"), 1, None])
 ACS_PH: bytes32 = ACS.get_tree_hash()

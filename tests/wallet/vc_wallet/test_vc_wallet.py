@@ -31,7 +31,7 @@ async def test_launch_vc(self_hostname: str, two_wallet_nodes: Any, trusted: Any
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
-    ph = await wallet_0.get_new_puzzlehash()
+    ph = await wallet_0.get_new_puzzlehash()  # noqa: F841
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-
 from dataclasses import dataclass, replace
 from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
@@ -11,28 +10,24 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint64
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    SINGLETON_MOD_HASH,
-    SINGLETON_LAUNCHER_HASH,
-)
-from chia.wallet.payment import Payment
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.vc_drivers import (
-    EXTIGENT_METADATA_LAYER_HASH,
+    COVENANT_LAYER_HASH,
     EML_TP_COVENANT_ADAPTER_HASH,
+    EXTIGENT_METADATA_LAYER_HASH,
     GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
-    COVENANT_LAYER_HASH,
-    create_eml_covenant_morpher,
     create_did_tp,
+    create_eml_covenant_morpher,
 )
-
 
 # Mods
 CREDENTIAL_RESTRICTION: Program = load_clvm_maybe_recompile(

@@ -1,14 +1,12 @@
+from __future__ import annotations
+
 from typing import Optional, Tuple
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    SINGLETON_MOD_HASH,
-    SINGLETON_LAUNCHER_HASH,
-)
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
-
 
 P2_PUZZLE_WITH_AUTH: Program = load_clvm_maybe_recompile(
     "p2_puzzle_w_auth.clsp", package_or_requirement="chia.wallet.puzzles"
