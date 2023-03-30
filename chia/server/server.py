@@ -264,7 +264,7 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start_server(
+    async def start(
         self,
         listen: bool,
         prefer_ipv6: bool,
