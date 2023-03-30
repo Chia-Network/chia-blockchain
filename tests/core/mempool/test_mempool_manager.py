@@ -928,24 +928,26 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
 
 
 @pytest.mark.parametrize(
-    "opcode,arg,expect_eviction",
+    "opcode,arg,expect_eviction, expect_limit",
     [
         # current height: 10 current_time: 10000
         # we step the chain forward 1 block and 19 seconds
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False, 10020),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False, 12),
         # the coin was created at height: 5 timestamp: 9900
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True),
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False, 5 + 7),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False, 9900 + 120),
     ],
 )
 @pytest.mark.asyncio
-async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expect_eviction: bool) -> None:
+async def test_assert_before_expiration(
+    opcode: ConditionOpcode, arg: int, expect_eviction: bool, expect_limit: Optional[int]
+) -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return {TEST_COIN.name(): CoinRecord(TEST_COIN, uint32(5), uint32(0), False, uint64(9900))}.get(coin_id)
 
@@ -973,6 +975,16 @@ async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expec
 
     still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
     assert still_in_pool != expect_eviction
+    if still_in_pool:
+        assert expect_limit is not None
+        item = mempool_manager.get_mempool_item(bundle_name)
+        assert item is not None
+        if opcode in [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, co.ASSERT_BEFORE_SECONDS_RELATIVE]:
+            assert item.assert_before_seconds == expect_limit
+        elif opcode in [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, co.ASSERT_BEFORE_HEIGHT_RELATIVE]:
+            assert item.assert_before_height == expect_limit
+        else:
+            assert False
 
 
 def make_test_spendbundle(coin: Coin, *, fee: int = 0) -> SpendBundle:
