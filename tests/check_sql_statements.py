@@ -9,7 +9,8 @@ from typing import Dict, Set, Tuple
 
 
 def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set()) -> int:
-    lines = check_output(["git", "grep", f"CREATE {sql_type}"], cwd=cwd).decode("ascii").split("\n")
+    exemptions = set((cwd + "/" + file, name) for file, name in exemptions)
+    lines = check_output(["git", "grep", f"CREATE {sql_type}"]).decode("ascii").split("\n")
 
     ret = 0
 
@@ -20,6 +21,8 @@ def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set
         if line.startswith("tests/"):
             continue
         if "db_upgrade_func.py" in line:
+            continue
+        if not line.startswith(cwd):
             continue
 
         name = line.split(f"CREATE {sql_type}")[1]
