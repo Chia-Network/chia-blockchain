@@ -746,7 +746,7 @@ class DAOWallet:
         #     raise ValueError("The proposed spend amount is greater than the treasury balance")
         if asset_type is not None:
             conditions = []
-            asset_conditions_list = []
+            asset_conditions_list = [[asset_type, [[51, recipient_address, amount]]]]
         else:
             conditions = Program.to([[51, recipient_address, amount]])
             asset_conditions_list = []
