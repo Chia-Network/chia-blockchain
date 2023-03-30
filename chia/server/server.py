@@ -34,19 +34,12 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError
+from chia.util.errors import Err, ProtocolError, SamePeerIdError
 from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
-
-
-class SamePeerIdError(Exception):
-    def __init__(self, peer: PeerInfo, node_id: bytes32) -> None:
-        super().__init__(f"Trying to connect to a ourselves: {peer} {node_id}")
-        self.peer = peer
-        self.node_id = node_id
 
 
 def ssl_context_for_server(

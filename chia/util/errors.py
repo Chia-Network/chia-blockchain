@@ -4,6 +4,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, List
 
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+
 
 class Err(Enum):
     # temporary errors. Don't blacklist
@@ -309,3 +312,14 @@ class InvalidPathError(Exception):
     def __init__(self, path: Path, error_message: str):
         super().__init__(f"{error_message}: {str(path)!r}")
         self.path = path
+
+
+class ServerError(Exception):
+    pass
+
+
+class SamePeerIdError(ServerError):
+    def __init__(self, peer: PeerInfo, node_id: bytes32) -> None:
+        super().__init__(f"Trying to connect to a ourselves: {peer} {node_id}")
+        self.peer = peer
+        self.node_id = node_id
