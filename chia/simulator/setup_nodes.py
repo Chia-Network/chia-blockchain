@@ -257,7 +257,7 @@ async def setup_simulators_and_wallets_inner(
         node_iters.append(sim)
     for index in range(0, wallet_count):
         if key_seed is None:
-            seed = std_hash(uint32(index))
+            seed = std_hash(bytes(uint32(index)))
         else:
             seed = key_seed
         if index > (len(bt_tools) - 1):

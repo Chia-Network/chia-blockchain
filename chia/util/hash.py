@@ -5,7 +5,7 @@ from hashlib import sha256
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-def std_hash(b, skip_bytes_conversion: bool = False) -> bytes32:
+def std_hash(b: bytes, skip_bytes_conversion: bool = False) -> bytes32:
     """
     The standard hash used in many places.
     """
