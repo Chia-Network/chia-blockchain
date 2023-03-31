@@ -91,11 +91,11 @@ async def validate_block_body(
     expected_reward_coins: Set[Coin] = set()
 
     # 3. The transaction info hash in the Foliage block must match the transaction info
-    if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
+    if block.foliage_transaction_block.transactions_info_hash != std_hash(bytes(block.transactions_info)):
         return Err.INVALID_TRANSACTIONS_INFO_HASH, None
 
     # 4. The foliage block hash in the foliage block must match the foliage block
-    if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
+    if block.foliage.foliage_transaction_block_hash != std_hash(bytes(block.foliage_transaction_block)):
         return Err.INVALID_FOLIAGE_BLOCK_HASH, None
 
     # 5. The reward claims must be valid for the previous blocks, and current block fees

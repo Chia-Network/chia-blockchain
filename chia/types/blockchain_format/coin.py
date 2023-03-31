@@ -25,4 +25,4 @@ def hash_coin_ids(coin_ids: List[bytes32]) -> bytes32:
     for name in coin_ids:
         buffer.extend(name)
 
-    return std_hash(buffer, skip_bytes_conversion=True)
+    return std_hash(buffer)

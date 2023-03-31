@@ -105,14 +105,16 @@ class SimBlockRecord(Streamable):
 
     @classmethod
     def create(cls: Type[_T_SimBlockRecord], rci: List[Coin], height: uint32, timestamp: uint64) -> _T_SimBlockRecord:
+        height_bytes = bytes(height)
+        height_bytes_hashed = std_hash(height_bytes)
         return cls(
             rci,
             height,
             uint32(height - 1 if height > 0 else 0),
             timestamp,
             True,
-            std_hash(bytes(height)),
-            std_hash(std_hash(height)),
+            height_bytes_hashed,
+            std_hash(height_bytes_hashed),
         )
 
 
