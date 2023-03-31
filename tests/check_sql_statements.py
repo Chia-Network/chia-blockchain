@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import sys
 from subprocess import check_output
 from typing import Dict, Set, Tuple
@@ -9,7 +10,10 @@ from typing import Dict, Set, Tuple
 
 
 def check_create(sql_type: str, cwd: str, exemptions: Set[Tuple[str, str]] = set()) -> int:
-    lines = check_output(["git", "grep", f"CREATE {sql_type}"], cwd=cwd).decode("ascii").split("\n")
+    # the need for this isn't fully understood
+    # https://gist.github.com/altendky/b1bde4d15c63e889a766a6f1c6fcf33d
+    env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
+    lines = check_output(["git", "grep", f"CREATE {sql_type}"], cwd=cwd, env=env).decode("ascii").split("\n")
 
     ret = 0
 
