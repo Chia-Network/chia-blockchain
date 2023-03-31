@@ -96,12 +96,21 @@ class Mempool:
 
     def _row_to_item(self, row: sqlite3.Row) -> MempoolItem:
         name = bytes32(row[0])
-        fee = int(row[1])
-        assert_height = row[2]
+        fee = int(row[2])
+        assert_height = row[3]
+        assert_before_height = row[4]
+        assert_before_seconds = row[5]
         item = self._items[name]
 
         return MempoolItem(
-            item.spend_bundle, uint64(fee), item.npc_result, name, uint32(item.height_added_to_mempool), assert_height
+            item.spend_bundle,
+            uint64(fee),
+            item.npc_result,
+            name,
+            uint32(item.height_added_to_mempool),
+            assert_height,
+            assert_before_height,
+            assert_before_seconds,
         )
 
     def total_mempool_fees(self) -> int:
@@ -118,7 +127,7 @@ class Mempool:
 
     def all_spends(self) -> Iterator[MempoolItem]:
         with self._db_conn:
-            cursor = self._db_conn.execute("SELECT name, fee, assert_height FROM tx")
+            cursor = self._db_conn.execute("SELECT * FROM tx")
             for row in cursor:
                 yield self._row_to_item(row)
 
@@ -131,7 +140,7 @@ class Mempool:
     # bit more efficiently
     def spends_by_feerate(self) -> Iterator[MempoolItem]:
         with self._db_conn:
-            cursor = self._db_conn.execute("SELECT name, fee, assert_height FROM tx ORDER BY fee_per_cost DESC")
+            cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC")
             for row in cursor:
                 yield self._row_to_item(row)
 
@@ -143,7 +152,7 @@ class Mempool:
 
     def get_spend_by_id(self, spend_bundle_id: bytes32) -> Optional[MempoolItem]:
         with self._db_conn:
-            cursor = self._db_conn.execute("SELECT name, fee, assert_height FROM tx WHERE name=?", (spend_bundle_id,))
+            cursor = self._db_conn.execute("SELECT * FROM tx WHERE name=?", (spend_bundle_id,))
             row = cursor.fetchone()
             return None if row is None else self._row_to_item(row)
 
@@ -151,7 +160,7 @@ class Mempool:
     def get_spends_by_coin_id(self, spent_coin_id: bytes32) -> List[MempoolItem]:
         with self._db_conn:
             cursor = self._db_conn.execute(
-                "SELECT name, fee, assert_height FROM tx WHERE name in (SELECT tx FROM spends WHERE coin_id=?)",
+                "SELECT * FROM tx WHERE name in (SELECT tx FROM spends WHERE coin_id=?)",
                 (spent_coin_id,),
             )
             return [self._row_to_item(row) for row in cursor]
