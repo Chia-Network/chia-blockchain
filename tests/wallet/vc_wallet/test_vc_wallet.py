@@ -16,6 +16,7 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vc_wallet.vc_store import VCProofs
 
 
 @pytest.mark.parametrize(
@@ -129,11 +130,24 @@ async def test_update_vc_proof(self_hostname: str, two_wallet_nodes: Any, truste
     )
     assert vc_record is not None
     # Spend VC
+    proofs: VCProofs = VCProofs({"foo": "bar", "baz": "qux", "corge": "grault"})
+    proof_root: bytes32 = proofs.root()
     resp = await api_0.vc_spend_vc(
-        dict({"vc_id": vc_id, "fee": 100, "new_proof_hash": vc_id, "provider_inner_puzhash": inner_puzhash.hex()})
+        dict(
+            {
+                "vc_id": vc_id,
+                "fee": 100,
+                "new_proof_hash": proof_root.hex(),
+                "provider_inner_puzhash": inner_puzhash.hex(),
+            }
+        )
     )
     json.dumps(resp)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     vc_record_updated = await wallet_node_0.wallet_state_manager.vc_store.get_vc_record(bytes32.from_hexstr(vc_id))
-    assert vc_record_updated.vc.proof_hash.hex() == vc_id[2:]
+    assert vc_record_updated.vc.proof_hash == proof_root
     assert len(await wallet_node_0.wallet_state_manager.vc_store.get_vc_record_list()) == 1
+
+    # Add proofs to DB
+    assert await api_0.add_vc_proofs({"proofs": proofs.key_value_pairs}) == {}
+    assert await api_0.get_proofs_for_root({"root": proof_root.hex()}) == {"proofs": proofs.key_value_pairs}

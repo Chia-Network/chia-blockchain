@@ -71,6 +71,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -214,9 +215,11 @@ class WalletRpcApi:
             "/dl_delete_mirror": self.dl_delete_mirror,
             # Verified Credential
             "/vc_mint_vc": self.vc_mint_vc,
-            "/vc_get_vc": self.vc_mint_vc,
-            "/vc_get_vc_list": self.vc_mint_vc,
-            "/vc_spend_vc": self.vc_mint_vc,
+            "/vc_get_vc": self.vc_get_vc,
+            "/vc_get_vc_list": self.vc_get_vc_list,
+            "/vc_spend_vc": self.vc_spend_vc,
+            "/add_vc_proofs": self.add_vc_proofs,
+            "/get_proofs_for_root": self.get_proofs_for_root,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -3487,3 +3490,38 @@ class WalletRpcApi:
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
+
+    async def add_vc_proofs(self, request) -> Dict:
+        # get VC wallet
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(
+                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
+            )
+
+        await vc_wallet.store.add_vc_proofs(VCProofs(request["proofs"]))
+
+        return {}
+
+    async def get_proofs_for_root(self, request) -> Dict:
+        # get VC wallet
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(
+                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
+            )
+
+        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(bytes32.from_hexstr(request["root"]))
+        if vc_proofs is None:
+            raise ValueError("no proofs found for specified root")
+        return {"proofs": vc_proofs.key_value_pairs}

@@ -1,17 +1,59 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Type, TypeVar
+from functools import cmp_to_key
+from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiosqlite import Row
 from chia_rs.chia_rs import Coin
 
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.util.merkle_utils import list_to_binary_tree
 from chia.wallet.vc_wallet.vc_drivers import VCLineageProof, VerifiedCredential
+
+
+@dataclasses.dataclass(frozen=True)
+class VCProofs:
+    key_value_pairs: Dict[str, str]
+
+    def as_program(self) -> Program:
+        def byte_sort_pairs(f1: Tuple[str, str], f2: Tuple[str, str]) -> int:
+            return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.to(None) else -1
+
+        prog: Program = Program.to(
+            list_to_binary_tree(
+                list(
+                    sorted(
+                        self.key_value_pairs.items(),
+                        key=cmp_to_key(byte_sort_pairs),
+                    )
+                )
+            )
+        )
+        return prog
+
+    def root(self) -> bytes32:
+        return self.as_program().get_tree_hash()
+
+    @staticmethod
+    def from_program(prog: Program) -> VCProofs:
+        first: Program = prog.at("f")
+        rest: Program = prog.at("r")
+        if first.atom is None and rest.atom is None:
+            final_dict: Dict[str, str] = {}
+            final_dict.update(VCProofs.from_program(first).key_value_pairs)
+            final_dict.update(VCProofs.from_program(rest).key_value_pairs)
+            return VCProofs(final_dict)
+        elif first.atom is not None and rest.atom is not None:
+            return VCProofs({first.atom.decode("utf-8"): rest.atom.decode("utf-8")})
+        else:
+            raise ValueError("Malformatted VCProofs program")
+
 
 _T_VCStore = TypeVar("_T_VCStore", bound="VCStore")
 
@@ -70,7 +112,7 @@ class VCStore:
                     " inner_puzzle_hash text,"
                     # VerifiedCredential.proof_provider
                     " proof_provider text,"
-                    # VerifiedCredential.proof_hash (0x00 == None)
+                    # VerifiedCredential.proof_hash
                     " proof_hash text,"
                     # VCRecord.confirmed_height
                     " confirmed_height int)"
@@ -78,6 +120,8 @@ class VCStore:
             )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_id_index ON vc_records(coin_id)")
+
+            await conn.execute("CREATE TABLE IF NOT EXISTS vc_proofs(root text PRIMARY KEY, proofs blob)")
 
         return self
 
@@ -161,3 +205,19 @@ class VCStore:
         if row is not None:
             return _row_to_vc_record(row)
         return None
+
+    async def add_vc_proofs(self, vc_proofs: VCProofs) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "INSERT INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
+            )
+
+    async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT proofs FROM vc_proofs WHERE root=?", (root.hex(),))
+            row = await cursor.fetchone()
+            await cursor.close()
+            if row is None:
+                return None
+            else:
+                return VCProofs.from_program(Program.from_bytes(row[0]))
