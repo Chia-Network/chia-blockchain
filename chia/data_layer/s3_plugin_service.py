@@ -114,12 +114,14 @@ class S3Plugin:
         for bucket in self.bukets:
             if store_id.hex() in self.bukets[bucket]:
                 return bucket
-        raise Exception(f"bucket not found store id {store_id.hex()}")
+        raise Exception(f"bucket not found for store id {store_id.hex()}")
 
     def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
         store_ids = config["store_ids"]
+        buckets: Dict[str, List[str]] = config["buckets"]
         urls = config["urls"]
+        self.buckets = buckets
         self.store_ids = store_ids
         self.urls = urls
 
