@@ -66,6 +66,7 @@ from chia.wallet.util.wallet_sync_utils import (
 )
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
+from guppy import hpy; h=hpy()
 
 
 def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint: str) -> Path:
@@ -777,6 +778,8 @@ class WalletNode:
         await self.update_ui()
 
         self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
+        guppy = h.heap()
+        self.log.info(f"GUPPY {guppy}")
 
     async def receive_state_from_peer(
         self,
