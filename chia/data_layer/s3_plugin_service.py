@@ -51,7 +51,7 @@ class S3Plugin:
         self.instance_name = instance_name
 
     async def check_store_id(self, request: web.Request) -> web.Response:
-        await self.update_instance_from_config()
+        self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
@@ -71,14 +71,14 @@ class S3Plugin:
         store_id = bytes32.from_hexstr(data["id"])
         full_tree_path = data["full_tree_path"]
         diff_path = data["diff_path"]
-        bucket = await self.get_bucket(store_id)
+        bucket = self.get_bucket(store_id)
         # todo add try catch
         self.boto_client.upload_file(str(full_tree_path), bucket, full_tree_path)
         self.boto_client.upload_file(str(diff_path), bucket, diff_path)
         return web.json_response({"uploaded": True})
 
     async def check_url(self, request: web.Request) -> web.Response:
-        await self.update_instance_from_config()
+        self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
@@ -110,13 +110,13 @@ class S3Plugin:
 
         return web.json_response({"downloaded": True})
 
-    async def get_bucket(self, store_id: bytes32) -> str:
+    def get_bucket(self, store_id: bytes32) -> str:
         for bucket in self.bukets:
             if store_id.hex() in self.bukets[bucket]:
                 return bucket
         raise Exception(f"bucket not found store id {store_id.hex()}")
 
-    async def update_instance_from_config(self) -> None:
+    def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
         region = config["aws_credentials"]["region"]
         aws_access_key_id = config["aws_credentials"]["access_key_id"]
@@ -132,7 +132,7 @@ class S3Plugin:
         self.urls = urls
 
 
-async def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
+def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
     region = config["aws_credentials"]["region"]
     aws_access_key_id = config["aws_credentials"]["access_key_id"]
     aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
