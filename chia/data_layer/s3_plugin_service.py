@@ -27,6 +27,7 @@ class S3Plugin:
     store_ids: List[str]
     bukets: Dict[str, List[str]]
     urls: List[str]
+    instance_name: str
 
     def __init__(
         self,
@@ -36,6 +37,7 @@ class S3Plugin:
         store_ids: List[str],
         bukets: Dict[str, List[str]],
         urls: List[str],
+        instance_name: str,
     ):
         self.boto_client = boto3.client(
             "s3",
@@ -46,8 +48,10 @@ class S3Plugin:
         self.store_ids = store_ids
         self.bukets = bukets
         self.urls = urls
+        self.instance_name = instance_name
 
     async def check_store_id(self, request: web.Request) -> web.Response:
+        await self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
@@ -74,6 +78,7 @@ class S3Plugin:
         return web.json_response({"uploaded": True})
 
     async def check_url(self, request: web.Request) -> web.Response:
+        await self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
@@ -111,21 +116,30 @@ class S3Plugin:
                 return bucket
         raise Exception(f"bucket not found store id {store_id.hex()}")
 
+    async def update_instance_from_config(self) -> None:
+        config = load_config(self.instance_name)
+        region = config["aws_credentials"]["region"]
+        aws_access_key_id = config["aws_credentials"]["access_key_id"]
+        aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+        store_ids = config["store_ids"]
+        buckets: Dict[str, List[str]] = config["buckets"]
+        urls = config["urls"]
+        self.aws_access_key_id = aws_access_key_id
+        self.aws_secret_access_key = aws_secret_access_key
+        self.buckets = buckets
+        self.region = region
+        self.store_ids = store_ids
+        self.urls = urls
 
-async def make_app(config: Dict[str, Any]):  # type: ignore
+
+async def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
     region = config["aws_credentials"]["region"]
     aws_access_key_id = config["aws_credentials"]["access_key_id"]
     aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
     store_ids = config["store_ids"]
     buckets: Dict[str, List[str]] = config["buckets"]
     urls = config["urls"]
-    print(f"region {region}")
-    print(f"aws_access_key_id {aws_access_key_id}")
-    print(f"aws_secret_access_key {aws_secret_access_key}")
-    print(f"store_ids {store_ids}")
-    print(f"buckets {buckets}")
-    print(f"urls {urls}")
-    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, buckets, urls)
+    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, buckets, urls, instance_name)
     app = web.Application()
     app.add_routes([web.post("/check_store_id", s3_client.check_store_id)])
     app.add_routes([web.post("/upload", s3_client.upload)])
@@ -141,11 +155,11 @@ def load_config(instance: str) -> Any:
 
 
 def run_server() -> None:
-    instance = sys.argv[1]
-    print(f"run instance {instance}")
-    config = load_config(instance)
+    instance_name = sys.argv[1]
+    print(f"run instance {instance_name}")
+    config = load_config(instance_name)
     port = config["port"]
-    web.run_app(make_app(config), port=port)
+    web.run_app(make_app(config, instance_name), port=port)
 
 
 # run this
