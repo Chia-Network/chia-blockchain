@@ -118,16 +118,8 @@ class S3Plugin:
 
     def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
-        region = config["aws_credentials"]["region"]
-        aws_access_key_id = config["aws_credentials"]["access_key_id"]
-        aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
         store_ids = config["store_ids"]
-        buckets: Dict[str, List[str]] = config["buckets"]
         urls = config["urls"]
-        self.aws_access_key_id = aws_access_key_id
-        self.aws_secret_access_key = aws_secret_access_key
-        self.buckets = buckets
-        self.region = region
         self.store_ids = store_ids
         self.urls = urls
 
