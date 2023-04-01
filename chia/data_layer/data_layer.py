@@ -415,11 +415,13 @@ class DataLayer:
         request_json = {"url": url}
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
-                async with session.post("http://" + d + "/check_url", json=request_json) as response:
-                    res_json = await response.json()
-                    if res_json["handles_url"] is True:
-                        return d
-        # todo return list of downloaders
+                try:
+                    async with session.post("http://" + d + "/check_url", json=request_json) as response:
+                        res_json = await response.json()
+                        if res_json["handles_url"] is True:
+                            return d
+                except Exception as e:
+                    self.log.error(f"get_downloader could not get response {e}")
         return None
 
     async def upload_files(self, tree_id: bytes32) -> None:
@@ -832,15 +834,14 @@ class DataLayer:
 
     async def get_uploader(self, tree_id: bytes32) -> Optional[str]:
         for uploader in self.uploaders:
-            # todo handle errors
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
-                ) as response:
-                    try:
+                try:
+                    async with session.post(
+                        "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
+                    ) as response:
                         res_json = await response.json()
-                    except Exception as e:
-                        self.log.error(f"get_uploader could not parse response {e}")
-            if res_json["handles_store"] is True:
-                return uploader
+                        if res_json["handles_store"] is True:
+                            return uploader
+                except Exception as e:
+                    self.log.error(f"get_uploader could not get response {e}")
         return None
