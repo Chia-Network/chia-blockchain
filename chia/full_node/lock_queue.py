@@ -4,11 +4,18 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
-from typing import Any, AsyncIterator, Generic, Optional, Set, TypeVar
+import time
+from typing import Any, AsyncIterator, Callable, Generic, Optional, Set, TypeVar
 
 from typing_extensions import Protocol
 
+from chia.util.log_exceptions import log_exceptions
+
 log = logging.getLogger(__name__)
+
+
+class NestedLockUnsupportedError(Exception):
+    pass
 
 
 class _Comparable(Protocol):
@@ -22,6 +29,8 @@ _T_Comparable = TypeVar("_T_Comparable", bound=_Comparable)
 @dataclasses.dataclass(frozen=True, order=True)
 class _Element(Generic[_T_Comparable]):
     priority: _T_Comparable
+    # forces retention of insertion order for matching priority requests
+    creation_time: float = dataclasses.field(default_factory=time.monotonic)
     ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event, compare=False)
 
 
@@ -46,13 +55,25 @@ class LockQueue(Generic[_T_Comparable]):
 
     _queue: asyncio.PriorityQueue[_Element[_T_Comparable]] = dataclasses.field(default_factory=asyncio.PriorityQueue)
     _active: Optional[_Element[_T_Comparable]] = None
+    _active_task: Optional[asyncio.Task[object]] = None
     cancelled: Set[_Element[_T_Comparable]] = dataclasses.field(default_factory=set)
 
     @contextlib.asynccontextmanager
-    async def acquire(self, priority: _T_Comparable) -> AsyncIterator[None]:
+    async def acquire(
+        self,
+        priority: _T_Comparable,
+        queued_callback: Optional[Callable[[], object]] = None,
+    ) -> AsyncIterator[None]:
+        if self._active_task is asyncio.current_task():
+            raise NestedLockUnsupportedError()
         element = _Element(priority=priority)
 
         await self._queue.put(element)
+
+        if queued_callback is not None:
+            with log_exceptions(log=log, consume=True):
+                queued_callback()
+
         await self._process()
 
         try:
@@ -65,6 +86,7 @@ class LockQueue(Generic[_T_Comparable]):
         finally:
             if self._active is element:
                 self._active = None
+                self._active_task = None
             await self._process()
 
     async def _process(self) -> None:
@@ -78,4 +100,5 @@ class LockQueue(Generic[_T_Comparable]):
             self.cancelled.remove(element)
 
         self._active = element
+        self._active_task = asyncio.current_task()
         element.ready_event.set()
