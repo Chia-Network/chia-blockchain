@@ -315,3 +315,24 @@ async def create_acquire_tasks_in_controlled_order(requests: List[Request], queu
     release_event.set()
 
     return tasks
+
+
+@pytest.mark.asyncio
+async def test_multiple_tasks_track_active_task_accurately() -> None:
+    queue = LockQueue[LockPriority]()
+
+    other_task_allow_release_event = asyncio.Event()
+
+    async def other_task_function(queued_event: asyncio.Event) -> None:
+        async with queue.acquire(priority=LockPriority.high, queued_callback=queued_event.set):
+            await other_task_allow_release_event.wait()
+
+    async with queue.acquire(priority=LockPriority.high):
+        other_task_queued_event = asyncio.Event()
+        other_task = asyncio.create_task(other_task_function(other_task_queued_event))
+        await other_task_queued_event.wait()
+
+    async with queue.acquire(priority=LockPriority.high, queued_callback=other_task_allow_release_event.set):
+        pass
+
+    await other_task
