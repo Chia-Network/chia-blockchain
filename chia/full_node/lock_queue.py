@@ -31,7 +31,7 @@ class _Element(Generic[_T_Comparable]):
     priority: _T_Comparable
     task: asyncio.Task[object] = dataclasses.field(compare=False)
     # forces retention of insertion order for matching priority requests
-    creation_time: float = dataclasses.field(default_factory=time.monotonic)
+    creation_time: float = dataclasses.field(default_factory=time.perf_counter)
     ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event, compare=False)
 
 
