@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
-import time
 from typing import Any, AsyncIterator, Callable, Generic, Optional, Set, TypeVar
 
 from typing_extensions import Protocol
@@ -29,9 +28,9 @@ _T_Comparable = TypeVar("_T_Comparable", bound=_Comparable)
 @dataclasses.dataclass(frozen=True, order=True)
 class _Element(Generic[_T_Comparable]):
     priority: _T_Comparable
-    task: asyncio.Task[object] = dataclasses.field(compare=False)
     # forces retention of insertion order for matching priority requests
-    creation_time: float = dataclasses.field(default_factory=time.perf_counter)
+    creation_order: float
+    task: asyncio.Task[object] = dataclasses.field(compare=False)
     ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event, compare=False)
 
 
@@ -56,6 +55,7 @@ class LockQueue(Generic[_T_Comparable]):
 
     _queue: asyncio.PriorityQueue[_Element[_T_Comparable]] = dataclasses.field(default_factory=asyncio.PriorityQueue)
     _active: Optional[_Element[_T_Comparable]] = None
+    _creation_counter: int = 0
     cancelled: Set[_Element[_T_Comparable]] = dataclasses.field(default_factory=set)
 
     # TODO: can we catch all unhandled errors and mark ourselves broken?
@@ -73,7 +73,11 @@ class LockQueue(Generic[_T_Comparable]):
         if self._active is not None and self._active.task is asyncio.current_task():
             raise NestedLockUnsupportedError()
 
-        element = _Element(priority=priority, task=task)
+        if self._queue.empty():
+            self._creation_counter = 0
+        else:
+            self._creation_counter += 1
+        element = _Element(priority=priority, creation_order=self._creation_counter, task=task)
 
         await self._queue.put(element)
 
