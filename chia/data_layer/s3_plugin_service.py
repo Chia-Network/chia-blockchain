@@ -6,12 +6,13 @@ import functools
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import boto3 as boto3
 import yaml
 from aiohttp import web
+from botocore.exceptions import ClientError
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -65,16 +66,19 @@ class S3Plugin:
     async def upload(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()
+            store_id = bytes32.from_hexstr(data["id"])
+            bucket = self.get_bucket(store_id)
+            try:
+                full_tree_path = Path(data["full_tree_path"])
+                diff_path = Path(data["diff_path"])
+                self.boto_client.upload_file(full_tree_path, bucket, full_tree_path.name)
+                self.boto_client.upload_file(diff_path, bucket, diff_path.name)
+            except ClientError as e:
+                print(f"failed uploading file to aws {e}")
+                return web.json_response({"uploaded": False})
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            print(f"failed handling request {request} {e}")
             return web.json_response({"handles_url": False})
-        store_id = bytes32.from_hexstr(data["id"])
-        full_tree_path = data["full_tree_path"]
-        diff_path = data["diff_path"]
-        bucket = self.get_bucket(store_id)
-        # todo add try catch
-        self.boto_client.upload_file(str(full_tree_path), bucket, full_tree_path)
-        self.boto_client.upload_file(str(diff_path), bucket, diff_path)
         return web.json_response({"uploaded": True})
 
     async def check_url(self, request: web.Request) -> web.Response:
