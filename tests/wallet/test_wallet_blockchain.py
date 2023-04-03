@@ -73,19 +73,19 @@ class TestWalletBlockchain:
                 header_block = get_block_header(block, [], [])
                 header_blocks.append(header_block)
 
-            res, err = await chain.receive_block(header_blocks[50])
+            res, err = await chain.add_block(header_blocks[50])
             print(res, err)
             assert res == AddBlockResult.DISCONNECTED_BLOCK
 
-            res, err = await chain.receive_block(header_blocks[400])
+            res, err = await chain.add_block(header_blocks[400])
             print(res, err)
             assert res == AddBlockResult.ALREADY_HAVE_BLOCK
 
-            res, err = await chain.receive_block(header_blocks[507])
+            res, err = await chain.add_block(header_blocks[507])
             print(res, err)
             assert res == AddBlockResult.DISCONNECTED_BLOCK
 
-            res, err = await chain.receive_block(
+            res, err = await chain.add_block(
                 dataclasses.replace(header_blocks[506], challenge_chain_ip_proof=VDFProof(2, b"123", True))
             )
             assert res == AddBlockResult.INVALID_BLOCK
@@ -93,7 +93,7 @@ class TestWalletBlockchain:
             assert (await chain.get_peak_block()).height == 505
 
             for block in header_blocks[506:]:
-                res, err = await chain.receive_block(block)
+                res, err = await chain.add_block(block)
                 assert res == AddBlockResult.NEW_PEAK
                 assert (await chain.get_peak_block()).height == block.height
 

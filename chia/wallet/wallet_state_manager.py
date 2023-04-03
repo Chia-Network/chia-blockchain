@@ -1579,13 +1579,6 @@ class WalletStateManager:
     async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
-    async def get_transaction_by_wallet_record(self, wr: WalletCoinRecord) -> Optional[TransactionRecord]:
-        records = await self.tx_store.get_transactions_by_height(wr.confirmed_block_height)
-        for record in records:
-            if wr.coin in record.additions or record.removals:
-                return record
-        return None
-
     async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> CoinRecord:
         timestamp: uint64 = await self.wallet_node.get_timestamp_for_height(wr.confirmed_block_height)
         return wr.to_coin_record(timestamp)
