@@ -29,7 +29,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util import cached_bls
@@ -392,15 +392,30 @@ class MempoolManager:
         removal_names: Set[bytes32] = set()
         additions_dict: Dict[bytes32, Coin] = {}
         addition_amount: int = 0
+        eligibility_and_additions: Dict[bytes32, Tuple[bool, List[Coin]]] = {}
+        non_eligible_coin_ids: List[bytes32] = []
         for spend in npc_result.conds.spends:
             coin_id = bytes32(spend.coin_id)
             removal_names.add(coin_id)
+            spend_additions = []
             for puzzle_hash, amount, _ in spend.create_coin:
                 child_coin = Coin(coin_id, puzzle_hash, amount)
+                spend_additions.append(child_coin)
                 additions_dict[child_coin.name()] = child_coin
                 addition_amount = addition_amount + child_coin.amount
+            is_eligible = bool(spend.flags & ELIGIBLE_FOR_DEDUP)
+            if not is_eligible:
+                non_eligible_coin_ids.append(coin_id)
+            eligibility_and_additions[coin_id] = (is_eligible, spend_additions)
+        removal_names_from_coin_spends: Set[bytes32] = set()
+        bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = {}
+        for coin_spend in new_spend.coin_spends:
+            coin_id = coin_spend.coin.name()
+            removal_names_from_coin_spends.add(coin_id)
+            eligible_for_dedup, spend_additions = eligibility_and_additions.get(coin_id, (False, []))
+            bundle_coin_spends[coin_id] = BundleCoinSpend(coin_spend, eligible_for_dedup, spend_additions)
 
-        if removal_names != set(coin_spend.coin.name() for coin_spend in new_spend.coin_spends):
+        if removal_names != removal_names_from_coin_spends:
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
@@ -455,7 +470,7 @@ class MempoolManager:
                 return Err.INVALID_FEE_LOW_FEE, None, []
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
-        fail_reason, conflicts = self.check_removals(npc_result, removal_record_dict)
+        fail_reason, conflicts = self.check_removals(non_eligible_coin_ids, removal_record_dict)
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -494,6 +509,7 @@ class MempoolManager:
             timelocks.assert_height,
             timelocks.assert_before_height,
             timelocks.assert_before_seconds,
+            bundle_coin_spends,
         )
 
         if tl_error:
@@ -518,7 +534,7 @@ class MempoolManager:
         return None, potential, [item.name for item in conflicts]
 
     def check_removals(
-        self, npc_result: NPCResult, removals: Dict[bytes32, CoinRecord]
+        self, non_eligible_coin_ids: List[bytes32], removals: Dict[bytes32, CoinRecord]
     ) -> Tuple[Optional[Err], List[MempoolItem]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
@@ -527,19 +543,13 @@ class MempoolManager:
         having duplicate removals.
         """
         assert self.peak is not None
-        removals_ids = []
+        # 1. Checks if it's been spent already
         for record in removals.values():
-            removal = record.coin
-            # 1. Checks if it's been spent already
             if record.spent:
                 return Err.DOUBLE_SPEND, []
-            coin_id = removal.name()
-            # Only consider conflicts if the coin is not eligible for deduplication
-            assert npc_result.conds is not None
-            if len([s for s in npc_result.conds.spends if s.coin_id == coin_id and s.flags & ELIGIBLE_FOR_DEDUP]) == 0:
-                removals_ids.append(coin_id)
-        # 2. Checks if there are mempool conflicts
-        conflicts = self.mempool.get_items_by_coin_ids(removals_ids)
+        # 2. Checks if there's a mempool conflict
+        # Only consider conflicts if the coin is not eligible for deduplication
+        conflicts = self.mempool.get_items_by_coin_ids(non_eligible_coin_ids)
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, conflicts
         # 5. If coins can be spent return list of unspents as we see them in local storage

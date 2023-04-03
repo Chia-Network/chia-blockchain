@@ -1,25 +1,22 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import sqlite3
 from datetime import datetime
 from enum import Enum
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G2Element
-from chia_rs import ELIGIBLE_FOR_DEDUP, Coin
+from chia_rs import Coin
 
-
-from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
+from chia.types.eligible_coin_spends import EligibleCoinSpends
+from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
@@ -42,115 +39,6 @@ class MempoolRemoveReason(Enum):
     BLOCK_INCLUSION = 2
     POOL_FULL = 3
     EXPIRED = 4
-
-
-@dataclasses.dataclass(frozen=True)
-class InternalMempoolItem:
-    spend_bundle: SpendBundle
-    npc_result: NPCResult
-    height_added_to_mempool: uint32
-    # Map of coin ID to coin spend cost and additions
-    dedup_spend_info: Dict[bytes32, Tuple[uint64, List[Coin]]]
-
-
-@dataclasses.dataclass(frozen=True)
-class DedupCoinSpend:
-    solution: SerializedProgram
-    cost: Optional[uint64]
-    additions: Set[Coin]
-
-
-def run_for_cost_and_additions(
-    coin_id: bytes32,
-    puzzle_reveal: SerializedProgram,
-    solution: SerializedProgram,
-    npc_result: NPCResult,
-) -> Tuple[uint64, List[Coin]]:
-    if npc_result.conds is None:
-        raise ValueError("Invalid NPCResult")
-    created_coins = []
-    relevant_spend = next(s for s in npc_result.conds.spends if s.coin_id == coin_id)
-    for coin_tuple in relevant_spend.create_coin:
-        puzzle_hash = bytes32(coin_tuple[0])
-        amount = uint64(coin_tuple[1])
-        created_coins.append(Coin(coin_id, puzzle_hash, amount))
-    create_coins_cost = len(created_coins) * ConditionCost.CREATE_COIN.value
-    clvm_cost, _ = puzzle_reveal.run_mempool_with_cost(npc_result.cost, solution)
-    saved_cost = uint64(clvm_cost + create_coins_cost)
-    return (saved_cost, created_coins)
-
-
-def find_duplicate_spends(
-    item: MempoolItem, dedup_coin_spends: Dict[bytes32, DedupCoinSpend]
-) -> Tuple[List[CoinSpend], uint64, Dict[bytes32, DedupCoinSpend], Set[Coin]]:
-    """
-    Checks all coin spends of a mempool item for deduplication eligibility and
-    provides the caller with the necessary information that allows it to perform
-    identical spend aggregation on that mempool item if possible
-
-    Args:
-        item: the mempool item to check
-        dedup_coin_spends: the current global state of identical spend aggregation
-
-    Returns:
-        List[CoinSpend]: list of coin spends to deduplicate from this mempool item
-        uint64: the cost we're saving by this deduplication
-        Dict[bytes32, DedupCoinSpend]: new deduplication information to update the global state with
-        Set[Coin]: the additions that need to be deduplicated as a result of spend deduplication
-    """
-    cost_saving = uint64(0)
-    spends_to_dedup: List[CoinSpend] = []
-    dedup_additions: Set[Coin] = set()
-    new_dedups: Dict[bytes32, DedupCoinSpend] = {}
-    # See if this item has coin spends that are eligible for deduplication
-    assert item.npc_result.conds is not None
-    eligible_coin_ids = [bytes32(s.coin_id) for s in item.npc_result.conds.spends if s.flags & ELIGIBLE_FOR_DEDUP]
-    for coin_id in eligible_coin_ids:
-        # Pick the first coin spend with coin_id
-        # npc_result.conds.spends should be consistent with
-        # spend_bundle.coin_spends at this point, guaranteeing the presence of
-        # this coin spend in this bundle as a result
-        coin_spend_in_bundle = next(cs for cs in item.spend_bundle.coin_spends if cs.coin.name() == coin_id)
-        solution_in_bundle = coin_spend_in_bundle.solution
-        # See if we processed an item with this coin before
-        if coin_id not in dedup_coin_spends:
-            # We didn't process an item with this coin before. If we end up including
-            # this item, add this pair to dedup_coin_spends
-            new_dedups[coin_id] = DedupCoinSpend(solution_in_bundle, None, set())
-            continue
-        # See if the solution was identical
-        current_solution, duplicate_cost, duplicate_additions = dataclasses.astuple(dedup_coin_spends[coin_id])
-        if current_solution != solution_in_bundle:
-            # It wasn't, so let's skip this whole item because it's relying on
-            # spending this coin with a different solution and that would
-            # conflict with the coin spends that we're deduplicating already
-            raise ValueError("Solution is different from what we're deduplicating on")
-        # Let's calculate the saved cost if we never did that before
-        if duplicate_cost is None:
-            # If we never ran this before, additions should be empty
-            assert len(duplicate_additions) == 0
-            # See first if this mempool item had this cost computed before
-            # This can happen if this item didn't get included in the previous block
-            if coin_id in item.dedup_spend_info:
-                spend_cost = item.dedup_spend_info[coin_id][0]
-                created_coins = item.dedup_spend_info[coin_id][1]
-            else:
-                spend_cost, created_coins = run_for_cost_and_additions(
-                    coin_id,
-                    coin_spend_in_bundle.puzzle_reveal,
-                    current_solution,
-                    item.npc_result,
-                )
-                # Update this mempool item's deduplicated coin spends map
-                item.dedup_spend_info[coin_id] = (spend_cost, created_coins)
-            duplicate_cost = spend_cost
-            duplicate_additions.update(created_coins)
-            # If we end up including this item, update this entry's cost and additions
-            new_dedups[coin_id] = DedupCoinSpend(current_solution, duplicate_cost, duplicate_additions)
-        cost_saving = uint64(cost_saving + duplicate_cost)
-        dedup_additions.update(duplicate_additions)
-        spends_to_dedup.append(coin_spend_in_bundle)
-    return (spends_to_dedup, cost_saving, new_dedups, dedup_additions)
 
 
 class Mempool:
@@ -233,7 +121,7 @@ class Mempool:
             assert_height,
             assert_before_height,
             assert_before_seconds,
-            dedup_spend_info=item.dedup_spend_info,
+            bundle_coin_spends=item.bundle_coin_spends,
         )
 
     def total_mempool_fees(self) -> int:
@@ -479,7 +367,7 @@ class Mempool:
             self._db_conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
 
             self._items[item.name] = InternalMempoolItem(
-                item.spend_bundle, item.npc_result, item.height_added_to_mempool, item.dedup_spend_info
+                item.spend_bundle, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
             )
 
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
@@ -499,42 +387,34 @@ class Mempool:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         processed_spend_bundles = 0
-        additions: Set[Coin] = set()
-        # This is a map of coin ID to a coin spend solution, its isolated cost and its additions
-        dedup_coin_spends: Dict[bytes32, DedupCoinSpend] = {}
+        additions: List[Coin] = []
+        # This contains a map of coin ID to a coin spend solution and its isolated cost
+        eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
-        for item in self.items_by_feerate():
-            if not item_inclusion_filter(item.name):
+        with self._db_conn:
+            cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC")
+        for row in cursor:
+            name = bytes32(row[0])
+            fee = int(row[1])
+            item = self._items[name]
+            if not item_inclusion_filter(name):
                 continue
             try:
-                spends_to_dedup, cost_saving, new_dedups, dedup_additions = find_duplicate_spends(
-                    item, dedup_coin_spends
-                )
-                item_cost = item.cost - cost_saving
-                log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
+                unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(item)
+                item_cost = item.npc_result.cost - cost_saving
+                log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, fee / item_cost)
                 if (
                     item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
-                    or item.fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
+                    or fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
                 ):
                     break
-                # Update the deduplicated coin spends map
-                dedup_coin_spends.update(new_dedups)
-                # Add all the spends in the transaction except the duplicated ones
-                for cs in item.spend_bundle.coin_spends:
-                    if cs not in spends_to_dedup:
-                        coin_spends.append(cs)
-                # Deduplicate the created coins resulting from the deduplicated coin spends
-                if item.npc_result.conds is not None:
-                    for spend in item.npc_result.conds.spends:
-                        for puzzle_hash, amount, _ in spend.create_coin:
-                            coin = Coin(spend.coin_id, puzzle_hash, amount)
-                            if coin not in dedup_additions:
-                                additions.add(coin)
+                coin_spends.extend(unique_coin_spends)
+                additions.extend(unique_additions)
                 sigs.append(item.spend_bundle.aggregated_signature)
                 cost_sum += item_cost
-                fee_sum += item.fee
+                fee_sum += fee
                 processed_spend_bundles += 1
             except Exception as e:
                 log.debug(f"Exception while checking a mempool item for deduplication: {e}")
@@ -547,4 +427,4 @@ class Mempool:
         )
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         agg = SpendBundle(coin_spends, aggregated_signature)
-        return agg, list(additions)
+        return agg, additions
