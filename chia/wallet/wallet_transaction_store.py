@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -12,6 +13,8 @@ from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
+
+log = logging.getLogger(__name__)
 
 
 def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
@@ -152,6 +155,10 @@ class WalletTransactionStore:
         sent_to.append(append_data)
 
         tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
+        if not tx.is_valid():
+            # if the tx is not valid due to repeated failures, we will confirm that we can't spend it
+            log.info(f"Marking tx={tx.name} as confirmed but failed, since it is not spendable due to errors")
+            tx = dataclasses.replace(tx, confirmed=True, confirmed_at_height=uint32(0))
         await self.add_transaction_record(tx)
         return True
 
@@ -178,19 +185,6 @@ class WalletTransactionStore:
         if len(rows) > 0:
             return TransactionRecord.from_bytes(rows[0][0])
         return None
-
-    async def get_transactions_by_height(self, height: uint32) -> List[TransactionRecord]:
-        """
-        Checks DB and cache for TransactionRecord with id: id and returns it.
-        """
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            # NOTE: bundle_id is being stored as bytes, not hex
-            rows = list(
-                await conn.execute_fetchall(
-                    "SELECT transaction_record from transaction_record WHERE confirmed_at_height=?", (height,)
-                )
-            )
-        return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True

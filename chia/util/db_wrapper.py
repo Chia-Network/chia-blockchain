@@ -16,6 +16,9 @@ if aiosqlite.sqlite_version_info < (3, 32, 0):
 else:
     SQLITE_MAX_VARIABLE_NUMBER = 32700
 
+# integers in sqlite are limited by int64
+SQLITE_INT_MAX = 2**63 - 1
+
 
 async def execute_fetchone(
     c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None

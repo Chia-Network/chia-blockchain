@@ -131,8 +131,8 @@ class DataLayerWallet:
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.DATA_LAYER)
+    def type(cls) -> WalletType:
+        return WalletType.DATA_LAYER
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -154,7 +154,7 @@ class DataLayerWallet:
         self.standard_wallet = wallet
 
         for _, w in self.wallet_state_manager.wallets.items():
-            if w.type() == uint8(WalletType.DATA_LAYER):
+            if w.type() == WalletType.DATA_LAYER:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
         assert name is not None
@@ -163,9 +163,7 @@ class DataLayerWallet:
             WalletType.DATA_LAYER.value,
             "",
         )
-        self.wallet_id = uint8(self.wallet_info.id)
-
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
 
         return self
 
@@ -613,10 +611,12 @@ class DataLayerWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
         )
+        assert dl_tx.spend_bundle is not None
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
                 fee, Announcement(current_coin.name(), b"$"), coin_announcement=True
             )
+            assert chia_tx.spend_bundle is not None
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
@@ -818,6 +818,8 @@ class DataLayerWallet:
                 fee=uint64(excess_fee),
                 coin_announcements_to_consume={Announcement(mirror_coin.name(), b"$")},
             )
+            assert txs[0].spend_bundle is not None
+            assert chia_tx.spend_bundle is not None
             txs = [
                 dataclasses.replace(
                     txs[0], spend_bundle=SpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])

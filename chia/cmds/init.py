@@ -24,7 +24,14 @@ import click
     help="Initialize the blockchain database in v1 format (compatible with older versions of the full node)",
 )
 @click.pass_context
-def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, testnet: bool, v1_db: bool, **kwargs):
+def init_cmd(
+    ctx: click.Context,
+    create_certs: str,
+    fix_ssl_permissions: bool,
+    testnet: bool,
+    set_passphrase: bool,
+    v1_db: bool,
+) -> None:
     """
     Create a new configuration or migrate from previous versions to current
 
@@ -43,7 +50,6 @@ def init_cmd(ctx: click.Context, create_certs: str, fix_ssl_permissions: bool, t
 
     from .init_funcs import init
 
-    set_passphrase = kwargs.get("set_passphrase")
     if set_passphrase:
         initialize_passphrase()
 

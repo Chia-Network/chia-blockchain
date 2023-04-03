@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import List, Optional, Set
 from unittest.mock import MagicMock
 
@@ -10,7 +11,6 @@ from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -1225,6 +1225,7 @@ class TestWalletSync:
             return new_func
 
         for wallet_node, wallet_server in wallets:
+            wallet_node.coin_state_retry_seconds = 1
             wallet_node.coin_state_flaky = True
             wallet_node.puzzle_solution_flaky = True
             wallet_node.fetch_children_flaky = True
@@ -1250,36 +1251,30 @@ class TestWalletSync:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-            async def len_gt_0(func, *args):
-                return len((await func(*args))) > 0
+            async def retry_store_empty() -> bool:
+                return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
 
-            await time_out_assert(
-                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
-            await time_out_assert(
-                30, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
+            async def assert_coin_state_retry() -> None:
+                # Wait for retry coin states to show up
+                await time_out_assert(15, retry_store_empty, False)
+                # And become retried/removed
+                await time_out_assert(30, retry_store_empty, True)
+
+            await assert_coin_state_retry()
 
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
             tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
             await wallet_node.wallet_state_manager.add_pending_transaction(tx)
 
-            async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
-                tx = mempool.get_spendbundle(tx_id)
-                if tx is None:
-                    return False
-                return True
+            async def tx_in_mempool():
+                return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
-            await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name)
+            await time_out_assert(15, tx_in_mempool)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-            await time_out_assert(
-                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
-            await time_out_assert(
-                120, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
+            await assert_coin_state_retry()
+
             assert not wallet_node.coin_state_flaky
             assert not wallet_node.puzzle_solution_flaky
             assert not wallet_node.fetch_children_flaky
@@ -1336,3 +1331,62 @@ class TestWalletSync:
         await asyncio.sleep(3)
         assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
+
+
+@pytest.mark.asyncio
+async def test_long_sync_untrusted_break(
+    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
+):
+    full_nodes, [(wallet_node, wallet_server)], bt = setup_two_nodes_and_wallet
+    trusted_full_node_api = full_nodes[0]
+    trusted_full_node_server = trusted_full_node_api.full_node.server
+    untrusted_full_node_api = full_nodes[1]
+    untrusted_full_node_server = untrusted_full_node_api.full_node.server
+    wallet_node.config["trusted_peers"] = {trusted_full_node_server.node_id.hex(): None}
+
+    sync_canceled = False
+
+    async def register_interest_in_puzzle_hash():
+        nonlocal sync_canceled
+        # Just sleep a long time here to simulate a long-running untrusted sync
+        try:
+            await asyncio.sleep(120)
+        except Exception:
+            sync_canceled = True
+            raise
+
+    def wallet_syncing() -> bool:
+        return wallet_node.wallet_state_manager.sync_mode
+
+    def check_sync_canceled() -> bool:
+        return sync_canceled
+
+    def only_trusted_peer() -> bool:
+        trusted_peers = sum([wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
+        untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
+        return trusted_peers == 1 and untrusted_peers == 0
+
+    for block in default_400_blocks:
+        await trusted_full_node_api.full_node.add_block(block)
+    for block in default_1000_blocks[:400]:
+        await untrusted_full_node_api.full_node.add_block(block)
+
+    untrusted_full_node_api.register_interest_in_puzzle_hash = MagicMock(
+        return_value=register_interest_in_puzzle_hash()
+    )
+
+    # Connect to the untrusted peer and wait until the long sync started
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(untrusted_full_node_server._port)), None)
+    await time_out_assert(30, wallet_syncing)
+    with caplog.at_level(logging.INFO):
+        # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(trusted_full_node_server._port)), None)
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+        assert trusted_full_node_server.node_id in wallet_node.synced_peers
+        assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
+        assert "Connected to a a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
+
+    # Make sure the sync was interrupted
+    assert time_out_assert(30, check_sync_canceled)
+    # And that we only have a trusted peer left
+    assert time_out_assert(30, only_trusted_peer)
