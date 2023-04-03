@@ -34,7 +34,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err, ProtocolError, SamePeerIdError
+from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
@@ -450,7 +450,8 @@ class ChiaServer:
             der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
             if peer_id == self.node_id:
-                raise SamePeerIdError(peer=target_node, node_id=peer_id)
+                self.log.info(f"Connected to a node with the same peer ID, disconnecting: {target_node} {peer_id}")
+                return False
 
             connection = WSChiaConnection.create(
                 self._local_type,
@@ -494,10 +495,6 @@ class ChiaServer:
             else:
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
-        except SamePeerIdError as e:
-            if connection is not None:
-                await connection.close(error=Err.SELF_CONNECTION)
-            self.log.info(str(e))
         except Exception as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
