@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 from typing import List, Optional, Set
 from unittest.mock import MagicMock
@@ -1184,11 +1185,17 @@ class TestWalletSync:
 
             return new_func
 
-        def flaky_fetch_coin_spend(node, func):
+        request_puzzle_solution_failure_tested = False
+
+        def flaky_request_puzzle_solution(func):
+            @functools.wraps(func)
             async def new_func(*args, **kwargs):
-                if node.coin_spend_flaky:
-                    node.coin_spend_flaky = False
-                    raise PeerRequestException()
+                nonlocal request_puzzle_solution_failure_tested
+                if not request_puzzle_solution_failure_tested:
+                    request_puzzle_solution_failure_tested = True
+                    # This can just return None if we have `none_response` enabled.
+                    reject = wallet_protocol.RejectPuzzleSolution(bytes32([0] * 32), uint32(0))
+                    return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
                 else:
                     return await func(*args, **kwargs)
 
@@ -1224,16 +1231,17 @@ class TestWalletSync:
 
             return new_func
 
+        full_node_api.request_puzzle_solution = flaky_request_puzzle_solution(full_node_api.request_puzzle_solution)
+
         for wallet_node, wallet_server in wallets:
             wallet_node.coin_state_retry_seconds = 1
+            request_puzzle_solution_failure_tested = False
             wallet_node.coin_state_flaky = True
-            wallet_node.coin_spend_flaky = True
             wallet_node.fetch_children_flaky = True
             wallet_node.get_timestamp_flaky = True
             wallet_node.db_flaky = True
 
             wallet_node.get_coin_state = flaky_get_coin_state(wallet_node, wallet_node.get_coin_state)
-            wallet_node.fetch_coin_spend = flaky_fetch_coin_spend(wallet_node, wallet_node.fetch_coin_spend)
             wallet_node.fetch_children = flaky_fetch_children(wallet_node, wallet_node.fetch_children)
             wallet_node.get_timestamp_for_height = flaky_get_timestamp(
                 wallet_node, wallet_node.get_timestamp_for_height
@@ -1276,7 +1284,7 @@ class TestWalletSync:
             await assert_coin_state_retry()
 
             assert not wallet_node.coin_state_flaky
-            assert not wallet_node.coin_spend_flaky
+            assert request_puzzle_solution_failure_tested
             assert not wallet_node.fetch_children_flaky
             assert not wallet_node.get_timestamp_flaky
             assert not wallet_node.db_flaky
