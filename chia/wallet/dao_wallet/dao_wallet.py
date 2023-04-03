@@ -753,7 +753,7 @@ class DAOWallet:
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)
         return puzzle
 
-    async def generate_new_proposal(self, proposed_puzzle_hash, fee):
+    async def generate_new_proposal(self, proposed_puzzle_hash: bytes32, fee: uint64):
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
             return None
@@ -762,9 +762,10 @@ class DAOWallet:
         genesis_launcher_puz = SINGLETON_LAUNCHER
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
-        # MH: do you think we should store the cat tail locally as well?
+
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         breakpoint()
+
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
             launcher_coin.name(),
@@ -858,6 +859,12 @@ class DAOWallet:
     ) -> SpendBundle:
         # TODO: connect with DAO CAT Wallet here
 
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail = cat_wallet.cat_info.limitations_program_hash
+        dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+            self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
+        )
+        assert dao_cat_wallet is not None
         # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_p2_singleton_mod_hash
         # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from

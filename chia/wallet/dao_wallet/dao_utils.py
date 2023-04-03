@@ -193,7 +193,7 @@ def get_proposal_puzzle(
     votes_sum: uint64,
     total_votes: uint64,
     spend_or_update_flag: str,
-    innerpuz: Program,
+    proposed_puzzle_hash: Program,
 ) -> Program:
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     puzzle = DAO_PROPOSAL_MOD.curry(
@@ -208,7 +208,7 @@ def get_proposal_puzzle(
         votes_sum,
         total_votes,
         spend_or_update_flag,
-        innerpuz,
+        proposed_puzzle_hash,
     )
     return puzzle
 

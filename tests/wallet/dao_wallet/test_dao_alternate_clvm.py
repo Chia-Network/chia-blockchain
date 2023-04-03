@@ -3,6 +3,7 @@ from __future__ import annotations
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -456,6 +457,38 @@ def test_validator() -> None:
     return
 
 
+def test_merge_p2_singleton() -> None:
+    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
+
+    # Test that p2_singleton_via_delegated_puzzle will run
+    p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
+    # singleton_inner_puzhash
+    # delegated_puzzle
+    # delegated_solution
+    # my_id
+    # my_puzhash
+    # list_of_parent_amounts
+    # my_amount
+    conds = p2_singleton.run(Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), 0]))
+    assert len(conds.as_python()) == 2
+    fake_parent_id = Program.to("fake_parent").get_tree_hash()
+    fake_coin = Coin(fake_parent_id, p2_singleton.get_tree_hash(), 200)
+    conds = p2_singleton.run(Program.to([
+        0,
+        0,
+        0,
+        singleton_id,
+        p2_singleton.get_tree_hash(),
+        [[fake_parent_id, 200]],
+        100
+    ]))
+    assert len(conds.as_python()) == 5
+    assert conds.rest().rest().rest().rest().first().rest().rest().first().as_int() == 300
+    return
+
+
 def test_spend_p2_singleton() -> None:
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
@@ -473,7 +506,7 @@ def test_spend_p2_singleton() -> None:
     # delegated_solution
     # my_id
     p2_singleton_id = Program.to("p2_singleton_coin").get_tree_hash()
-    conds = p2_singleton.run(Program.to([singleton_inner_hash, deleg_puz, deleg_conds, p2_singleton_id]))
+    conds = p2_singleton.run(Program.to([singleton_inner_hash, deleg_puz, deleg_conds, p2_singleton_id, 0, 0]))
     assert len(conds.as_python()) == 4
 
     spend_amount = 1100
