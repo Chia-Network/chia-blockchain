@@ -864,7 +864,7 @@ class WalletNode:
             except Exception as e:
                 tb = traceback.format_exc()
                 log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
-                self.log.log(log_level, f"receive_and_validate failed - exception: {e}, traceback: {tb}")
+                self.log.log(log_level, f"validate_and_add failed - exception: {e}, traceback: {tb}")
 
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
