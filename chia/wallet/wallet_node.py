@@ -538,7 +538,7 @@ class WalletNode:
                         coin_states: List[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, uint32(0))
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
-                                await self.receive_state_from_peer(coin_states, peer)
+                                await self.add_states_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION:
                     self.log.debug("Pulled from queue: %s %s", item.item_type, item.data)
                     puzzle_hashes: List[bytes32] = item.data
@@ -547,7 +547,7 @@ class WalletNode:
                         coin_states: List[CoinState] = await subscribe_to_phs(puzzle_hashes, peer, uint32(0))
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
-                                await self.receive_state_from_peer(coin_states, peer)
+                                await self.add_states_from_peer(coin_states, peer)
                 elif item.item_type == NewPeakQueueTypes.FULL_NODE_STATE_UPDATED:
                     # Note: this can take a while when we have a lot of transactions. We want to process these
                     # before new_peaks, since new_peak_wallet requires that we first obtain the state for that peak.
@@ -757,7 +757,7 @@ class WalletNode:
             for chunk in chunks(list(not_checked_puzzle_hashes), 1000):
                 ph_update_res: List[CoinState] = await subscribe_to_phs(chunk, full_node, 0)
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
-                if not await self.receive_state_from_peer(ph_update_res, full_node):
+                if not await self.add_states_from_peer(ph_update_res, full_node):
                     # If something goes wrong, abort sync
                     return
             already_checked_ph.update(not_checked_puzzle_hashes)
@@ -775,7 +775,7 @@ class WalletNode:
             for chunk in chunks(list(not_checked_coin_ids), 1000):
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
 
-                if not await self.receive_state_from_peer(c_update_res, full_node):
+                if not await self.add_states_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
                     return
             already_checked_coin_ids.update(not_checked_coin_ids)
@@ -794,7 +794,7 @@ class WalletNode:
 
         self.log.info(f"Sync (trusted: {trusted}) duration was: {time.time() - start_time}")
 
-    async def receive_state_from_peer(
+    async def add_states_from_peer(
         self,
         items_input: List[CoinState],
         peer: WSChiaConnection,
@@ -845,7 +845,7 @@ class WalletNode:
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
 
-        async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
+        async def validate_and_add(inner_states: List[CoinState], inner_idx_start: int):
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -913,7 +913,7 @@ class WalletNode:
                         self.log.info("Terminating receipt and validation due to shut down request")
                         await asyncio.gather(*all_tasks)
                         return False
-                all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
+                all_tasks.append(asyncio.create_task(validate_and_add(states, idx)))
             idx += len(states)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
@@ -964,7 +964,7 @@ class WalletNode:
             self.log.info(f"request coin: {coin.coin.name().hex()}{coin}")
 
         async with self.wallet_state_manager.lock:
-            await self.receive_state_from_peer(
+            await self.add_states_from_peer(
                 request.items,
                 peer,
                 request.fork_height,
@@ -1174,7 +1174,7 @@ class WalletNode:
                 ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
                 coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
                 peer_new_peak_height, peer_new_peak_hash = self.node_peaks[peer.peer_node_id]
-                success = await self.receive_state_from_peer(
+                success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
                     peer,
                     height=peer_new_peak_height,
@@ -1192,7 +1192,7 @@ class WalletNode:
                 header_hash = self.wallet_state_manager.blockchain.height_to_hash(uint32(potential_height))
                 if header_hash in self.race_cache:
                     self.log.info(f"Receiving race state: {self.race_cache[header_hash]}")
-                    await self.receive_state_from_peer(list(self.race_cache[header_hash]), peer)
+                    await self.add_states_from_peer(list(self.race_cache[header_hash]), peer)
 
             self.wallet_state_manager.state_changed("new_block")
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
@@ -1234,7 +1234,7 @@ class WalletNode:
             assert header_block.weight >= peak.weight
         for block in blocks:
             # Set blockchain to the latest peak
-            res, err = await self.wallet_state_manager.blockchain.receive_block(block)
+            res, err = await self.wallet_state_manager.blockchain.add_block(block)
             if res == AddBlockResult.INVALID_BLOCK:
                 raise ValueError(err)
 
