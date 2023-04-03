@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
+import itertools
 import logging
 import random
 import time
@@ -82,23 +83,29 @@ async def test_lock_queue():
     assert winner == "h"
 
 
+# This is used instead of time to have more determinism between platforms
+# and specifically to avoid low resolution timers on Windows that can
+# result in multiple events having the same time stamps.
+counter = itertools.count()
+
+
 @dataclass
 class Request:
     # TODO: is the ID unneeded?
     id: str
     priority: LockPriority
-    acquisition_time: Optional[float] = None
-    release_time: Optional[float] = None
-    clock: Callable[[], float] = time.monotonic
+    acquisition_order: Optional[float] = None
+    release_order: Optional[float] = None
+    order_counter: Callable[[], float] = counter.__next__
     # TODO: done may not be needed
     done: bool = False
     completed: bool = False
 
     def __lt__(self, other: Request) -> bool:
-        if self.acquisition_time is None or other.acquisition_time is None:
+        if self.acquisition_order is None or other.acquisition_order is None:
             raise RequestNotCompleteError()
 
-        return self.acquisition_time < other.acquisition_time
+        return self.acquisition_order < other.acquisition_order
 
     async def acquire(
         self,
@@ -111,19 +118,19 @@ class Request:
 
         try:
             async with queue.acquire(priority=self.priority, queued_callback=queued_callback):
-                self.acquisition_time = self.clock()
+                self.acquisition_order = self.order_counter()
                 await wait_for.wait()
-                self.release_time = self.clock()
+                self.release_order = self.order_counter()
         finally:
             self.done = True
 
         self.completed = True
 
     def before(self, other: Request) -> bool:
-        if self.release_time is None or other.acquisition_time is None:
+        if self.release_order is None or other.acquisition_order is None:
             raise RequestNotCompleteError()
 
-        return self.release_time < other.acquisition_time
+        return self.release_order < other.acquisition_order
 
 
 @dataclass(frozen=True)
