@@ -2669,6 +2669,8 @@ coins = make_test_coins()
 @pytest.mark.parametrize(
     "items,expected",
     [
+        # make sure fractions of fee-rate are ordered correctly (i.e. that
+        # we don't use integer division)
         (
             [
                 mk_item(coins[0:1], fee=110, cost=50),
@@ -2676,6 +2678,25 @@ coins = make_test_coins()
                 mk_item(coins[2:3], fee=105, cost=50),
             ],
             [coins[0], coins[2], coins[1]],
+        ),
+        # make sure insertion order is a tie-breaker for items with the same
+        # fee-rate
+        (
+            [
+                mk_item(coins[0:1], fee=100, cost=50),
+                mk_item(coins[1:2], fee=100, cost=50),
+                mk_item(coins[2:3], fee=100, cost=50),
+            ],
+            [coins[0], coins[1], coins[2]],
+        ),
+        # also for items that don't pay fees
+        (
+            [
+                mk_item(coins[2:3], fee=0, cost=50),
+                mk_item(coins[1:2], fee=0, cost=50),
+                mk_item(coins[0:1], fee=0, cost=50),
+            ],
+            [coins[2], coins[1], coins[0]],
         ),
     ],
 )
