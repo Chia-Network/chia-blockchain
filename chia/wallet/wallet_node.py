@@ -494,14 +494,14 @@ class WalletNode:
                         p for p in self.server.get_connections(NodeType.FULL_NODE) if p.peer_node_id == peer_id
                     )
                     if len(matching_peer) == 0:
-                        peer = self.get_full_node_peer()
-                        if peer is None:
-                            self.log.info(f"disconnected from all peers, cannot retry state: {state}")
-                            continue
-                        else:
+                        try:
+                            peer = self.get_full_node_peer()
                             self.log.info(
                                 f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
                             )
+                        except ValueError:
+                            self.log.info(f"disconnected from all peers, cannot retry state: {state}")
+                            continue
                     else:
                         peer = matching_peer[0]
                     async with self.wallet_state_manager.db_wrapper.writer():
@@ -972,13 +972,13 @@ class WalletNode:
                 request.peak_hash,
             )
 
-    def get_full_node_peer(self) -> Optional[WSChiaConnection]:
+    def get_full_node_peer(self) -> WSChiaConnection:
         """
         Get a full node, preferring synced & trusted > synced & untrusted > unsynced & trusted > unsynced & untrusted
         """
         full_nodes: List[WSChiaConnection] = self.get_full_node_peers_in_order()
         if len(full_nodes) == 0:
-            return None
+            raise ValueError("No peer connected")
         return full_nodes[0]
 
     def get_full_node_peers_in_order(self) -> List[WSChiaConnection]:
