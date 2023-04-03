@@ -776,15 +776,16 @@ class WalletStateManager:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
             removed_wallet_ids = []
-            for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DECENTRALIZED_ID):
-                did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
+            for wallet in self.wallets.values():
+                if not isinstance(wallet, DIDWallet):
+                    continue
                 if (
-                    did_info.origin_coin is not None
-                    and launch_id == did_info.origin_coin.name()
-                    and not did_info.sent_recovery_transaction
+                    wallet.did_info.origin_coin is not None
+                    and launch_id == wallet.did_info.origin_coin.name()
+                    and not wallet.did_info.sent_recovery_transaction
                 ):
-                    await self.user_store.delete_wallet(wallet_info.id)
-                    removed_wallet_ids.append(wallet_info.id)
+                    await self.user_store.delete_wallet(wallet.id())
+                    removed_wallet_ids.append(wallet.id())
             for remove_id in removed_wallet_ids:
                 self.wallets.pop(remove_id)
                 self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
