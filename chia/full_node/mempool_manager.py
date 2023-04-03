@@ -565,8 +565,7 @@ class MempoolManager:
                 return Err.DOUBLE_SPEND, set()
             # 2. Checks if there's a mempool conflict
             items: List[MempoolItem] = self.mempool.get_spends_by_coin_id(removal.name())
-            for item in items:
-                conflicts.add(item)
+            conflicts.update(items)
 
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, conflicts

@@ -224,6 +224,18 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
             raise ValueError from error
 
 
+async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol) -> None:
+    expected_balance = await wallet_node.get_balance(wallet.id())
+    expected_balance_dict = expected_balance.to_json_dict()
+    expected_balance_dict["wallet_id"] = wallet.id()
+    expected_balance_dict["wallet_type"] = wallet.type()
+    expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
+    if wallet.type() == WalletType.CAT:
+        assert isinstance(wallet, CATWallet)
+        expected_balance_dict["asset_id"] = wallet.get_asset_id()
+    assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
+
+
 async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
     tx = await client.get_transaction(1, transaction_id)
     return tx.is_in_mempool()
@@ -308,6 +320,22 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     tx = await client.get_transaction(1, transaction_id=tx.name)
     assert tx.confirmed
+
+
+@pytest.mark.asyncio
+async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    await full_node_api.farm_blocks_to_wallet(2, wallet)
+    async with wallet_node.wallet_state_manager.lock:
+        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+        )
+    await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
+    await assert_get_balance(wallet_rpc_client, wallet_node, cat_wallet)
 
 
 @pytest.mark.asyncio

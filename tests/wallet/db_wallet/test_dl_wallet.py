@@ -189,7 +189,6 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         peer = wallet_node_1.get_full_node_peer()
-        assert peer is not None
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
         await asyncio.sleep(0.5)
@@ -379,7 +378,6 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         peer = wallet_node_1.get_full_node_peer()
-        assert peer is not None
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
         current_record = await dl_wallet_1.get_latest_singleton(launcher_id)
@@ -551,10 +549,8 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
 
     peer_1 = wallet_node_1.get_full_node_peer()
-    assert peer_1 is not None
     await dl_wallet_1.track_new_launcher_id(launcher_id_2, peer_1)
     peer_2 = wallet_node_2.get_full_node_peer()
-    assert peer_2 is not None
     await dl_wallet_2.track_new_launcher_id(launcher_id_1, peer_2)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))

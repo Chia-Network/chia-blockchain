@@ -91,7 +91,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_compat: b
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker, peer)
     await dl_wallet_taker.track_new_launcher_id(launcher_id_maker, peer)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
@@ -387,7 +386,6 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_2, taker_root)
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_1, peer)
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_2, peer)
     await dl_wallet_taker.track_new_launcher_id(launcher_id_maker_1, peer)

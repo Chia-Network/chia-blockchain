@@ -122,7 +122,7 @@ class DIDWallet:
         if spend_bundle is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
 
         return self
 
@@ -157,7 +157,7 @@ class DIDWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.DECENTRALIZED_ID.value, info_as_string
         )
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.did_info)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         await self.load_parent(self.did_info)
@@ -232,7 +232,7 @@ class DIDWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.DECENTRALIZED_ID.value, info_as_string
         )
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         await self.load_parent(self.did_info)
         self.log.info(f"New DID wallet created {info_as_string}.")
@@ -470,12 +470,9 @@ class DIDWallet:
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
-        peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
-            raise ValueError("Could not find any peers to request puzzle and solution from")
-
         parent_coin: Coin = did_info.origin_coin
         while True:
+            peer = wallet_node.get_full_node_peer()
             children = await wallet_node.fetch_children(parent_coin.name(), peer)
             if len(children) == 0:
                 break

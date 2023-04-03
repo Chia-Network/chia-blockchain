@@ -31,10 +31,13 @@ class SingletonOuterPuzzle:
         matched, curried_args = match_singleton_puzzle(puzzle)
         if matched:
             singleton_struct, inner_puzzle = curried_args
+            launcher_struct = singleton_struct.pair[1].pair
+            launcher_id = launcher_struct[0].atom
+            launcher_ph = launcher_struct[1].atom
             constructor_dict = {
                 "type": "singleton",
-                "launcher_id": "0x" + singleton_struct.as_python()[1].hex(),
-                "launcher_ph": "0x" + singleton_struct.as_python()[2].hex(),
+                "launcher_id": "0x" + launcher_id.hex(),
+                "launcher_ph": "0x" + launcher_ph.hex(),
             }
             next_constructor = self._match(uncurry_puzzle(inner_puzzle))
             if next_constructor is not None:

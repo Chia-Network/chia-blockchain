@@ -1747,13 +1747,6 @@ class WalletStateManager:
     async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
-    async def get_transaction_by_wallet_record(self, wr: WalletCoinRecord) -> Optional[TransactionRecord]:
-        records = await self.tx_store.get_transactions_by_height(wr.confirmed_block_height)
-        for record in records:
-            if wr.coin in record.additions or record.removals:
-                return record
-        return None
-
     async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> CoinRecord:
         timestamp: uint64 = await self.wallet_node.get_timestamp_for_height(wr.confirmed_block_height)
         return wr.to_coin_record(timestamp)
@@ -1845,10 +1838,9 @@ class WalletStateManager:
                 name,
             )
 
-    async def add_new_wallet(self, wallet: WalletProtocol, wallet_id: int, create_puzzle_hashes: bool = True) -> None:
-        self.wallets[uint32(wallet_id)] = wallet
-        if create_puzzle_hashes:
-            await self.create_more_puzzle_hashes()
+    async def add_new_wallet(self, wallet: WalletProtocol) -> None:
+        self.wallets[wallet.id()] = wallet
+        await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(

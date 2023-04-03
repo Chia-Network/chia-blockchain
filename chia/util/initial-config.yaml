@@ -515,7 +515,10 @@ wallet:
   full_node_peer:
     host: *self_hostname
     port: 8444
-
+  # The path of NFT off-chain metadata cache
+  nft_metadata_cache_path: "nft_cache"
+  # The length of NFT ID prefix will be used as hash index
+  nft_metadata_cache_hash_length: 3
   multiprocessing_start_method: default
 
   testing: False
