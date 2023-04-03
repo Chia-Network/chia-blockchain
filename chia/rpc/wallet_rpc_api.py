@@ -90,7 +90,6 @@ class WalletRpcApi:
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
-        self.balance_cache: Dict[int, Any] = {}
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -318,7 +317,6 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
 
         await self._stop_wallet()
-        self.balance_cache = {}
         started = await self.service._start_with_fingerprint(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
@@ -792,61 +790,15 @@ class WalletRpcApi:
     async def get_wallet_balance(self, request: Dict) -> EndpointResult:
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        # If syncing return the last available info or 0s
-        syncing = self.service.wallet_state_manager.sync_mode
-        if syncing:
-            if wallet_id in self.balance_cache:
-                wallet_balance = self.balance_cache[wallet_id]
-            else:
-                wallet_balance = {
-                    "wallet_id": wallet_id,
-                    "confirmed_wallet_balance": 0,
-                    "unconfirmed_wallet_balance": 0,
-                    "spendable_balance": 0,
-                    "pending_change": 0,
-                    "max_send_amount": 0,
-                    "unspent_coin_count": 0,
-                    "pending_coin_removal_count": 0,
-                    "wallet_type": wallet.type(),
-                }
-                if self.service.logged_in_fingerprint is not None:
-                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-                if wallet.type() == WalletType.CAT:
-                    assert isinstance(wallet, CATWallet)
-                    wallet_balance["asset_id"] = wallet.get_asset_id()
-        else:
-            async with self.service.wallet_state_manager.lock:
-                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
-                    wallet_id
-                )
-                balance = await wallet.get_confirmed_balance(unspent_records)
-                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-                spendable_balance = await wallet.get_spendable_balance(unspent_records)
-                pending_change = await wallet.get_pending_change_balance()
-                max_send_amount = await wallet.get_max_send_amount(unspent_records)
-
-                unconfirmed_removals: Dict[
-                    bytes32, Coin
-                ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
-                wallet_balance = {
-                    "wallet_id": wallet_id,
-                    "confirmed_wallet_balance": balance,
-                    "unconfirmed_wallet_balance": pending_balance,
-                    "spendable_balance": spendable_balance,
-                    "pending_change": pending_change,
-                    "max_send_amount": max_send_amount,
-                    "unspent_coin_count": len(unspent_records),
-                    "pending_coin_removal_count": len(unconfirmed_removals),
-                    "wallet_type": wallet.type(),
-                }
-                if self.service.logged_in_fingerprint is not None:
-                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-                if wallet.type() == WalletType.CAT:
-                    assert isinstance(wallet, CATWallet)
-                    wallet_balance["asset_id"] = wallet.get_asset_id()
-                self.balance_cache[wallet_id] = wallet_balance
-
+        balance = await self.service.get_balance(wallet_id)
+        wallet_balance = balance.to_json_dict()
+        wallet_balance["wallet_id"] = wallet_id
+        wallet_balance["wallet_type"] = wallet.type()
+        if self.service.logged_in_fingerprint is not None:
+            wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
+        if wallet.type() == WalletType.CAT:
+            assert isinstance(wallet, CATWallet)
+            wallet_balance["asset_id"] = wallet.get_asset_id()
         return {"wallet_balance": wallet_balance}
 
     async def get_transaction(self, request: Dict) -> EndpointResult:
