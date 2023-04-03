@@ -3444,7 +3444,17 @@ class WalletRpcApi:
         vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(
             request.get("start", 0), request.get("count", 50)
         )
-        return {"vc_records": vc_list}
+        return {
+            "vc_records": vc_list,
+            "proofs": {
+                rec.vc.proof_hash.hex(): None if fetched_proof is None else fetched_proof.key_value_pairs
+                for rec in vc_list
+                if rec.vc.proof_hash is not None
+                for fetched_proof in (
+                    await self.service.wallet_state_manager.vc_store.get_proofs_for_root(rec.vc.proof_hash),
+                )
+            },
+        }
 
     async def vc_spend_vc(self, request) -> Dict:
         """
