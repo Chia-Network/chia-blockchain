@@ -19,7 +19,7 @@ class WalletMerkleCoinStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, wrapper: DBWrapper2):
+    async def create(cls, wrapper: DBWrapper2) -> WalletMerkleCoinStore:
         self = cls()
 
         self.db_wrapper = wrapper
@@ -152,9 +152,9 @@ class WalletMerkleCoinStore:
     async def get_coin_records_between(
         self,
         wallet_id: int,
-        start,
-        end,
-        reverse=False,
+        start: int,
+        end: int,
+        reverse: bool = False,
     ) -> List[WalletMerkleCoinRecord]:
         """Return a list of merkle coins between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
