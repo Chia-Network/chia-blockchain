@@ -69,6 +69,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            "/get_mempool_min_fee_per_cost": self.get_mempool_min_fee_per_cost,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
         }
@@ -744,6 +745,21 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item.to_json_dict()}
+
+    async def get_mempool_min_fee_per_cost(self, request: Dict[str, Any]) -> EndpointResult:
+        if "cost" not in request:
+            raise ValueError("cost missing from request")
+
+        cost = request["cost"]
+
+        if self.service.mempool_manager is None:
+            return {"success": False}
+
+        mempool_min_fpc = self.service.mempool_manager.mempool.get_min_fee_rate(cost)
+        return {
+            "cost": cost,
+            "min_fee_per_cost": mempool_min_fpc,
+        }
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """
