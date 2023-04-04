@@ -53,6 +53,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
+from tests.core.mempool.test_mempool_manager import make_test_coins, mk_item
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import assert_runtime
 
@@ -2659,3 +2660,65 @@ class TestParseSexpCondition:
         err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"1", b"2", b"3", b"4", b"5", b"6"]]))
         assert err is None
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"1", b"2", b"3", b"4"])]
+
+
+coins = make_test_coins()
+
+
+# This test makes sure we're properly sorting items by fee rate
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        # make sure fractions of fee-rate are ordered correctly (i.e. that
+        # we don't use integer division)
+        (
+            [
+                mk_item(coins[0:1], fee=110, cost=50),
+                mk_item(coins[1:2], fee=100, cost=50),
+                mk_item(coins[2:3], fee=105, cost=50),
+            ],
+            [coins[0], coins[2], coins[1]],
+        ),
+        # make sure insertion order is a tie-breaker for items with the same
+        # fee-rate
+        (
+            [
+                mk_item(coins[0:1], fee=100, cost=50),
+                mk_item(coins[1:2], fee=100, cost=50),
+                mk_item(coins[2:3], fee=100, cost=50),
+            ],
+            [coins[0], coins[1], coins[2]],
+        ),
+        # also for items that don't pay fees
+        (
+            [
+                mk_item(coins[2:3], fee=0, cost=50),
+                mk_item(coins[1:2], fee=0, cost=50),
+                mk_item(coins[0:1], fee=0, cost=50),
+            ],
+            [coins[2], coins[1], coins[0]],
+        ),
+    ],
+)
+def test_spends_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    for i in items:
+        mempool.add_to_pool(i)
+
+    ordered_items = list(mempool.spends_by_feerate())
+
+    assert len(ordered_items) == len(expected)
+
+    last_fpc: Optional[float] = None
+    for mi, expected_coin in zip(ordered_items, expected):
+        assert len(mi.spend_bundle.coin_spends) == 1
+        assert mi.spend_bundle.coin_spends[0].coin == expected_coin
+        assert last_fpc is None or last_fpc >= mi.fee_per_cost
+        last_fpc = mi.fee_per_cost

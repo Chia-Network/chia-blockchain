@@ -41,7 +41,6 @@ def get_name_puzzle_conditions(
     height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> NPCResult:
-
     if mempool_mode:
         flags = MEMPOOL_MODE
     elif height >= constants.SOFT_FORK_HEIGHT:

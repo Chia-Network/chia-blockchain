@@ -55,18 +55,22 @@ class Mempool:
             generated = ""
             if not SQLITE_NO_GENERATED_COLUMNS:
                 generated = " GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
-
+            # the seq field indicates the order of items being added to the
+            # mempool. It's used as a tie-breaker for items with the same fee
+            # rate
             self._db_conn.execute(
                 f"""CREATE TABLE tx(
-                name BLOB PRIMARY KEY,
+                name BLOB,
                 cost INT NOT NULL,
                 fee INT NOT NULL,
                 assert_height INT,
                 assert_before_height INT,
                 assert_before_seconds INT,
-                fee_per_cost REAL{generated})
+                fee_per_cost REAL{generated},
+                seq INTEGER PRIMARY KEY AUTOINCREMENT)
                 """
             )
+            self._db_conn.execute("CREATE INDEX name_idx ON tx(name)")
             self._db_conn.execute("CREATE INDEX fee_sum ON tx(fee)")
             self._db_conn.execute("CREATE INDEX cost_sum ON tx(cost)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
@@ -140,7 +144,7 @@ class Mempool:
     # bit more efficiently
     def spends_by_feerate(self) -> Iterator[MempoolItem]:
         with self._db_conn:
-            cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC")
+            cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC, seq ASC")
             for row in cursor:
                 yield self._row_to_item(row)
 
@@ -176,7 +180,7 @@ class Mempool:
 
             # Iterates through all spends in increasing fee per cost
             with self._db_conn:
-                cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC")
+                cursor = self._db_conn.execute("SELECT cost,fee_per_cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
 
                 item_cost: int
                 fee_per_cost: float
@@ -216,7 +220,6 @@ class Mempool:
 
         removed_items: List[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-
             for spend_bundle_ids in chunks(items, SQLITE_MAX_VARIABLE_NUMBER):
                 args = ",".join(["?"] * len(spend_bundle_ids))
                 with self._db_conn:
@@ -259,13 +262,15 @@ class Mempool:
         with self._db_conn:
             while self.at_full_capacity(item.cost):
                 # pick the item with the lowest fee per cost to remove
-                cursor = self._db_conn.execute("SELECT name FROM tx ORDER BY fee_per_cost ASC LIMIT 1")
+                cursor = self._db_conn.execute("SELECT name FROM tx ORDER BY fee_per_cost ASC, seq DESC LIMIT 1")
                 name = bytes32(cursor.fetchone()[0])
                 self.remove_from_pool([name], MempoolRemoveReason.POOL_FULL)
 
             if SQLITE_NO_GENERATED_COLUMNS:
                 self._db_conn.execute(
-                    "INSERT INTO tx VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO "
+                    "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
+                    "VALUES(?, ?, ?, ?, ?, ?, ?)",
                     (
                         item.name,
                         item.cost,
@@ -278,7 +283,9 @@ class Mempool:
                 )
             else:
                 self._db_conn.execute(
-                    "INSERT INTO tx VALUES(?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO "
+                    "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds) "
+                    "VALUES(?, ?, ?, ?, ?, ?)",
                     (
                         item.name,
                         item.cost,
