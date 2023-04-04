@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from clvm.casts import int_to_bytes
 
+# from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -51,7 +51,7 @@ def test_proposal() -> None:
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
-    self_destruct_time = 1000 # number of blocks
+    self_destruct_time = 1000  # number of blocks
     oracle_spend_delay = 10
     active_votes_list = [0xFADEDDAB]  # are the the ids of previously voted on proposals?
     acs: Program = Program.to(1)
@@ -242,7 +242,6 @@ def test_proposal() -> None:
     timer_apa = std_hash(timer_puzhash + singleton_id)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == timer_apa
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == std_hash(treasury_puzhash + apa_msg)
-
 
     # close a failed proposal
     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
@@ -474,16 +473,10 @@ def test_merge_p2_singleton() -> None:
     conds = p2_singleton.run(Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), 0]))
     assert len(conds.as_python()) == 2
     fake_parent_id = Program.to("fake_parent").get_tree_hash()
-    fake_coin = Coin(fake_parent_id, p2_singleton.get_tree_hash(), 200)
-    conds = p2_singleton.run(Program.to([
-        0,
-        0,
-        0,
-        singleton_id,
-        p2_singleton.get_tree_hash(),
-        [[fake_parent_id, 200]],
-        100
-    ]))
+    # fake_coin = Coin(fake_parent_id, p2_singleton.get_tree_hash(), 200)
+    conds = p2_singleton.run(
+        Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), [[fake_parent_id, 200]], 100])
+    )
     assert len(conds.as_python()) == 5
     assert conds.rest().rest().rest().rest().first().rest().rest().first().as_int() == 300
     return

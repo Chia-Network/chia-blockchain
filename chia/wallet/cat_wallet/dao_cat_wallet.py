@@ -396,13 +396,13 @@ class DAOCATWallet:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
-        cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
+        # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
         dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
         YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
         proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in locked_coins:
             coin = lci.coin
-            new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
+            # new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
 
             # CREATE_COIN new_puzzle coin.amount
             # primaries = [

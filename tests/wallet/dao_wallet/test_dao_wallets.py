@@ -13,9 +13,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.dao_wallet.dao_info import DAORules
 
 puzzle_hash_0 = bytes32(32 * b"0")
 
@@ -65,12 +65,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     cat_amt = 2000
     dao_rules = DAORules(
-        proposal_timelock = uint64(10),
-        soft_close_length = uint64(5),
-        attendance_required = uint64(1000), # 10%
-        pass_percentage =  uint64(5100), # 51%
-        self_destruct_length = uint64(20),
-        oracle_spend_delay = uint64(10),
+        proposal_timelock=uint64(10),
+        soft_close_length=uint64(5),
+        attendance_required=uint64(1000),  # 10%
+        pass_percentage=uint64(5100),  # 51%
+        self_destruct_length=uint64(20),
+        oracle_spend_delay=uint64(10),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:
@@ -98,7 +98,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         treasury_id,
     )
     # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
-    for i in  range(1, 11):
+    for i in range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     async with wallet_node_0.wallet_state_manager.lock:
         await dao_wallet_0.generate_treasury_eve_spend()
@@ -186,7 +186,8 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    breakpoint()
+    # breakpoint()
+
     # await asyncio.sleep(10)
     # Verify apply_state_transition is called after a spend to the Treasury Singleton
     assert dao_wallet_0.apply_state_transition_call_count == 1
@@ -200,11 +201,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert dao_tsy_coin.amount == funding_amt + 1
 
     # propose to pay 100000 mojos to wallet_1
-    proposal_amt = 100000
-    fee = 100
-    inner_proposal = dao_wallet_0.generate_spend_proposal(ph_1, proposal_amt)
+    # proposal_amt = 100000
+    # fee = 100
+    # inner_proposal = dao_wallet_0.generate_spend_proposal(ph_1, proposal_amt)
     # proposal_spend = await dao_wallet_0.generate_new_proposal(inner_proposal.get_tree_hash(), fee)
-    breakpoint()
+
+    # breakpoint()
 
 
 def test_dao_singleton_update():
