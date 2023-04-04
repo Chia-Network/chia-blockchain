@@ -1073,6 +1073,8 @@ class DAOWallet:
         if TOTAL_VOTES < self.dao_info.filter_below_vote_amount:
             return  # ignore all proposals below the filter amount
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        if current_coin is None:
+            raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
         ended = False
         timer_coin = None
         if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
