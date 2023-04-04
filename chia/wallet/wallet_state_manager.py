@@ -1079,7 +1079,7 @@ class WalletStateManager:
         clawback_args: Tuple[uint64, bytes32, bytes32],
         coin_state: CoinState,
         coin_spend: CoinSpend,
-    ) -> Tuple[Optional[uint32], Optional[WalletType]]:
+    ) -> Optional[WalletIdentifier]:
         """
         Handle Clawback coins
         :param clawback_args:
@@ -1115,7 +1115,7 @@ class WalletStateManager:
             )
             # Add merkle coin
             await self.merkle_coin_store.add_coin_record(coin_record)
-            return None, None
+            return None
         # Check if the wallet is the recipient
         recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
         if recipient_derivation_record is not None:
@@ -1133,7 +1133,7 @@ class WalletStateManager:
             )
             # Add merkle coin
             await self.merkle_coin_store.add_coin_record(coin_record)
-        return None, None
+        return None
 
     async def add_coin_states(
         self,
