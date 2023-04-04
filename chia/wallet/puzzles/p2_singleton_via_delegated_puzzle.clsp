@@ -50,14 +50,17 @@
   )
 
   (if my_puzhash
-    (if list_of_parent_amounts
-      ; we are making the output
-      (c
-        (list ASSERT_MY_AMOUNT my_amount)
-        (for_parent_amounts my_puzhash list_of_parent_amounts my_amount)
+    (c
+      (list ASSERT_MY_PUZZLEHASH my_puzhash)
+      (if list_of_parent_amounts
+        ; we are making the output
+        (c
+          (list ASSERT_MY_AMOUNT my_amount)
+          (for_parent_amounts my_puzhash list_of_parent_amounts my_amount)
+        )
+        ; we are letting another coin make the output
+        (give_self_to_merge my_puzhash my_id)
       )
-      ; we are letting another coin make the output
-      (give_self_to_merge my_puzhash my_id)
     )
     ; we are being spent by our singleton
     (c
