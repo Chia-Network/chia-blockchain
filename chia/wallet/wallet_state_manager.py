@@ -683,6 +683,16 @@ class WalletStateManager:
         if dao_curried_args is not None:
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
+        # Check if the coin is dao funding spend (hint == treasury_id)
+        hint_list = compute_coin_hints(coin_spend)
+        if hint_list:
+            for wallet in self.wallets.values():
+                if wallet.type() == WalletType.DAO.value:
+                    if wallet.dao_info.treasury_id in hint_list:
+                        return wallet.id(), WalletType(wallet.type())
+
+        # check if a dao p2_singleton is being spent
+
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None

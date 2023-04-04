@@ -259,6 +259,8 @@ class DAOWallet(WalletProtocol):
         )
         await self.save_info(dao_info)
 
+        # add interested puzzle hash so we can folllow treasury funds
+        await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         return self
 
     @staticmethod
@@ -1066,6 +1068,7 @@ class DAOWallet(WalletProtocol):
                 amount,
                 p2_singleton_puzhash,
                 fee=fee,
+                memos=[self.dao_info.treasury_id],
             )
         elif funding_wallet.type() == WalletType.CAT.value:
             cat_wallet: CATWallet = funding_wallet  # type: ignore[assignment]
@@ -1077,6 +1080,7 @@ class DAOWallet(WalletProtocol):
                 [amount],
                 [p2_singleton_puzhash],
                 fee=fee,
+                memos=[self.dao_info.treasury_id],
             )
             return tx_records[0]
         else:
@@ -1108,8 +1112,9 @@ class DAOWallet(WalletProtocol):
 
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
         # TODO: Pull coins from DB once they're being stored
-        # puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
-        return uint128(0)
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
+        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
+        return sum([record.coin.amount for record in records])
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")

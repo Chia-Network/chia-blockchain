@@ -178,7 +178,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert dao_wallet_0.apply_state_transition_call_count == 0
 
     # Add money to the Treasury -- see dao_treasury.clvm, add money spend case
-    funding_amt = uint64(10000000000)
+    funding_amt = uint64(11000000000)
     funding_tx = await dao_wallet_0.create_add_money_to_treasury_spend(funding_amt)
     funding_sb = funding_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_sb.name())
@@ -187,8 +187,11 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # breakpoint()
-
+    # Check that the funding spend is recognized by both dao wallets
+    bal_0 = await dao_wallet_0.get_balance_by_asset_type()
+    assert bal_0 == funding_amt
+    bal_1 = await dao_wallet_1.get_balance_by_asset_type()
+    assert bal_1 == funding_amt
     # await asyncio.sleep(10)
     # Verify apply_state_transition is called after a spend to the Treasury Singleton
     assert dao_wallet_0.apply_state_transition_call_count == 1
