@@ -4,35 +4,28 @@ import dataclasses
 import logging
 import time
 import traceback
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
+from chia.util.ints import uint32, uint64
+from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
@@ -52,6 +45,8 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, CRCAT
+from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -60,14 +55,14 @@ if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 
-class CRCATWallet(CATWallet):
+class CRCATWallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
-    tail_hash: bytes32
+    cat_info: CRCATInfo
     standard_wallet: Wallet
     cost_of_single_tx: int
-    cr_cat_store: CRCATStore
+    lineage_store: CATLineageStore
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
@@ -95,12 +90,12 @@ class CRCATWallet(CATWallet):
         self = CRCATWallet()
         self.cost_of_single_tx = 78000000  # Measured in testing
         self.standard_wallet = wallet
-        self.log = logging.getLogger(__name__)
-        self.authorized_providers = authorized_providers
-        self.proofs_checker = proofs_checker
+        if name is None:
+            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
+        self.log = logging.getLogger(name)
 
-        self.tail_hash = bytes32.from_hexstr(limitations_program_hash_hex)
-        limitations_program_hash_hex = self.tail_hash.hex()
+        tail_hash = bytes32.from_hexstr(limitations_program_hash_hex)
+        limitations_program_hash_hex = tail_hash.hex()
 
         for id, w in wallet_state_manager.wallets.items():
             if w.type() == CRCATWallet.type():
@@ -110,19 +105,11 @@ class CRCATWallet(CATWallet):
                     return w
 
         self.wallet_state_manager = wallet_state_manager
-        if limitations_program_hash_hex in wallet_state_manager.default_cats:
-            cat_info = wallet_state_manager.default_cats[limitations_program_hash_hex]
-            name = cat_info["name"]
-        elif name is None:
-            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name,
-            WalletType.CRCAT,
-            limitations_program_hash_hex,
-        )
-
-        self.cr_cat_store = wallet_state_manager.cr_cat_store
+        self.cat_info = CRCATInfo(tail_hash, None, authorized_providers, proofs_checker)
+        info_as_string = bytes(self.cat_info).hex()
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
+        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
 
         await self.wallet_state_manager.add_new_wallet(self)
         return self
@@ -157,20 +144,20 @@ class CRCATWallet(CATWallet):
         self.cost_of_single_tx = 78000000
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
-        self.tail_hash = bytes32.from_hexstr(wallet_info.data)
         self.standard_wallet = wallet
-        self.cr_cat_store = wallet_state_manager.cr_cat_store
-        self.authorized_providers = self.cr_cat_store.get_authorized_providers_for_tail(self.tail_hash)
-        self.proofs_checker = self.cr_cat_store.get_proofs_checker_for_tail(self.tail_hash)
-
+        self.cat_info = CRCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         return self
 
     @classmethod
     def type(cls) -> WalletType:
         return WalletType.CRCAT
 
+    def id(self) -> uint32:
+        return self.wallet_info.id
+
     def get_asset_id(self) -> str:
-        return self.tail_hash.hex()
+        return self.cat_info.limitations_program_hash.hex()
 
     async def set_tail_program(self, tail_program: str) -> None:
         raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
@@ -178,23 +165,22 @@ class CRCATWallet(CATWallet):
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CR-CAT wallet has been notified that {coin.name().hex()} was added")
+        try:
+            coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
+                [coin.parent_coin_info], peer=peer
+            )
+            coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                coin_state[0].spent_height, coin_state[0].coin, peer
+            )
+            await self.puzzle_solution_received(coin_spend, coin)
+        except Exception as e:
+            self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
-        lineage = await self.get_lineage_proof_for_coin(coin)
-        if lineage is None:
-            try:
-                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                    [coin.parent_coin_info], peer=peer
-                )
-                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state[0].spent_height, coin_state[0].coin, peer
-                )
-                await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
-            except Exception as e:
-                self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
-
-    async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin) -> None:
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, coin: Coin) -> None:
         try:
             new_cr_cats: List[CRCAT] = CRCAT.get_next_from_coin_spend(coin_spend)
+            cr_cat: CRCAT = list(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))[0]
+            await self.lineage_store.add_lineage_proof(cr_cat.coin.name(), cr_cat.lineage_proof)
         except Exception:
             # The parent is not a CAT which means we need to scrub all of its children from our DB
             child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_spend.coin.name())
@@ -204,10 +190,6 @@ class CRCATWallet(CATWallet):
                         await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
-
-        for cr_cat in new_crcats:
-            if self.wallet_state_manager.puzzle_store.puzzle_hash_exists(cr_cat.inner_puzzle_hash):
-                await self.cr_cat_store.add_cr_cat(cr_cat)
 
     def require_derivation_paths(self) -> bool:
         return False
@@ -233,7 +215,7 @@ class CRCATWallet(CATWallet):
         return puzzle_hash
 
     async def get_lineage_proof_for_coin(self, coin: Coin) -> Optional[LineageProof]:
-        return await self.cr_cat_store.get_lineage_proof(coin.parent_coin_info)
+        return await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
 
     async def generate_unsigned_spendbundle(
         self,
@@ -517,4 +499,4 @@ class CRCATWallet(CATWallet):
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
 
-    _dummy: WalletProtocol = CATWallet()
+    _dummy: WalletProtocol = CRCATWallet()
