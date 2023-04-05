@@ -7,7 +7,7 @@ from blspy import AugSchemeMPL
 
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from tests.util.db_connection import DBConnection
 
@@ -45,7 +45,7 @@ class TestPuzzleStore:
             assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) is False
             assert await db.index_for_pubkey(derivation_recs[0].pubkey) is None
             assert await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) is None
-            assert await db.wallet_info_for_puzzle_hash(derivation_recs[2].puzzle_hash) is None
+            assert await db.get_wallet_identifier_for_puzzle_hash(derivation_recs[2].puzzle_hash) is None
             assert len((await db.get_all_puzzle_hashes())) == 0
             assert await db.get_last_derivation_path() is None
             assert await db.get_unused_derivation_path() is None
@@ -57,7 +57,7 @@ class TestPuzzleStore:
 
             assert await db.index_for_pubkey(derivation_recs[4].pubkey) == 2
             assert await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) == 1
-            assert await db.wallet_info_for_puzzle_hash(derivation_recs[2].puzzle_hash) == (
+            assert await db.get_wallet_identifier_for_puzzle_hash(derivation_recs[2].puzzle_hash) == WalletIdentifier(
                 derivation_recs[2].wallet_id,
                 derivation_recs[2].wallet_type,
             )

@@ -470,12 +470,9 @@ class DIDWallet:
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
-        peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
-            raise ValueError("Could not find any peers to request puzzle and solution from")
-
         parent_coin: Coin = did_info.origin_coin
         while True:
+            peer = wallet_node.get_full_node_peer()
             children = await wallet_node.fetch_children(parent_coin.name(), peer)
             if len(children) == 0:
                 break

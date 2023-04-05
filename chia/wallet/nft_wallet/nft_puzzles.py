@@ -113,6 +113,7 @@ async def get_nft_info_from_puzzle(
         encode_puzzle_hash(uncurried_nft.singleton_launcher_id, prefix=AddressType.NFT.hrp(config=config)),
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
+        nft_coin_info.latest_height,
         uncurried_nft.owner_did,
         uncurried_nft.trade_price_percentage,
         uncurried_nft.royalty_address,

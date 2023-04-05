@@ -775,7 +775,6 @@ coins = make_test_coins()
     ],
 )
 def test_can_replace(existing_items: List[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
-
     removals = set(c.name() for c in new_item.spend_bundle.removals())
     assert can_replace(set(existing_items), removals, new_item) == expected
 
@@ -827,7 +826,6 @@ async def test_get_items_not_in_filter() -> None:
 
 @pytest.mark.asyncio
 async def test_total_mempool_fees() -> None:
-
     coin_records: Dict[bytes32, CoinRecord] = {}
 
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
@@ -928,24 +926,26 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
 
 
 @pytest.mark.parametrize(
-    "opcode,arg,expect_eviction",
+    "opcode,arg,expect_eviction, expect_limit",
     [
         # current height: 10 current_time: 10000
         # we step the chain forward 1 block and 19 seconds
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False, 10020),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False, 12),
         # the coin was created at height: 5 timestamp: 9900
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True),
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False, 5 + 7),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False, 9900 + 120),
     ],
 )
 @pytest.mark.asyncio
-async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expect_eviction: bool) -> None:
+async def test_assert_before_expiration(
+    opcode: ConditionOpcode, arg: int, expect_eviction: bool, expect_limit: Optional[int]
+) -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return {TEST_COIN.name(): CoinRecord(TEST_COIN, uint32(5), uint32(0), False, uint64(9900))}.get(coin_id)
 
@@ -973,6 +973,16 @@ async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expec
 
     still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
     assert still_in_pool != expect_eviction
+    if still_in_pool:
+        assert expect_limit is not None
+        item = mempool_manager.get_mempool_item(bundle_name)
+        assert item is not None
+        if opcode in [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, co.ASSERT_BEFORE_SECONDS_RELATIVE]:
+            assert item.assert_before_seconds == expect_limit
+        elif opcode in [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, co.ASSERT_BEFORE_HEIGHT_RELATIVE]:
+            assert item.assert_before_height == expect_limit
+        else:
+            assert False
 
 
 def make_test_spendbundle(coin: Coin, *, fee: int = 0) -> SpendBundle:
@@ -1103,31 +1113,3 @@ async def test_sufficient_total_fpc_increase() -> None:
     assert_sb_in_pool(mempool_manager, sb1234)
     assert_sb_not_in_pool(mempool_manager, sb12)
     assert_sb_not_in_pool(mempool_manager, sb3)
-
-
-@pytest.mark.asyncio
-async def test_spends_by_feerate() -> None:
-    # This test makes sure we're properly sorting items by fee rate
-    async def send_to_mempool_returning_item(
-        mempool_manager: MempoolManager, coin: Coin, *, fee: int = 0
-    ) -> MempoolItem:
-        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - fee]]
-        sb = spend_bundle_from_conditions(conditions, coin)
-        result = await add_spendbundle(mempool_manager, sb, sb.name())
-        assert result[1] == MempoolInclusionStatus.SUCCESS
-        mi = mempool_manager.get_mempool_item(sb.name())
-        assert mi is not None
-        return mi
-
-    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000005)))
-    # Create a ~3.73 FPC item
-    mi1 = await send_to_mempool_returning_item(mempool_manager, coins[0], fee=11000000)
-    # Create a ~3.39 FPC item
-    mi2 = await send_to_mempool_returning_item(mempool_manager, coins[1], fee=10000000)
-    # Create a ~3.56 FPC item
-    mi3 = await send_to_mempool_returning_item(mempool_manager, coins[2], fee=10500000)
-    assert mi1.fee_per_cost > mi2.fee_per_cost
-    assert mi1.fee_per_cost > mi3.fee_per_cost
-    assert mi3.fee_per_cost > mi2.fee_per_cost
-    items = mempool_manager.mempool.spends_by_feerate()
-    assert list(items) == [mi1, mi3, mi2]

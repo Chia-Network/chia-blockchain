@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, T
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
+from clvm_tools.binutils import disassemble
 
 import chia.wallet.singleton
 from chia.protocols.wallet_protocol import CoinState
