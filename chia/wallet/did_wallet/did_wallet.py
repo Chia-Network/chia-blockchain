@@ -702,7 +702,6 @@ class DIDWallet:
             ],
             coin_announcements={coin.name()},
         )
-
         # Need to include backup list reveal here, even we are don't recover
         # innerpuz solution is
         # (mode, p2_solution)

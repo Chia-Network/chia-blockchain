@@ -426,7 +426,6 @@ class Wallet:
                 decorated_target_puzhash = decorator_manager.decorate_target_puzhash(inner_puzzle, newpuzzlehash)
                 target_primary = {}
                 memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
-                assert memos is not None
                 if primaries is None:
                     if amount > 0:
                         primaries = [{"puzzlehash": decorated_target_puzhash, "amount": uint64(amount), "memos": memos}]
@@ -455,7 +454,9 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                assert puzzle.get_tree_hash() == coin.puzzle_hash
+                assert (
+                    puzzle.get_tree_hash() == coin.puzzle_hash
+                ), "Decorated puzzle doesn't match the coin puzzle hash, please check your puzzle_decorators config."
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
@@ -465,6 +466,7 @@ class Wallet:
                 )
                 solution = decorator_manager.solve(inner_puzzle, [target_primary], solution)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
+
                 spends.append(
                     CoinSpend(
                         coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))

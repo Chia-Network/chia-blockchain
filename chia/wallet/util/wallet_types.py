@@ -27,7 +27,12 @@ class WalletType(IntEnum):
     NFT = 10
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
-    CLAWBACK = 13
+
+
+class CoinType(IntEnum):
+    # Wallet Types
+    NORMAL_COIN = 0
+    CLAWBACK_COIN = 1
 
 
 class AmountWithPuzzlehash(TypedDict):

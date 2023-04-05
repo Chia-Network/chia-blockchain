@@ -378,8 +378,7 @@ class WalletNode:
         path.parent.mkdir(parents=True, exist_ok=True)
         if self.config.get("reset_sync_for_fingerprint") == fingerprint:
             await self.reset_sync_db(path, fingerprint)
-        # We need to login before initialize the wallet state manager
-        self.log_in(private_key)
+
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
@@ -404,6 +403,7 @@ class WalletNode:
         self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
+        self.log_in(private_key)
         self.wallet_state_manager.state_changed("sync_changed")
 
         # Populate the balance caches for all wallets
@@ -584,6 +584,9 @@ class WalletNode:
                     peer = item.data[1]
                     assert peer is not None
                     await self.new_peak_wallet(request, peer)
+                    # Check if any coin needs auto spending
+                    if self.config.get("auto_claim", True):
+                        await self.wallet_state_manager.auto_claim_coins()
                 else:
                     self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)
                     assert False

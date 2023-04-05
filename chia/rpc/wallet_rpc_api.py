@@ -69,13 +69,11 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.merkle_utils import MerkleCoinType
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, CoinType, WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_merkle_coin_record import WalletMerkleCoinRecord
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -1020,11 +1018,12 @@ class WalletRpcApi:
         end = request.get("end", 50)
         reverse = request.get("reverse", False)
 
-        coins = await self.service.wallet_state_manager.merkle_coin_store.get_coin_records_between(
+        coins = await self.service.wallet_state_manager.coin_store.get_coin_records_between(
             wallet_id,
             start,
             end,
             reverse=reverse,
+            coin_type=CoinType.CLAWBACK_COIN,
         )
         return {
             "coins": [
@@ -1034,7 +1033,7 @@ class WalletRpcApi:
                     "amount": coin.coin.amount,
                     "puzzle_hash": coin.coin.puzzle_hash.hex(),
                     "parent_coin": coin.coin.parent_coin_info.hex(),
-                    "metadata": json.loads(coin.metadata),
+                    "metadata": json.loads(coin.metadata) if coin.metadata is not None else "",
                     "confirmed_height": coin.confirmed_block_height,
                     "spent_height": coin.spent_block_height,
                 }
@@ -1049,10 +1048,10 @@ class WalletRpcApi:
         coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["merkle_coin_ids"]]
         tx_fee: uint64 = uint64(request.get("fee", 0))
         # Get inner puzzle
-        merkle_records: List[
-            Optional[WalletMerkleCoinRecord]
-        ] = await self.service.wallet_state_manager.merkle_coin_store.get_coin_records(
-            coin_ids, include_spent_coins=False
+        merkle_records: List[Optional[WalletCoinRecord]] = list(
+            (
+                await self.service.wallet_state_manager.coin_store.get_coin_records(coin_ids, include_spent_coins=False)
+            ).values()
         )
         merkle_coins: List[Tuple[Coin, Dict[str, Any]]] = []
         clawback_coins = []
@@ -1061,8 +1060,11 @@ class WalletRpcApi:
             if merkle_record is None:
                 log.warning(f"Cannot find merkle coin f{coin_ids[i].hex()}")
                 continue
+            if merkle_record.metadata is None:
+                log.warning(f"Skip merkle coin f{coin_ids[i].hex()}, metadata cannot be None.")
+                continue
             metadata = json.loads(merkle_record.metadata)
-            if merkle_record.coin_type != MerkleCoinType.CLAWBACK.value:
+            if merkle_record.coin_type != CoinType.CLAWBACK_COIN.value:
                 log.warning(f"Coin {coin_ids[i].hex()} is not a Clawback coin.")
                 continue
             if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
@@ -2120,7 +2122,15 @@ class WalletRpcApi:
             wallet_type = did_wallet.type()
             assert coin_state.created_height is not None
             coin_record: WalletCoinRecord = WalletCoinRecord(
-                coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
+                coin_state.coin,
+                uint32(coin_state.created_height),
+                uint32(0),
+                False,
+                False,
+                wallet_type,
+                wallet_id,
+                CoinType.NORMAL_COIN.value,
+                None,
             )
             await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())
             await did_wallet.coin_added(coin_state.coin, uint32(coin_state.created_height), peer)

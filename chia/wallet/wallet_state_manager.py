@@ -76,19 +76,16 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
-from chia.wallet.util.merkle_utils import MerkleCoinType
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
-from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
+from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs, subscribe_to_coin_updates
+from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
-from chia.wallet.wallet_merkle_coin_record import WalletMerkleCoinRecord
-from chia.wallet.wallet_merkle_coin_store import WalletMerkleCoinStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -130,7 +127,6 @@ class WalletStateManager:
     notification_manager: NotificationManager
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
-    merkle_coin_store: WalletMerkleCoinStore
     interested_store: WalletInterestedStore
     retry_store: WalletRetryStore
     multiprocessing_context: multiprocessing.context.BaseContext
@@ -163,7 +159,7 @@ class WalletStateManager:
         self.log = logging.getLogger(name if name else __name__)
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
-
+        fingerprint = private_key.get_g1().get_fingerprint()
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/wallet_sql.log")
@@ -182,7 +178,6 @@ class WalletStateManager:
             self.initial_num_public_keys = min_num_public_keys
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
-        self.merkle_coin_store = await WalletMerkleCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
         self.user_store = await WalletUserStore.create(self.db_wrapper)
@@ -202,13 +197,8 @@ class WalletStateManager:
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.db_path = db_path
-        if (
-            "puzzle_decorator" in self.config
-            and self.wallet_node.logged_in_fingerprint in self.config["puzzle_decorator"]
-        ):
-            self.decorator_manager = PuzzleDecoratorManager.create(
-                self.config["puzzle_decorator"][self.wallet_node.logged_in_fingerprint]
-            )
+        if "puzzle_decorators" in self.config and fingerprint in self.config["puzzle_decorators"]:
+            self.decorator_manager = PuzzleDecoratorManager.create(self.config["puzzle_decorators"][fingerprint])
         else:
             self.decorator_manager = PuzzleDecoratorManager.create([])
 
@@ -216,6 +206,7 @@ class WalletStateManager:
         assert main_wallet_info is not None
 
         self.private_key = private_key
+
         self.main_wallet = await Wallet.create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
@@ -655,7 +646,6 @@ class WalletStateManager:
             return None
 
         puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        solution = Program.from_bytes(bytes(coin_spend.solution))
 
         uncurried = uncurry_puzzle(puzzle)
 
@@ -677,46 +667,36 @@ class WalletStateManager:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
         # Check if the coin is clawback
+        solution = Program.from_bytes(bytes(coin_spend.solution))
         clawback_args = match_clawback_puzzle(puzzle, solution, self.constants.MAX_BLOCK_COST_CLVM)
         if clawback_args is not None:
-            return await self.handle_clawback(clawback_args, coin_state, coin_spend)
+            return await self.handle_clawback(clawback_args, coin_state, peer)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
-
         return None
 
-    async def update_merkle_coin(self, peer: WSChiaConnection, coin_state: CoinState):
+    async def auto_claim_coins(self):
         # Get unspent merkle coin
-        unspent_coins = await self.merkle_coin_store.get_all_unspent_coins()
+        unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK_COIN)
         current_timestamp = self.blockchain.get_latest_timestamp()
-        merkle_coins: List[Tuple[Coin, Dict[str, Any]]] = []
+        clawback_coins: List[Tuple[Coin, Dict[str, Any]]] = []
         tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
         for coin in unspent_coins:
             metadata = json.loads(coin.metadata)
-            if coin_state.coin.name() == coin.coin.name() and coin_state.spent_height is not None:
-                # This coin is spent, update it
-                self.log.info(f"Marked merkle coin {coin.coin.name().hex()} as spent")
-                await self.merkle_coin_store.set_spent(coin.coin.name(), uint32(coin_state.spent_height))
-                continue
-            if coin_state.coin.parent_coin_info == coin.coin.name() and coin_state.created_height is not None:
-                # This coin is spent, update it
-                self.log.info(f"Marked merkle coin {coin.coin.name().hex()} as spent")
-                await self.merkle_coin_store.set_spent(coin.coin.name(), uint32(coin_state.created_height))
-                continue
             if (
-                self.config.get("auto_claim", True)
-                and self.config.get("auto_claim_min_amount", 0) < coin.coin.amount
-                and coin.coin_type == MerkleCoinType.CLAWBACK.value
+                self.config.get("auto_claim_min_amount", 0) < coin.coin.amount
+                and coin.coin_type == CoinType.CLAWBACK_COIN.value
                 and metadata["is_recipient"]
                 and coin.spent == 0
             ):
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata["time_lock"]:
-                    merkle_coins.append((coin.coin, metadata))
-                    if len(merkle_coins) >= self.config.get("auto_claim_coin_size", 50):
-                        await self.claim_clawback_coins(merkle_coins, tx_fee)
-                        merkle_coins = []
-        if len(merkle_coins) > 0:
-            await self.claim_clawback_coins(merkle_coins, tx_fee)
+                    clawback_coins.append((coin.coin, metadata))
+                    if len(clawback_coins) >= self.config.get("auto_claim_coin_size", 50):
+                        await self.claim_clawback_coins(clawback_coins, tx_fee)
+                        clawback_coins = []
+        if len(clawback_coins) > 0:
+            print(f"Auto claim fee {tx_fee}")
+            await self.claim_clawback_coins(clawback_coins, tx_fee)
 
     async def claim_clawback_coins(self, merkle_coins: List[Tuple[Coin, Dict[str, Any]]], fee: uint64) -> List[bytes32]:
         assert len(merkle_coins) > 0
@@ -740,7 +720,7 @@ class WalletStateManager:
                     {
                         "puzzlehash": recipient_puzhash if metadata["is_recipient"] else sender_puzhash,
                         "amount": uint64(coin.amount),
-                        "memos": [sender_puzhash if metadata["is_recipient"] else recipient_puzhash],
+                        "memos": [],
                     }
                 ],
                 coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
@@ -760,7 +740,7 @@ class WalletStateManager:
         await self.wallet_node.push_tx(spend_bundle)
         for coin_spend in coin_spends:
             # This will make sure we don't double spend
-            await self.merkle_coin_store.set_spent(coin_spend.coin.name(), uint32(0))
+            await self.coin_store.set_spent(coin_spend.coin.name(), uint32(0))
         return clawback_coins
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
@@ -1078,13 +1058,13 @@ class WalletStateManager:
         self,
         clawback_args: Tuple[uint64, bytes32, bytes32],
         coin_state: CoinState,
-        coin_spend: CoinSpend,
+        peer: WSChiaConnection,
     ) -> Optional[WalletIdentifier]:
         """
         Handle Clawback coins
-        :param clawback_args:
-        :param coin_state:
-        :param coin_spend:
+        :param clawback_args: uncurried clawback parameters
+        :param coin_state: clawback merkle coin
+        :param peer: Fullnode peer
         :return:
         """
         time_lock, sender_puzhash, recipient_puzhash = clawback_args
@@ -1103,36 +1083,40 @@ class WalletStateManager:
         if sender_derivation_record is not None:
             self.log.info("Found Clawback merkle coin %s as the sender.", coin_state.coin.name().hex())
             metadata["is_recipient"] = False
-            coin_record = WalletMerkleCoinRecord(
+            coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
                 uint32(0),
                 False,
-                MerkleCoinType.CLAWBACK.value,
-                json.dumps(metadata),
+                False,
                 WalletType.STANDARD_WALLET,
                 1,
+                CoinType.CLAWBACK_COIN.value,
+                json.dumps(metadata),
             )
             # Add merkle coin
-            await self.merkle_coin_store.add_coin_record(coin_record)
+            await self.coin_store.add_coin_record(coin_record)
             return None
         # Check if the wallet is the recipient
         recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
         if recipient_derivation_record is not None:
             self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name().hex())
             metadata["is_recipient"] = True
-            coin_record = WalletMerkleCoinRecord(
+            coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
                 uint32(0),
                 False,
-                MerkleCoinType.CLAWBACK.value,
-                json.dumps(metadata),
+                False,
                 WalletType.STANDARD_WALLET,
                 1,
+                CoinType.CLAWBACK_COIN.value,
+                json.dumps(metadata),
             )
             # Add merkle coin
-            await self.merkle_coin_store.add_coin_record(coin_record)
+            await self.coin_store.add_coin_record(coin_record)
+            # For the recipient we need to manually subscribe the merkle coin
+            await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
         return None
 
     async def add_coin_states(
@@ -1159,7 +1143,7 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_names)
 
         for coin_name, coin_state in zip(coin_names, coin_states):
-            self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
+            self.log.debug("Add coin state: %s: %s", coin_name.hex(), coin_state)
             local_record = local_records.get(coin_name)
             rollback_wallets = None
             try:
@@ -1196,7 +1180,6 @@ class WalletStateManager:
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
                                 wallet_identifier = WalletIdentifier.create(potential_dl)
-                    await self.update_merkle_coin(peer, coin_state)
 
                     if wallet_identifier is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
@@ -1254,6 +1237,8 @@ class WalletStateManager:
                                 farmer_reward or pool_reward,
                                 wallet_identifier.type,
                                 wallet_identifier.id,
+                                CoinType.NORMAL_COIN.value,
+                                None,
                             )
                             await self.coin_store.add_coin_record(record)
                             # Coin first received
@@ -1625,9 +1610,9 @@ class WalletStateManager:
             )
             if tx_record.amount > 0:
                 await self.tx_store.add_transaction_record(tx_record)
-
+        # We only add normal coins here
         coin_record: WalletCoinRecord = WalletCoinRecord(
-            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id
+            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id, CoinType.NORMAL_COIN.value, None
         )
         await self.coin_store.add_coin_record(coin_record, coin_name)
 
@@ -1750,7 +1735,6 @@ class WalletStateManager:
         """
         await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
-        await self.merkle_coin_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
