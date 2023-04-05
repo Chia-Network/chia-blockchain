@@ -65,12 +65,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     cat_amt = 2000
     dao_rules = DAORules(
-        proposal_timelock = uint64(10),
-        soft_close_length = uint64(5),
-        attendance_required = uint64(1000), # 10%
-        pass_percentage =  uint64(5100), # 51%
-        self_destruct_length = uint64(20),
-        oracle_spend_delay = uint64(10),
+        proposal_timelock=uint64(10),
+        soft_close_length=uint64(5),
+        attendance_required=uint64(1000),  # 10%
+        pass_percentage=uint64(5100),  # 51%
+        self_destruct_length=uint64(20),
+        oracle_spend_delay=uint64(10),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:

@@ -14,6 +14,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
+from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
+from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.transaction_record import TransactionRecord
@@ -140,34 +143,26 @@ async def test_cat_spend(self_hostname: str, two_wallet_nodes: SimulatorsAndWall
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - 1, height + 1, puzzle_hash_1, None))
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
 
-    current_cat_issuance: uint64 = uint64(1000)
-    proposal_pass_percentage: uint64 = uint64(15)
-    CAT_TAIL: Program = Program.to("tail").get_tree_hash()
-    treasury_id: Program = Program.to("treasury").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
-    # PREVIOUS_VOTES: List[bytes] = [0xFADEDDAB]
-
-    proposal_id: Program = Program.to("singleton_id").get_tree_hash()
-    singleton_struct: Program = Program.to(
-        (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    dao_rules = DAORules(
+        proposal_timelock=uint64(10),
+        soft_close_length=uint64(5),
+        attendance_required=uint64(1000),  # 10%
+        pass_percentage=uint64(5100),  # 51%
+        self_destruct_length=uint64(20),
+        oracle_spend_delay=uint64(10),
     )
 
-    current_votes: uint64 = uint64(0)
-    total_votes: uint64 = uint64(0)
-    proposal_innerpuz: Program = Program.to(1)
-    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
-        singleton_struct,
-        DAO_PROPOSAL_MOD.get_tree_hash(),
-        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        DAO_TREASURY_MOD.get_tree_hash(),
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        CAT_TAIL,
-        current_cat_issuance,
-        proposal_pass_percentage,
-        treasury_id,
-        LOCKUP_TIME,
-        current_votes,
-        total_votes,
-        proposal_innerpuz,
+    dao_wallet = await DAOWallet.create_new_dao_for_existing_cat(
+        wallet_node.wallet_state_manager,
+        wallet,
+        bytes.fromhex(asset_id),
+        dao_rules,
     )
+
+    dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+        wallet_node.wallet_state_manager,
+        wallet,
+        asset_id,
+    )
+    assert dao_wallet is not None
+    assert dao_cat_wallet is not None

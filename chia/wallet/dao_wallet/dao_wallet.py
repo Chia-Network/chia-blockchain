@@ -159,7 +159,7 @@ class DAOWallet:
         try:
             launcher_spend = await self.generate_new_dao(
                 amount_of_cats,
-                fee,
+                fee=fee,
             )
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
@@ -238,6 +238,91 @@ class DAOWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
+
+        # Now the dao wallet is created we can create the dao_cat wallet
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail = cat_wallet.cat_info.limitations_program_hash
+        new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+            self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
+        )
+        dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,
+            self.dao_info.cat_wallet_id,
+            dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            self.dao_info.current_treasury_coin,
+            self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
+        )
+        await self.save_info(dao_info)
+
+        return self
+
+    @staticmethod
+    async def create_new_dao_for_existing_cat(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        tail_hash: bytes32,
+        dao_rules: DAORules,
+        filter_amount: uint64 = 1,
+        name: Optional[str] = None,
+        fee: uint64 = uint64(0),
+    ) -> DAOWallet:
+        """
+        Create a brand new DAO wallet
+        This must be called under the wallet state manager lock
+        :param wallet_state_manager: Wallet state manager
+        :param wallet: Standard wallet
+        :param amount_of_cats: Initial amount of voting CATs
+        :param name: Wallet name
+        :param fee: transaction fee
+        :return: DAO wallet
+        """
+
+        self = DAOWallet()
+        self.wallet_state_manager = wallet_state_manager
+        if name is None:
+            name = self.generate_wallet_name()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.standard_wallet = wallet
+        self.log = logging.getLogger(name if name else __name__)
+
+        self.dao_info: DAOInfo = DAOInfo(
+            bytes32([0] * 32),
+            0,
+            0,
+            [],
+            [],
+            None,
+            None,
+            0,
+            filter_amount,
+        )
+        self.dao_rules = dao_rules
+        info_as_string = json.dumps(self.dao_info.to_json_dict())
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            name, WalletType.DAO.value, info_as_string
+        )
+        self.wallet_id = self.wallet_info.id
+
+        try:
+            launcher_spend = await self.generate_new_dao(
+                None,
+                cat_tail_hash=tail_hash,
+                fee=fee,
+            )
+        except Exception:
+            await wallet_state_manager.user_store.delete_wallet(self.id())
+            raise
+
+        if launcher_spend is None:
+            await wallet_state_manager.user_store.delete_wallet(self.id())
+            raise ValueError("Failed to create spend.")
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
         # Now the dao wallet is created we can create the dao_cat wallet
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -521,7 +606,8 @@ class DAOWallet:
 
     async def generate_new_dao(
         self,
-        amount_of_cats: uint64,
+        amount_of_cats: Optional[uint64],
+        cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
@@ -533,36 +619,26 @@ class DAOWallet:
         if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
-        coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
+        if amount_of_cats is not None:
+            coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
+        else:
+            coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
             return None
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
 
-        different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats), exclude=[origin])
-        cat_origin = different_coins.copy().pop()
-
-        assert origin.name() != cat_origin.name()
         genesis_launcher_puz = SINGLETON_LAUNCHER
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
-        cat_wallet = None
-        cat_tail_hash = None
-        if self.dao_info.cat_wallet_id is None:
-            cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_info.cat_wallet_id)
-            if cat_wallet is not None:
-                cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
         if cat_tail_hash is None:
+            different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats), exclude=[origin])
+            cat_origin = different_coins.copy().pop()
+            assert origin.name() != cat_origin.name()
             cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
 
         assert cat_tail_hash is not None
-
-        cat_tail_info = {
-            "identifier": "genesis_by_id_or_singleton",
-            "treasury_id": launcher_coin.name(),
-            "coins": different_coins,
-        }
 
         dao_info: DAOInfo = DAOInfo(
             launcher_coin.name(),
@@ -576,16 +652,28 @@ class DAOWallet:
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
-
+        new_cat_wallet = None
         # This will also mint the coins
-        new_cat_wallet = await CATWallet.create_new_cat_wallet(
-            self.wallet_state_manager,
-            self.standard_wallet,
-            cat_tail_info,
-            amount_of_cats,
-        )
-        assert new_cat_wallet is not None
+        if amount_of_cats is not None and different_coins is not None:
+            cat_tail_info = {
+                "identifier": "genesis_by_id_or_singleton",
+                "treasury_id": launcher_coin.name(),
+                "coins": different_coins,
+            }
+            new_cat_wallet = await CATWallet.create_new_cat_wallet(
+                self.wallet_state_manager,
+                self.standard_wallet,
+                cat_tail_info,
+                amount_of_cats,
+            )
+            assert new_cat_wallet is not None
+        else:
+            for wallet in self.wallet_state_manager.wallets:
+                if self.wallet_state_manager.wallets[wallet].type() == WalletType.CAT:
+                    if self.wallet_state_manager.wallets[wallet].cat_info.limitations_program_hash == cat_tail_hash:
+                        new_cat_wallet = self.wallet_state_manager.wallets[wallet]
 
+        assert new_cat_wallet is not None
         cat_wallet_id = new_cat_wallet.wallet_info.id
 
         dao_info = DAOInfo(
