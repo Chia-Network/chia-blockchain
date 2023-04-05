@@ -255,16 +255,21 @@ class Mempool:
 
         assert item.fee < MEMPOOL_ITEM_FEE_LIMIT
         assert item.npc_result.conds is not None
+        assert item.cost <= self.mempool_info.max_block_clvm_cost
 
-        # TODO: this block could be simplified by removing all items in a single
-        # SQL query. Or at least figure out which items to remove and then
-        # remove them all in a single call to remove_from_pool()
         with self._db_conn:
-            while self.at_full_capacity(item.cost):
-                # pick the item with the lowest fee per cost to remove
-                cursor = self._db_conn.execute("SELECT name FROM tx ORDER BY fee_per_cost ASC, seq DESC LIMIT 1")
-                name = bytes32(cursor.fetchone()[0])
-                self.remove_from_pool([name], MempoolRemoveReason.POOL_FULL)
+            total_cost = int(self.total_mempool_cost())
+            if total_cost + item.cost > self.mempool_info.max_size_in_cost:
+                to_remove: List[bytes32] = []
+                # pick the items with the lowest fee per cost to remove
+                cursor = self._db_conn.execute("SELECT name, cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
+                for row in cursor:
+                    to_remove.append(bytes32(row[0]))
+                    total_cost -= int(row[1])
+                    if total_cost + item.cost <= self.mempool_info.max_size_in_cost:
+                        break
+
+                self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
             if SQLITE_NO_GENERATED_COLUMNS:
                 self._db_conn.execute(
