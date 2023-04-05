@@ -207,7 +207,7 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
         await self.server.start_client(
-            PeerInfo(resolve(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
+            PeerInfo(await resolve(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
         )
 
     async def _query_dns(self, dns_address: str) -> None:

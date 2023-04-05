@@ -127,7 +127,9 @@ class Crawler:
 
         try:
             connected = await self.create_client(
-                PeerInfo(str(resolve(peer.ip_address, prefer_ipv6=self.config.get("prefer_ipv6", False))), peer.port),
+                PeerInfo(
+                    str(await resolve(peer.ip_address, prefer_ipv6=self.config.get("prefer_ipv6", False))), peer.port
+                ),
                 peer_action,
             )
             if not connected:
