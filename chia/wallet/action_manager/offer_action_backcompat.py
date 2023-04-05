@@ -69,7 +69,6 @@ async def old_request_to_new(
 
     final_solver.setdefault("actions", [])
     for asset_id, amount in offered_assets.items():
-
         # Get the wallet
         if asset_id is None:
             wallet = wallet_state_manager.main_wallet

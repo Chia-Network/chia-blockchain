@@ -422,7 +422,6 @@ class RequestPayment:
             )
             return wrapper
         else:
-
             # For optimization, the chialisp takes the already treehashed committed arguments
             # At this level, it makes more sense to be dealing with the pre-hashed arguments
             # So before we pass our committed args to the chialisp, we walk the tree and hash everything that is a leaf
