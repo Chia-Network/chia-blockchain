@@ -35,7 +35,6 @@ class PuzzleDecoratorProtocol(Protocol):
 
 
 class PuzzleDecoratorManager:
-
     decorator_list: List[PuzzleDecoratorProtocol]
 
     @staticmethod
