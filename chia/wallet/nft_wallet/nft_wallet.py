@@ -1522,7 +1522,7 @@ class NFTWallet:
             puzzle_announcements_to_assert=puzzle_assertions,
         )
         did_inner_sol: Program = Program.to([1, did_p2_solution])
-        did_full_puzzle: Program = chia.wallet.singleton.create_singleton_fullpuz(
+        did_full_puzzle: Program = chia.wallet.singleton.create_singleton_puzzle(
             innerpuz,
             did_wallet.did_info.origin_coin.name(),
         )

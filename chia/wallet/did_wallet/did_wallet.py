@@ -37,8 +37,8 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE,
-    create_singleton_fullpuz,
-    create_singleton_fullpuz_hash,
+    create_singleton_puzzle,
+    create_singleton_puzzle_hash,
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.transaction_record import TransactionRecord
@@ -407,7 +407,7 @@ class DIDWallet:
 
         # TODO: if not the first singleton, and solution mode == recovery
         if not self._coin_is_first_singleton(coin):
-            full_puzzle = create_singleton_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
+            full_puzzle = create_singleton_puzzle(inner_puzzle, self.did_info.origin_coin.name())
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
@@ -553,10 +553,10 @@ class DIDWallet:
                 self.did_info.origin_coin.name(),
                 did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
-            return create_singleton_fullpuz(innerpuz, self.did_info.origin_coin.name())
+            return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         else:
             innerpuz = Program.to((8, 0))
-            return create_singleton_fullpuz(innerpuz, bytes32([0] * 32))
+            return create_singleton_puzzle(innerpuz, bytes32([0] * 32))
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
@@ -570,7 +570,7 @@ class DIDWallet:
             origin_coin_name,
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
-        return create_singleton_fullpuz_hash(innerpuz_hash, origin_coin_name)
+        return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -618,7 +618,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = create_singleton_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -636,7 +636,7 @@ class DIDWallet:
             ]
         )
         # Create an additional spend to confirm the change on-chain
-        new_full_puzzle: Program = create_singleton_fullpuz(
+        new_full_puzzle: Program = create_singleton_puzzle(
             new_inner_puzzle,
             self.did_info.origin_coin.name(),
         )
@@ -738,7 +738,7 @@ class DIDWallet:
             innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
-        full_puzzle: Program = create_singleton_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             self.did_info.current_inner,
             self.did_info.origin_coin.name(),
         )
@@ -824,7 +824,7 @@ class DIDWallet:
         innersol: Program = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = create_singleton_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -859,7 +859,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = create_singleton_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -938,7 +938,7 @@ class DIDWallet:
         innersol = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = create_singleton_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -1055,7 +1055,7 @@ class DIDWallet:
         # full solution is (parent_info my_amount solution)
         assert self.did_info.current_inner is not None
         innerpuz: Program = self.did_info.current_inner
-        full_puzzle: Program = create_singleton_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -1271,7 +1271,7 @@ class DIDWallet:
 
         did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
         did_inner_hash = did_inner.get_tree_hash()
-        did_full_puz = create_singleton_fullpuz(did_inner, launcher_coin.name())
+        did_full_puz = create_singleton_puzzle(did_inner, launcher_coin.name())
         did_puzzle_hash = did_full_puz.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
