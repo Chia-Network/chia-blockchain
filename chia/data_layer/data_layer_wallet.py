@@ -4,10 +4,11 @@ import dataclasses
 import logging
 import time
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
+from typing_extensions import final
 
 from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import OfferIntegrityError
@@ -100,9 +101,7 @@ class Mirror:
         )
 
 
-_T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
-
-
+@final
 class DataLayerWallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -115,16 +114,14 @@ class DataLayerWallet:
 
     @classmethod
     async def create(
-        cls: Type[_T_DataLayerWallet],
+        cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
         wallet_info: WalletInfo,
-        name: Optional[str] = None,
-    ) -> _T_DataLayerWallet:
+    ) -> DataLayerWallet:
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
         self.wallet_info = wallet_info
         self.wallet_id = uint8(self.wallet_info.id)
 
@@ -138,28 +135,22 @@ class DataLayerWallet:
         return self.wallet_info.id
 
     @classmethod
-    async def create_new_dl_wallet(
-        cls: Type[_T_DataLayerWallet],
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        name: Optional[str] = "DataLayer Wallet",
-    ) -> _T_DataLayerWallet:
+    async def create_new_dl_wallet(cls, wallet_state_manager: WalletStateManager) -> DataLayerWallet:
         """
         This must be called under the wallet state manager lock
         """
 
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
 
         for _, w in self.wallet_state_manager.wallets.items():
             if w.type() == WalletType.DATA_LAYER:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        assert name is not None
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name,
+            "DataLayer Wallet",
             WalletType.DATA_LAYER.value,
             "",
         )
