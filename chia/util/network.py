@@ -145,7 +145,7 @@ def class_for_type(type: NodeType) -> Any:
     raise ValueError("No class for type")
 
 
-def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
+def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     try:
         return IPAddress.create(host)
     except ValueError:
