@@ -28,7 +28,7 @@ def wallet_cmd(ctx: click.Context) -> None:
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
 @click.option("--verbose", "-v", count=True, type=int)
@@ -49,7 +49,7 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-o",
@@ -140,7 +140,7 @@ def get_transactions_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
 @click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
@@ -227,7 +227,7 @@ def send_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-w",
     "--wallet_type",
@@ -255,7 +255,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
     default=None,
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-n/-l",
     "--new-address/--latest-address",
@@ -286,7 +286,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
     default=None,
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
     extra_params = {"id": id}
     import asyncio
@@ -304,7 +304,7 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
     extra_params: Dict[str, Any] = {}
     import asyncio
@@ -322,7 +322,7 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-a", "--address", help="The address you want to use for signing", type=str, required=True)
 @click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
 def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, address: str, hex_message: str) -> None:
@@ -344,7 +344,7 @@ def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, addre
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
 )
@@ -400,7 +400,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-o",
     "--offer",
@@ -459,7 +459,7 @@ def make_offer_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-id", "--id", help="The ID of the offer that you wish to examine")
 @click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
 @click.option("-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True)
@@ -505,7 +505,7 @@ def get_offers_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
 @click.option(
     "-m", "--fee", help="The fee to use when pushing the completed offer, in XCH", default="0", show_default=True
@@ -546,7 +546,7 @@ def take_offer_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True)
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @click.option(
@@ -589,7 +589,7 @@ def did_cmd():
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-n", "--name", help="Set the DID wallet name", type=str)
 @click.option(
     "-a",
@@ -627,7 +627,7 @@ def did_create_wallet_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--did_id", help="DID ID you want to use for signing", type=str, required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: str, hex_message: str) -> None:
@@ -647,7 +647,7 @@ def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: s
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
 @click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
 def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str) -> None:
@@ -667,7 +667,7 @@ def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
 def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
@@ -691,7 +691,7 @@ def nft_cmd():
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-di", "--did-id", help="DID Id to use", type=str)
 @click.option("-n", "--name", help="Set the NFT wallet name", type=str)
 def nft_wallet_create_cmd(
@@ -713,7 +713,7 @@ def nft_wallet_create_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=str, required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: str, hex_message: str) -> None:
@@ -733,7 +733,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ra", "--royalty-address", help="Royalty address", type=str)
 @click.option("-ta", "--target-address", help="Target address", type=str)
@@ -831,7 +831,7 @@ def nft_mint_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
 @click.option("-u", "--uri", help="URI to add to the NFT", type=str)
@@ -888,7 +888,7 @@ def nft_add_uri_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
 @click.option("-ta", "--target-address", help="Target recipient wallet address", type=str, required=True)
@@ -939,7 +939,7 @@ def nft_transfer_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
@@ -958,7 +958,7 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-di", "--did-id", help="DID Id to set on the NFT", type=str, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to set the DID on", type=str, required=True)
@@ -1009,7 +1009,7 @@ def nft_set_did_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
 def nft_get_info_cmd(
     wallet_rpc_port: Optional[int],
@@ -1043,7 +1043,7 @@ def notification_cmd():
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-t", "--to-address", help="The address to send the notification to", type=str, required=True)
 @click.option(
     "-a",
@@ -1087,7 +1087,7 @@ def _send_notification(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="The specific notification ID to show", type=str, default=[], multiple=True)
 @click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
 @click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
@@ -1120,7 +1120,7 @@ def _get_notifications(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="A specific notification ID to delete", type=str, multiple=True)
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
 def _delete_notifications(
