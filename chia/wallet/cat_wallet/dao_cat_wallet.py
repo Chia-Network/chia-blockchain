@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -13,6 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.wallet.transaction_record import TransactionRecord
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
@@ -177,8 +178,12 @@ class DAOCATWallet:
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         await self.lineage_store.remove_lineage_proof(name)
 
-    # maybe we change this to return the full records and just add the clean ones ourselves later
-    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> List[LockedCoinInfo]:
+    async def advanced_select_coins(
+        self,
+        amount: uint64,
+        proposal_id: bytes32,
+        permission_to_convert_more: bool = False
+    ) -> List[LockedCoinInfo]:
         coins = []
         s = 0
         for coin in self.dao_cat_info.locked_coins:
@@ -192,7 +197,11 @@ class DAOCATWallet:
                 s += coin.coin.amount
                 if s >= amount:
                     break
-        assert s >= amount
+        if s < amount:
+            if permission_to_convert_more:
+                tx_list = await self.create_new_dao_cats(amount - s)
+            else:
+                raise ValueError("We do not have enough CATs in Voting Mode right now. Please convert some more or try again with permission to convert.")
         return coins
 
     def id(self) -> uint32:
@@ -326,6 +335,32 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
         return puzzle
+
+    async def create_new_dao_cats(
+        self,
+        amount: uint64,
+        push: bool = False
+    ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
+        # check there are enough cats to convert
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
+        cat_balance = await cat_wallet.get_spendable_balance()
+        if cat_balance < amount:
+            raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
+        # get the lockup puzzle hash
+        lockup_puzzle = await self.get_new_puzzle()
+
+        # create the cat spend
+        txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle.get_tree_hash()])
+        new_cats = []
+        cat_puzzle_hash: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle).get_tree_hash()
+        if push:
+            for tx in txs:
+                await self.wallet_state_manager.add_pending_transaction(tx)
+                for coin in tx.spend_bundle.additions():
+                    if coin.puzzle_hash == cat_puzzle_hash:
+                        new_cats.append(coin)
+
+        return txs, new_cats
 
     async def exit_vote_state(self, coins: List[LockedCoinInfo]):
         extra_delta, limitations_solution = 0, Program.to([])
@@ -462,7 +497,7 @@ class DAOCATWallet:
     async def get_new_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    async def get_new_puzzlehash(self) -> bytes32:
+    async def get_new_puzzle(self) -> Program:
         record = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         inner_puzzle = self.standard_wallet.puzzle_for_pk(record.pubkey)
         puzzle = get_lockup_puzzle(
@@ -473,6 +508,10 @@ class DAOCATWallet:
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
         await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
+        return puzzle
+
+    async def get_new_puzzlehash(self) -> bytes32:
+        puzzle = await self.get_new_puzzle()
         return puzzle.get_tree_hash()
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
@@ -513,6 +552,29 @@ class DAOCATWallet:
             amount += record.coin.amount
 
         return uint128(amount)
+
+    async def get_votable_balance(
+        self,
+        proposal_id: Optional[bytes32] = None,
+        include_free_cats: bool = True,
+    ):
+        balance = 0
+        for coin in self.dao_cat_info.locked_coins:
+            if proposal_id is not None:
+                compatible = True
+                for active_vote in coin.active_votes:
+                    if active_vote == proposal_id:
+                        compatible = False
+                        break
+                if compatible:
+                    balance += coin.coin.amount
+            else:
+                balance += coin.coin.amount
+        if include_free_cats:
+            cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
+            cat_balance = await cat_wallet.get_spendable_balance()
+            balance += cat_balance
+        return balance
 
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []

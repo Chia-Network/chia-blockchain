@@ -138,7 +138,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # Send some cats to the dao_cat lockup
     dao_cat_amt = uint64(100)
     async with wallet_node_0.wallet_state_manager.lock:
-        txs = await dao_wallet_0.create_new_dao_cats(dao_cat_amt)
+        txs, new_coins = await dao_wallet_0.create_new_dao_cats(dao_cat_amt)
     sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.process_transaction_records(records=txs)

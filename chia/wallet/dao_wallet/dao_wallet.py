@@ -856,8 +856,8 @@ class DAOWallet:
         full_proposal_puzzle: Program,
         dao_proposal_puzzle: Program,
         launcher_coin: Coin,
+        vote_amount: uint64,
     ) -> SpendBundle:
-        # TODO: connect with DAO CAT Wallet here
 
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
@@ -865,6 +865,8 @@ class DAOWallet:
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         assert dao_cat_wallet is not None
+        coins = dao_cat_wallet.select_coins(vote_amount)
+
         # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_p2_singleton_mod_hash
         # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from
@@ -1014,21 +1016,14 @@ class DAOWallet:
     def get_cat_wallet_id(self) -> uint64:
         return self.dao_info.cat_wallet_id
 
-    async def create_new_dao_cats(self, amount: uint64):
-        # check there are enough cats to convert
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        cat_balance = await cat_wallet.get_spendable_balance()
-        if cat_balance < amount:
-            raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
+    async def create_new_dao_cats(
+        self,
+        amount: uint64,
+        push: bool = False
+    ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # get the lockup puzzle hash
         dao_cat_wallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
-        lockup_puzzle_hash = await dao_cat_wallet.get_new_puzzlehash()
-
-        # create the cat spend
-        txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle_hash])
-        for tx in txs:
-            await self.wallet_state_manager.add_pending_transaction(tx)
-        return txs
+        return (await dao_cat_wallet.create_new_dao_cats(amount, push))
 
     @staticmethod
     def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
