@@ -260,15 +260,19 @@ class Mempool:
         with self._db_conn:
             total_cost = int(self.total_mempool_cost())
             if total_cost + item.cost > self.mempool_info.max_size_in_cost:
-                to_remove: List[bytes32] = []
                 # pick the items with the lowest fee per cost to remove
-                cursor = self._db_conn.execute("SELECT name, cost FROM tx ORDER BY fee_per_cost ASC, seq DESC")
-                for row in cursor:
-                    to_remove.append(bytes32(row[0]))
-                    total_cost -= int(row[1])
-                    if total_cost + item.cost <= self.mempool_info.max_size_in_cost:
-                        break
-
+                cursor = self._db_conn.execute(
+                    """SELECT name FROM tx
+                    WHERE name NOT IN (
+                        SELECT name FROM (
+                            SELECT name,
+                            SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
+                            FROM tx) AS tx_with_cost
+                        WHERE total_cost <= ?)
+                    """,
+                    (self.mempool_info.max_size_in_cost - item.cost,),
+                )
+                to_remove: List[bytes32] = [bytes32(row[0]) for row in cursor]
                 self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
             if SQLITE_NO_GENERATED_COLUMNS:
