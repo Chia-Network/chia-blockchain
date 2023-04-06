@@ -1063,7 +1063,7 @@ class DAOWallet:
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
         created_coin = [coin for coin in tx_record.additions if coin.amount == amount][0]
         # TODO: How are we going to track p2_singletons?
-        await self.wallet_state_manager.add_interested_coin_id([created_coin.name()])
+        await self.wallet_state_manager.add_interested_coin_ids([created_coin.name()])
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record
 
