@@ -13,7 +13,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.wallet.transaction_record import TransactionRecord
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
@@ -37,6 +36,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.wallet_types import WalletType
@@ -179,10 +179,7 @@ class DAOCATWallet:
         await self.lineage_store.remove_lineage_proof(name)
 
     async def advanced_select_coins(
-        self,
-        amount: uint64,
-        proposal_id: bytes32,
-        permission_to_convert_more: bool = False
+        self, amount: uint64, proposal_id: bytes32, permission_to_convert_more: bool = False
     ) -> List[LockedCoinInfo]:
         coins = []
         s = 0
@@ -200,8 +197,12 @@ class DAOCATWallet:
         if s < amount:
             if permission_to_convert_more:
                 tx_list = await self.create_new_dao_cats(amount - s)
+                self.log.info("New voting tokens created: %s", tx_list)
             else:
-                raise ValueError("We do not have enough CATs in Voting Mode right now. Please convert some more or try again with permission to convert.")
+                raise ValueError(
+                    "We do not have enough CATs in Voting Mode right now. "
+                    "Please convert some more or try again with permission to convert."
+                )
         return coins
 
     def id(self) -> uint32:
@@ -337,9 +338,7 @@ class DAOCATWallet:
         return puzzle
 
     async def create_new_dao_cats(
-        self,
-        amount: uint64,
-        push: bool = False
+        self, amount: uint64, push: bool = False
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
@@ -352,7 +351,9 @@ class DAOCATWallet:
         # create the cat spend
         txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle.get_tree_hash()])
         new_cats = []
-        cat_puzzle_hash: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle).get_tree_hash()
+        cat_puzzle_hash: Program = construct_cat_puzzle(
+            CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle
+        ).get_tree_hash()
         if push:
             for tx in txs:
                 await self.wallet_state_manager.add_pending_transaction(tx)

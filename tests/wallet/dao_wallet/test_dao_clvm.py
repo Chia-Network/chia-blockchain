@@ -116,7 +116,7 @@ def test_proposal() -> None:
 
 
 def test_proposal_timer() -> None:
-    proposal_pass_percentage: uint64 = uint64(15)
+    # proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     # LOCKUP_TIME: uint64 = uint64(200)
@@ -250,7 +250,7 @@ def test_lockup() -> None:
     # LOCKUP_TIME
     # PUBKEY
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
+    # LOCKUP_TIME: uint64 = uint64(200)
 
     INNERPUZ = Program.to(1)
     previous_votes = [0xFADEDDAB]

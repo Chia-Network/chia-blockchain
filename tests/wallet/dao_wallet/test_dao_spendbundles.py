@@ -258,7 +258,7 @@ def test_close_proposal():
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
-    PREVIOUS_VOTES: List[bytes] = [0xFADEDDAB]
+    # PREVIOUS_VOTES: List[bytes] = [0xFADEDDAB]
 
     proposal_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
@@ -370,3 +370,5 @@ def test_close_proposal():
             0,
         ]
     )
+
+    raise RuntimeError("TODO: ", treasury_coin, timer_puz, proposal_coin, proposal_solution)

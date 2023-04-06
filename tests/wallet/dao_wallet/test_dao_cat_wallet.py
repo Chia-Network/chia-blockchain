@@ -14,10 +14,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
+
+# from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.transaction_record import TransactionRecord
 

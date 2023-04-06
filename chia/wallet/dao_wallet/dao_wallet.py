@@ -949,14 +949,13 @@ class DAOWallet:
         launcher_coin: Coin,
         vote_amount: uint64,
     ) -> SpendBundle:
-
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         assert dao_cat_wallet is not None
-        coins = dao_cat_wallet.select_coins(vote_amount)
+        # coins = dao_cat_wallet.select_coins(vote_amount)
 
         # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_p2_singleton_mod_hash
@@ -1108,13 +1107,11 @@ class DAOWallet:
         return self.dao_info.cat_wallet_id
 
     async def create_new_dao_cats(
-        self,
-        amount: uint64,
-        push: bool = False
+        self, amount: uint64, push: bool = False
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # get the lockup puzzle hash
         dao_cat_wallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
-        return (await dao_cat_wallet.create_new_dao_cats(amount, push))
+        return await dao_cat_wallet.create_new_dao_cats(amount, push)
 
     @staticmethod
     def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
