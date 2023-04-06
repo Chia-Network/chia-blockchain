@@ -169,15 +169,23 @@ async def test_cat_spend(self_hostname: str, two_wallet_nodes: SimulatorsAndWall
     assert dao_wallet is not None
     assert dao_cat_wallet is not None
 
-    # cat wallet balance is 40
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
-    await time_out_assert(20, dao_cat_wallet.get_votable_balance, 40)
-    await time_out_assert(20, dao_cat_wallet.get_votable_balance, 0, include_free_cats=False)
-
-    await dao_cat_wallet.create_new_dao_cats(35, push=True)
+    # cat wallet balance is 55
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, 5)
-    await time_out_assert(20, dao_cat_wallet.get_votable_balance, 40)
+    await time_out_assert(20, cat_wallet.get_confirmed_balance, 55)
+    await time_out_assert(20, dao_cat_wallet.get_votable_balance, 55)
+    await time_out_assert(20, dao_cat_wallet.get_votable_balance, 0, include_free_cats=False)
+
+    txs, new_cats = await dao_cat_wallet.create_new_dao_cats(35, push=True)
+    await time_out_assert(
+        15, tx_in_pool, True, full_node_api.full_node.mempool_manager, txs[0].spend_bundle.name()
+    )
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    # coins = await cat_wallet.select_coins(55)
+
+    await time_out_assert(20, cat_wallet.get_spendable_balance, 20)
+    await time_out_assert(20, cat_wallet.get_confirmed_balance, 20)
+    await time_out_assert(20, dao_cat_wallet.get_votable_balance, 55)
     await time_out_assert(20, dao_cat_wallet.get_votable_balance, 35, include_free_cats=False)
