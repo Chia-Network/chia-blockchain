@@ -532,7 +532,7 @@ class DAOWallet(WalletProtocol):
                     break
         else:
             # Didn't find a cat wallet, so create one
-            cat_wallet: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
+            cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
                 self.wallet_state_manager, self.standard_wallet, cat_tail_hash.hex()
             )
 
@@ -650,6 +650,7 @@ class DAOWallet(WalletProtocol):
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         if cat_tail_hash is None:
+            assert amount_of_cats_to_create is not None
             different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats_to_create), exclude=[origin])
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
@@ -880,11 +881,11 @@ class DAOWallet(WalletProtocol):
         assert cat_wallet.cat_info.my_tail
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
-            launcher_coin.name(),
-            cat_tail_hash,
-            self.dao_info.treasury_id,
-            uint64(0),
-            uint64(0),
+            proposal_id=launcher_coin.name(),
+            cat_tail_hash=cat_tail_hash,
+            treasury_id=self.dao_info.treasury_id,
+            votes_sum=uint64(0),
+            total_votes=uint64(0),
             spend_or_update_flag="x",  # TODO: decide spend or update
             proposed_puzzle_hash=proposed_puzzle_hash,
         )
@@ -921,10 +922,11 @@ class DAOWallet(WalletProtocol):
         await self.add_parent(eve_coin.name(), future_parent)
 
         eve_spend = await self.generate_proposal_eve_spend(
-            eve_coin,
-            full_proposal_puzzle,
-            dao_proposal_puzzle,
-            launcher_coin,
+            eve_coin=eve_coin,
+            full_proposal_puzzle=full_proposal_puzzle,
+            dao_proposal_puzzle=dao_proposal_puzzle,
+            launcher_coin=launcher_coin,
+            vote_amount=uint64(0)
         )
         assert tx_record
         assert tx_record.spend_bundle is not None
@@ -967,6 +969,7 @@ class DAOWallet(WalletProtocol):
     # TODO: add an amount of dao_cat to spend on voting on the new proposal here
     async def generate_proposal_eve_spend(
         self,
+            *,
         eve_coin: Coin,
         full_proposal_puzzle: Program,
         dao_proposal_puzzle: Program,

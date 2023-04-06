@@ -192,13 +192,19 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
 def get_proposal_puzzle(
     *,
     proposal_id: bytes32,
-    cat_tail: bytes32,
+    cat_tail_hash: bytes32,
     treasury_id: bytes32,
     votes_sum: uint64,
     total_votes: uint64,
     spend_or_update_flag: str,
-    proposed_puzzle_hash: Program,
+    proposed_puzzle_hash: bytes32,
 ) -> Program:
+    """
+    spend_or_update_flag can take on the following values, ranked from safest to most dangerous:
+    s for spend only
+    u for update only
+    d for dangerous (can do anything)
+    """
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     puzzle = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
@@ -207,7 +213,7 @@ def get_proposal_puzzle(
         CAT_MOD_HASH,
         DAO_TREASURY_MOD_HASH,
         DAO_LOCKUP_MOD_HASH,
-        cat_tail,
+        cat_tail_hash,
         treasury_id,
         votes_sum,
         total_votes,
@@ -416,7 +422,7 @@ def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_TREASURY_MOD:
-                return curried_args.first().as_iter()  #type: ignore[no-any-return]
+                return curried_args.first().as_iter()  # type: ignore[no-any-return]
     except ValueError:
         import traceback
 
@@ -436,7 +442,7 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_PROPOSAL_MOD:
-                return curried_args.as_iter()  #type: ignore[no-any-return]
+                return curried_args.as_iter()  # type: ignore[no-any-return]
     except ValueError:
         import traceback
 
