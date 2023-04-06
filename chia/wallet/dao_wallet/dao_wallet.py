@@ -371,8 +371,8 @@ class DAOWallet(WalletProtocol):
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.DAO)
+    def type(cls) -> WalletType:
+        return WalletType.DAO
 
     def id(self) -> uint32:
         return self.wallet_info.id

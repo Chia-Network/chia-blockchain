@@ -8,7 +8,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -36,7 +36,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -67,7 +67,6 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.singleton import create_fullpuz, get_singleton_id_from_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -247,7 +246,6 @@ class WalletStateManager:
             elif wallet_info.type == WalletType.DATA_LAYER:
                 wallet = await DataLayerWallet.create(
                     self,
-                    self.main_wallet,
                     wallet_info,
                 )
             elif wallet_info.type == WalletType.DAO:
@@ -257,7 +255,7 @@ class WalletStateManager:
                     wallet_info,
                 )
             elif wallet_info.type == WalletType.DAO_CAT:
-                wallet = await DAOCATWallet.create(
+                wallet = await DAOCATWallet.create(  # TODO: create
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -1286,7 +1284,7 @@ class WalletStateManager:
                         if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
                             wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
-                                singleton_wallet = self.get_wallet(
+                                singleton_wallet: Union[PoolWallet, DAOWallet] = self.get_wallet(
                                     id=uint32(record.wallet_id), required_type=wallet_type_to_class[record.wallet_type]
                                 )
                                 curr_coin_state: CoinState = coin_state

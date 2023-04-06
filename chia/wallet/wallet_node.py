@@ -1656,7 +1656,7 @@ class WalletNode:
         assert len(parents_children) == 1
         full_coin = parents_children[0].coin
         assert full_coin.name() == coin_name
-        spend_height = parents_children[0].spend_height
+        # spend_height = parents_children[0].spend_height
         # fetch original coin's spend using our coin's created height
 
         raise "unfinished"
