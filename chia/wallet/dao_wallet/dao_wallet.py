@@ -1041,6 +1041,7 @@ class DAOWallet(WalletProtocol):
     async def create_add_money_to_treasury_spend(
         self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: uint32 = uint32(1)
     ) -> TransactionRecord:
+        # TODO: add test for create_add_money_to_treasury_spend
         # TODO: Do we need to ensure the p2_singleton amount is odd?
         # set up the p2_singleton
         funding_wallet: Wallet = self.wallet_state_manager.wallets[funding_wallet_id]
@@ -1056,8 +1057,8 @@ class DAOWallet(WalletProtocol):
             asset_id = bytes32.from_hexstr(funding_wallet.get_asset_id())
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
             tx_record: TransactionRecord = await funding_wallet.generate_signed_transaction(
-                [amount],
-                [p2_singleton_puzhash],
+                amount,
+                p2_singleton_puzhash,
                 fee=fee,
             )
         else:
