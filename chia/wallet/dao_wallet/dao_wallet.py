@@ -66,6 +66,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
+
 # from chia.wallet.wallet_state_manager import WalletStateManager
 
 # from chia.wallet.wallet_singleton_store import WalletSingletonStore
@@ -197,7 +198,7 @@ class DAOWallet(WalletProtocol):
         wallet_state_manager: Any,
         wallet: Wallet,
         treasury_id: bytes32,
-        filter_amount: uint64 = 1,
+        filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
     ) -> DAOWallet:
         """
@@ -406,7 +407,7 @@ class DAOWallet(WalletProtocol):
         # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
-            return []
+            return set()
 
         spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
@@ -782,11 +783,15 @@ class DAOWallet(WalletProtocol):
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
         """
+        if self.dao_info.current_treasury_innerpuz is None:
+            raise ValueError("generate_treasury_eve_spend called with nil self.dao_info.current_treasury_innerpuz")
         full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
         launcher_id, launcher_proof = self.dao_info.parent_info[0]
+        assert launcher_proof
         eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
         inner_puz = self.dao_info.current_treasury_innerpuz
+        assert inner_puz
         inner_sol = Program.to([0])
         fullsol = Program.to(
             [
@@ -798,6 +803,7 @@ class DAOWallet(WalletProtocol):
         eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
         eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
 
+        assertself.dao_info.current_treasury_innerpuz
         eve_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -865,6 +871,7 @@ class DAOWallet(WalletProtocol):
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         # breakpoint()
 
+        assert cat_wallet.cat_info.my_tail
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
             launcher_coin.name(),
@@ -913,6 +920,7 @@ class DAOWallet(WalletProtocol):
             dao_proposal_puzzle,
             launcher_coin,
         )
+        assert tx_record
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         return full_spend
 
@@ -1368,6 +1376,7 @@ class DAOWallet(WalletProtocol):
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        assert puzzle
         try:
             mod, curried_args = puzzle.uncurry()
         except ValueError as e:
