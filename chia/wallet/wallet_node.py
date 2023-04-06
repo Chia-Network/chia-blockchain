@@ -505,14 +505,9 @@ class WalletNode:
                         peer = matching_peer[0]
                     async with self.wallet_state_manager.db_wrapper.writer():
                         self.log.info(f"retrying coin_state: {state}")
-                        try:
-                            await self.wallet_state_manager.add_coin_states(
-                                [state], peer, None if fork_height == 0 else fork_height
-                            )
-                        except Exception as e:
-                            self.log.exception(f"Exception while adding states.. : {e}")
-                        else:
-                            await self.wallet_state_manager.blockchain.clean_block_records()
+                        await self.wallet_state_manager.add_coin_states(
+                            [state], peer, None if fork_height == 0 else fork_height
+                        )
             except asyncio.CancelledError:
                 self.log.info("Retry task cancelled, exiting.")
                 raise
@@ -864,20 +859,11 @@ class WalletNode:
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
-                            try:
-                                await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height)
-                            except Exception as e:
-                                tb = traceback.format_exc()
-                                self.log.error(f"Exception while adding state: {e} {tb}")
-                            else:
-                                await self.wallet_state_manager.blockchain.clean_block_records()
-
+                            await self.wallet_state_manager.add_coin_states(valid_states, peer, fork_height)
             except Exception as e:
                 tb = traceback.format_exc()
-                if self._shut_down:
-                    self.log.debug(f"Shutting down while adding state : {e} {tb}")
-                else:
-                    self.log.error(f"Exception while adding state: {e} {tb}")
+                log_level = logging.DEBUG if peer.closed or self._shut_down else logging.ERROR
+                self.log.log(log_level, f"validate_and_add failed - exception: {e}, traceback: {tb}")
 
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
@@ -894,16 +880,9 @@ class WalletNode:
                 return False
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.writer():
-                    try:
-                        self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.add_coin_states(states, peer, fork_height)
-                    except Exception as e:
-                        tb = traceback.format_exc()
-                        self.log.error(f"Error adding states.. {e} {tb}")
+                    self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
+                    if not await self.wallet_state_manager.add_coin_states(states, peer, fork_height):
                         return False
-                    else:
-                        await self.wallet_state_manager.blockchain.clean_block_records()
-
             else:
                 while len(all_tasks) >= target_concurrent_tasks:
                     all_tasks = [task for task in all_tasks if not task.done()]
@@ -1306,6 +1285,8 @@ class WalletNode:
         Returns all state that is valid and included in the blockchain proved by the weight proof. If return_old_states
         is False, only new states that are not in the coin_store are returned.
         """
+        if peer.closed:
+            return False
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
@@ -1512,10 +1493,8 @@ class WalletNode:
             start, end, peer_request_cache, all_peers
         )
         if blocks is None:
-            if self._shut_down:
-                self.log.debug(f"Shutting down, block fetching from: {start} to {end} canceled.")
-            else:
-                self.log.error(f"Error fetching blocks {start} {end}")
+            log_level = logging.DEBUG if self._shut_down or peer.closed else logging.ERROR
+            self.log.log(log_level, f"Error fetching blocks {start} {end}")
             return False
 
         if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
