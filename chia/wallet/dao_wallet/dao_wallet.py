@@ -65,6 +65,9 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 # from chia.wallet.wallet_singleton_store import WalletSingletonStore
 
@@ -91,7 +94,7 @@ class DAOWallet:
       * Get Updated Proposal Data
     """
 
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     dao_info: DAOInfo
@@ -102,7 +105,7 @@ class DAOWallet:
 
     @staticmethod
     async def create_new_dao_and_wallet(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         amount_of_cats: uint64,
         dao_rules: DAORules,
@@ -191,7 +194,7 @@ class DAOWallet:
 
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         treasury_id: bytes32,
         filter_amount: uint64 = 1,
@@ -259,7 +262,7 @@ class DAOWallet:
 
     @staticmethod
     async def create_new_dao_for_existing_cat(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         tail_hash: bytes32,
         dao_rules: DAORules,
@@ -342,7 +345,7 @@ class DAOWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
@@ -435,14 +438,14 @@ class DAOWallet:
         return
 
     async def is_spend_retrievable(self, coin_id: bytes32) -> bool:
-        wallet_node: Any = self.wallet_state_manager.wallet_node
+        wallet_node = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         children = await wallet_node.fetch_children(coin_id, peer)
         return len(children) > 0
 
     def get_cat_tail_hash(self) -> bytes32:
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+        cat_tail_hash: bytes32 = cat_wallet.cat_info.limitations_program_hash
         return cat_tail_hash
 
     async def resync_treasury_state(self) -> None:
@@ -572,10 +575,10 @@ class DAOWallet:
         return chia_tx
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return Program.to(0)
+        return Program(Program.to(0))
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return Program.to(0).get_tree_hash()
+        return bytes32(Program.to(0).get_tree_hash())
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -1035,14 +1038,14 @@ class DAOWallet:
         return
 
     async def create_add_money_to_treasury_spend(
-        self, amount: uint64, fee: uint64 = uint64(0), wallet_id: int = 1
-    ) -> Optional[TransactionRecord]:
+        self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: int = 1
+    ) -> TransactionRecord:
         # TODO: Do we need to ensure the p2_singleton amount is odd?
         # set up the p2_singleton
-        funding_wallet = self.wallet_state_manager.wallets[wallet_id]
+        funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
-            tx_record = await funding_wallet.generate_signed_transaction(
+            tx_record: TransactionRecord = await funding_wallet.generate_signed_transaction(
                 amount,
                 p2_singleton_puzhash,
                 fee=fee,
@@ -1050,7 +1053,7 @@ class DAOWallet:
         elif funding_wallet.type() == WalletType.CAT.value:
             asset_id = bytes32.from_hexstr(funding_wallet.get_asset_id())
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
-            tx_record = await funding_wallet.generate_signed_transaction(
+            tx_record: TransactionRecord = await funding_wallet.generate_signed_transaction(
                 [amount],
                 [p2_singleton_puzhash],
                 fee=fee,
@@ -1058,7 +1061,7 @@ class DAOWallet:
         else:
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
         created_coin = [coin for coin in tx_record.additions if coin.amount == amount][0]
-        # TODO: How are we going to track p2_singletons
+        # TODO: How are we going to track p2_singletons?
         await self.wallet_state_manager.add_interested_coin_id([created_coin.name()])
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record
@@ -1125,7 +1128,7 @@ class DAOWallet:
         self, amount: uint64, push: bool = False
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # get the lockup puzzle hash
-        dao_cat_wallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+        dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         return await dao_cat_wallet.create_new_dao_cats(amount, push)
 
     @staticmethod
