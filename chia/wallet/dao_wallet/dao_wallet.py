@@ -266,7 +266,7 @@ class DAOWallet:
         wallet: Wallet,
         tail_hash: bytes32,
         dao_rules: DAORules,
-        filter_amount: uint64 = 1,
+        filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ) -> DAOWallet:
@@ -863,7 +863,6 @@ class DAOWallet:
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        raise "unfinished"
         # breakpoint()
 
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
@@ -1043,6 +1042,7 @@ class DAOWallet:
         # TODO: Do we need to ensure the p2_singleton amount is odd?
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
+        tx_record: TransactionRecord
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
             tx_record: TransactionRecord = await funding_wallet.generate_signed_transaction(
