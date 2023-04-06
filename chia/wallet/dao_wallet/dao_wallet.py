@@ -260,6 +260,8 @@ class DAOWallet(WalletProtocol):
         await self.save_info(dao_info)
 
         # add interested puzzle hash so we can folllow treasury funds
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([puzhash], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         return self
 
@@ -562,6 +564,10 @@ class DAOWallet(WalletProtocol):
 
         await self.save_info(dao_info)
         assert self.dao_info.parent_info is not None
+
+        # get existing xch funds for treasury
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([puzhash], [self.id()])
         return
 
     async def create_tandem_xch_tx(
@@ -1096,8 +1102,6 @@ class DAOWallet(WalletProtocol):
         tx_record = await self._create_treasury_fund_transaction(funding_wallet, amount, fee)
 
         created_coin = [coin for coin in tx_record.additions if coin.amount == amount][0]
-        # TODO: How are we going to track p2_singletons?
-        await self.wallet_state_manager.add_interested_coin_ids([created_coin.name()])
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record
 

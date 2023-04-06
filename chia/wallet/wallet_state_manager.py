@@ -689,9 +689,7 @@ class WalletStateManager:
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DAO.value:
                     if wallet.dao_info.treasury_id in hint_list:
-                        return wallet.id(), WalletType(wallet.type())
-
-        # check if a dao p2_singleton is being spent
+                        return WalletIdentifier.create(wallet)
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
@@ -928,8 +926,8 @@ class WalletStateManager:
                 assert isinstance(wallet, DAOWallet)
                 singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
                 if wallet.dao_info.treasury_id == singleton_id:
-                    return wallet.id(), WalletType(wallet.type())
-        return None, None
+                    return WalletIdentifier.create(wallet)
+        return None
 
     async def handle_dao_proposal(
         self,
@@ -955,8 +953,8 @@ class WalletStateManager:
             if wallet.type() == WalletType.DAO:
                 assert isinstance(wallet, DAOWallet)
                 if wallet.dao_info.treasury_id == TREASURY_ID.as_atom():
-                    return wallet.id(), WalletType(wallet.type())
-        return None, None
+                    return WalletIdentifier.create(wallet)
+        return None
 
     async def handle_nft(
         self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState, coin_state: CoinState
