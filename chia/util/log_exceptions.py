@@ -11,6 +11,7 @@ def log_exceptions(
     log: logging.Logger,
     *, 
     consume: bool = False,
+    message: str = "Caught exception",
     level: int = logging.ERROR,
     show_traceback: bool = True,
     exceptions_to_catch: Union[Type[BaseException], Tuple[Type[BaseException], ...]] = Exception,
@@ -18,7 +19,7 @@ def log_exceptions(
     try:
         yield
     except exceptions_to_catch as e:
-        message = f"Caught exception: {type(e).__name__}: {e}"
+        message = f"{message}: {type(e).__name__}: {e}"
         if show_traceback:
             message += f"\n{traceback.format_exc()}"
 
