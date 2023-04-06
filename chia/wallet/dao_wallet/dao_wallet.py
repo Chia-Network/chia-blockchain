@@ -72,7 +72,7 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 # from chia.wallet.wallet_singleton_store import WalletSingletonStore
 
 
-class DAOWallet:
+class DAOWallet(WalletProtocol):
     """
     This is a wallet in the sense that it conforms to the interface needed by WalletStateManager.
     It is not a user-facing wallet. A user cannot spend or receive XCH though a wallet of this type.
@@ -100,7 +100,7 @@ class DAOWallet:
     dao_info: DAOInfo
     dao_rules: DAORules
     standard_wallet: Wallet
-    wallet_id: int
+    wallet_id: uint32
     apply_state_transition_call_count: int = 0
     new_peak_call_count: int = 0
 
@@ -1039,11 +1039,11 @@ class DAOWallet:
         return
 
     async def create_add_money_to_treasury_spend(
-        self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: int = 1
+        self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: uint32 = uint32(1)
     ) -> TransactionRecord:
         # TODO: Do we need to ensure the p2_singleton amount is odd?
         # set up the p2_singleton
-        funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
+        funding_wallet: Wallet = self.wallet_state_manager.wallets[funding_wallet_id]
         tx_record: TransactionRecord
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
@@ -1109,13 +1109,13 @@ class DAOWallet:
 
     def generate_wallet_name(self) -> str:
         """
-        Generate a new DID wallet name
+        Generate a new DAO wallet name
         :return: wallet name
         """
         max_num = 0
         for wallet in self.wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DAO:
-                matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)
+                matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)  # TODO: bug: wallet.wallet_info
                 if matched and int(matched.group(1)) > max_num:
                     max_num = int(matched.group(1))
         return f"Profile {max_num + 1}"
