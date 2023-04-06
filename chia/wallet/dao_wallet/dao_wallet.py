@@ -395,7 +395,8 @@ class DAOWallet:
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-    ) -> Optional[Set[Coin]]:
+            excluded_coin_amounts: Optional[List[uint64]] = None,
+    ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -406,7 +407,7 @@ class DAOWallet:
         # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
-            return None
+            return []
 
         spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
