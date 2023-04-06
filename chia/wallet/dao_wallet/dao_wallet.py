@@ -106,7 +106,7 @@ class DAOWallet:
         wallet: Wallet,
         amount_of_cats: uint64,
         dao_rules: DAORules,
-        filter_amount: uint64 = 1,
+        filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ) -> DAOWallet:
@@ -125,8 +125,8 @@ class DAOWallet:
         self.wallet_state_manager = wallet_state_manager
         if name is None:
             name = self.generate_wallet_name()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
+        # self.base_puzzle_program = None
+        # self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
@@ -134,15 +134,15 @@ class DAOWallet:
         if amount_of_cats > bal:
             raise ValueError("Not enough balance")
 
-        self.dao_info: DAOInfo = DAOInfo(
+        self.dao_info = DAOInfo(#xxx
             bytes32([0] * 32),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             [],
             [],
             None,
             None,
-            0,
+            uint32(0),
             filter_amount,
         )
         self.dao_rules = dao_rules
@@ -177,8 +177,8 @@ class DAOWallet:
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            dao_cat_wallet_id,
+            self.dao_info.cat_wallet_id, #xxx if this is a local wallet id, we might need to change it.
+            dao_cat_wallet_id, #xxx if this is a local wallet id, we might need to change it.
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -214,15 +214,15 @@ class DAOWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DAO wallet for existent DAO ...")
-        self.dao_info = DAOInfo(
+        self.dao_info = DAOInfo(#xxx
             treasury_id,  # treasury_id: bytes32
-            0,  # cat_wallet_id: int
-            0,  # dao_cat_wallet_id: int
+            uint64(0),# cat_wallet_id: uint64
+            uint64(0), # dao_cat_wallet_id: uint64
             [],  # proposals_list: List[ProposalInfo]
             [],  # treasury_id: bytes32
             None,  # current_coin
             None,  # current innerpuz
-            0,
+            uint32(0),
             filter_amount,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -274,7 +274,6 @@ class DAOWallet:
         This must be called under the wallet state manager lock
         :param wallet_state_manager: Wallet state manager
         :param wallet: Standard wallet
-        :param amount_of_cats: Initial amount of voting CATs
         :param name: Wallet name
         :param fee: transaction fee
         :return: DAO wallet
@@ -289,15 +288,15 @@ class DAOWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
 
-        self.dao_info: DAOInfo = DAOInfo(
+        self.dao_info = DAOInfo(#xxx
             bytes32([0] * 32),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             [],
             [],
             None,
             None,
-            0,
+            uint32(0),
             filter_amount,
         )
         self.dao_rules = dao_rules
@@ -349,7 +348,7 @@ class DAOWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: str = None,
+        name: Optional[str] = None,
     ):
         """
         Create a DID wallet based on the local database
@@ -378,7 +377,7 @@ class DAOWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list=None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]]=None) -> uint128:
         # This wallet only tracks coins, and does not hold any spendable value
         return uint128(0)
 
@@ -386,7 +385,8 @@ class DAOWallet:
         # No spendable or receivable value
         return uint64(0)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint128:  # comment
+    async def get_unconfirmed_balance(self, record_list:Optional[Set[WalletCoinRecord]]=None) -> uint128:
+        # TODO: should return zero?
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
     async def select_coins(
@@ -438,7 +438,7 @@ class DAOWallet:
         # self.log.info(f"DAOWallet.coin_added() is unused.")
         return
 
-    async def is_spend_retrievable(self, coin_id):
+    async def is_spend_retrievable(self, coin_id) -> bool:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         children = await wallet_node.fetch_children(coin_id, peer)
@@ -449,7 +449,7 @@ class DAOWallet:
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
         return cat_tail_hash
 
-    async def resync_treasury_state(self):
+    async def resync_treasury_state(self) -> None:
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
@@ -464,8 +464,11 @@ class DAOWallet:
             children = await wallet_node.fetch_children(parent_coin_id, peer)
             if len(children) == 0:
                 break
-            children_state = None
-            children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
+
+            children_state_list: List[CoinState] = [child for child in children if child.coin.amount % 2 == 1]
+            if len(children_state_list) == 0:
+                raise RuntimeError("Could not retrieve child_state")
+            children_state = children_state_list[0]
             assert children_state is not None
             child_coin = children_state.coin
             if parent_coin is not None:
@@ -569,7 +572,7 @@ class DAOWallet:
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return Program.to(0)
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         return Program.to(0).get_tree_hash()
 
     async def get_new_puzzle(self) -> Program:
@@ -594,11 +597,8 @@ class DAOWallet:
     async def get_new_p2_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    async def get_new_did_inner_hash(self) -> bytes32:
-        innerpuz = await self.get_new_did_innerpuz()
-        return innerpuz.get_tree_hash()
 
-    def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
+    def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
         parent_info = None
         for name, ccparent in self.dao_info.parent_info:
             if name == coin.parent_coin_info:
@@ -613,8 +613,10 @@ class DAOWallet:
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
-        Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher and eve coins.
-        The eve spend has to be completed in a separate tx using 'submit_eve_spend' once the number of blocks required by deo_rules.oracle_spend_delay has passed.
+        Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
+        and eve coins.
+        The eve spend has to be completed in a separate tx using 'submit_eve_spend' once the number of blocks required
+        by dao_rules.oracle_spend_delay has passed.
         This must be called under the wallet state manager lock
         """
 
@@ -962,7 +964,7 @@ class DAOWallet:
         # vote_info_or_p2_singleton_mod_hash
         # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from
         # previous_votes  ; set this to 0 if we have passed
-        # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from
+        # lockup_innerpuzhash_or_attendance_required  ;either the innerpuz of the locked up CAT we're taking a vote from
         inner_sol = Program.to([])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
@@ -996,11 +998,19 @@ class DAOWallet:
         # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
         #                                     ; the total number of CATs in circulation according to the treasury
         # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-        #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-        # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-        #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-        # proposal_timelock  ; we assert this from the treasury and announce it, so the timer knows what the the current timelock is
-        #                  ; we only use this when closing out so set it to 0 and we will do the vote spend case
+        #                              ; OR this is what percentage of the total votes must be YES - represented as an
+        #                              integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        #
+        # ; either the innerpuz of the locked up CAT we're taking a vote from OR
+        # ; the attendance required - the percentage of the current issuance which must have voted represented as
+        # ; a number from 0 to 10,000 - this is announced by the treasury
+        # lockup_innerpuzhash_or_attendance_required
+        #
+        #
+        # ; we assert this from the treasury and announce it, so the timer knows what the current timelock is
+        # ; we only use this when closing out so set it to 0 and we will do the vote spend case
+        # proposal_timelock
+        #
 
         # TODO: fill this in when we can take a list of coins in dao_proposal.clvm
         # voting_info = 0
@@ -1052,10 +1062,10 @@ class DAOWallet:
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)
 
-    async def get_spendable_balance(self, unspent_records: Set[WalletCoinRecord] = None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def get_max_send_amount(self, records: Set[WalletCoinRecord] = None) -> uint128:
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
