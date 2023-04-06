@@ -177,8 +177,8 @@ class DAOWallet:
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id, #xxx if this is a local wallet id, we might need to change it.
-            dao_cat_wallet_id, #xxx if this is a local wallet id, we might need to change it.
+            self.dao_info.cat_wallet_id, # TODO: xxx if this is a local wallet id, we might need to change it.
+            uint64(dao_cat_wallet_id),   # TODO: xxx if this is a local wallet id, we might need to change it.
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -247,7 +247,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
-            dao_cat_wallet_id,
+            uint64(dao_cat_wallet_id),
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -331,7 +331,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
-            dao_cat_wallet_id,
+            uint64(dao_cat_wallet_id),
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -481,6 +481,9 @@ class DAOWallet:
         parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_parent_coin, peer)
         assert parent_spend is not None
         parent_inner_puz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal.to_program())
+        if parent_inner_puz is None:
+            raise ValueError("get_innerpuzzle_from_puzzle failed")
+
         if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
             current_inner_puz = parent_inner_puz
         else:
@@ -534,8 +537,8 @@ class DAOWallet:
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
-            cat_wallet_id,  # cat_wallet_id: int
-            0,  # dao_wallet_id: int
+            uint64(cat_wallet_id),  # cat_wallet_id: int
+            uint64(0),  # dao_wallet_id: int
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
@@ -608,7 +611,7 @@ class DAOWallet:
 
     async def generate_new_dao(
         self,
-        amount_of_cats: Optional[uint64],
+        amount_of_cats: Optional[uint64], # TODO: Should this be Optional? Zero seems sufficient here.
         cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
@@ -627,6 +630,7 @@ class DAOWallet:
             coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
         else:
             coins = await self.standard_wallet.select_coins(uint64(fee + 1))
+            # amount_of_cats = 0
         if coins is None:
             return None
         # origin is normal coin which creates launcher coin
@@ -652,7 +656,7 @@ class DAOWallet:
             self.dao_info.parent_info,
             None,
             None,
-            0,
+            uint32(0),
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
@@ -682,13 +686,13 @@ class DAOWallet:
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            cat_wallet_id,
+            uint64(cat_wallet_id),
             self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             None,
             None,
-            0,
+            uint32(0),
             self.dao_info.filter_below_vote_amount,
         )
 
@@ -759,7 +763,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            cat_wallet_id,
+            uint64(cat_wallet_id),
             self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
@@ -776,7 +780,7 @@ class DAOWallet:
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
         """
-        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
+        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz.hazhs)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
         launcher_id, launcher_proof = self.dao_info.parent_info[0]
         eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
@@ -817,7 +821,7 @@ class DAOWallet:
         next_proof = LineageProof(
             eve_coin.parent_coin_info,
             inner_puz.get_tree_hash(),
-            eve_coin.amount,
+            uint64(eve_coin.amount),
         )
         next_coin = Coin(eve_coin.name(), eve_coin.puzzle_hash, eve_coin.amount)
         await self.add_parent(next_coin.name(), next_proof)
@@ -867,7 +871,8 @@ class DAOWallet:
             self.dao_info.treasury_id,
             0,
             0,
-            proposed_puzzle_hash,
+            spend_or_update_flag='x',
+            proposed_puzzle_hash=proposed_puzzle_hash,
         )
 
         full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
@@ -1143,10 +1148,14 @@ class DAOWallet:
     ):
         new_dao_info = copy.copy(self.dao_info)
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        if puzzle is None:
+            raise ValueError("get_innerpuzzle_from_puzzle failed")
         solution = (
             Program.from_bytes(bytes(new_state.solution)).rest().rest().first()
         )  # get proposal solution from full singleton solution
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
+        if singleton_id is None:
+            raise ValueError("get_singleton_id_from_puzzle failed")
         curried_args = uncurry_proposal(puzzle)  # not sure if we're going to use this
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
@@ -1170,6 +1179,8 @@ class DAOWallet:
         timer_coin = None
         if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
             current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
+            if current_innerpuz is None:
+                raise RuntimeError("get_new_puzzle_from_proposal_solution failed")
             # TODO: find timer coin
         else:
             # If we have entered the finished state
@@ -1190,7 +1201,7 @@ class DAOWallet:
                         singleton_id,
                         puzzle,
                         current_info.amount_voted,
-                        current_info.is_yes_vote,
+                        current_info.is_yes_vote, #TODO: should this be Optional?
                         current_coin,
                         current_innerpuz,
                         current_info.timer_coin,
@@ -1212,6 +1223,8 @@ class DAOWallet:
                 found = False
                 parent_coin_id = singleton_id
 
+                if self.dao_info.current_treasury_innerpuz is None:
+                    raise ValueError("self.dao_info.current_treasury_innerpuz is None")
                 treasury_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
                 (
                     singleton_struct,
@@ -1252,7 +1265,7 @@ class DAOWallet:
         new_proposal_info = ProposalInfo(
             singleton_id,
             puzzle,
-            0,  # assume we haven't voted any if we don't already know about this
+            uint64(0),  # assume we haven't voted any if we don't already know about this
             None,
             current_coin,
             current_innerpuz,
@@ -1278,6 +1291,8 @@ class DAOWallet:
             # TODO: what do we do here?
             return
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        if puzzle is None:
+            raise ValueError("get_innerpuzzle_from_puzzle failed")
         solution = (
             Program.from_bytes(bytes(new_state.solution)).rest().rest().first()
         )  # get proposal solution from full singleton solution
