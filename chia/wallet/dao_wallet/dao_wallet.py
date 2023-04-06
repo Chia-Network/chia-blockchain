@@ -23,7 +23,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import ConditionOpcode
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -125,8 +125,7 @@ class DAOWallet:
         self.wallet_state_manager = wallet_state_manager
         if name is None:
             name = self.generate_wallet_name()
-        # self.base_puzzle_program = None
-        # self.base_inner_puzzle_hash = None
+
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
@@ -209,8 +208,7 @@ class DAOWallet:
         self.wallet_state_manager = wallet_state_manager
         if name is None:
             name = self.generate_wallet_name()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
+
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DAO wallet for existent DAO ...")
@@ -283,8 +281,7 @@ class DAOWallet:
         self.wallet_state_manager = wallet_state_manager
         if name is None:
             name = self.generate_wallet_name()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
+
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
 
@@ -366,8 +363,7 @@ class DAOWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.dao_info = DAOInfo.from_json_dict(json.loads(wallet_info.data))
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
+
         return self
 
     @classmethod
@@ -475,6 +471,9 @@ class DAOWallet:
                 parent_parent_coin = parent_coin
             parent_coin = child_coin
             parent_coin_id = child_coin.name()
+
+        if parent_parent_coin is None:
+            raise RuntimeError("could not get parent_parent_coin of %s", children)
 
         # get lineage proof of parent spend, and also current innerpuz
         assert children_state.created_height
@@ -1300,13 +1299,13 @@ class DAOWallet:
         child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
-            self.dao_info.cat_wallet_id,  # cat_wallet_id: int
-            self.dao_info.dao_wallet_id,  # dao_wallet_id: int
+            self.dao_info.cat_wallet_id,  # cat_wallet_id: uint64
+            self.dao_info.dao_cat_wallet_id,  # dao_cat_wallet_id: uin64
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
             new_innerpuz,  # current innerpuz
-            block_height,
+            block_height,  # block_height: uint32
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
@@ -1317,6 +1316,9 @@ class DAOWallet:
         )
         await self.add_parent(new_state.coin.name(), future_parent)
         return
+
+    async def get_spend_history(self) -> List[Tuple[uint32, CoinSpend]]:
+        return []
 
     # TODO: Find a nice way to express interest in more than one singleton.
     #     e.g. def register_singleton_for_wallet()
