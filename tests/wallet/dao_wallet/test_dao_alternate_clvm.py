@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# mypy: ignore-errors
 from clvm.casts import int_to_bytes
 
 # from chia.types.blockchain_format.coin import Coin
@@ -51,7 +52,7 @@ def test_proposal() -> None:
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
-    self_destruct_time = 1000   # number of blocks
+    self_destruct_time = 1000  # number of blocks
     oracle_spend_delay = 10
     active_votes_list = [0xFADEDDAB]  # are the the ids of previously voted on proposals?
     acs: Program = Program.to(1)
