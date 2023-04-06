@@ -139,8 +139,8 @@ class DAOWallet:
 
         self.dao_info = DAOInfo(#xxx
             bytes32([0] * 32),
-            uint64(0),
-            uint64(0),
+            uint32(0),
+            uint32(0),
             [],
             [],
             None,
@@ -181,7 +181,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id, # TODO: xxx if this is a local wallet id, we might need to change it.
-            uint64(dao_cat_wallet_id),   # TODO: xxx if this is a local wallet id, we might need to change it.
+            dao_cat_wallet_id,   # TODO: xxx if this is a local wallet id, we might need to change it.
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -218,8 +218,8 @@ class DAOWallet:
         self.log.info("Creating DAO wallet for existent DAO ...")
         self.dao_info = DAOInfo(#xxx
             treasury_id,  # treasury_id: bytes32
-            uint64(0),# cat_wallet_id: uint64
-            uint64(0), # dao_cat_wallet_id: uint64
+            uint32(0),# cat_wallet_id: uint64
+            uint32(0), # dao_cat_wallet_id: uint64
             [],  # proposals_list: List[ProposalInfo]
             [],  # treasury_id: bytes32
             None,  # current_coin
@@ -249,7 +249,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
-            uint64(dao_cat_wallet_id),
+            dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -291,8 +291,8 @@ class DAOWallet:
 
         self.dao_info = DAOInfo(#xxx
             bytes32([0] * 32),
-            uint64(0),
-            uint64(0),
+            uint32(0),
+            uint32(0),
             [],
             [],
             None,
@@ -322,7 +322,7 @@ class DAOWallet:
             raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
-        # Now the dao wallet is created we can create the dao_cat wallet
+        # Now that the dao wallet is created we can create the dao_cat wallet
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
@@ -332,7 +332,7 @@ class DAOWallet:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
-            uint64(dao_cat_wallet_id),
+            dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -540,8 +540,8 @@ class DAOWallet:
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
-            uint64(cat_wallet_id),  # cat_wallet_id: int
-            uint64(0),  # dao_wallet_id: int
+            uint32(cat_wallet_id),  # cat_wallet_id: int
+            uint32(0),  # dao_wallet_id: int
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
@@ -689,7 +689,7 @@ class DAOWallet:
 
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            uint64(cat_wallet_id),
+            cat_wallet_id,
             self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
@@ -766,7 +766,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            uint64(cat_wallet_id),
+            cat_wallet_id,
             self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
@@ -1303,8 +1303,8 @@ class DAOWallet:
         child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
-            self.dao_info.cat_wallet_id,  # cat_wallet_id: uint64
-            self.dao_info.dao_cat_wallet_id,  # dao_cat_wallet_id: uin64
+            self.dao_info.cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
             self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
             self.dao_info.parent_info,  # treasury_id: bytes32
             child_coin,  # current_coin
