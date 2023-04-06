@@ -610,7 +610,7 @@ class CATWallet(WalletProtocol):
                 excluded_coin_amounts=exclude_coin_amounts,
             )
             selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transactions(
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
                 coins=chia_coins,
