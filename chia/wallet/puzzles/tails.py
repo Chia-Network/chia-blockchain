@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from chia_rs import Coin
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -223,7 +225,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         cls, wallet, tail_info: Dict, amount: uint64
     ) -> Tuple[TransactionRecord, SpendBundle]:
         if "coins" in tail_info:
-            coins = tail_info["coins"]
+            coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()
         else:
             coins = await wallet.standard_wallet.select_coins(amount)
@@ -236,8 +238,8 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         # TREASURY_SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
         tail: Program = cls.construct(
             [
-                origin_id,
-                (
+                Program(origin_id),
+                (  # type: ignore[list-item]  # TODO: fix type
                     tail_info["treasury_id"],
                     (Program.to(SINGLETON_MOD.get_tree_hash()), Program.to(SINGLETON_LAUNCHER.get_tree_hash())),
                 ),

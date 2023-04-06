@@ -255,7 +255,7 @@ class WalletStateManager:
                     wallet_info,
                 )
             elif wallet_info.type == WalletType.DAO_CAT:
-                wallet = await DAOCATWallet.create(  # TODO: create
+                wallet = await DAOCATWallet.create(  # type: ignore[attr-defined] # TODO: implement create
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -1767,7 +1767,7 @@ class WalletStateManager:
             if wallet.type() in valid_list:
                 valid = isinstance(wallet, PoolWallet) or isinstance(wallet, DAOWallet)
                 assert valid
-                await wallet.new_peak(uint64(peak.height))
+                await wallet.new_peak(uint64(peak.height))  # type: ignore[attr-defined]
         current_time = int(time.time())
 
         if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:

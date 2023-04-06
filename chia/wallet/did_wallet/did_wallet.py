@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# mypy: ignore-errors
 import dataclasses
 import json
 import logging

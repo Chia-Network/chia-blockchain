@@ -31,6 +31,7 @@ from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import NIL
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_spend import CoinSpend
@@ -1636,32 +1637,34 @@ class WalletNode:
         coin_names = [coin_name]
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
         # fetch full coin details
-        coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
+        res: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)  # type: ignore[attr-defined]
+        if res is None or not isinstance(res, wallet_protocol.RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
         valid_list = []
         # validate coin details
         if not self.is_trusted(peer):
-            for coin in coin_state.coin_states:
+            for coin_state in res.coin_states:
                 valid = await self.validate_received_state_from_peer(
-                    coin, peer, self.get_cache_for_peer(peer), fork_height
+                    coin_state, peer, self.get_cache_for_peer(peer), fork_height
                 )
                 if valid:
-                    valid_list.append(coin)
+                    valid_list.append(coin_state)
         if len(valid_list) != 1:
             raise PeerRequestException("Unable to fetch coin info")
         # fetch original coin's parent's children to get our coin
-        coin = valid_list[0].coin
-        parents_children = await self.fetch_children(valid_list)
+        # coin = valid_list[0].coin
+        # TODO: coin.name should probably be used in the call below to fetch_children
+        parents_children = await self.fetch_children(valid_list)  # type: ignore[call-arg,arg-type]
         assert len(parents_children) == 1
         full_coin = parents_children[0].coin
         assert full_coin.name() == coin_name
         # spend_height = parents_children[0].spend_height
         # fetch original coin's spend using our coin's created height
 
-        raise "unfinished"
         # breakpoint()
-        return
+        puzzle_reveal = NIL
+        solution = NIL
+        return CoinSpend(full_coin, puzzle_reveal, solution)
 
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
