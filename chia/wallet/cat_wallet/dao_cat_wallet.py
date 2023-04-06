@@ -39,7 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -253,17 +253,18 @@ class DAOCATWallet:
                 # CREATE_COIN new_puzzle coin.amount
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
                 primaries = [
-                    {
-                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    AmountWithPuzzlehash({
                         "amount": uint64(vote_amount),
+                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
                         "memos": [new_innerpuzzle.get_tree_hash()],
-                    }
+                    })
                 ]
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
                 )
                 inner_solution = await self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
+
                 )
             else:
                 vote_amount = amount - running_sum
@@ -271,16 +272,16 @@ class DAOCATWallet:
                 # CREATE_COIN old_puzzle change
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
                 primaries = [
-                    {
+                    AmountWithPuzzlehash({
                         "puzzlehash": new_innerpuzzle.get_tree_hash(),
                         "amount": uint64(vote_amount),
                         "memos": [new_innerpuzzle.get_tree_hash()],
-                    },
-                    {
+                    }),
+                    AmountWithPuzzlehash({
                         "puzzlehash": lci.inner_puzzle.get_tree_hash(),
                         "amount": uint64(change),
                         "memos": [lci.inner_puzzle.get_tree_hash()],
-                    },
+                    }),
                 ]
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
@@ -353,7 +354,7 @@ class DAOCATWallet:
         # create the cat spend
         txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle.get_tree_hash()])
         new_cats = []
-        cat_puzzle_hash: Program = construct_cat_puzzle(
+        cat_puzzle_hash: bytes32 = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle
         ).get_tree_hash()
         if push:
@@ -376,11 +377,11 @@ class DAOCATWallet:
 
             # CREATE_COIN new_puzzle coin.amount
             primaries = [
-                {
+                AmountWithPuzzlehash({
                     "puzzlehash": new_innerpuzzle.get_tree_hash(),
                     "amount": uint64(coin.amount),
                     "memos": [new_innerpuzzle.get_tree_hash()],
-                },
+                }),
             ]
             inner_solution = await self.standard_wallet.make_solution(
                 primaries=primaries,
@@ -444,11 +445,11 @@ class DAOCATWallet:
 
             # CREATE_COIN new_puzzle coin.amount
             # primaries = [
-            #     {
+            #     AmountWithPuzzlehash({
             #         "puzzlehash": new_innerpuzzle.get_tree_hash(),
             #         "amount": uint64(coin.amount),
             #         "memos": [new_innerpuzzle.get_tree_hash()],
-            #     },
+            #     }),
             # ]
 
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
