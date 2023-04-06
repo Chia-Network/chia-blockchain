@@ -208,7 +208,9 @@ class DNSServer:
             }
 
             qname = request.q.qname
-            qn = str(qname)
+            # DNS labels are mixed case with DNS resolvers that implement the use of bit 0x20 to improve
+            # transaction identity. See https://datatracker.ietf.org/doc/html/draft-vixie-dnsext-dns0x20-00
+            qn = str(qname).lower()
             qtype = request.q.qtype
             qt = QTYPE[qtype]
             if qn == D or qn.endswith("." + D):

@@ -161,7 +161,6 @@ class TestCATTrades:
             assert trade_make is not None
 
         peer = wallet_node_taker.get_full_node_peer()
-        assert peer is not None
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
@@ -675,7 +674,6 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
 
         peer = wallet_node_taker.get_full_node_peer()
-        assert peer is not None
         with pytest.raises(ValueError, match="This offer is no longer valid"):
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 

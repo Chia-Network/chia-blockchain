@@ -21,34 +21,22 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
-    construct_cat_puzzle,
-    match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.coin_selection import select_coins
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-)
-from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
+
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, CRCAT
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 if TYPE_CHECKING:
@@ -84,7 +72,7 @@ class CRCATWallet:
         wallet: Wallet,
         limitations_program_hash_hex: str,
         authorized_providers: List[bytes32],
-        proofs_checker: ProofsChecker,
+        proofs_checker: Program,
         name: Optional[str] = None,
     ) -> CRCATWallet:
         self = CRCATWallet()
@@ -166,9 +154,7 @@ class CRCATWallet:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CR-CAT wallet has been notified that {coin.name().hex()} was added")
         try:
-            coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                [coin.parent_coin_info], peer=peer
-            )
+            coin_state = await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                 coin_state[0].spent_height, coin_state[0].coin, peer
             )
@@ -183,7 +169,9 @@ class CRCATWallet:
             await self.lineage_store.add_lineage_proof(cr_cat.coin.name(), cr_cat.lineage_proof)
         except Exception:
             # The parent is not a CAT which means we need to scrub all of its children from our DB
-            child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_spend.coin.name())
+            child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(
+                coin_spend.coin.name()
+            )
             if len(child_coin_records) > 0:
                 for record in child_coin_records:
                     if record.wallet_id == self.id():
@@ -474,7 +462,7 @@ class CRCATWallet:
         return tx_list
 
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
-        if AssetType(puzzle_driver.type()) == AssetType.CAT and puzzle_driver["tail"] == self.tail_hash:
+        if AssetType(puzzle_driver.type()) == AssetType.CAT and puzzle_driver["tail"] == self.cat_info.tail_hash:
             inner_puzzle_driver: PuzzleInfo = puzzle_driver.also()
             return (
                 AssetType(inner_puzzle_driver.type()) == AssetType.CR
@@ -491,7 +479,7 @@ class CRCATWallet:
                     "type": AssetType.CR.value,
                     "authorized_providers": ["0x" + provider.hex() for provider in self.authorized_providers],
                     "proofs_checker": self.proofs_checker.as_program(),
-                }
+                },
             }
         )
 
