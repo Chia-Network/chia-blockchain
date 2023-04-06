@@ -169,7 +169,7 @@ class DAOWallet(WalletProtocol):
         if launcher_spend is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
 
         # Now the dao wallet is created we can create the dao_cat wallet
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -232,7 +232,7 @@ class DAOWallet(WalletProtocol):
             name, WalletType.DAO.value, info_as_string
         )
         await self.resync_treasury_state()
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.dao_info)
 
         if self.wallet_info is None:
@@ -322,7 +322,7 @@ class DAOWallet(WalletProtocol):
         if launcher_spend is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
 
         # Now that the dao wallet is created we can create the dao_cat wallet
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]

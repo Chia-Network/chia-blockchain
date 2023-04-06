@@ -111,7 +111,7 @@ class DAOCATWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.DAO_CAT, info_as_string)
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        await self.wallet_state_manager.add_new_wallet(self, self.id())
+        await self.wallet_state_manager.add_new_wallet(self)
         return self
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
