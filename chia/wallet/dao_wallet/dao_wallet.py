@@ -260,8 +260,6 @@ class DAOWallet(WalletProtocol):
         await self.save_info(dao_info)
 
         # add interested puzzle hash so we can folllow treasury funds
-        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([puzhash], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         return self
 
@@ -345,6 +343,9 @@ class DAOWallet(WalletProtocol):
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
+
+        # add interested puzzle hash so we can folllow treasury funds
+        await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
 
         return self
 
@@ -566,8 +567,7 @@ class DAOWallet(WalletProtocol):
         assert self.dao_info.parent_info is not None
 
         # get existing xch funds for treasury
-        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([puzhash], [self.id()])
+        await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         return
 
     async def create_tandem_xch_tx(
