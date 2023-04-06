@@ -85,7 +85,9 @@ def get_treasury_puzzle(dao_rules: DAORules) -> Program:
 
 
 def create_announcement_condition_for_nft_spend(
-    treasury_id: bytes32, nft_id: bytes32, target_address: bytes32
+    # treasury_id: bytes32, TODO: is treasury_id needed here?
+    nft_id: bytes32,
+    target_address: bytes32,
 ) -> Tuple[Program, Program]:
     # TODO: this delegated puzzle does not actually work with NFTs - need to copy more of the code later
     delegated_puzzle = Program.to([(1, [[51, target_address, 1]])])
@@ -94,8 +96,11 @@ def create_announcement_condition_for_nft_spend(
 
 
 def get_spend_p2_singleton_puzzle(
-    treasury_id: bytes32, xch_conditions: [Optional[List]], asset_conditions: [Optional[List[Tuple]]]
+    treasury_id: bytes32, xch_conditions: Optional[List], asset_conditions: Optional[List[Tuple]]  # type: ignore
 ) -> Program:
+    # TODO: typecheck get_spend_p2_singleton_puzzle arguments
+    # TODO: add tests for get_spend_p2_singleton_puzzle: pass xch_conditions as Puzzle, List and ConditionWithArgs
+    #
     # CAT_MOD_HASH
     # CONDITIONS  - this may also include announcements to spend an NFT
     # LIST_OF_TAILHASH_CONDITIONS
@@ -166,7 +171,7 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         ACTIVE_VOTES,
         _INNERPUZ,
     ) = list(curried_args.as_iter())
-    return ACTIVE_VOTES
+    return Program(ACTIVE_VOTES)
 
 
 def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
@@ -181,10 +186,11 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         _ACTIVE_VOTES,
         INNERPUZ,
     ) = list(curried_args.as_iter())
-    return INNERPUZ
+    return Program(INNERPUZ)
 
 
 def get_proposal_puzzle(
+    *,
     proposal_id: bytes32,
     cat_tail: bytes32,
     treasury_id: bytes32,
@@ -253,17 +259,17 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Program) -> DAORules:
 # This takes the treasury puzzle and treasury solution, not the full puzzle and full solution
 # This also returns the treasury puzzle and not the full puzzle
 def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
-    curried_args = uncurry_treasury(puzzle_reveal)
-    (
-        DAO_TREASURY_MOD_HASH,
-        DAO_PROPOSAL_VALIDATOR_MOD,
-        proposal_timelock,
-        soft_close_length,
-        attendance_required_percentage,
-        proposal_pass_percentage,
-        proposal_self_destruct_length,
-        oracle_spend_delay,
-    ) = curried_args
+    # curried_args = uncurry_treasury(puzzle_reveal)
+    # (
+    #     DAO_TREASURY_MOD_HASH,
+    #     DAO_PROPOSAL_VALIDATOR_MOD,
+    #     proposal_timelock,
+    #     soft_close_length,
+    #     attendance_required_percentage,
+    #     proposal_pass_percentage,
+    #     proposal_self_destruct_length,
+    #     oracle_spend_delay,
+    # ) = curried_args
     if solution.first() != Program.to(0):
         # Proposal Spend
         # first check if we are running a spend or update proposal
@@ -283,6 +289,7 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
 
 # This takes the proposal puzzle and proposal solution, not the full puzzle and full solution
 # This also returns the proposal puzzle and not the full puzzle
+# TODO: fix return type of get_new_puzzle_from_proposal_solution
 def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
     # Check if soft_close_length is in solution. If not, then add votes, otherwise close proposal
     if solution.at("rrrrrrf") != Program.to(0):
@@ -355,7 +362,7 @@ def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
 
     if mod != DAO_TREASURY_MOD:
         raise ValueError("Not a Treasury mod.")
-    return curried_args.as_iter()
+    return list(curried_args.as_iter())
 
 
 def uncurry_proposal(proposal_puzzle: Program) -> Program:
@@ -389,6 +396,8 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
     return puzzle
 
 
+# TODO: move curry_singleton to chia.wallet.singleton
+# TODO: Is this correct? See create_fullpuz
 def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
@@ -406,19 +415,19 @@ def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_TREASURY_MOD:
-                return curried_args.first().as_iter()
-    except Exception:
+                return curried_args.first().as_iter()  #type: ignore[no-any-return]
+    except ValueError:
         import traceback
 
         print(f"exception: {traceback.format_exc()}")
+
     return None
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
-def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Program]:
+def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
     """
     Given a puzzle test if it's a Proposal, if it is, return the curried arguments
-    :param puzzle: Puzzle
     :param curried_args: Puzzle
     :return: Curried parameters
     """
@@ -426,8 +435,8 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Progr
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_PROPOSAL_MOD:
-                return curried_args.as_iter()
-    except Exception:
+                return curried_args.as_iter()  #type: ignore[no-any-return]
+    except ValueError:
         import traceback
 
         print(f"exception: {traceback.format_exc()}")
