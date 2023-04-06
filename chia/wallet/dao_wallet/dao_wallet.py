@@ -386,8 +386,8 @@ class DAOWallet(WalletProtocol):
         return uint64(0)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        # TODO: should return zero?
-        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
+        # TODO: should get_unconfirmed_balance return zero?
+        return uint128(await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list))
 
     async def select_coins(
         self,
@@ -528,7 +528,7 @@ class DAOWallet(WalletProtocol):
             if wallet.type() == WalletType.CAT:
                 assert isinstance(wallet, CATWallet)
                 if wallet.cat_info.limitations_program_hash == cat_tail_hash:
-                    cat_wallet: CATWallet = wallet
+                    cat_wallet = wallet
                     break
         else:
             # Didn't find a cat wallet, so create one
@@ -614,7 +614,7 @@ class DAOWallet(WalletProtocol):
 
     async def generate_new_dao(
         self,
-        amount_of_cats: Optional[uint64],  # TODO: Should this be Optional? Zero seems sufficient here.
+        amount_of_cats_to_create: Optional[uint64],
         cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
@@ -626,14 +626,20 @@ class DAOWallet(WalletProtocol):
         This must be called under the wallet state manager lock
         """
 
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create < 0:
+            raise ValueError("amount_of_cats must be >= 0, or None")
+        if (amount_of_cats_to_create is None or amount_of_cats_to_create == 0) and cat_tail_hash is None:
+            raise ValueError("amount_of_cats must be > 0 or cat_tail_hash must be specified")
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0 and cat_tail_hash is not None:
+            raise ValueError("cannot create voting cats and use existing cat_tail_hash")
         if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
-        if amount_of_cats is not None:
-            coins = await self.standard_wallet.select_coins(uint64(amount_of_cats + fee + 1))
+        if amount_of_cats_to_create > 0:
+            coins = await self.standard_wallet.select_coins(uint64(amount_of_cats_to_create + fee + 1))
         else:
             coins = await self.standard_wallet.select_coins(uint64(fee + 1))
-            # amount_of_cats = 0
+
         if coins is None:
             return None
         # origin is normal coin which creates launcher coin
@@ -644,7 +650,7 @@ class DAOWallet(WalletProtocol):
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         if cat_tail_hash is None:
-            different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats), exclude=[origin])
+            different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats_to_create), exclude=[origin])
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
             cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
@@ -665,7 +671,7 @@ class DAOWallet(WalletProtocol):
         await self.save_info(dao_info)
         new_cat_wallet = None
         # This will also mint the coins
-        if amount_of_cats is not None and different_coins is not None:
+        if amount_of_cats_to_create is not None and different_coins is not None:
             cat_tail_info = {
                 "identifier": "genesis_by_id_or_singleton",
                 "treasury_id": launcher_coin.name(),
@@ -675,7 +681,7 @@ class DAOWallet(WalletProtocol):
                 self.wallet_state_manager,
                 self.standard_wallet,
                 cat_tail_info,
-                amount_of_cats,
+                amount_of_cats_to_create,
             )
             assert new_cat_wallet is not None
         else:
@@ -803,7 +809,7 @@ class DAOWallet(WalletProtocol):
         eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
         eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
 
-        assertself.dao_info.current_treasury_innerpuz
+        assert self.dao_info.current_treasury_innerpuz
         eve_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -855,7 +861,7 @@ class DAOWallet(WalletProtocol):
         else:
             conditions = Program.to([[51, recipient_address, amount]])
             asset_conditions_list = []
-        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)
+        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)  # type: ignore[arg-type]
         return puzzle
 
     async def generate_new_proposal(self, proposed_puzzle_hash: bytes32, fee: uint64) -> SpendBundle:
@@ -877,8 +883,8 @@ class DAOWallet(WalletProtocol):
             launcher_coin.name(),
             cat_tail_hash,
             self.dao_info.treasury_id,
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             spend_or_update_flag="x",  # TODO: decide spend or update
             proposed_puzzle_hash=proposed_puzzle_hash,
         )
@@ -921,6 +927,7 @@ class DAOWallet(WalletProtocol):
             launcher_coin,
         )
         assert tx_record
+        assert tx_record.spend_bundle is not None
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         return full_spend
 
@@ -1159,7 +1166,7 @@ class DAOWallet(WalletProtocol):
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         ret = await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
         if len(ret) == 0:
-            return None
+            raise ValueError("Could not get latest Singleton from wallet data store")
         return ret[-1]
 
     async def add_or_update_proposal_info(
