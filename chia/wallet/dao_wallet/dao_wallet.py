@@ -635,7 +635,7 @@ class DAOWallet(WalletProtocol):
         if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
-        if amount_of_cats_to_create > 0:
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0:
             coins = await self.standard_wallet.select_coins(uint64(amount_of_cats_to_create + fee + 1))
         else:
             coins = await self.standard_wallet.select_coins(uint64(fee + 1))
