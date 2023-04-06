@@ -98,6 +98,7 @@ class DAOWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     dao_info: DAOInfo
+    dao_rules: DAORules
     standard_wallet: Wallet
     wallet_id: int
     apply_state_transition_call_count: int = 0
@@ -592,7 +593,7 @@ class DAOWallet:
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    async def get_name(self)->str:
+    def get_name(self)->str:
         return self.wallet_info.name
 
     async def get_new_p2_inner_hash(self) -> bytes32:
