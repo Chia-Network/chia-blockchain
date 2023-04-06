@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+from chia_rs.chia_rs import Coin
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -68,10 +70,15 @@ class GenesisById(LimitationsProgram):
         return Program.to([])
 
     @classmethod
-    async def generate_issuance_bundle(cls, wallet, _: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
-        coins = await wallet.standard_wallet.select_coins(amount)
+    async def generate_issuance_bundle(
+        cls,
+        wallet,
+        _: Dict,
+        amount: uint64,
+    ) -> Tuple[TransactionRecord, SpendBundle]:
+        coins: Set[Coin] = await wallet.standard_wallet.select_coins(amount)
 
-        origin = coins.copy().pop()
+        origin: Coin = coins.copy().pop()
         origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()

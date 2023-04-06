@@ -272,7 +272,6 @@ class WalletNode:
         ignore_tables = {"lineage_proofs_", "sqlite_"}
         required_tables = [
             "coin_record",
-            "merkle_coin_record",
             "transaction_record",
             "derivation_paths",
             "users_wallets",

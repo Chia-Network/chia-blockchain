@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from chia.types.blockchain_format.coin import Coin
@@ -24,8 +24,10 @@ class WalletCoinRecord:
     coinbase: bool
     wallet_type: WalletType
     wallet_id: int
-    coin_type: Optional[int]
-    metadata: Optional[str]
+    # Cannot include new attributes in the hash since they will change the coin order in a set.
+    # The launcher coin ID will change and will break all hardcode offer tests in CAT/NFT/DL, etc.
+    coin_type: Optional[int] = field(hash=False)
+    metadata: Optional[str] = field(hash=False)
 
     def name(self) -> bytes32:
         return self.coin.name()

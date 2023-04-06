@@ -56,13 +56,19 @@ class TestCATTrades:
         # Create two new CATs, one in each wallet
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
             )
             await asyncio.sleep(1)
 
         async with wallet_node_taker.wallet_state_manager.lock:
             new_cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_taker.wallet_state_manager, wallet_taker, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_taker.wallet_state_manager,
+                wallet_taker,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
             )
             await asyncio.sleep(1)
 
