@@ -25,9 +25,9 @@ from chia.wallet.transaction_record import TransactionRecord
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
-DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clvm")
+DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_alternate_proposal_timer.clvm")
+DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
+DAO_TREASURY_MOD: Program = load_clvm("dao_alternate_treasury.clvm")
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 
 
@@ -102,7 +102,7 @@ async def test_cat_spend(self_hostname: str, two_wallet_nodes: SimulatorsAndWall
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-    tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
+    tx_records = await cat_wallet.generate_signed_transactions([uint64(60)], [cat_2_hash], fee=uint64(1))
     for tx_record in tx_records:
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         if tx_record.spend_bundle is not None:
@@ -126,7 +126,7 @@ async def test_cat_spend(self_hostname: str, two_wallet_nodes: SimulatorsAndWall
     await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 60)
 
     cat_hash = await cat_wallet.get_new_inner_hash()
-    tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
+    tx_records = await cat_wallet_2.generate_signed_transactions([uint64(15)], [cat_hash])
     for tx_record in tx_records:
         assert tx_record.spend_bundle
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
