@@ -352,7 +352,7 @@ class DAOCATWallet:
         lockup_puzzle = await self.get_new_puzzle()
 
         # create the cat spend
-        txs = await cat_wallet.generate_signed_transaction([amount], [lockup_puzzle.get_tree_hash()])
+        txs = await cat_wallet.generate_signed_transactions([amount], [lockup_puzzle.get_tree_hash()])
         new_cats = []
         cat_puzzle_hash: bytes32 = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle

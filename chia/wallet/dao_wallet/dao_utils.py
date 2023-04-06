@@ -389,7 +389,7 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
     return puzzle
 
 
-def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
+def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
 

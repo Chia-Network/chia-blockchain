@@ -66,7 +66,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
-from chia.wallet.wallet_state_manager import WalletStateManager
+# from chia.wallet.wallet_state_manager import WalletStateManager
 
 # from chia.wallet.wallet_singleton_store import WalletSingletonStore
 
@@ -93,7 +93,7 @@ class DAOWallet(WalletProtocol):
       * Get Updated Proposal Data
     """
 
-    wallet_state_manager: WalletStateManager
+    wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
     dao_info: DAOInfo
@@ -105,7 +105,7 @@ class DAOWallet(WalletProtocol):
 
     @staticmethod
     async def create_new_dao_and_wallet(
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         amount_of_cats: uint64,
         dao_rules: DAORules,
@@ -194,7 +194,7 @@ class DAOWallet(WalletProtocol):
 
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         treasury_id: bytes32,
         filter_amount: uint64 = 1,
@@ -262,7 +262,7 @@ class DAOWallet(WalletProtocol):
 
     @staticmethod
     async def create_new_dao_for_existing_cat(
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         tail_hash: bytes32,
         dao_rules: DAORules,
@@ -345,7 +345,7 @@ class DAOWallet(WalletProtocol):
 
     @staticmethod
     async def create(
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
@@ -782,7 +782,7 @@ class DAOWallet(WalletProtocol):
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
         """
-        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz.hazhs)
+        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
         launcher_id, launcher_proof = self.dao_info.parent_info[0]
         eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
