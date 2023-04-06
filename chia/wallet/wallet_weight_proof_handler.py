@@ -6,7 +6,7 @@ import tempfile
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, List, Optional, Tuple
+from typing import IO, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -37,13 +37,8 @@ class WalletWeightProofHandler:
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         )
-        self._weight_proof_tasks: List[asyncio.Task[Tuple[bool, List[BlockRecord]]]] = []
 
     def cancel_weight_proof_tasks(self) -> None:
-        for task in self._weight_proof_tasks:
-            if not task.done():
-                task.cancel()
-        self._weight_proof_tasks = []
         self._executor_shutdown_tempfile.close()
         self._executor.shutdown(wait=True)
 
@@ -56,22 +51,17 @@ class WalletWeightProofHandler:
         if summaries is None or sub_epoch_weight_list is None:
             raise ValueError("weight proof failed sub epoch data validation")
         validate_from = get_fork_ses_idx(old_proof, weight_proof)
-        task = asyncio.create_task(
-            validate_weight_proof_inner(
-                self._constants,
-                self._executor,
-                self._executor_shutdown_tempfile.name,
-                self._num_processes,
-                weight_proof,
-                summaries,
-                sub_epoch_weight_list,
-                skip_segment_validation,
-                validate_from,
-            )
+        valid, block_records = await validate_weight_proof_inner(
+            self._constants,
+            self._executor,
+            self._executor_shutdown_tempfile.name,
+            self._num_processes,
+            weight_proof,
+            summaries,
+            sub_epoch_weight_list,
+            skip_segment_validation,
+            validate_from,
         )
-        self._weight_proof_tasks.append(task)
-        valid, block_records = await task
-        self._weight_proof_tasks.remove(task)
         if not valid:
             raise ValueError("weight proof validation failed")
         log.info(f"It took {time.time() - start_time} time to validate the weight proof {weight_proof.get_hash()}")
