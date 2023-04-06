@@ -173,6 +173,9 @@ class Err(Enum):
     ASSERT_MY_BIRTH_SECONDS_FAILED = 138
     ASSERT_MY_BIRTH_HEIGHT_FAILED = 139
 
+    ASSERT_EPHEMERAL_FAILED = 140
+    EPHEMERAL_RELATIVE_CONDITION = 141
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

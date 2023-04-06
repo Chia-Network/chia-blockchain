@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 from typing_extensions import Literal
 
@@ -137,10 +137,9 @@ class TradeManager:
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
-        our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
-            primary_coin_ids
-        )
-        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records]
+        # TODO: Add `WalletCoinStore.get_coins`.
+        our_coin_records = await self.wallet_state_manager.coin_store.get_coin_records(primary_coin_ids)
+        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records.values()]
         our_additions: List[Coin] = list(
             filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
         )
@@ -176,7 +175,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
                 self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
-    async def get_locked_coins(self, wallet_id: Optional[int] = None) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -190,13 +189,13 @@ class TradeManager:
         for trade_offer in all_pending:
             coins_of_interest.extend([c.name() for c in trade_offer.coins_of_interest])
 
-        result = {}
-        coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)
-        for record in coin_records:
-            if wallet_id is None or record.wallet_id == wallet_id:
-                result[record.name()] = record
-
-        return result
+        # TODO:
+        #  - No need to get the coin records here, we are only interested in the coin_id on the call site.
+        #  - The cast here is required for now because TradeManager.wallet_state_manager is hinted as Any.
+        return cast(
+            Dict[bytes32, WalletCoinRecord],
+            await self.wallet_state_manager.coin_store.get_coin_records(coins_of_interest),
+        )
 
     async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
@@ -641,11 +640,12 @@ class TradeManager:
 
         addition_dict: Dict[uint32, List[Coin]] = {}
         for addition in additions:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                addition.puzzle_hash
+            )
+            if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
-                    wallet = self.wallet_state_manager.wallets[wallet_id]
+                    wallet = self.wallet_state_manager.wallets[wallet_identifier.id]
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(
@@ -659,7 +659,7 @@ class TradeManager:
                             spend_bundle=None,
                             additions=[addition],
                             removals=[],
-                            wallet_id=wallet_id,
+                            wallet_id=wallet_identifier.id,
                             sent_to=[],
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
@@ -668,17 +668,18 @@ class TradeManager:
                         )
                     )
                 else:  # This is change
-                    addition_dict.setdefault(wallet_id, [])
-                    addition_dict[wallet_id].append(addition)
+                    addition_dict.setdefault(wallet_identifier.id, [])
+                    addition_dict[wallet_identifier.id].append(addition)
 
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
-                removal_dict.setdefault(wallet_id, [])
-                removal_dict[wallet_id].append(removal)
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                removal.puzzle_hash
+            )
+            if wallet_identifier is not None:
+                removal_dict.setdefault(wallet_identifier.id, [])
+                removal_dict[wallet_identifier.id].append(removal)
 
         all_removals: List[bytes32] = [r.name() for removals in removal_dict.values() for r in removals]
 

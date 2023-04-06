@@ -133,7 +133,7 @@ def db_version(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3630000, 3830000])
+@pytest.fixture(scope="function", params=[1000000, 3630000, 4000000])
 def softfork_height(request):
     return request.param
 
@@ -457,8 +457,7 @@ async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulato
         yield _
 
 
-# soft-fork 2 is disabled (for now)
-@pytest.fixture(scope="function", params=[False])
+@pytest.fixture(scope="function", params=[True, False])
 def enable_softfork2(request):
     return request.param
 

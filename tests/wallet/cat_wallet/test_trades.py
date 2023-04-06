@@ -42,7 +42,9 @@ class TestCATTrades:
         "reuse_puzhash",
         [True, False],
     )
-    async def test_cat_trades(self, wallets_prefarm, forwards_compat: bool, reuse_puzhash: bool):
+    async def test_cat_trades(
+        self, wallets_prefarm, forwards_compat: bool, reuse_puzhash: bool, softfork_height: uint32
+    ):
         (
             [wallet_node_maker, initial_maker_balance],
             [wallet_node_taker, initial_taker_balance],
@@ -159,7 +161,6 @@ class TestCATTrades:
             assert trade_make is not None
 
         peer = wallet_node_taker.get_full_node_peer()
-        assert peer is not None
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
@@ -575,7 +576,9 @@ class TestCATTrades:
         # (and therefore are solved as a complete ring)
         bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
         program = simple_solution_generator(bundle)
-        result: NPCResult = get_name_puzzle_conditions(program, INFINITE_COST, cost_per_byte=0, mempool_mode=True)
+        result: NPCResult = get_name_puzzle_conditions(
+            program, INFINITE_COST, mempool_mode=True, height=softfork_height
+        )
         assert result.error is None
 
     @pytest.mark.asyncio
@@ -671,7 +674,6 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
 
         peer = wallet_node_taker.get_full_node_peer()
-        assert peer is not None
         with pytest.raises(ValueError, match="This offer is no longer valid"):
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 
