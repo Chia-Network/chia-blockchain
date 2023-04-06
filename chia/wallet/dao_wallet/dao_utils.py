@@ -264,7 +264,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Program) -> DAORules:
 
 # This takes the treasury puzzle and treasury solution, not the full puzzle and full solution
 # This also returns the treasury puzzle and not the full puzzle
-def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
+def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
     # curried_args = uncurry_treasury(puzzle_reveal)
     # (
     #     DAO_TREASURY_MOD_HASH,
@@ -295,8 +295,7 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
 
 # This takes the proposal puzzle and proposal solution, not the full puzzle and full solution
 # This also returns the proposal puzzle and not the full puzzle
-# TODO: fix return type of get_new_puzzle_from_proposal_solution
-def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program | bytes32]:
+def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
     # Check if soft_close_length is in solution. If not, then add votes, otherwise close proposal
     if solution.at("rrrrrrf") != Program.to(0):
         (

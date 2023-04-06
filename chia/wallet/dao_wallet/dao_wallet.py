@@ -651,7 +651,9 @@ class DAOWallet(WalletProtocol):
 
         if cat_tail_hash is None:
             assert amount_of_cats_to_create is not None
-            different_coins = await self.standard_wallet.select_coins(uint64(amount_of_cats_to_create), exclude=[origin])
+            different_coins = await self.standard_wallet.select_coins(
+                uint64(amount_of_cats_to_create), exclude=[origin]
+            )
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
             cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
@@ -926,7 +928,7 @@ class DAOWallet(WalletProtocol):
             full_proposal_puzzle=full_proposal_puzzle,
             dao_proposal_puzzle=dao_proposal_puzzle,
             launcher_coin=launcher_coin,
-            vote_amount=uint64(0)
+            vote_amount=uint64(0),
         )
         assert tx_record
         assert tx_record.spend_bundle is not None
@@ -969,7 +971,7 @@ class DAOWallet(WalletProtocol):
     # TODO: add an amount of dao_cat to spend on voting on the new proposal here
     async def generate_proposal_eve_spend(
         self,
-            *,
+        *,
         eve_coin: Coin,
         full_proposal_puzzle: Program,
         dao_proposal_puzzle: Program,
@@ -1167,7 +1169,9 @@ class DAOWallet(WalletProtocol):
         return get_most_recent_singleton_coin_from_coin_spend(spend)
 
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
-        ret = await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
+        ret: List[Tuple[uint32, CoinSpend]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
+            self.wallet_id
+        )
         if len(ret) == 0:
             raise ValueError("Could not get latest Singleton from wallet data store")
         return ret[-1]
@@ -1232,7 +1236,7 @@ class DAOWallet(WalletProtocol):
                         singleton_id,
                         puzzle,
                         current_info.amount_voted,
-                        current_info.is_yes_vote,  # TODO: should this be Optional?
+                        Program(current_info.is_yes_vote),  # TODO: should is_yes_vote be Optional?
                         current_coin,
                         current_innerpuz,
                         current_info.timer_coin,
@@ -1281,15 +1285,16 @@ class DAOWallet(WalletProtocol):
                     children = await wallet_node.fetch_children(parent_coin_id, peer)
                     if len(children) == 0:
                         break
-                    children_state = None
-                    children_state: CoinState = [child for child in children if child.coin.amount % 2 == 1][0]
+                    children_state = [child for child in children if child.coin.amount % 2 == 1]
                     assert children_state is not None
+                    assert len(children_state) > 0
+                    child_state = children_state[0]
                     for child in children:
                         if children.coin.puzzle_hash == timer_coin_puzhash:
                             found = True
                             timer_coin = children.coin
                             break
-                    child_coin = children_state.coin
+                    child_coin = child_state.coin
                     parent_coin_id = child_coin.name()
 
         # If we reach here then we don't currently know about this coin
