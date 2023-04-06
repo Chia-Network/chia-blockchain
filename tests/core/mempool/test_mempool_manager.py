@@ -543,7 +543,6 @@ async def test_get_items_not_in_filter() -> None:
 
 @pytest.mark.asyncio
 async def test_total_mempool_fees() -> None:
-
     coin_records: Dict[bytes32, CoinRecord] = {}
 
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:

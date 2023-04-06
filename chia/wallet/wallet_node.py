@@ -1667,7 +1667,8 @@ class WalletNode:
         spend_height = parents_children[0].spend_height
         # fetch original coin's spend using our coin's created height
 
-        breakpoint()
+        raise "unfinished"
+        # breakpoint()
         return
 
     async def fetch_children(

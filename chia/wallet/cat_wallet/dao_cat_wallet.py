@@ -321,7 +321,8 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
         # TODO: connect with DAOWallet and aggregate the proposal spend
-        breakpoint()
+        raise "unfinished"
+        # breakpoint()
         return spend_bundle
 
     async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None):

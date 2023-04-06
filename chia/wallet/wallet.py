@@ -632,7 +632,7 @@ class Wallet:
                     coin_announcements_to_assert=coin_announcements_to_assert,
                     puzzle_announcements=puzzle_announcements,
                     puzzle_announcements_to_assert=puzzle_announcements_to_assert,
-                    fee=fee
+                    fee=fee,
                 )
                 output_created = coin
             list_of_solutions.append(CoinSpend(coin, puzzle, solution))

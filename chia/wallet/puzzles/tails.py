@@ -239,10 +239,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
                 origin_id,
                 (
                     tail_info["treasury_id"],
-                    (
-                        Program.to(SINGLETON_MOD.get_tree_hash()),
-                        Program.to(SINGLETON_LAUNCHER.get_tree_hash())
-                    )
+                    (Program.to(SINGLETON_MOD.get_tree_hash()), Program.to(SINGLETON_LAUNCHER.get_tree_hash())),
                 ),
             ]
         )

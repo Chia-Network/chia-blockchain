@@ -183,7 +183,6 @@ class Mempool:
 
         removed_items: List[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-
             for spend_bundle_ids in chunks(items, SQLITE_MAX_VARIABLE_NUMBER):
                 args = ",".join(["?"] * len(spend_bundle_ids))
                 with self._db_conn:

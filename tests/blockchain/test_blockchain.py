@@ -1943,7 +1943,6 @@ class TestBodyValidation:
                 expected = ReceiveBlockResult.NEW_PEAK
 
         async with make_empty_blockchain(constants) as b:
-
             blocks = bt.get_consecutive_blocks(
                 3,
                 guarantee_transaction_block=True,

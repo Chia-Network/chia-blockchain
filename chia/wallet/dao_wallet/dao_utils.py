@@ -85,9 +85,7 @@ def get_treasury_puzzle(dao_rules: DAORules) -> Program:
 
 
 def create_announcement_condition_for_nft_spend(
-    treasury_id: bytes32,
-    nft_id: bytes32,
-    target_address: bytes32
+    treasury_id: bytes32, nft_id: bytes32, target_address: bytes32
 ) -> Tuple[Program, Program]:
     # TODO: this delegated puzzle does not actually work with NFTs - need to copy more of the code later
     delegated_puzzle = Program.to([(1, [[51, target_address, 1]])])
@@ -96,20 +94,20 @@ def create_announcement_condition_for_nft_spend(
 
 
 def get_spend_p2_singleton_puzzle(
-    treasury_id: bytes32,
-    xch_conditions: [Optional[List]],
-    asset_conditions: [Optional[List[Tuple]]]
+    treasury_id: bytes32, xch_conditions: [Optional[List]], asset_conditions: [Optional[List[Tuple]]]
 ) -> Program:
     # CAT_MOD_HASH
     # CONDITIONS  - this may also include announcements to spend an NFT
     # LIST_OF_TAILHASH_CONDITIONS
     # P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
-    puzzle: Program = SPEND_P2_SINGLETON_MOD.curry([
-        CAT_MOD_HASH,
-        xch_conditions,
-        asset_conditions,
-        P2_SINGLETON_MOD.curry(treasury_id),
-    ])
+    puzzle: Program = SPEND_P2_SINGLETON_MOD.curry(
+        [
+            CAT_MOD_HASH,
+            xch_conditions,
+            asset_conditions,
+            P2_SINGLETON_MOD.curry(treasury_id),
+        ]
+    )
 
     return puzzle
 

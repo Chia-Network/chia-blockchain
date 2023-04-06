@@ -855,7 +855,8 @@ class DAOWallet:
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        breakpoint()
+        raise "unfinished"
+        # breakpoint()
 
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
