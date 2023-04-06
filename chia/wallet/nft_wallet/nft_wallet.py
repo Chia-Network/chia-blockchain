@@ -55,11 +55,12 @@ from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
+from chia.wallet.wallet_protocol import WalletProtocol
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 
-class NFTWallet:
+class NFTWallet(WalletProtocol):
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo

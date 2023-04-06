@@ -54,6 +54,7 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -102,7 +103,7 @@ class Mirror:
 
 
 @final
-class DataLayerWallet:
+class DataLayerWallet(WalletProtocol):
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
