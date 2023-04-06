@@ -22,8 +22,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -67,7 +67,6 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
-
 
 # from chia.wallet.wallet_singleton_store import WalletSingletonStore
 
@@ -137,7 +136,7 @@ class DAOWallet(WalletProtocol):
         if amount_of_cats > bal:
             raise ValueError("Not enough balance")
 
-        self.dao_info = DAOInfo(#xxx
+        self.dao_info = DAOInfo(
             bytes32([0] * 32),
             uint32(0),
             uint32(0),
@@ -180,8 +179,8 @@ class DAOWallet(WalletProtocol):
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id, # TODO: xxx if this is a local wallet id, we might need to change it.
-            dao_cat_wallet_id,   # TODO: xxx if this is a local wallet id, we might need to change it.
+            self.dao_info.cat_wallet_id,  # TODO: xxx if this is a local wallet id, we might need to change it.
+            dao_cat_wallet_id,  # TODO: xxx if this is a local wallet id, we might need to change it.
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -216,10 +215,10 @@ class DAOWallet(WalletProtocol):
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DAO wallet for existent DAO ...")
-        self.dao_info = DAOInfo(#xxx
+        self.dao_info = DAOInfo(
             treasury_id,  # treasury_id: bytes32
-            uint32(0),# cat_wallet_id: uint64
-            uint32(0), # dao_cat_wallet_id: uint64
+            uint32(0),  # cat_wallet_id: uint64
+            uint32(0),  # dao_cat_wallet_id: uint64
             [],  # proposals_list: List[ProposalInfo]
             [],  # treasury_id: bytes32
             None,  # current_coin
@@ -289,7 +288,7 @@ class DAOWallet(WalletProtocol):
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
 
-        self.dao_info = DAOInfo(#xxx
+        self.dao_info = DAOInfo(
             bytes32([0] * 32),
             uint32(0),
             uint32(0),
@@ -377,7 +376,7 @@ class DAOWallet(WalletProtocol):
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]]=None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         # This wallet only tracks coins, and does not hold any spendable value
         return uint128(0)
 
@@ -385,7 +384,7 @@ class DAOWallet(WalletProtocol):
         # No spendable or receivable value
         return uint64(0)
 
-    async def get_unconfirmed_balance(self, record_list:Optional[Set[WalletCoinRecord]]=None) -> uint128:
+    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         # TODO: should return zero?
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
@@ -395,7 +394,7 @@ class DAOWallet(WalletProtocol):
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-            excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -587,14 +586,14 @@ class DAOWallet(WalletProtocol):
             (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
         )
 
-    async def set_name(self, new_name: str)->None:
+    async def set_name(self, new_name: str) -> None:
         import dataclasses
 
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    def get_name(self)->str:
+    def get_name(self) -> str:
         return self.wallet_info.name
 
     async def get_new_p2_inner_hash(self) -> bytes32:
@@ -603,7 +602,6 @@ class DAOWallet(WalletProtocol):
 
     async def get_new_p2_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
-
 
     def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
         parent_info = None
@@ -615,7 +613,7 @@ class DAOWallet(WalletProtocol):
 
     async def generate_new_dao(
         self,
-        amount_of_cats: Optional[uint64], # TODO: Should this be Optional? Zero seems sufficient here.
+        amount_of_cats: Optional[uint64],  # TODO: Should this be Optional? Zero seems sufficient here.
         cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
@@ -854,7 +852,7 @@ class DAOWallet(WalletProtocol):
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)
         return puzzle
 
-    async def generate_new_proposal(self, proposed_puzzle_hash: bytes32, fee: uint64)->SpendBundle:
+    async def generate_new_proposal(self, proposed_puzzle_hash: bytes32, fee: uint64) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
             return None
@@ -874,7 +872,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.treasury_id,
             0,
             0,
-            spend_or_update_flag='x',
+            spend_or_update_flag="x",  # TODO: decide spend or update
             proposed_puzzle_hash=proposed_puzzle_hash,
         )
 
@@ -1038,31 +1036,41 @@ class DAOWallet(WalletProtocol):
 
         return
 
-    async def create_add_money_to_treasury_spend(
-        self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: uint32 = uint32(1)
+    async def _create_treasury_fund_transaction(
+        self, funding_wallet: WalletProtocol, amount: uint64, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
-        # TODO: add test for create_add_money_to_treasury_spend
-        # TODO: Do we need to ensure the p2_singleton amount is odd?
-        # set up the p2_singleton
-        funding_wallet: Wallet = self.wallet_state_manager.wallets[funding_wallet_id]
-        tx_record: TransactionRecord
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
-            tx_record: TransactionRecord = await funding_wallet.generate_signed_transaction(
+            wallet: Wallet = funding_wallet  # type: ignore[assignment]
+            return await wallet.generate_signed_transaction(
                 amount,
                 p2_singleton_puzhash,
                 fee=fee,
             )
         elif funding_wallet.type() == WalletType.CAT.value:
-            asset_id = bytes32.from_hexstr(funding_wallet.get_asset_id())
+            cat_wallet: CATWallet = funding_wallet  # type: ignore[assignment]
+            asset_id = bytes32.from_hexstr(cat_wallet.get_asset_id())
+            # generate_signed_transaction has a different type signature in Wallet and CATWallet
+            # CATWallet uses a List of amounts and a List of puzhashes as the first two arguments
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
-            tx_record: TransactionRecord = await funding_wallet.generate_signed_transaction(
-                amount,
-                p2_singleton_puzhash,
+            tx_records: List[TransactionRecord] = await cat_wallet.generate_signed_transactions(
+                [amount],
+                [p2_singleton_puzhash],
                 fee=fee,
             )
+            return tx_records[0]
         else:
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
+
+    async def create_add_money_to_treasury_spend(
+        self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: uint32 = uint32(1)
+    ) -> TransactionRecord:
+        # TODO: add tests for create_add_money_to_treasury_spend
+        # TODO: Do we need to ensure the p2_singleton amount is odd?
+        # set up the p2_singleton
+        funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
+        tx_record = await self._create_treasury_fund_transaction(funding_wallet, amount, fee)
+
         created_coin = [coin for coin in tx_record.additions if coin.amount == amount][0]
         # TODO: How are we going to track p2_singletons?
         await self.wallet_state_manager.add_interested_coin_ids([created_coin.name()])
@@ -1124,7 +1132,7 @@ class DAOWallet(WalletProtocol):
     def require_derivation_paths(self) -> bool:
         return True
 
-    def get_cat_wallet_id(self) -> uint64:
+    def get_cat_wallet_id(self) -> uint32:
         return self.dao_info.cat_wallet_id
 
     async def create_new_dao_cats(
@@ -1206,7 +1214,7 @@ class DAOWallet(WalletProtocol):
                         singleton_id,
                         puzzle,
                         current_info.amount_voted,
-                        current_info.is_yes_vote, #TODO: should this be Optional?
+                        current_info.is_yes_vote,  # TODO: should this be Optional?
                         current_coin,
                         current_innerpuz,
                         current_info.timer_coin,

@@ -55,6 +55,7 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -66,7 +67,7 @@ CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
-class CATWallet:
+class CATWallet(WalletProtocol):
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
@@ -284,7 +285,7 @@ class CATWallet:
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
-            txs = await self.generate_signed_transaction(
+            txs = await self.generate_signed_transactions(
                 [uint64(coin.amount)], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
             assert txs[0].spend_bundle
@@ -580,7 +581,7 @@ class CATWallet:
                 excluded_coin_amounts=exclude_coin_amounts,
             )
             origin_id = list(chia_coins)[0].name()
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            chia_tx = await self.standard_wallet.generate_signed_transactions(
                 uint64(0),
                 (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
                 fee=uint64(fee - amount_to_claim),
@@ -610,7 +611,7 @@ class CATWallet:
                 excluded_coin_amounts=exclude_coin_amounts,
             )
             selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            chia_tx = await self.standard_wallet.generate_signed_transactions(
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
                 coins=chia_coins,
@@ -796,7 +797,7 @@ class CATWallet:
             chia_tx,
         )
 
-    async def generate_signed_transaction(
+    async def generate_signed_transactions(
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
