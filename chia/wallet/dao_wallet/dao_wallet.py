@@ -172,7 +172,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
         # Now the dao wallet is created we can create the dao_cat wallet
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
@@ -240,7 +240,7 @@ class DAOWallet:
         self.wallet_id = self.wallet_info.id
 
         # Now the dao wallet is created we can create the dao_cat wallet
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
@@ -323,7 +323,7 @@ class DAOWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
         # Now that the dao wallet is created we can create the dao_cat wallet
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         new_dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
@@ -446,7 +446,7 @@ class DAOWallet:
         return len(children) > 0
 
     def get_cat_tail_hash(self) -> bytes32:
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail_hash: bytes32 = cat_wallet.cat_info.limitations_program_hash
         return cat_tail_hash
 
@@ -520,7 +520,7 @@ class DAOWallet:
                 break
         assert cat_tail_hash
 
-        cat_wallet = None
+        cat_wallet: Optional[CATWallet] = None
 
         # Get or create a cat wallet
         for wallet_id in self.wallet_state_manager.wallets:
@@ -528,11 +528,11 @@ class DAOWallet:
             if wallet.type() == WalletType.CAT:
                 assert isinstance(wallet, CATWallet)
                 if wallet.cat_info.limitations_program_hash == cat_tail_hash:
-                    cat_wallet = wallet
+                    cat_wallet: CATWallet = wallet
                     break
         else:
             # Didn't find a cat wallet, so create one
-            cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
+            cat_wallet: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
                 self.wallet_state_manager, self.standard_wallet, cat_tail_hash.hex()
             )
 
@@ -864,7 +864,7 @@ class DAOWallet:
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         # breakpoint()
 
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
@@ -960,7 +960,7 @@ class DAOWallet:
         launcher_coin: Coin,
         vote_amount: uint64,
     ) -> SpendBundle:
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
