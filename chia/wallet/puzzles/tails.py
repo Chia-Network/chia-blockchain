@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-from chia_rs.chia_rs import Coin
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -76,9 +74,9 @@ class GenesisById(LimitationsProgram):
         _: Dict,
         amount: uint64,
     ) -> Tuple[TransactionRecord, SpendBundle]:
-        coins: Set[Coin] = await wallet.standard_wallet.select_coins(amount)
+        coins = await wallet.standard_wallet.select_coins(amount)
 
-        origin: Coin = coins.copy().pop()
+        origin = coins.copy().pop()
         origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
