@@ -96,8 +96,8 @@ TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
 
 
 class WalletStateManager:
-    interested_ph_cache: Dict[bytes32, List[int]]
-    interested_coin_cache: Dict[bytes32, List[int]]
+    interested_ph_cache: Dict[bytes32, List[int]] = {}
+    interested_coin_cache: Dict[bytes32, List[int]] = {}
     constants: ConsensusConstants
     config: Dict
     tx_store: WalletTransactionStore
