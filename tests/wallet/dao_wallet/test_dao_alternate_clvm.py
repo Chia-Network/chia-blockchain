@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from clvm.casts import int_to_bytes
 
-# from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -471,14 +471,20 @@ def test_merge_p2_singleton() -> None:
     # list_of_parent_amounts
     # my_amount
     conds = p2_singleton.run(Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), 0]))
-    assert len(conds.as_python()) == 2
+    assert len(conds.as_python()) == 3
     fake_parent_id = Program.to("fake_parent").get_tree_hash()
     # fake_coin = Coin(fake_parent_id, p2_singleton.get_tree_hash(), 200)
-    conds = p2_singleton.run(
-        Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), [[fake_parent_id, 200]], 100])
-    )
-    assert len(conds.as_python()) == 5
-    assert conds.rest().rest().rest().rest().first().rest().rest().first().as_int() == 300
+    conds = p2_singleton.run(Program.to([
+        0,
+        0,
+        0,
+        singleton_id,
+        p2_singleton.get_tree_hash(),
+        [[fake_parent_id, 200]],
+        100
+    ]))
+    assert len(conds.as_python()) == 6
+    assert conds.rest().rest().rest().rest().rest().first().rest().rest().first().as_int() == 300
     return
 
 
