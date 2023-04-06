@@ -102,7 +102,7 @@ class DAOCATWallet:
 
         self.dao_cat_info = DAOCATInfo(
             dao_wallet_id,
-            free_cat_wallet_id,
+            uint64(free_cat_wallet_id),
             limitations_program_hash,
             None,
             [],
@@ -143,7 +143,9 @@ class DAOCATWallet:
                 coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                     coin_state[0].spent_height, coin_state[0].coin, peer
                 )
-                await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
+                # TODO: process this coin
+                self.log.info("coin_added coin_spend: %s", coin_spend)
+                # await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
@@ -196,7 +198,7 @@ class DAOCATWallet:
                     break
         if s < amount:
             if permission_to_convert_more:
-                tx_list = await self.create_new_dao_cats(amount - s)
+                tx_list = await self.create_new_dao_cats(uint64(amount - s))
                 self.log.info("New voting tokens created: %s", tx_list)
             else:
                 raise ValueError(
@@ -208,7 +210,7 @@ class DAOCATWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def create_vote_spend(self, amount: uint64, proposal_id: bytes32, is_yes_vote: bool):
+    async def create_vote_spend(self, amount: uint64, proposal_id: bytes32, is_yes_vote: bool) -> SpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
         change = sum(c.coin.amount for c in coins) - amount
@@ -308,7 +310,7 @@ class DAOCATWallet:
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
                 coin,
-                self.cat_info.limitations_program_hash,
+                self.dao_cat_info.limitations_program_hash,
                 lci.inner_puzzle,
                 solution,
                 limitations_solution=limitations_solution,
@@ -321,11 +323,10 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
         # TODO: connect with DAOWallet and aggregate the proposal spend
-        raise "unfinished"
         # breakpoint()
         return spend_bundle
 
-    async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None):
+    async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None) -> Program:
         innerpuz = await self.get_new_inner_puzzle()
         puzzle = get_lockup_puzzle(
             self.dao_cat_info.limitations_program_hash,
@@ -364,7 +365,7 @@ class DAOCATWallet:
 
         return txs, new_cats
 
-    async def exit_vote_state(self, coins: List[LockedCoinInfo]):
+    async def exit_vote_state(self, coins: List[LockedCoinInfo]) -> SpendBundle:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
@@ -408,7 +409,7 @@ class DAOCATWallet:
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
                 coin,
-                self.cat_info.limitations_program_hash,
+                self.dao_cat_info.limitations_program_hash,
                 lci.inner_puzzle,
                 solution,
                 limitations_solution=limitations_solution,
@@ -423,9 +424,9 @@ class DAOCATWallet:
 
         return spend_bundle
 
-    async def remove_active_proposal(self, proposal_id: bytes32):
+    async def remove_active_proposal(self, proposal_id: bytes32) -> SpendBundle:
         locked_coins = []
-        for lci in self.dao_info.locked_coins:
+        for lci in self.dao_cat_info.locked_coins:
             for active_vote in lci.active_votes:
                 if active_vote == proposal_id:
                     locked_coins.append(lci)
@@ -474,7 +475,7 @@ class DAOCATWallet:
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
                 coin,
-                self.cat_info.limitations_program_hash,
+                self.dao_cat_info.limitations_program_hash,
                 lci.inner_puzzle,
                 solution,
                 limitations_solution=limitations_solution,
@@ -489,7 +490,7 @@ class DAOCATWallet:
         # TODO: attach a DAOWallet spend creating the oracle announcement
         return spend_bundle
 
-    def get_asset_id(self):
+    def get_asset_id(self) -> str:
         return bytes(self.dao_cat_info.limitations_program_hash).hex()
 
     async def get_new_inner_hash(self) -> bytes32:
@@ -559,7 +560,7 @@ class DAOCATWallet:
         self,
         proposal_id: Optional[bytes32] = None,
         include_free_cats: bool = True,
-    ):
+    ) -> int:
         balance = 0
         for coin in self.dao_cat_info.locked_coins:
             if proposal_id is not None:
