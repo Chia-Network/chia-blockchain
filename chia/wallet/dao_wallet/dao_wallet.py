@@ -197,7 +197,7 @@ class DAOWallet:
         treasury_id: bytes32,
         filter_amount: uint64 = 1,
         name: Optional[str] = None,
-    ):
+    ) -> DAOWallet:
         """
         Create a DAO wallet for existing DAO
         :param wallet_state_manager: Wallet state manager
@@ -349,7 +349,7 @@ class DAOWallet:
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
-    ):
+    ) -> DAOWallet:
         """
         Create a DID wallet based on the local database
         :param wallet_state_manager: Wallet state manager
@@ -432,13 +432,13 @@ class DAOWallet:
         assert sum(c.amount for c in coins) >= amount
         return coins
 
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
         # self.log.info(f"DAOWallet.coin_added() is unused.")
         return
 
-    async def is_spend_retrievable(self, coin_id) -> bool:
+    async def is_spend_retrievable(self, coin_id: bytes32) -> bool:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         children = await wallet_node.fetch_children(coin_id, peer)
@@ -583,14 +583,14 @@ class DAOWallet:
             (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
         )
 
-    async def set_name(self, new_name: str):
+    async def set_name(self, new_name: str)->None:
         import dataclasses
 
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    async def get_name(self):
+    async def get_name(self)->str:
         return self.wallet_info.name
 
     async def get_new_p2_inner_hash(self) -> bytes32:
@@ -850,7 +850,7 @@ class DAOWallet:
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)
         return puzzle
 
-    async def generate_new_proposal(self, proposed_puzzle_hash: bytes32, fee: uint64):
+    async def generate_new_proposal(self, proposed_puzzle_hash: bytes32, fee: uint64)->SpendBundle:
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
             return None
@@ -991,7 +991,7 @@ class DAOWallet:
         previous_votes_list: List[Program],
         lockup_innerpuz_list: List[Program],
         is_yes_vote: bool,
-    ):
+    ) -> None:
         proposal_info = None
         for prop in self.dao_info.proposals_list:
             if prop.proposal_id == proposal_id:
@@ -1145,7 +1145,7 @@ class DAOWallet:
         self,
         new_state: CoinSpend,
         block_height: uint32,
-    ):
+    ) -> None:
         new_dao_info = copy.copy(self.dao_info)
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
         if puzzle is None:
@@ -1286,7 +1286,7 @@ class DAOWallet:
         self,
         new_state: CoinSpend,
         block_height: uint32,
-    ):
+    ) -> None:
         if self.dao_info.singleton_block_height <= block_height:
             # TODO: what do we do here?
             return
