@@ -398,7 +398,8 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
 
 # TODO: move curry_singleton to chia.wallet.singleton
 # TODO: Is this correct? See create_fullpuz
-def curry_singleton(singleton_id: bytes32, innerpuz: bytes32) -> Program:
+# TODO: innerpuz type: is innerpuz a full reveal, or a hash?
+def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
 

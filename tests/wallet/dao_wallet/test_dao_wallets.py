@@ -162,7 +162,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert list(coins)[0].coin.amount == dao_cat_amt
 
     # send some cats from wallet_0 to wallet_1 so we can test voting
-    cat_txs = await cat_wallet_0.generate_signed_transaction([cat_amt], [ph_1])
+    cat_txs = await cat_wallet_0.generate_signed_transactions([cat_amt], [ph_1])
     await wallet.wallet_state_manager.add_pending_transaction(cat_txs[0])
     sb = cat_txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
