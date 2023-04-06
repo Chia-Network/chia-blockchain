@@ -726,7 +726,7 @@ async def test_nft_offer_sell_nft_for_cat(
 
     ph_taker_cat_1 = await wallet_taker.get_new_puzzlehash()
     ph_taker_cat_2 = await wallet_taker.get_new_puzzlehash()
-    cat_tx_records = await cat_wallet_maker.generate_signed_transaction(
+    cat_tx_records = await cat_wallet_maker.generate_signed_transactions(
         [cats_to_trade, cats_to_trade], [ph_taker_cat_1, ph_taker_cat_2], memos=[[ph_taker_cat_1], [ph_taker_cat_2]]
     )
     for tx_record in cat_tx_records:
@@ -942,7 +942,7 @@ async def test_nft_offer_request_nft_for_cat(
         extra_change = cats_to_mint - (2 * cats_to_trade)
         amounts.append(uint64(extra_change))
         puzzle_hashes.append(ph_taker_cat_1)
-    cat_tx_records = await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes)
+    cat_tx_records = await cat_wallet_maker.generate_signed_transactions(amounts, puzzle_hashes)
     for tx_record in cat_tx_records:
         await wallet_maker.wallet_state_manager.add_pending_transaction(tx_record)
     await full_node_api.process_transaction_records(records=cat_tx_records)
