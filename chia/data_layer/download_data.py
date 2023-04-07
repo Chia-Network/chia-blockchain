@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -134,6 +136,7 @@ async def insert_from_delta_file(
     client_foldername: Path,
     timeout: int,
     log: logging.Logger,
+    proxy_url: str,
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -142,13 +145,27 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(server_info.url + "/" + filename, timeout=timeout) as resp:
+                headers = {"accept-encoding": "gzip"}
+                async with session.get(
+                    server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
+                ) as resp:
                     resp.raise_for_status()
-
+                    size = int(resp.headers.get("content-length", 0))
+                    log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
+                    progress_byte = 0
+                    progress_percentage = "{:.0%}".format(0)
                     target_filename = client_foldername.joinpath(filename)
-                    text = await resp.read()
-                    target_filename.write_bytes(text)
+                    with target_filename.open(mode="wb") as f:
+                        async for chunk, _ in resp.content.iter_chunks():
+                            f.write(chunk)
+                            progress_byte += len(chunk)
+                            new_percentage = "{:.0%}".format(progress_byte / size)
+                            if new_percentage != progress_percentage:
+                                progress_percentage = new_percentage
+                                log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
         except Exception:
+            target_filename = client_foldername.joinpath(filename)
+            os.remove(target_filename)
             await data_store.server_misses_file(tree_id, server_info, timestamp)
             raise
 

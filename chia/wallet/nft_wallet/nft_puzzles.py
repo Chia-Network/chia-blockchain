@@ -1,30 +1,37 @@
+from __future__ import annotations
+
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
-from chia.wallet.nft_wallet.nft_off_chain import get_off_chain_metadata
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
+from chia.wallet.util.address_type import AddressType
 
 log = logging.getLogger(__name__)
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
-NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
+LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
+NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
-NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
+NFT_METADATA_UPDATER = load_clvm_maybe_recompile("nft_metadata_updater_default.clvm")
+NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile("nft_ownership_layer.clvm")
 NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
-STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm_maybe_recompile(
+    "nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
+)
+STANDARD_PUZZLE_MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clvm")
 
 
 def create_nft_layer_puzzle_with_curry_params(
@@ -76,13 +83,12 @@ def create_full_puzzle(
 
 
 async def get_nft_info_from_puzzle(
-    nft_coin_info: NFTCoinInfo, config: Dict = None, include_off_chain: bool = False, ignore_size_limit: bool = False
+    nft_coin_info: NFTCoinInfo, config: Dict[str, Any], ignore_size_limit: bool = False
 ) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
     :param nft_coin_info NFTCoinInfo in local database
     :param config Wallet config
-    :param include_off_chain If load the off-chain metadata
     :param ignore_size_limit Ignore the off-chain metadata loading size limit
     :return: NFTInfo
     """
@@ -99,11 +105,11 @@ async def get_nft_info_from_puzzle(
     for uri in uncurried_nft.license_uris.as_python():  # pylint: disable=E1133
         license_uris.append(str(uri, "utf-8"))
     off_chain_metadata: Optional[str] = None
-    if include_off_chain:
-        off_chain_metadata = await get_off_chain_metadata(nft_coin_info, config, ignore_size_limit)
     nft_info = NFTInfo(
+        encode_puzzle_hash(uncurried_nft.singleton_launcher_id, prefix=AddressType.NFT.hrp(config=config)),
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
+        nft_coin_info.latest_height,
         uncurried_nft.owner_did,
         uncurried_nft.trade_price_percentage,
         uncurried_nft.royalty_address,

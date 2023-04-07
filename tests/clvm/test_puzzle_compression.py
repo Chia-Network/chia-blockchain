@@ -1,22 +1,25 @@
-from blspy import G1Element, G2Element
+from __future__ import annotations
+
 from typing import Dict
 
+from blspy import G1Element, G2Element
+
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
-from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
-from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.util.puzzle_compression import (
-    LATEST_VERSION,
-    lowest_best_version,
-    compress_object_with_puzzles,
-    decompress_object_with_puzzles,
-)
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
+from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_OLD
+from chia.wallet.util.puzzle_compression import (
+    LATEST_VERSION,
+    compress_object_with_puzzles,
+    decompress_object_with_puzzles,
+    lowest_best_version,
+)
 
 ZERO_32 = bytes32([0] * 32)
 ONE_32 = bytes32([17] * 32)
@@ -37,6 +40,14 @@ class TestPuzzleCompression:
         assert len(bytes(coin_spend)) > len(compressed)
         assert coin_spend == CoinSpend.from_bytes(decompress_object_with_puzzles(compressed))
         self.compression_factors["standard_puzzle"] = len(bytes(compressed)) / len(bytes(coin_spend))
+
+    def test_decompress_limit(self):
+        buffer = bytearray(10 * 1024 * 1024)
+        compressed = compress_object_with_puzzles(buffer, LATEST_VERSION)
+        print(len(compressed))
+        decompressed = decompress_object_with_puzzles(compressed)
+        print(len(decompressed))
+        assert len(decompressed) <= 6 * 1024 * 1024
 
     def test_cat_puzzle(self):
         coin_spend = CoinSpend(
@@ -85,7 +96,8 @@ class TestPuzzleCompression:
 
     def test_lowest_best_version(self):
         assert lowest_best_version([bytes(CAT_MOD)]) == 4
-        assert lowest_best_version([bytes(OFFER_MOD)]) == 2
+        assert lowest_best_version([bytes(OFFER_MOD_OLD)]) == 2
+        assert lowest_best_version([bytes(OFFER_MOD)]) == 5
 
     def test_version_override(self):
         coin_spend = CoinSpend(

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from chia.types.blockchain_format.sized_bytes import bytes32

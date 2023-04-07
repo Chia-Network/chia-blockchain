@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import time
 from pathlib import Path
@@ -19,7 +21,7 @@ class AddressManagerTest(AddressManager):
 
     def make_deterministic(self):
         # Fix seed.
-        self.key = 2 ** 256 - 1
+        self.key = 2**256 - 1
 
     async def simulate_connection_fail(self, peer):
         await self.mark_good(peer.peer_info, True, 1)
@@ -313,8 +315,8 @@ class TestPeerManager:
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
-        key1 = 2 ** 256 - 1
-        key2 = 2 ** 128 - 1
+        key1 = 2**256 - 1
+        key2 = 2**128 - 1
         bucket1 = peer_info1.get_tried_bucket(key1)
         bucket2 = peer_info1.get_tried_bucket(key2)
         assert bucket1 != bucket2
@@ -358,8 +360,8 @@ class TestPeerManager:
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
-        key1 = 2 ** 256 - 1
-        key2 = 2 ** 128 - 1
+        key1 = 2**256 - 1
+        key2 = 2**128 - 1
         bucket1 = peer_info1.get_new_bucket(key1)
         bucket2 = peer_info1.get_new_bucket(key2)
         assert bucket1 != bucket2
@@ -385,7 +387,6 @@ class TestPeerManager:
         buckets = []
         for i in range(4 * 255):
             src = PeerInfo("251.4.1.1", 8444)
-            peer = PeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444)
             t_peer = TimestampedPeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444, 0)
             extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
@@ -398,7 +399,6 @@ class TestPeerManager:
         buckets = []
         for i in range(255):
             src = PeerInfo("250." + str(i) + ".1.1", 8444)
-            peer = PeerInfo("250.1.1.1", 8444)
             t_peer = TimestampedPeerInfo("250.1.1.1", 8444, 0)
             extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
@@ -583,6 +583,6 @@ class TestPeerManager:
         await addrman.mark_good(PeerInfo("250.250.2.2", 9999))
         assert await addrman.size() == 2
         for _ in range(5):
-            await addrman.attempt(peer1, True, time.time() - 61)
+            await addrman.attempt(PeerInfo(peer1.host, peer1.port), True, time.time() - 61)
         addrman.cleanup(7 * 3600 * 24, 5)
         assert await addrman.size() == 1

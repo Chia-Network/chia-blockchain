@@ -1,32 +1,29 @@
-import pytest
+from __future__ import annotations
 
+import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import SpendSim, SimClient
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.clvm.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program
-from chia.types.spend_bundle import SpendBundle
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 
 
 class TestSpendSim:
     @pytest.mark.asyncio
     async def test_farming(self):
-        try:
-            sim = await SpendSim.create()
+        async with sim_and_client(pass_prefarm=False) as (sim, _):
             for i in range(0, 5):
                 await sim.farm_block()
 
             assert len(sim.blocks) == 5
             assert sim.blocks[-1].height == 4
             assert sim.block_records[0].reward_claims_incorporated[0].amount == 18375000000000000000
-        finally:
-            await sim.close()
 
     @pytest.mark.asyncio
     async def test_rewind(self):
-        try:
-            sim = await SpendSim.create()
+        async with sim_and_client() as (sim, _):
             for i in range(0, 5):
                 await sim.farm_block()
 
@@ -34,18 +31,14 @@ class TestSpendSim:
             await sim.farm_block()
             await sim.rewind(save_height)
 
-            assert len(sim.blocks) == 5
-            assert sim.blocks[-1].height == 4
-        finally:
-            await sim.close()
+            assert len(sim.blocks) == 6
+            assert sim.blocks[-1].height == 5
 
 
 class TestSimClient:
     @pytest.mark.asyncio
     async def test_all_endpoints(self):
-        try:
-            sim = await SpendSim.create()
-            sim_client = SimClient(sim)
+        async with sim_and_client() as (sim, sim_client):
             for i in range(0, 5):
                 await sim.farm_block()
             await sim.farm_block(bytes32([0] * 32))
@@ -142,6 +135,3 @@ class TestSimClient:
             new_coin = next(x.coin for x in additions if x.coin.puzzle_hash == puzzle_hash)
             coin_records = await sim_client.get_coin_records_by_parent_ids([spendable_coin.name()])
             assert coin_records[0].coin.name() == new_coin.name()
-
-        finally:
-            await sim.close()

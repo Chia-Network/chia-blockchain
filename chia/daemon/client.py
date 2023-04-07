@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import ssl
@@ -16,12 +18,14 @@ class DaemonProxy:
         self,
         uri: str,
         ssl_context: Optional[ssl.SSLContext],
+        heartbeat: int,
         max_message_size: int = 50 * 1000 * 1000,
     ):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
         self.response_dict: Dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
+        self.heartbeat = heartbeat
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
         self.max_message_size = max_message_size
@@ -37,7 +41,7 @@ class DaemonProxy:
                 self._uri,
                 autoclose=True,
                 autoping=True,
-                heartbeat=60,
+                heartbeat=self.heartbeat,
                 ssl_context=self.ssl_context,
                 max_msg_size=self.max_message_size,
             )
@@ -126,12 +130,6 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
-    async def notify_keyring_migration_completed(self, passphrase: Optional[str]) -> WsRpcMessage:
-        data: Dict[str, Any] = {"key": passphrase}
-        request: WsRpcMessage = self.format_request("notify_keyring_migration_completed", data)
-        response: WsRpcMessage = await self._get(request)
-        return response
-
     async def ping(self) -> WsRpcMessage:
         request = self.format_request("ping", {})
         response = await self._get(request)
@@ -149,13 +147,18 @@ class DaemonProxy:
 
 
 async def connect_to_daemon(
-    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext
+    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext, heartbeat: int
 ) -> DaemonProxy:
     """
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, max_message_size)
+    client = DaemonProxy(
+        f"wss://{self_hostname}:{daemon_port}",
+        ssl_context=ssl_context,
+        max_message_size=max_message_size,
+        heartbeat=heartbeat,
+    )
     await client.start()
     return client
 
@@ -171,13 +174,18 @@ async def connect_to_daemon_and_validate(
 
     try:
         daemon_max_message_size = config.get("daemon_max_message_size", 50 * 1000 * 1000)
+        daemon_heartbeat = config.get("daemon_heartbeat", 300)
         crt_path = root_path / config["daemon_ssl"]["private_crt"]
         key_path = root_path / config["daemon_ssl"]["private_key"]
         ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         connection = await connect_to_daemon(
-            config["self_hostname"], config["daemon_port"], daemon_max_message_size, ssl_context
+            config["self_hostname"],
+            config["daemon_port"],
+            max_message_size=daemon_max_message_size,
+            ssl_context=ssl_context,
+            heartbeat=daemon_heartbeat,
         )
         r = await connection.ping()
 

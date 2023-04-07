@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from typing import List, Tuple
 
 import typing_extensions
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -33,15 +33,12 @@ class HintStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
         return self
 
-    async def get_coin_ids(self, hint: bytes) -> List[bytes32]:
+    async def get_coin_ids(self, hint: bytes, *, max_items: int = 50000) -> List[bytes32]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT coin_id from hints WHERE hint=?", (hint,))
+            cursor = await conn.execute("SELECT coin_id from hints WHERE hint=? LIMIT ?", (hint, max_items))
             rows = await cursor.fetchall()
             await cursor.close()
-        coin_ids = []
-        for row in rows:
-            coin_ids.append(row[0])
-        return coin_ids
+        return [bytes32(row[0]) for row in rows]
 
     async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         if len(coin_hint_list) == 0:

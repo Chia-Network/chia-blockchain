@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Optional
 
@@ -22,8 +24,7 @@ def configure(
     crawler_minimum_version_count: Optional[int],
     seeder_domain_name: str,
     seeder_nameserver: str,
-    enable_data_server: str = "",
-):
+) -> None:
     config_yaml = "config.yaml"
     with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
         config.update(load_defaults_for_missing_services(config=config, config_name=config_yaml))
@@ -95,13 +96,6 @@ def configure(
         if set_peer_count:
             config["full_node"]["target_peer_count"] = int(set_peer_count)
             print("Target peer count updated")
-            change_made = True
-        if enable_data_server:
-            config["data_layer"]["run_server"] = str2bool(enable_data_server)
-            if str2bool(enable_data_server):
-                print("Data Server enabled.")
-            else:
-                print("Data Server disabled.")
             change_made = True
         if testnet:
             if testnet == "true" or testnet == "t":
@@ -273,30 +267,24 @@ def configure(
     help="configures the seeder nameserver setting. Ex: `example.com.`",
     type=str,
 )
-@click.option(
-    "--enable-data-server",
-    help="Enable or disable data propagation server for your data layer",
-    type=click.Choice(["true", "t", "false", "f"]),
-)
 @click.pass_context
 def configure_cmd(
-    ctx,
-    set_farmer_peer,
-    set_node_introducer,
-    set_fullnode_port,
-    set_harvester_port,
-    set_log_level,
-    enable_upnp,
-    set_outbound_peer_count,
-    set_peer_count,
-    testnet,
-    set_peer_connect_timeout,
-    crawler_db_path,
-    crawler_minimum_version_count,
-    seeder_domain_name,
-    seeder_nameserver,
-    enable_data_server,
-):
+    ctx: click.Context,
+    set_farmer_peer: str,
+    set_node_introducer: str,
+    set_fullnode_port: str,
+    set_harvester_port: str,
+    set_log_level: str,
+    enable_upnp: str,
+    set_outbound_peer_count: str,
+    set_peer_count: str,
+    testnet: str,
+    set_peer_connect_timeout: str,
+    crawler_db_path: str,
+    crawler_minimum_version_count: int,
+    seeder_domain_name: str,
+    seeder_nameserver: str,
+) -> None:
     configure(
         ctx.obj["root_path"],
         set_farmer_peer,
@@ -313,5 +301,4 @@ def configure_cmd(
         crawler_minimum_version_count,
         seeder_domain_name,
         seeder_nameserver,
-        enable_data_server,
     )

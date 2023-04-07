@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -51,7 +53,6 @@ class WalletUserStore:
         data: str,
         id: Optional[int] = None,
     ) -> WalletInfo:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",

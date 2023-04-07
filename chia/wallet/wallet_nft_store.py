@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 from sqlite3 import Row
@@ -155,10 +157,36 @@ class WalletNftStore:
                 return int(count_row[0])
         return -1
 
+    async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
+        sql = "SELECT 1 FROM users_nfts WHERE removed_height is NULL"
+        params: List[Union[uint32, bytes32]] = []
+        if wallet_id is not None:
+            sql += " AND wallet_id=?"
+            params.append(wallet_id)
+        sql += " LIMIT 1"
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            count_row = await execute_fetchone(conn, sql, params)
+            if count_row:
+                return False
+        return True
+
     async def get_nft_list(
-        self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
+        self,
+        wallet_id: Optional[uint32] = None,
+        did_id: Optional[bytes32] = None,
+        start_index: int = 0,
+        count: int = 50,
     ) -> List[NFTCoinInfo]:
-        sql: str = f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE"
+        try:
+            start_index = int(start_index)
+        except ValueError:
+            start_index = 0
+        try:
+            count = int(count)
+        except ValueError:
+            count = 50
+
+        sql: str = f"SELECT {NFT_COIN_INFO_COLUMNS} from users_nfts WHERE"
         if wallet_id is not None and did_id is None:
             sql += f" wallet_id={wallet_id}"
         if wallet_id is None and did_id is not None:
@@ -168,8 +196,9 @@ class WalletNftStore:
         if wallet_id is not None or did_id is not None:
             sql += " and"
         sql += " removed_height is NULL"
+        sql += " LIMIT ? OFFSET ?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(sql)
+            rows = await conn.execute_fetchall(sql, (count, start_index))
 
         return [
             NFTCoinInfo(

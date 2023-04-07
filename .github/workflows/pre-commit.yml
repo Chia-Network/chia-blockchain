@@ -17,6 +17,7 @@ jobs:
   pre-commit:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -71,4 +72,6 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
-    - run: pre-commit run --all-files --verbose
+    - env:
+        CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
+      run: pre-commit run --all-files --verbose

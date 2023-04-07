@@ -1,13 +1,14 @@
-from secrets import token_bytes
-from typing import Any, Dict
+from __future__ import annotations
 
-from chia.util.json_util import dict_to_json_str
+from secrets import token_bytes
+from typing import Any, Dict, Optional
 
 from typing_extensions import TypedDict
 
+from chia.util.json_util import dict_to_json_str
 
 # Messages must follow this format
-# Message = { "command" "command_name",
+# Message = { "command": "command_name",
 #             "data" : {...},
 #             "request_id": "bytes_32",
 #             "destination": "service_name",
@@ -29,12 +30,12 @@ def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -
     Formats the response into standard format.
     """
     response = {
-        "command": incoming_msg["command"],
+        "command": incoming_msg.get("command", ""),
         "ack": True,
         "data": response_data,
-        "request_id": incoming_msg["request_id"],
-        "destination": incoming_msg["origin"],
-        "origin": incoming_msg["destination"],
+        "request_id": incoming_msg.get("request_id", ""),
+        "destination": incoming_msg.get("origin", ""),
+        "origin": incoming_msg.get("destination", ""),
     }
 
     json_str = dict_to_json_str(response)
@@ -46,7 +47,10 @@ def create_payload(command: str, data: Dict[str, Any], origin: str, destination:
     return dict_to_json_str(response)
 
 
-def create_payload_dict(command: str, data: Dict[str, Any], origin: str, destination: str) -> WsRpcMessage:
+def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: str, destination: str) -> WsRpcMessage:
+    if data is None:
+        data = {}
+
     return WsRpcMessage(
         command=command,
         ack=False,

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import inspect
 import os
 import sys
 import time
 from types import FrameType
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List
 
 # This is a development utility that instruments tasks (coroutines) and records
 # wall-clock time they spend in various functions. Since it relies on
@@ -154,7 +155,6 @@ def get_file(frame: FrameType) -> str:
 
 
 def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
-
     if event in ["c_call", "c_return", "c_exception"]:
         return
 
@@ -197,7 +197,6 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
     #    f.write(f"{indent}CALL {t} {get_stack(frame)}\n")
 
     elif event == "return":
-
         fi = ti.stack.get(frame)
         assert fi is not None
 
@@ -209,7 +208,6 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
             # with open("instrumentation.log", "a") as f:
             #    f.write(f"{indent}SUSPEND {t} {get_stack(frame)}\n")
         else:
-
             # with open("instrumentation.log", "a") as f:
             #    f.write(f"{indent}RETURN {t} {get_stack(frame)}\n")
 
@@ -257,11 +255,10 @@ def fontcolor(pct: float) -> str:
         return "black"
 
 
-def stop_task_instrumentation() -> None:
+def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -> None:
     sys.setprofile(None)
     global g_function_infos
 
-    target_dir = f"task-profile-{os.getpid()}"
     try:
         os.mkdir(target_dir)
     except Exception:
@@ -290,7 +287,6 @@ def stop_task_instrumentation() -> None:
 
             # print all nodes (functions)
             for name, fun_info in call_tree.items():
-
                 # frames that are less than 0.1% of the total wall-clock time are
                 # filtered
                 if fun_info.duration / total_duration < 0.001:
@@ -310,7 +306,6 @@ def stop_task_instrumentation() -> None:
 
             # print all edges (calls)
             for name, fun_info in call_tree.items():
-
                 if name in filter_frames:
                     continue
 
@@ -335,12 +330,30 @@ def stop_task_instrumentation() -> None:
             f.write("}\n")
 
 
-if __name__ == "__main__":
+@contextlib.contextmanager
+def manage_task_instrumentation() -> Iterator[None]:
+    start_task_instrumentation()
+    try:
+        yield
+    finally:
+        stop_task_instrumentation()
+
+
+@contextlib.contextmanager
+def maybe_manage_task_instrumentation(enable: bool) -> Iterator[None]:
+    if enable:
+        with manage_task_instrumentation():
+            yield
+    else:
+        yield
+
+
+def main(args: List[str]) -> int:
     import glob
     import pathlib
     import subprocess
 
-    profile_dir = pathlib.Path(sys.argv[1])
+    profile_dir = pathlib.Path(args[0])
     queue: List[subprocess.Popen[bytes]] = []
     for file in glob.glob(str(profile_dir / "*.dot")):
         print(file)
@@ -357,3 +370,9 @@ if __name__ == "__main__":
     while len(queue) > 0:
         oldest = queue.pop(0)
         oldest.wait()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(args=sys.argv[1:]))

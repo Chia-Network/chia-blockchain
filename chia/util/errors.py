@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 from pathlib import Path
 from typing import Any, List
@@ -156,22 +158,41 @@ class Err(Enum):
     INVALID_SPEND_BUNDLE = 126
     FAILED_GETTING_GENERATOR_MULTIPROCESSING = 127
 
+    ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED = 128
+    ASSERT_BEFORE_SECONDS_RELATIVE_FAILED = 129
+    ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED = 130
+    ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED = 131
+    ASSERT_CONCURRENT_SPEND_FAILED = 132
+    ASSERT_CONCURRENT_PUZZLE_FAILED = 133
+
+    IMPOSSIBLE_SECONDS_RELATIVE_CONSTRAINTS = 134
+    IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS = 135
+    IMPOSSIBLE_HEIGHT_RELATIVE_CONSTRAINTS = 136
+    IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS = 137
+
+    ASSERT_MY_BIRTH_SECONDS_FAILED = 138
+    ASSERT_MY_BIRTH_HEIGHT_FAILED = 139
+
+    ASSERT_EPHEMERAL_FAILED = 140
+    EPHEMERAL_RELATIVE_CONDITION = 141
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):
+        super().__init__(f"Error code: {code.name} {error_msg}")
         self.code = code
         self.error_msg = error_msg
 
 
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
-        super(ConsensusError, self).__init__(f"Error code: {code.name}")
+        super().__init__(f"Error code: {code.name} {errors}")
         self.errors = errors
 
 
 class ProtocolError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
-        super(ProtocolError, self).__init__(f"Error code: {code.name}")
+        super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 
@@ -196,11 +217,6 @@ class KeychainIsLocked(KeychainException):
 
 class KeychainSecretsMissing(KeychainException):
     pass
-
-
-class KeychainRequiresMigration(KeychainException):
-    def __init__(self) -> None:
-        super().__init__("Keychain requires migration")
 
 
 class KeychainCurrentPassphraseIsInvalid(KeychainException):

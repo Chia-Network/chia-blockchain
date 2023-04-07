@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import dataclasses
+import logging
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -10,6 +13,8 @@ from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
+
+log = logging.getLogger(__name__)
 
 
 def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
@@ -150,6 +155,10 @@ class WalletTransactionStore:
         sent_to.append(append_data)
 
         tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
+        if not tx.is_valid():
+            # if the tx is not valid due to repeated failures, we will confirm that we can't spend it
+            log.info(f"Marking tx={tx.name} as confirmed but failed, since it is not spendable due to errors")
+            tx = dataclasses.replace(tx, confirmed=True, confirmed_at_height=uint32(0))
         await self.add_transaction_record(tx)
         return True
 
@@ -180,7 +189,7 @@ class WalletTransactionStore:
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.
-    # also, the current time should be passed in as a paramter
+    # also, the current time should be passed in as a parameter
     async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.

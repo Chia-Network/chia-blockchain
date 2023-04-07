@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -21,7 +23,9 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.ws_connection import NodeType, ProtocolMessageTypes, WSChiaConnection, make_msg
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int16, uint32, uint64
 
@@ -92,7 +96,7 @@ class Sender:
     _messages: List[MessageGenerator[PayloadType]]
     _last_sync_id: uint64
     _stop_requested = False
-    _task: Optional[asyncio.Task]  # type: ignore[type-arg]  # Asks for Task parameter which doesn't work
+    _task: Optional[asyncio.Task[None]]
     _response: Optional[ExpectedResponse]
 
     def __init__(self, plot_manager: PlotManager) -> None:
@@ -114,8 +118,7 @@ class Sender:
             await self.await_closed()
         if self._task is None:
             self._task = asyncio.create_task(self._run())
-            # TODO, Add typing in PlotManager
-            if not self._plot_manager.initial_refresh() or self._sync_id != 0:  # type:ignore[no-untyped-call]
+            if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:
             raise AlreadyStartedError()
@@ -169,7 +172,7 @@ class Sender:
             return False
         if response.identifier.sync_id != self._response.identifier.sync_id:
             log.warning(
-                "set_response unexpected sync-id: " f"{response.identifier.sync_id}/{self._response.identifier.sync_id}"
+                "set_response unexpected sync-id: {response.identifier.sync_id}/{self._response.identifier.sync_id}"
             )
             return False
         if response.identifier.message_id != self._response.identifier.message_id:
@@ -180,7 +183,7 @@ class Sender:
             return False
         if response.message_type != int16(self._response.message_type.value):
             log.warning(
-                "set_response unexpected message-type: " f"{response.message_type}/{self._response.message_type.value}"
+                "set_response unexpected message-type: {response.message_type}/{self._response.message_type.value}"
             )
             return False
         log.debug(f"set_response valid {response}")

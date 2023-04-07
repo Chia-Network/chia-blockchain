@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import asyncio
 import logging
 
@@ -9,14 +11,13 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Handshake
-from chia.server.outbound_message import make_msg, Message
+from chia.server.outbound_message import Message, make_msg
 from chia.server.rate_limits import RateLimiter
-from chia.server.server import ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint64
-from chia.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -48,18 +49,16 @@ class TestDos:
         session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
 
-        ssl_context = ssl_context_for_client(
-            server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
-        )
+        ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
         await ws.close()
         assert ws.closed
 
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         assert not ws.closed
 
@@ -77,7 +76,7 @@ class TestDos:
         assert ws.closed
         try:
             ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
             assert response.type == WSMsgType.CLOSE
@@ -97,11 +96,9 @@ class TestDos:
         session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
 
-        ssl_context = ssl_context_for_client(
-            server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
-        )
+        ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
         await ws.send_bytes(bytes([1] * 1024))
 
@@ -116,7 +113,7 @@ class TestDos:
         assert ws.closed
         try:
             ws = await session.ws_connect(
-                url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
             response: WSMessage = await ws.receive()
             assert response.type == WSMsgType.CLOSE
@@ -125,9 +122,7 @@ class TestDos:
         await asyncio.sleep(6)
 
         # Ban expired
-        await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-        )
+        await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024)
 
         await session.close()
 
@@ -143,11 +138,9 @@ class TestDos:
         session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
 
-        ssl_context = ssl_context_for_client(
-            server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
-        )
+        ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
         )
 
         # Construct an otherwise valid handshake message

@@ -1,18 +1,19 @@
 from __future__ import annotations
-import warnings
 
+import warnings
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import Any, Dict, List, cast
 
 from blspy import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.streamable import Streamable, streamable_from_dict, recurse_jsonify, streamable
+from chia.util.errors import Err, ValidationError
+from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
-from .coin_spend import CoinSpend
+from .coin_spend import CoinSpend, compute_additions_with_cost
 
 
 @streamable
@@ -29,11 +30,11 @@ class SpendBundle(Streamable):
     aggregated_signature: G2Element
 
     @property
-    def coin_solutions(self):
+    def coin_solutions(self) -> List[CoinSpend]:
         return self.coin_spends
 
     @classmethod
-    def aggregate(cls, spend_bundles) -> "SpendBundle":
+    def aggregate(cls, spend_bundles: List[SpendBundle]) -> SpendBundle:
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         for bundle in spend_bundles:
@@ -42,29 +43,35 @@ class SpendBundle(Streamable):
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         return cls(coin_spends, aggregated_signature)
 
-    def additions(self) -> List[Coin]:
+    # TODO: this should be removed
+    def additions(self, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
         items: List[Coin] = []
-        for coin_spend in self.coin_spends:
-            items.extend(coin_spend.additions())
+        for cs in self.coin_spends:
+            coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
+            max_cost -= cost
+            if max_cost < 0:
+                raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "additions() for SpendBundle")
+            items.extend(coins)
         return items
 
     def removals(self) -> List[Coin]:
-        """This should be used only by wallet"""
         return [_.coin for _ in self.coin_spends]
 
+    # TODO: this should be removed
     def fees(self) -> int:
         """Unsafe to use for fees validation!!!"""
-        amount_in = sum(_.amount for _ in self.removals())
-        amount_out = sum(_.amount for _ in self.additions())
+        amount_in = sum(coin.amount for coin in self.removals())
+        amount_out = sum(coin.amount for coin in self.additions())
 
         return amount_in - amount_out
 
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
+    def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
+    # TODO: this should be removed
     def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()
@@ -106,4 +113,4 @@ class SpendBundle(Streamable):
             d["coin_solutions"] = d["coin_spends"]
         if exclude_modern_keys:
             del d["coin_spends"]
-        return recurse_jsonify(d)
+        return cast(Dict[str, Any], recurse_jsonify(d))

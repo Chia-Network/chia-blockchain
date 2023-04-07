@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys
@@ -7,7 +9,6 @@ import click
 
 from chia.plotting.util import add_plot_directory, validate_plot_size
 
-DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
 
@@ -35,7 +36,7 @@ def plots_cmd(ctx: click.Context):
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
-    initialize_logging("", {"log_stdout": True}, root_path)
+    initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
 
 
 @plots_cmd.command("create", short_help="Create plots")
@@ -115,21 +116,21 @@ def create_cmd(
     connect_to_daemon: bool,
 ):
     from chia.plotting.create_plots import create_plots, resolve_plot_keys
+    from chia.plotting.util import Params
 
-    class Params(object):
-        def __init__(self):
-            self.size = size
-            self.num = num
-            self.buffer = buffer
-            self.num_threads = num_threads
-            self.buckets = buckets
-            self.stripe_size = DEFAULT_STRIPE_SIZE
-            self.tmp_dir = Path(tmp_dir)
-            self.tmp2_dir = Path(tmp2_dir) if tmp2_dir else None
-            self.final_dir = Path(final_dir)
-            self.plotid = plotid
-            self.memo = memo
-            self.nobitfield = nobitfield
+    params = Params(
+        size=size,
+        num=num,
+        buffer=buffer,
+        num_threads=num_threads,
+        buckets=buckets,
+        tmp_dir=Path(tmp_dir),
+        tmp2_dir=Path(tmp2_dir) if tmp2_dir else None,
+        final_dir=Path(final_dir),
+        plotid=plotid,
+        memo=memo,
+        nobitfield=nobitfield,
+    )
 
     root_path: Path = ctx.obj["root_path"]
     try:
@@ -150,7 +151,7 @@ def create_cmd(
         )
     )
 
-    asyncio.run(create_plots(Params(), plot_keys))
+    asyncio.run(create_plots(params, plot_keys))
     if not exclude_final_dir:
         try:
             add_plot_directory(root_path, final_dir)

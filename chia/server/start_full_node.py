@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -16,6 +18,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
+from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -26,11 +29,11 @@ log = logging.getLogger(__name__)
 
 def create_full_node_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-    override_capabilities: List[Tuple[uint16, str]] = None,
-) -> Service:
+    override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+) -> Service[FullNode]:
     service_config = config[SERVICE_NAME]
 
     full_node = FullNode(
@@ -65,10 +68,9 @@ def create_full_node_service(
     )
 
 
-async def async_main() -> int:
+async def async_main(service_config: Dict[str, Any]) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
@@ -82,14 +84,17 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
-    if os.getenv("CHIA_INSTRUMENT_NODE", 0) != 0:
-        import atexit
 
-        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-
-        start_task_instrumentation()
-        atexit.register(stop_task_instrumentation)
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_NODE") is not None):
+        service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        target_peer_count = service_config.get("target_peer_count", 80) - service_config.get(
+            "target_outbound_peer_count", 8
+        )
+        if target_peer_count < 0:
+            target_peer_count = None
+        if not service_config.get("use_chia_loop_policy", True):
+            target_peer_count = None
+        return async_run(coro=async_main(service_config), connection_limit=target_peer_count)
 
 
 if __name__ == "__main__":

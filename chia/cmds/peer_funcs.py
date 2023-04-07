@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.cmds.cmds_util import get_any_service_client
+from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
 
 
@@ -15,7 +17,10 @@ async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> Non
         )
         print(f"Connecting to {ip}, {port}")
         try:
-            await rpc_client.open_connection(ip, int(port))
+            result = await rpc_client.open_connection(ip, int(port))
+            err = result.get("error")
+            if result["success"] is False or err is not None:
+                print(err)
         except Exception:
             print(f"Failed to connect to {ip}:{port}")
 
@@ -52,7 +57,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
 
     connections = await rpc_client.get_connections()
     print("Connections:")
-    print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
+    print("Type      IP                                      Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
     for con in connections:
         last_connect_tuple = time.struct_time(time.localtime(con["last_message_time"]))
         last_connect = time.strftime("%b %d %T", last_connect_tuple)
@@ -75,12 +80,12 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
                     connection_peak_hash = connection_peak_hash[2:]
                 connection_peak_hash = f"{connection_peak_hash[:8]}..."
             con_str = (
-                f"{NodeType(con['type']).name:9} {host:38} "
+                f"{NodeType(con['type']).name:9} {host:39} "
                 f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                 f" {con['node_id'].hex()[:8]}... "
                 f"{last_connect}  "
                 f"{mb_up:7.1f}|{mb_down:<7.1f}"
-                f"\n                                                 "
+                f"\n                                                  "
             )
             if peak_height is not None:
                 con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
@@ -91,7 +96,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
                 con_str += f"    -Trusted: {trusted}"
         else:
             con_str = (
-                f"{NodeType(con['type']).name:9} {host:38} "
+                f"{NodeType(con['type']).name:9} {host:39} "
                 f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                 f" {con['node_id'].hex()[:8]}... "
                 f"{last_connect}  "
@@ -108,8 +113,8 @@ async def peer_async(
     add_connection: str,
     remove_connection: str,
 ) -> None:
-    rpc_client: Optional[RpcClient]
-    async with get_any_service_client(node_type, rpc_port, root_path) as node_config_fp:
+    client_type = NODE_TYPES[node_type]
+    async with get_any_service_client(client_type, rpc_port, root_path) as node_config_fp:
         rpc_client, config, _ = node_config_fp
         if rpc_client is not None:
             # Check or edit node connections

@@ -1,21 +1,21 @@
 from __future__ import annotations
 
+import io
+import struct
 from dataclasses import dataclass
 from decimal import Decimal
-import struct
-import io
 from typing import Iterable, List, Optional, Type
 
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.mark.structures import ParameterSet
+from _pytest.fixtures import SubRequest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
+from _pytest.mark.structures import ParameterSet
 from typing_extensions import final
 
-from chia.util.ints import int8, uint8, int16, uint16, int32, uint32, int64, uint64, uint128, int512
+from chia.util.ints import int8, int16, int32, int64, int512, uint8, uint16, uint32, uint64, uint128
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 
@@ -107,7 +107,6 @@ class TestStructStream:
         length: int,
         struct_format: Optional[str],
     ) -> None:
-
         with pytest.raises(ValueError):
             t = cls(upper_boundary + 1)
 

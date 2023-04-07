@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import dataclasses
+import signal
+import sys
 from pathlib import Path
 from typing import Any, Dict, Sequence, Union
 
@@ -15,7 +19,6 @@ class VersionedBlob(Streamable):
 
 
 def format_bytes(bytes: int) -> str:
-
     if not isinstance(bytes, int) or bytes < 0:
         return "Invalid"
 
@@ -31,7 +34,6 @@ def format_bytes(bytes: int) -> str:
 
 
 def format_minutes(minutes: int) -> str:
-
     if not isinstance(minutes, int):
         return "Invalid"
 
@@ -105,3 +107,11 @@ def validate_directory_writable(path: Path) -> None:
         raise InvalidPathError(path, "Directory doesn't exist")
     except OSError:
         raise InvalidPathError(path, "Directory not writable")
+
+
+if sys.platform == "win32" or sys.platform == "cygwin":
+    termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = [signal.SIGTERM]
+else:
+    termination_signals = [signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = termination_signals

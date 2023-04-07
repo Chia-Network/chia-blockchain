@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import logging
 import os
-
-from chia.util.keyring_wrapper import KeyringWrapper
+import time
 from multiprocessing import Pool
 from pathlib import Path
 from sys import platform
-from tests.util.keyring import TempKeyring, using_temp_file_keyring
-from tests.core.util.test_lockfile import poll_directory
 from time import sleep
 
+from chia.simulator.keyring import TempKeyring, using_temp_file_keyring
+from chia.simulator.time_out_assert import adjusted_timeout
+from chia.util.keyring_wrapper import KeyringWrapper
+from tests.core.util.test_lockfile import wait_for_enough_files_in_directory
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +19,7 @@ log = logging.getLogger(__name__)
 DUMMY_SLEEP_VALUE = 2
 
 
-def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_workers):
+def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
     with TempKeyring(existing_keyring_path=keyring_path, delete_on_cleanup=False):
         if platform == "linux" or platform == "win32" or platform == "cygwin":
             # FileKeyring's setup_keyring_file_watcher needs to be called explicitly here,
@@ -28,17 +31,14 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index, num_wor
         with open(ready_file_path, "w") as f:
             f.write(f"{os.getpid()}\n")
 
-        # Wait up to 30 seconds for all processes to indicate readiness
+        # Wait up to 120 seconds for all processes to indicate readiness
         start_file_path: Path = Path(ready_file_path.parent) / "start"
-        remaining_attempts = 120
-        while remaining_attempts > 0:
-            if start_file_path.exists():
-                break
-            else:
-                sleep(0.25)
-                remaining_attempts -= 1
-
-        assert remaining_attempts >= 0
+        end = time.monotonic() + 120
+        started = False
+        while not started and time.monotonic() < end:
+            started = start_file_path.exists()
+            sleep(0.1)
+        assert started
 
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
@@ -62,14 +62,12 @@ class TestFileKeyringSynchronization:
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_multiple_writers(self):
-        num_workers = 20
+        num_workers = 10
         keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        passphrase_list = list(
-            map(
-                lambda x: ("test-service", f"test-user-{x}", f"passphrase {x}", keyring_path, x, num_workers),
-                range(num_workers),
-            )
-        )
+        passphrase_list = [
+            ("test-service", f"test-user-{index}", f"passphrase {index}", keyring_path, index)
+            for index in range(num_workers)
+        ]
 
         # Create a directory for each process to indicate readiness
         ready_dir: Path = Path(keyring_path).parent / "ready"
@@ -82,8 +80,7 @@ class TestFileKeyringSynchronization:
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -92,13 +89,14 @@ class TestFileKeyringSynchronization:
             with open(start_file_path, "w") as f:
                 f.write(f"{os.getpid()}\n")
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
             # Collect results
-            res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
+            res.get(
+                timeout=adjusted_timeout(timeout=10)
+            )  # 10 second timeout to prevent a bad test from spoiling the fun
 
         # Expect: parent process should be able to find all passphrases that were set by the child processes
         for item in passphrase_list:

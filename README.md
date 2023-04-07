@@ -1,6 +1,6 @@
 # chia-blockchain
 
-![Alt text](https://www.chia.net/img/chia_logo.svg)
+[![Chia Network logo](https://www.chia.net/wp-content/uploads/2022/09/chia-logo.svg "Chia logo")](https://www.chia.net/)
 
 | Current Release/main | Development Branch/dev |
 |         :---:          |          :---:         |
@@ -19,8 +19,7 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 * Support for light clients with fast, objective syncing
 * A growing community of farmers and developers around the world
 
-Please check out the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki)
-and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for
+Please check out the [Chia website](https://www.chia.net/), the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki), and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for
 information on this project.
 
 Python 3.7+ is required. Make sure your default python version is >=3.7

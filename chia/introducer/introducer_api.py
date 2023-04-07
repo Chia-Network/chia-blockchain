@@ -1,12 +1,15 @@
-from typing import Callable, Optional
+from __future__ import annotations
+
+from typing import Optional
 
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
-from chia.util.api_decorators import api_request, peer_required
+from chia.util.api_decorators import api_request
 from chia.util.ints import uint64
 
 
@@ -16,11 +19,10 @@ class IntroducerAPI:
     def __init__(self, introducer) -> None:
         self.introducer = introducer
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         pass
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def request_peers_introducer(
         self,
         request: RequestPeersIntroducer,

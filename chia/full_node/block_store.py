@@ -3,22 +3,21 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Tuple, Any, Union, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import block_info_from_block, generator_from_block
+from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
-from chia.util.full_block_utils import GeneratorBlockInfo
 
 log = logging.getLogger(__name__)
 
@@ -35,10 +34,8 @@ class BlockStore:
         self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-
             log.info("DB: Creating block store tables and indexes.")
             if self.db_wrapper.db_version == 2:
-
                 # TODO: most data in block is duplicated in block_record. The only
                 # reason for this is that our parsing of a FullBlock is so slow,
                 # it's faster to store duplicate data to parse less when we just
@@ -85,7 +82,6 @@ class BlockStore:
                 )
 
             else:
-
                 await conn.execute(
                     "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
                     "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -156,18 +152,19 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
-                    "UPDATE OR FAIL full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
+                    "UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
                 )
 
     async def set_in_chain(self, header_hashes: List[Tuple[bytes32]]) -> None:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.executemany(
-                    "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
-                )
+                async with await conn.executemany(
+                    "UPDATE full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
+                ) as cursor:
+                    if cursor.rowcount != len(header_hashes):
+                        raise RuntimeError(f"The blockchain database is corrupt. All of {header_hashes} should exist")
 
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
-
         assert header_hash == block.header_hash
 
         block_bytes: bytes
@@ -192,7 +189,6 @@ class BlockStore:
         self.block_cache.put(header_hash, block)
 
         if self.db_wrapper.db_version == 2:
-
             ses: Optional[bytes] = (
                 None
                 if block_record.sub_epoch_summary_included is None
@@ -283,9 +279,7 @@ class BlockStore:
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached: Optional[FullBlock] = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
-        log.debug(f"cache miss for block {header_hash.hex()}")
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
@@ -300,9 +294,7 @@ class BlockStore:
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return bytes(cached)
-        log.debug(f"cache miss for block {header_hash.hex()}")
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
@@ -330,10 +322,8 @@ class BlockStore:
                 return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
-
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return GeneratorBlockInfo(
                 cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
             )
@@ -361,10 +351,8 @@ class BlockStore:
                 )
 
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
-
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached.transactions_generator
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
@@ -520,9 +508,7 @@ class BlockStore:
         return ret
 
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-
         if self.db_wrapper.db_version == 2:
-
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT block_record FROM full_blocks WHERE header_hash=?",
@@ -555,7 +541,6 @@ class BlockStore:
 
         ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
-
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND height <= ?",
@@ -566,7 +551,6 @@ class BlockStore:
                         ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         else:
-
             formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
 
             async with self.db_wrapper.reader_no_transaction() as conn:
@@ -600,7 +584,6 @@ class BlockStore:
                 return [maybe_decompress_blob(row[0]) for row in rows]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
-
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
@@ -635,7 +618,6 @@ class BlockStore:
 
         ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
-
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
@@ -682,7 +664,6 @@ class BlockStore:
         return bool(row[0])
 
     async def get_random_not_compactified(self, number: int) -> List[int]:
-
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(

@@ -1,0 +1,25 @@
+name: 🚨 Check PR Labels
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+jobs:
+  check-labels:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: read
+      statuses: write
+    outputs:
+      status: ${{ steps.check-labels.outputs.status }}
+    steps:
+      - id: check-labels
+        uses: mheap/github-action-required-labels@v3
+        with:
+          mode: exactly
+          count: 1
+          labels: "Added, Changed, Fixed"
+          exit_type: success
+      - run: echo SUCCESS
+        if: steps.check-labels.outputs.status == 'success'
+      - run: echo FAILURE && exit 1
+        if: steps.check-labels.outputs.status == 'failure'

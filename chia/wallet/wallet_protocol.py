@@ -8,18 +8,18 @@ from typing_extensions import Protocol
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_info import WalletInfo
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class WalletProtocol(Protocol):
-
-    # TODO: it seems like this should return WalletType instead
     @classmethod
-    def type(cls) -> uint8:
+    def type(cls) -> WalletType:
         ...
 
     def id(self) -> uint32:
@@ -34,6 +34,7 @@ class WalletProtocol(Protocol):
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         ...
 
@@ -60,6 +61,10 @@ class WalletProtocol(Protocol):
     def require_derivation_paths(self) -> bool:
         ...
 
+    def get_name(self) -> str:
+        ...
+
+    wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment

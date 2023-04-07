@@ -9,12 +9,14 @@
 #
 # Note: This script is run in a `pre-commit` hook (which runs on CI) to make sure we don't miss out any folder.
 
+from __future__ import annotations
+
 import logging
+import os
 import pathlib
 import sys
 
 import click
-
 
 log_levels = {
     0: logging.ERROR,
@@ -52,6 +54,9 @@ def command(verbose, root_str):
         init_path = path.joinpath("__init__.py")
         # This has plenty of race hazards. If it messes up,
         # it will likely get caught the next time.
+        if len(os.listdir(path)) == 0:
+            logger.info(f"Skipping (empty directory)   : {init_path}")
+            continue
         if init_path.is_file() and not init_path.is_symlink():
             logger.info(f"Found   : {init_path}")
             continue

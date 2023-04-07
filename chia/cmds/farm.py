@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 import click
@@ -42,9 +44,7 @@ def farm_cmd() -> None:
 @click.option(
     "-fp",
     "--farmer-rpc-port",
-    help=(
-        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml"
-    ),
+    help=("Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml"),
     type=int,
     default=None,
     show_default=True,
@@ -55,8 +55,9 @@ def summary_cmd(
     harvester_rpc_port: Optional[int],
     farmer_rpc_port: Optional[int],
 ) -> None:
-    from .farm_funcs import summary
     import asyncio
+
+    from .farm_funcs import summary
 
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
@@ -79,7 +80,8 @@ def summary_cmd(
     show_default=True,
 )
 def challenges_cmd(farmer_rpc_port: Optional[int], limit: int) -> None:
-    from .farm_funcs import challenges
     import asyncio
+
+    from .farm_funcs import challenges
 
     asyncio.run(challenges(farmer_rpc_port, limit))

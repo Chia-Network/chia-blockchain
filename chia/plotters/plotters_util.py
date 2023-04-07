@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -105,3 +108,20 @@ def run_command(args, exc_description, *, check=True, **kwargs) -> subprocess.Co
     except Exception as e:
         raise RuntimeError(f"{exc_description} {e}")
     return proc
+
+
+def reset_loop_policy_for_windows():
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+
+def get_venv_bin():
+    venv_dir = os.environ.get("VIRTUAL_ENV", None)
+    if not venv_dir:
+        return None
+
+    venv_path = Path(venv_dir)
+
+    if sys.platform == "win32":
+        return venv_path / "Scripts"
+    else:
+        return venv_path / "bin"

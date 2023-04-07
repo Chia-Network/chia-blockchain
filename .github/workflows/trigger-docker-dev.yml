@@ -2,10 +2,14 @@ name: 📦🚀 Trigger Dev Docker Build
 
 on:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
       - 'long_lived/**'
       - 'release/**'
   pull_request:
+    paths-ignore:
+    - '**.md'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -24,7 +28,7 @@ jobs:
           unset HAS_SECRET
 
           if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_SECRET='true' ; fi
-          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+          echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
         env:
           GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 

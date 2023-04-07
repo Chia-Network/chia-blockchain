@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import traceback
@@ -19,6 +21,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, is_overf
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
@@ -88,8 +91,9 @@ def batch_pre_validate_blocks(
                     npc_result = get_name_puzzle_conditions(
                         block_generator,
                         min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
-                        cost_per_byte=constants.COST_PER_BYTE,
                         mempool_mode=False,
+                        height=block.height,
+                        constants=constants,
                     )
                     removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:
@@ -112,14 +116,17 @@ def batch_pre_validate_blocks(
                 successfully_validated_signatures = False
                 # If we failed CLVM, no need to validate signature, the block is already invalid
                 if error_int is None:
-
                     # If this is False, it means either we don't have a signature (not a tx block) or we have an invalid
                     # signature (which also puts in an error) or we didn't validate the signature because we want to
-                    # validate it later. receive_block will attempt to validate the signature later.
+                    # validate it later. add_block will attempt to validate the signature later.
                     if validate_signatures:
                         if npc_result is not None and block.transactions_info is not None:
                             assert npc_result.conds
-                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                            pairs_pks, pairs_msgs = pkm_pairs(
+                                npc_result.conds,
+                                constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                                soft_fork=block.height >= constants.SOFT_FORK_HEIGHT,
+                            )
                             # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
                             pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pairs_pks]
                             if not AugSchemeMPL.aggregate_verify(
@@ -237,8 +244,8 @@ async def pre_validate_blocks_multiprocessing(
             cc_sp_hash: bytes32 = challenge
         else:
             cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-        q_str: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
-            constants, challenge, cc_sp_hash
+        q_str: Optional[bytes32] = verify_and_get_quality_string(
+            block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):
@@ -365,6 +372,7 @@ def _run_generator(
     constants: ConsensusConstants,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
+    height: uint32,
 ) -> Optional[bytes]:
     """
     Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
@@ -378,8 +386,8 @@ def _run_generator(
         npc_result: NPCResult = get_name_puzzle_conditions(
             block_generator,
             min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
-            cost_per_byte=constants.COST_PER_BYTE,
             mempool_mode=False,
+            height=height,
         )
         return bytes(npc_result)
     except ValidationError as e:

@@ -26,6 +26,9 @@ on:
       configuration:
         required: true
         type: string
+      matrix_mode:
+        required: true
+        type: string
       runs-on:
         required: true
         type: string
@@ -58,12 +61,18 @@ jobs:
             apt: '3.7'
             install_sh: '3.7'
             matrix: '3.7'
+            exclude_from:
+              limited: True
+              main: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
             apt: '3.8'
             install_sh: '3.8'
             matrix: '3.8'
+            exclude_from:
+              limited: True
+              main: True
           - name: '3.9'
             file_name: '3.9'
             action: '3.9'
@@ -76,6 +85,18 @@ jobs:
             apt: '3.10'
             install_sh: '3.10'
             matrix: '3.10'
+            exclude_from:
+              limited: True
+              main: True
+          - name: '3.11'
+            file_name: '3.11'
+            action: '3.11'
+            apt: '3.11'
+            install_sh: '3.11'
+            matrix: '3.11'
+            exclude_from:
+              limited: True
+              main: True
         exclude:
           - os:
               matrix: macos
@@ -93,6 +114,9 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          - python:
+              exclude_from:
+                ${{ inputs.matrix_mode }}: True
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -109,8 +133,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Python environment
-        uses: actions/setup-python@v3
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.action }}
 
@@ -135,8 +164,9 @@ jobs:
 
       - name: Get pip cache dir
         id: pip-cache
+        shell: bash
         run: |
-          echo "::set-output name=dir::$(pip cache dir)"
+          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
       - name: Cache pip
         uses: actions/cache@v3
@@ -163,15 +193,20 @@ jobs:
 
       - name: Checkout test blocks and plots (macOS, Ubuntu)
         if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.tar.gz | tar xzf -
+          gh release download -R Chia-Network/test-cache 0.29.0 --archive=tar.gz -O - | tar xzf -
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
       - name: Checkout test blocks and plots (Windows)
         if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
+          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=zip -O blocks_and_plots.zip
+          Expand-Archive blocks_and_plots.zip -DestinationPath .
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
@@ -184,6 +219,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.install_sh }}
           development: true
+          legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
 
       - uses: chia-network/actions/activate-venv@main
 

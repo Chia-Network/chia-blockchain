@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 from chia.cmds.cmds_util import get_any_service_client
@@ -10,8 +12,7 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
     """
     Calculates the estimated space on the network given two block header hashes.
     """
-    client: Optional[FullNodeRpcClient]
-    async with get_any_service_client("full_node", rpc_port) as node_config_fp:
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as node_config_fp:
         client, _, _ = node_config_fp
         if client is not None:
             if delta_block_height:

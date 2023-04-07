@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pkg_resources import DistributionNotFound, get_distribution, resource_filename
 
 try:

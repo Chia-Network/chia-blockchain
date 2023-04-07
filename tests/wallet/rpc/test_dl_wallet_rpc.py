@@ -1,48 +1,42 @@
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import AsyncIterator
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
-from tests.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(
-        self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, self_hostname: str
+        self, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
     ) -> None:
         num_blocks = 5
-        full_nodes, wallets, bt = two_wallet_nodes
-        full_node_api = full_nodes[0]
+        [full_node_service], wallet_services, bt = two_wallet_nodes_services
+        full_node_api = full_node_service._api
         full_node_server = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
+        wallet_node = wallet_services[0]._node
+        server_2 = wallet_node.server
+        wallet_node_2 = wallet_services[1]._node
+        server_3 = wallet_node_2.server
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
@@ -53,8 +47,8 @@ class TestWalletRpc:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -63,56 +57,26 @@ class TestWalletRpc:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        wallet_rpc_api = WalletRpcApi(wallet_node)
-        wallet_rpc_api_2 = WalletRpcApi(wallet_node_2)
-
-        config = bt.config
-        hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
-
-        def stop_node_cb() -> None:
-            pass
-
-        full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-        rpc_server_node = await start_rpc_server(
-            full_node_rpc_api,
-            hostname,
-            daemon_port,
-            uint16(0),
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-        rpc_server_wallet_1 = await start_rpc_server(
-            wallet_rpc_api,
-            hostname,
-            daemon_port,
-            uint16(0),
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-        rpc_server_wallet_2 = await start_rpc_server(
-            wallet_rpc_api_2,
-            hostname,
-            daemon_port,
-            uint16(0),
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-
         await time_out_assert(15, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(15, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create(self_hostname, rpc_server_wallet_1.listen_port, bt.root_path, config)
-        await validate_get_routes(client, wallet_rpc_api)
-        client_2 = await WalletRpcClient.create(self_hostname, rpc_server_wallet_2.listen_port, bt.root_path, config)
-        await validate_get_routes(client_2, wallet_rpc_api_2)
+        assert wallet_services[0].rpc_server is not None
+        assert wallet_services[1].rpc_server is not None
+
+        client = await WalletRpcClient.create(
+            self_hostname,
+            wallet_services[0].rpc_server.listen_port,
+            wallet_services[0].root_path,
+            wallet_services[0].config,
+        )
+        await validate_get_routes(client, wallet_services[0].rpc_server.rpc_api)
+        client_2 = await WalletRpcClient.create(
+            self_hostname,
+            wallet_services[1].rpc_server.listen_port,
+            wallet_services[1].root_path,
+            wallet_services[1].config,
+        )
+        await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
         try:
             merkle_root: bytes32 = bytes32([0] * 32)
@@ -129,7 +93,8 @@ class TestWalletRpc:
                 return rec.confirmed
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
-            singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
+            singleton_record = await client.dl_latest_singleton(launcher_id)
+            assert singleton_record is not None
             assert singleton_record.root == merkle_root
 
             new_root: bytes32 = bytes32([1] * 32)
@@ -139,7 +104,8 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
                 await asyncio.sleep(0.5)
 
-            new_singleton_record: SingletonRecord = await client.dl_latest_singleton(launcher_id)
+            new_singleton_record = await client.dl_latest_singleton(launcher_id)
+            assert new_singleton_record is not None
             assert new_singleton_record.root == new_root
             assert new_singleton_record.confirmed
 
@@ -167,39 +133,27 @@ class TestWalletRpc:
                 new_singleton_record,
                 singleton_record,
             ]
-            assert (
-                await client.dl_history(
-                    launcher_id,
-                    min_generation=uint32(1),
-                    max_generation=uint32(1),
-                )
-                == [new_singleton_record]
-            )
-            assert (
-                await client.dl_history(
-                    launcher_id,
-                    max_generation=uint32(0),
-                    num_results=uint32(1),
-                )
-                == [singleton_record]
-            )
-            assert (
-                await client.dl_history(
-                    launcher_id,
-                    min_generation=uint32(1),
-                    num_results=uint32(1),
-                )
-                == [new_singleton_record]
-            )
-            assert (
-                await client.dl_history(
-                    launcher_id,
-                    min_generation=uint32(1),
-                    max_generation=uint32(1),
-                    num_results=uint32(1),
-                )
-                == [new_singleton_record]
-            )
+            assert await client.dl_history(
+                launcher_id,
+                min_generation=uint32(1),
+                max_generation=uint32(1),
+            ) == [new_singleton_record]
+            assert await client.dl_history(
+                launcher_id,
+                max_generation=uint32(0),
+                num_results=uint32(1),
+            ) == [singleton_record]
+            assert await client.dl_history(
+                launcher_id,
+                min_generation=uint32(1),
+                num_results=uint32(1),
+            ) == [new_singleton_record]
+            assert await client.dl_history(
+                launcher_id,
+                min_generation=uint32(1),
+                max_generation=uint32(1),
+                num_results=uint32(1),
+            ) == [new_singleton_record]
 
             assert await client.dl_singletons_by_root(launcher_id, new_root) == [new_singleton_record]
 
@@ -232,6 +186,7 @@ class TestWalletRpc:
 
             for lid in [launcher_id, launcher_id_2, launcher_id_3]:
                 rec = await client.dl_latest_singleton(lid)
+                assert rec is not None
                 assert rec.root == next_root
 
             await client_2.dl_stop_tracking(launcher_id)
@@ -261,10 +216,6 @@ class TestWalletRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
-            rpc_server_node.close()
-            rpc_server_wallet_1.close()
-            rpc_server_wallet_2.close()
+            client_2.close()
             await client.await_closed()
-            await rpc_server_node.await_closed()
-            await rpc_server_wallet_1.await_closed()
-            await rpc_server_wallet_2.await_closed()
+            await client_2.await_closed()

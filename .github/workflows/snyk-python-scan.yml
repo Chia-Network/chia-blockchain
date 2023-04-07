@@ -1,0 +1,80 @@
+name: 🚨 Snyk Python Scan
+on:
+  push:
+    paths-ignore:
+    - '**.md'
+    branches:
+    - long_lived/**
+    - main
+    - release/**
+    tags:
+    - '**'
+  pull_request:
+    paths-ignore:
+    - '**.md'
+    branches:
+    - '**'
+  workflow_dispatch:
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+
+jobs:
+  snyk_python:
+    name: Scan the dependencies of Chia Blockchain
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_SNYK_SECRET
+        if [ -n "$SNYK_TOKEN" ]; then HAS_SNYK_SECRET='true' ; fi
+        echo HAS_SNYK_SECRET=${HAS_SNYK_SECRET} >> $GITHUB_OUTPUT
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    - name: Checkout Code
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python environment
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Chia Blockchain
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
+
+    - name: Activate Chia venv
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      uses: chia-network/actions/activate-venv@main
+
+    - name: Generate requirements.txt file
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      run: |
+        pip freeze > requirements.txt
+
+    - name: Run Snyk to check for vulnerabilities
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      uses: snyk/actions/python@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: monitor
+        args: --skip-unresolved

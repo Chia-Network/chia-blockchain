@@ -1,4 +1,6 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import cProfile
 import dataclasses
 import logging
@@ -12,6 +14,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
@@ -19,7 +22,6 @@ from chia.util.ints import uint64
 from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from chia.simulator.time_out_assert import time_out_assert
 from tests.util.misc import assert_runtime
 
 log = logging.getLogger(__name__)
@@ -52,7 +54,7 @@ class TestPerformance:
             pool_reward_puzzle_hash=wallet_ph,
         )
         for block in blocks:
-            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+            await full_node_1.full_node.add_block(block)
 
         start_height = (
             full_node_1.full_node.blockchain.get_peak().height
@@ -92,7 +94,7 @@ class TestPerformance:
                 guarantee_transaction_block=True,
                 transaction_data=spend_bundle,
             )
-            await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), fake_peer)
+            await full_node_1.full_node.add_block(blocks[-1], fake_peer)
 
         await time_out_assert(20, node_height_at_least, True, full_node_1, start_height + 20)
 
@@ -140,7 +142,7 @@ class TestPerformance:
         curr: BlockRecord = peak
         while not curr.is_transaction_block:
             curr = full_node_1.full_node.blockchain.block_record(curr.prev_hash)
-        mempool_bundle = await full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
+        mempool_bundle = full_node_1.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
         if mempool_bundle is None:
             spend_bundle = None
         else:
@@ -187,7 +189,7 @@ class TestPerformance:
         with assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
-            res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
+            res = await full_node_1.full_node.add_block(block_small)
 
         log.warning(f"Res: {res}")
 

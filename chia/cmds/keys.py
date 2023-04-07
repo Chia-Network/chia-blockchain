@@ -1,24 +1,19 @@
-import asyncio
-
-import click
-import sys
+from __future__ import annotations
 
 from typing import Optional, Tuple
+
+import click
 
 
 @click.group("keys", short_help="Manage your keys")
 @click.pass_context
-def keys_cmd(ctx: click.Context):
+def keys_cmd(ctx: click.Context) -> None:
     """Create, delete, view and use your key pairs"""
     from pathlib import Path
-    from .keys_funcs import migrate_keys
 
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
-
-    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(root_path, True)):
-        sys.exit(1)
 
 
 @keys_cmd.command("generate", short_help="Generates and adds a key to keychain")
@@ -31,7 +26,7 @@ def keys_cmd(ctx: click.Context):
     required=False,
 )
 @click.pass_context
-def generate_cmd(ctx: click.Context, label: Optional[str]):
+def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     from .init_funcs import check_keys
     from .keys_funcs import generate_and_add
 
@@ -39,7 +34,7 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("show", short_help="Displays all the keys in keychain")
+@keys_cmd.command("show", short_help="Displays all the keys in keychain or the key with the given fingerprint")
 @click.option(
     "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
 )
@@ -54,10 +49,33 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
     show_default=True,
     is_flag=True,
 )
-def show_cmd(show_mnemonic_seed, non_observer_derivation):
-    from .keys_funcs import show_all_keys
+@click.option(
+    "--json",
+    "-j",
+    help=("Displays all the keys in keychain as JSON"),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+@click.option(
+    "--fingerprint",
+    "-f",
+    help="Enter the fingerprint of the key you want to view",
+    type=int,
+    required=False,
+    default=None,
+)
+@click.pass_context
+def show_cmd(
+    ctx: click.Context,
+    show_mnemonic_seed: bool,
+    non_observer_derivation: bool,
+    json: bool,
+    fingerprint: Optional[int],
+) -> None:
+    from .keys_funcs import show_keys
 
-    show_all_keys(show_mnemonic_seed, non_observer_derivation)
+    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
@@ -78,7 +96,7 @@ def show_cmd(show_mnemonic_seed, non_observer_derivation):
     required=False,
 )
 @click.pass_context
-def add_cmd(ctx: click.Context, filename: str, label: Optional[str]):
+def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
     from .init_funcs import check_keys
     from .keys_funcs import query_and_add_private_key_seed
 
@@ -93,12 +111,12 @@ def add_cmd(ctx: click.Context, filename: str, label: Optional[str]):
 
 
 @keys_cmd.group("label", short_help="Manage your key labels")
-def label_cmd():
+def label_cmd() -> None:
     pass
 
 
 @label_cmd.command("show", short_help="Show the labels of all available keys")
-def show_label_cmd():
+def show_label_cmd() -> None:
     from .keys_funcs import show_all_key_labels
 
     show_all_key_labels()
@@ -119,7 +137,7 @@ def show_label_cmd():
     type=str,
     required=True,
 )
-def set_label_cmd(fingerprint: int, label: str):
+def set_label_cmd(fingerprint: int, label: str) -> None:
     from .keys_funcs import set_key_label
 
     set_key_label(fingerprint, label)
@@ -133,7 +151,7 @@ def set_label_cmd(fingerprint: int, label: str):
     type=int,
     required=True,
 )
-def delete_label_cmd(fingerprint: int):
+def delete_label_cmd(fingerprint: int) -> None:
     from .keys_funcs import delete_key_label
 
     delete_key_label(fingerprint)
@@ -149,7 +167,7 @@ def delete_label_cmd(fingerprint: int):
     required=True,
 )
 @click.pass_context
-def delete_cmd(ctx: click.Context, fingerprint: int):
+def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
     from .init_funcs import check_keys
     from .keys_funcs import delete
 
@@ -158,14 +176,14 @@ def delete_cmd(ctx: click.Context, fingerprint: int):
 
 
 @keys_cmd.command("delete_all", short_help="Delete all private keys in keychain")
-def delete_all_cmd():
+def delete_all_cmd() -> None:
     from chia.util.keychain import Keychain
 
     Keychain().delete_all_keys()
 
 
 @keys_cmd.command("generate_and_print", short_help="Generates but does NOT add to keychain")
-def generate_and_print_cmd():
+def generate_and_print_cmd() -> None:
     from .keys_funcs import generate_and_print
 
     generate_and_print()
@@ -198,29 +216,70 @@ def generate_and_print_cmd():
     show_default=True,
     is_flag=True,
 )
-def sign_cmd(message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool):
+@click.option(
+    "--json",
+    "-j",
+    help=("Write the signature output in JSON format"),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+def sign_cmd(
+    message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
+) -> None:
     from .keys_funcs import resolve_derivation_master_key, sign
 
     private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-    sign(message, private_key, hd_path, as_bytes)
+    sign(message, private_key, hd_path, as_bytes, json)
+
+
+def parse_signature_json(json_str: str) -> Tuple[str, str, str, str]:
+    import json
+
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        raise click.BadParameter("Invalid JSON string")
+    if "message" not in data:
+        raise click.BadParameter("Missing 'message' field")
+    if "pubkey" not in data:
+        raise click.BadParameter("Missing 'pubkey' field")
+    if "signature" not in data:
+        raise click.BadParameter("Missing 'signature' field")
+    if "signing_mode" not in data:
+        raise click.BadParameter("Missing 'signing_mode' field")
+
+    return data["message"], data["pubkey"], data["signature"], data["signing_mode"]
 
 
 @keys_cmd.command("verify", short_help="Verify a signature with a pk")
-@click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
-@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
-@click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str, required=True)
-def verify_cmd(message: str, public_key: str, signature: str):
-    from .keys_funcs import verify
+@click.option("--message", "-d", default=None, help="Enter the signed message in UTF-8", type=str)
+@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str)
+@click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str)
+@click.option(
+    "--as-bytes",
+    "-b",
+    help="Verify the signed message as sequence of bytes rather than UTF-8 string. Ignored if --json is used.",
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+@click.option(
+    "--json",
+    "-j",
+    help=("Read the signature data from a JSON string. Overrides --message, --public_key, and --signature."),
+    show_default=True,
+    type=str,
+)
+def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, json: str) -> None:
+    from .keys_funcs import as_bytes_from_signing_mode, verify
 
-    verify(message, public_key, signature)
+    if json is not None:
+        parsed_message, parsed_pubkey, parsed_sig, parsed_signing_mode_str = parse_signature_json(json)
 
-
-@keys_cmd.command("migrate", short_help="Attempt to migrate keys to the Chia keyring")
-@click.pass_context
-def migrate_cmd(ctx: click.Context):
-    from .keys_funcs import migrate_keys
-
-    asyncio.run(migrate_keys(ctx.obj["root_path"]))
+        verify(parsed_message, parsed_pubkey, parsed_sig, as_bytes_from_signing_mode(parsed_signing_mode_str))
+    else:
+        verify(message, public_key, signature, as_bytes)
 
 
 @keys_cmd.group("derive", short_help="Derive child keys or wallet addresses")
@@ -241,7 +300,7 @@ def migrate_cmd(ctx: click.Context):
     required=False,
 )
 @click.pass_context
-def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]):
+def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]) -> None:
     ctx.obj["fingerprint"] = fingerprint
     ctx.obj["filename"] = filename
 
@@ -294,10 +353,12 @@ def search_cmd(
     search_type: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
     prefix: Optional[str],
-):
+) -> None:
     import sys
-    from .keys_funcs import search_derive, resolve_derivation_master_key
+
     from blspy import PrivateKey
+
+    from .keys_funcs import resolve_derivation_master_key, search_derive
 
     private_key: Optional[PrivateKey] = None
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
@@ -347,7 +408,7 @@ def search_cmd(
 @click.pass_context
 def wallet_address_cmd(
     ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
-):
+) -> None:
     from .keys_funcs import derive_wallet_address, resolve_derivation_master_key
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
@@ -412,7 +473,7 @@ def child_key_cmd(
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
-):
+) -> None:
     from .keys_funcs import derive_child_key, resolve_derivation_master_key
 
     if key_type is None and derive_from_hd_path is None:

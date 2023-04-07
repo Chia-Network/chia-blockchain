@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 import traceback
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 from functools import lru_cache
+from typing import Optional
 
 from chiavdf import create_discriminant, verify_n_wesolowski
 
@@ -17,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=200)
-def get_discriminant(challenge, size_bites) -> int:
+def get_discriminant(challenge: bytes32, size_bites: int) -> int:
     return int(
         create_discriminant(challenge, size_bites),
         16,
@@ -32,9 +34,9 @@ def verify_vdf(
     number_of_iterations: uint64,
     discriminant_size: int,
     witness_type: uint8,
-):
-
-    return verify_n_wesolowski(
+) -> bool:
+    # TODO: chiavdf needs hinted
+    return verify_n_wesolowski(  # type:ignore[no-any-return]
         str(disc),
         input_el,
         output,

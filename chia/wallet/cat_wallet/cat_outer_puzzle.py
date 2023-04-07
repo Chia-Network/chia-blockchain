@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
@@ -33,7 +35,7 @@ class CATOuterPuzzle:
         _, tail_hash, inner_puzzle = args
         constructor_dict = {
             "type": "CAT",
-            "tail": "0x" + tail_hash.as_python().hex(),
+            "tail": "0x" + tail_hash.atom.hex(),
         }
         next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:
@@ -74,7 +76,7 @@ class CATOuterPuzzle:
         tail_hash: bytes32 = constructor["tail"]
         spendable_cats: List[SpendableCAT] = []
         target_coin: Coin
-        for coin_prog, spend_prog, puzzle, solution in [
+        ring = [
             *zip(
                 solver["siblings"].as_iter(),
                 solver["sibling_spends"].as_iter(),
@@ -87,7 +89,9 @@ class CATOuterPuzzle:
                 inner_puzzle,
                 inner_solution,
             ),
-        ]:
+        ]
+        ring.sort(key=lambda c: bytes(c[0]))  # deterministic sort to make sure all spends have the same ring order
+        for coin_prog, spend_prog, puzzle, solution in ring:
             coin_bytes: bytes = coin_prog.as_python()
             coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
             if coin_bytes == solver["coin"]:

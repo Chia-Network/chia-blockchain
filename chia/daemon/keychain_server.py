@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type
 
 from blspy import PrivateKey
+
 from chia.cmds.init_funcs import check_keys
 from chia.util.errors import KeychainException, KeychainFingerprintNotFound
 from chia.util.ints import uint32
-from chia.util.keychain import KeyData, Keychain
-from chia.util.streamable import streamable, Streamable
-from pathlib import Path
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Type
+from chia.util.keychain import Keychain, KeyData
+from chia.util.streamable import Streamable, streamable
 
 # Commands that are handled by the KeychainServer
 keychain_commands = [
@@ -92,23 +95,22 @@ class DeleteLabelRequest(Streamable):
         return EmptyResponse()
 
 
+@dataclass
 class KeychainServer:
     """
     Implements a remote keychain service for clients to perform key operations on
     """
 
-    def __init__(self):
-        self._default_keychain = Keychain()
-        self._alt_keychains = {}
+    _default_keychain: Keychain = field(default_factory=Keychain)
+    _alt_keychains: Dict[str, Keychain] = field(default_factory=dict)
 
-    def get_keychain_for_request(self, request: Dict[str, Any]):
+    def get_keychain_for_request(self, request: Dict[str, Any]) -> Keychain:
         """
         Keychain instances can have user and service strings associated with them.
         The keychain backends ultimately point to the same data stores, but the user
         and service strings are used to partition those data stores. We attempt to
         maintain a mapping of user/service pairs to their corresponding Keychain.
         """
-        keychain = None
         user = request.get("kc_user", self._default_keychain.user)
         service = request.get("kc_service", self._default_keychain.service)
         if user == self._default_keychain.user and service == self._default_keychain.service:
@@ -166,7 +168,7 @@ class KeychainServer:
             }
 
         try:
-            self.get_keychain_for_request(request).add_private_key(mnemonic, label)
+            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
         except KeyError as e:
             return {
                 "success": False,
@@ -180,7 +182,7 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True}
+        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():

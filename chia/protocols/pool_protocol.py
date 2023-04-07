@@ -1,6 +1,8 @@
+from __future__ import annotations
+
+import time
 from dataclasses import dataclass
 from enum import Enum
-import time
 from typing import Optional
 
 from blspy import G1Element, G2Element
@@ -165,11 +167,11 @@ class ErrorResponse(Streamable):
     error_message: Optional[str]
 
 
-# Get the current authentication toke according "Farmer authentication" in SPECIFICATION.md
+# Get the current authentication token according to "Farmer authentication" in SPECIFICATION.md
 def get_current_authentication_token(timeout: uint8) -> uint64:
     return uint64(int(int(time.time() / 60) / timeout))
 
 
 # Validate a given authentication token against our local time
-def validate_authentication_token(token: uint64, timeout: uint8):
+def validate_authentication_token(token: uint64, timeout: uint8) -> bool:
     return abs(token - get_current_authentication_token(timeout)) <= timeout

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -18,5 +20,5 @@ class Announcement:
             message = self.message
         return std_hash(bytes(self.origin_info + message))
 
-    def __str__(self):
-        return self.name().decode("utf-8")
+    def __str__(self) -> str:
+        return self.name().hex()

@@ -1,17 +1,18 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Dict, Iterator, Optional
 
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks, get_name_puzzle_conditions
+from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
-from chia.full_node.bundle_tools import simple_solution_generator
 from chia.util.errors import Err
-from chia.consensus.cost_calculator import NPCResult
-
+from chia.util.ints import uint32, uint64
 
 MAX_COST = 11000000000
 
@@ -53,19 +54,12 @@ class CoinStore:
         self._add_coin_entry(coin, birthday)
         return coin
 
-    def validate_spend_bundle(
-        self,
-        spend_bundle: SpendBundle,
-        now: CoinTimestamp,
-        max_cost: int,
-        cost_per_byte: int,
-    ) -> int:
+    def validate_spend_bundle(self, spend_bundle: SpendBundle, now: CoinTimestamp, max_cost: int) -> int:
         # this should use blockchain consensus code
 
         program = simple_solution_generator(spend_bundle)
-        result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
-        )
+        # always use the post soft-fork2 semantics
+        result: NPCResult = get_name_puzzle_conditions(program, max_cost, mempool_mode=True, height=uint32(4000000))
         if result.error is not None:
             raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")
 
@@ -86,7 +80,11 @@ class CoinStore:
         err = mempool_check_time_locks(
             ephemeral_db,
             result.conds,
+            # TODO: this is technically not right, it's supposed to be the
+            # previous transaction block's height
             uint32(now.height),
+            # TODO: this is technically not right, it's supposed to be the
+            # previous transaction block's timestamp
             uint64(now.seconds),
         )
 
@@ -100,9 +98,8 @@ class CoinStore:
         spend_bundle: SpendBundle,
         now: CoinTimestamp,
         max_cost: int,
-        cost_per_byte: int,
     ):
-        err = self.validate_spend_bundle(spend_bundle, now, max_cost, cost_per_byte)
+        err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
         additions = spend_bundle.additions()

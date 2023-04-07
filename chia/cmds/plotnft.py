@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 from decimal import Decimal
 from typing import Optional
 
 import click
-from chia.cmds.cmds_util import execute_with_wallet
 
+from chia.cmds.cmds_util import execute_with_wallet
 
 MAX_CMDLINE_FEE = Decimal(0.5)
 
 
-def validate_fee(ctx, param, value):
+def validate_fee(ctx: click.Context, param: click.Parameter, value: str) -> str:
     try:
         fee = Decimal(value)
     except ValueError:
@@ -32,7 +34,7 @@ def plotnft_cmd() -> None:
     default=None,
 )
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
 
@@ -47,6 +49,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
 def get_login_link_cmd(launcher_id: str) -> None:
     import asyncio
+
     from .plotnft_funcs import get_login_link
 
     asyncio.run(get_login_link(launcher_id))
@@ -54,7 +57,7 @@ def get_login_link_cmd(launcher_id: str) -> None:
 
 @plotnft_cmd.command("create", short_help="Create a plot NFT")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=False)
 @click.option("-s", "--state", help="Initial state of Plot NFT: local or pool", type=str, required=True)
 @click.option(
@@ -105,7 +108,7 @@ def create_cmd(
 @plotnft_cmd.command("join", short_help="Join a plot NFT to a Pool")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
 @click.option(
     "-m",
@@ -136,7 +139,7 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 @plotnft_cmd.command("leave", short_help="Leave a pool and return to self-farming")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-m",
     "--fee",
@@ -165,7 +168,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 
 @plotnft_cmd.command("inspect", short_help="Get Detailed plotnft information as JSON")
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -184,7 +187,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 
 @plotnft_cmd.command("claim", short_help="Claim rewards from a plot NFT")
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
     "-m",
     "--fee",
@@ -219,6 +222,7 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
 @click.option("-a", "--address", help="New address for payout instructions", type=str, required=True)
 def change_payout_instructions_cmd(launcher_id: str, address: str) -> None:
     import asyncio
+
     from .plotnft_funcs import change_payout_instructions
 
     asyncio.run(change_payout_instructions(launcher_id, address))

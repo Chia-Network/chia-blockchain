@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List
 
 import pytest
@@ -6,8 +8,8 @@ from chiabip158 import PyBIP158
 
 class TestFilter:
     @pytest.mark.asyncio
-    async def test_basic_filter_test(self, wallet_and_node):
-        full_nodes, wallets, bt = wallet_and_node
+    async def test_basic_filter_test(self, simulator_and_wallet):
+        full_nodes, wallets, bt = simulator_and_wallet
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 

@@ -1,19 +1,23 @@
+from __future__ import annotations
+
 import re
-from typing import Optional, Tuple, List, Union
+from typing import List, Optional, Tuple, Union
+
+from clvm.casts import int_to_bytes
 
 from chia.full_node.generator import create_compressed_generator
-from chia.types.blockchain_format.program import SerializedProgram, Program
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from clvm.casts import int_to_bytes
 
 
 def _serialize_amount(val: int) -> bytes:
     assert val >= 0
-    assert val < 2 ** 64
+    assert val < 2**64
     atom: bytes = int_to_bytes(val)
     size = len(atom)
     assert size <= 9

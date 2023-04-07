@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from blspy import G1Element
 
 from chia.types.blockchain_format.coin import Coin

@@ -1,21 +1,20 @@
-import click
-import colorama
+from __future__ import annotations
+
 import os
 import sys
 import time
-
-from chia.daemon.client import acquire_connection_to_daemon
-from chia.util.config import load_config
-from chia.util.errors import KeychainMaxUnlockAttempts
-from chia.util.keychain import Keychain, supports_os_passphrase_storage
-from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-from chia.util.misc import prompt_yes_no
-from chia.util.ws_message import WsRpcMessage
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import colorama
+
+from chia.daemon.client import acquire_connection_to_daemon
+from chia.util.errors import KeychainMaxUnlockAttempts
+from chia.util.keychain import Keychain, supports_os_passphrase_storage
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
+from chia.util.misc import prompt_yes_no
 
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
@@ -92,7 +91,7 @@ def verify_passphrase_meets_requirements(
 
 def prompt_for_passphrase(prompt: str) -> str:
     if sys.platform == "win32" or sys.platform == "cygwin":
-        print(prompt, end="")
+        print(prompt, end="", flush=True)
         prompt = ""
     return getpass(prompt)
 
@@ -346,26 +345,3 @@ async def async_update_daemon_passphrase_cache_if_running(root_path: Path, confi
                     raise Exception(error)
     except Exception as e:
         print(f"Failed to notify daemon of updated keyring passphrase: {e}")
-
-
-async def async_update_daemon_migration_completed_if_running() -> None:
-    """
-    Attempt to connect to the daemon to notify that keyring migration has completed.
-    This allows the daemon to refresh its keyring so that it can stop using the
-    legacy keyring.
-    """
-    ctx: click.Context = click.get_current_context()
-    root_path: Path = ctx.obj["root_path"]
-
-    if root_path is None:
-        print("Missing root_path in context. Unable to notify daemon")
-        return None
-
-    async with acquire_connection_to_daemon(root_path, load_config(root_path, "config.yaml"), quiet=True) as daemon:
-        if daemon is not None:
-            passphrase: str = Keychain.get_cached_master_passphrase()
-
-            print("Updating daemon... ", end="")
-            response: WsRpcMessage = await daemon.notify_keyring_migration_completed(passphrase)
-            success: bool = response.get("data", {}).get("success", False)
-            print("succeeded" if success is True else "failed")

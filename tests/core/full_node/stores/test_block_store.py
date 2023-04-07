@@ -1,37 +1,37 @@
+from __future__ import annotations
+
 import asyncio
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
+import dataclasses
 import logging
 import random
 import sqlite3
-import dataclasses
 
 import pytest
 from clvm.casts import int_to_bytes
 
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.util.ints import uint8
+from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.full_block import FullBlock
+from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
-from tests.setup_nodes import test_constants
-
 
 log = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
 async def test_block_store(tmp_dir, db_version, bt):
-    assert sqlite3.threadsafety == 1
+    assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
-
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
@@ -87,7 +87,6 @@ async def test_deadlock(tmp_dir, db_version, bt):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
-
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
@@ -116,7 +115,6 @@ async def test_rollback(bt, tmp_dir):
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(2) as db_wrapper:
-
         # Use a different file for the blockchain
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
@@ -281,11 +279,10 @@ async def test_get_generator(bt, db_version):
 
 @pytest.mark.asyncio
 async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
-    assert sqlite3.threadsafety == 1
+    assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
-
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
@@ -319,11 +316,10 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
 
 @pytest.mark.asyncio
 async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
-    assert sqlite3.threadsafety == 1
+    assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper_2:
-
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)

@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import logging
+
 import pytest
 from clvm.casts import int_to_bytes
 
 from chia.full_node.hint_store import HintStore
-from chia.protocols.full_node_protocol import RespondBlock
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -11,8 +14,6 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from tests.util.db_connection import DBConnection
-from chia.simulator.wallet_tools import WalletTool
-
 
 log = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ class TestHintStore:
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         for block in blocks:
-            await full_node_1.full_node.respond_block(RespondBlock(block), None)
+            await full_node_1.full_node.add_block(block, None)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         puzzle_hash = bytes32(32 * b"\0")
@@ -138,7 +139,7 @@ class TestHintStore:
         )
 
         for block in blocks[-10:]:
-            await full_node_1.full_node.respond_block(RespondBlock(block), None)
+            await full_node_1.full_node.add_block(block, None)
 
         get_hint = await full_node_1.full_node.hint_store.get_coin_ids(hint)
 
@@ -161,3 +162,22 @@ class TestHintStore:
 
             count = await hint_store.count_hints()
             assert count == 2
+
+    @pytest.mark.asyncio
+    async def test_limits(self, db_version):
+        async with DBConnection(db_version) as db_wrapper:
+            hint_store = await HintStore.create(db_wrapper)
+
+            # Add 200 coins, all with the same hint
+            hint = 32 * b"\0"
+            for i in range(200):
+                coin_id = (28 * b"\4") + i.to_bytes(4, "big")
+                await hint_store.add_hints([(coin_id, hint)])
+
+            count = await hint_store.count_hints()
+            assert count == 200
+
+            for limit in [0, 1, 42, 200]:
+                assert len(await hint_store.get_coin_ids(hint, max_items=limit)) == limit
+
+            assert len(await hint_store.get_coin_ids(hint, max_items=10000)) == 200

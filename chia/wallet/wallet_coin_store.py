@@ -1,6 +1,7 @@
-from typing import List, Optional, Set, Dict
+from __future__ import annotations
 
 import sqlite3
+from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -63,19 +64,6 @@ class WalletCoinStore:
             )
             return int(0 if row is None else row[0])
 
-    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
-        """Return WalletCoinRecord(s) that have a coin name in the specified list"""
-        if len(coin_names) == 0:
-            return []
-
-        as_hexes = [cn.hex() for cn in coin_names]
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
-            )
-
-        return [self.coin_record_from_row(row) for row in rows]
-
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
         if name is None:
@@ -105,7 +93,6 @@ class WalletCoinStore:
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?",
@@ -131,13 +118,21 @@ class WalletCoinStore:
             return None
         return self.coin_record_from_row(rows[0])
 
-    async def get_coin_records(self, coin_names: List[bytes32]) -> List[Optional[WalletCoinRecord]]:
+    async def get_coin_records(
+        self,
+        coin_names: List[bytes32],
+        include_spent_coins: bool = True,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+    ) -> Dict[bytes32, WalletCoinRecord]:
         """Returns CoinRecord with specified coin id."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
                 await conn.execute_fetchall(
-                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))})",
-                    [c.hex() for c in coin_names],
+                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))}) "
+                    f"AND confirmed_height>=? AND confirmed_height<? "
+                    f"{'' if include_spent_coins else 'AND spent=0'}",
+                    tuple([c.hex() for c in coin_names]) + (start_height, end_height),
                 )
             )
 
@@ -147,7 +142,7 @@ class WalletCoinStore:
             coin_name = bytes32.fromhex(row[0])
             ret[coin_name] = record
 
-        return [ret.get(name) for name in coin_names]
+        return ret
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
@@ -172,19 +167,6 @@ class WalletCoinStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT * FROM coin_record WHERE spent_height=0")
         return set(self.coin_record_from_row(row) for row in rows)
-
-    async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
-        """Returns set of all CoinRecords."""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT coin_name from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
-                (
-                    check_height,
-                    check_height,
-                ),
-            )
-
-        return set(bytes32.fromhex(row[0]) for row in rows)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:

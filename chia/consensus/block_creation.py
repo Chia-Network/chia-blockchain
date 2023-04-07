@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import random
 from dataclasses import replace
@@ -61,7 +63,7 @@ def create_foliage(
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -129,10 +131,7 @@ def create_foliage(
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
             result: NPCResult = get_name_puzzle_conditions(
-                block_generator,
-                constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=constants.COST_PER_BYTE,
-                mempool_mode=True,
+                block_generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height
             )
             cost = result.cost
 
@@ -321,7 +320,7 @@ def create_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         additions: Coins added in spend_bundle
         removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point
@@ -386,7 +385,7 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info) = create_foliage(
         constants,
         rc_block,
         block_generator,

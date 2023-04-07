@@ -1,25 +1,27 @@
+from __future__ import annotations
+
 import logging
 from typing import List, Optional, Set, Tuple
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.simulator.block_tools import test_constants
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia.simulator.wallet_tools import WalletTool
-from tests.setup_nodes import test_constants
-from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
 
 constants = test_constants
@@ -49,7 +51,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
-    async def test_basic_coin_store(self, db_version, bt):
+    async def test_basic_coin_store(self, db_version, softfork_height, bt):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -94,10 +96,7 @@ class TestCoinStoreWithBlocks:
                     if block.transactions_generator is not None:
                         block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [], [])
                         npc_result = get_name_puzzle_conditions(
-                            block_gen,
-                            bt.constants.MAX_BLOCK_COST_CLVM,
-                            cost_per_byte=bt.constants.COST_PER_BYTE,
-                            mempool_mode=False,
+                            block_gen, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
@@ -315,7 +314,6 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     async def test_basic_reorg(self, tmp_dir, db_version, bt):
-
         async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
@@ -324,7 +322,6 @@ class TestCoinStoreWithBlocks:
             store = await BlockStore.create(db_wrapper)
             b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
             try:
-
                 records: List[Optional[CoinRecord]] = []
 
                 for block in blocks:
@@ -349,15 +346,11 @@ class TestCoinStoreWithBlocks:
 
                 for reorg_block in blocks_reorg_chain:
                     if reorg_block.height < initial_block_count - 10:
-                        await _validate_and_add_block(
-                            b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                        )
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
                     elif reorg_block.height < initial_block_count:
-                        await _validate_and_add_block(
-                            b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN
-                        )
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
                     elif reorg_block.height >= initial_block_count:
-                        await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.NEW_PEAK)
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.NEW_PEAK)
                         if reorg_block.is_transaction_block():
                             coins = reorg_block.get_included_reward_coins()
                             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -433,6 +426,19 @@ class TestCoinStoreWithBlocks:
             assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 603)) == 0
             assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"1")], 0)) == 0
 
+            # test max_items limit
+            for limit in [0, 1, 42, 300]:
+                assert (
+                    len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0, max_items=limit))
+                    == limit
+                )
+
+            # if the limit is very high, we should get all of them
+            assert (
+                len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0, max_items=10000))
+                == 300
+            )
+
             coins = [cr.coin.name() for cr in crs]
             bad_coins = [std_hash(cr.coin.name()) for cr in crs]
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 0)) == 600
@@ -440,3 +446,10 @@ class TestCoinStoreWithBlocks:
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 300)) == 302
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 603)) == 0
             assert len(await coin_store.get_coin_states_by_ids(True, bad_coins, 0)) == 0
+
+            # test max_items limit
+            for limit in [0, 1, 42, 300]:
+                assert len(await coin_store.get_coin_states_by_ids(True, coins, 0, max_items=limit)) == limit
+
+            # if the limit is very high, we should get all of them
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, 0, max_items=10000)) == 600

@@ -1,8 +1,8 @@
 from __future__ import annotations
+
 import asyncio
 import dataclasses
 import logging
-import traceback
 from types import TracebackType
 from typing import Awaitable, Callable
 
@@ -57,8 +57,7 @@ class LockQueue:
                 await prioritized_callback.af()
                 await self._release_event.wait()
         except asyncio.CancelledError:
-            error_stack = traceback.format_exc()
-            log.debug(f"LockQueue._run() cancelled: {error_stack}")
+            log.debug("LockQueue._run() cancelled")
 
     def close(self) -> None:
         self._run_task.cancel()

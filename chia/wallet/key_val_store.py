@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from chia.util.db_wrapper import DBWrapper2
@@ -15,7 +17,7 @@ class KeyValStore:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value blob)")
+            await conn.execute("CREATE TABLE IF NOT EXISTS key_val_store(key text PRIMARY KEY, value blob)")
 
             await conn.execute("CREATE INDEX IF NOT EXISTS key_val_name on key_val_store(key)")
 

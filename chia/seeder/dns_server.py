@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import ipaddress
 import logging
@@ -8,12 +10,12 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import aiosqlite
-from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
+from dnslib import AAAA, CNAME, MX, NS, QTYPE, RR, SOA, A, DNSHeader, DNSRecord
 
 from chia.util.chia_logging import initialize_logging
-from chia.util.path import path_from_root
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
@@ -91,15 +93,13 @@ class DNSServer:
         # One protocol instance will be created to serve all
         # client requests.
         self.transport, self.protocol = await loop.create_datagram_endpoint(
-            lambda: EchoServerProtocol(self.dns_response), local_addr=("0.0.0.0", 53)
+            lambda: EchoServerProtocol(self.dns_response), local_addr=("::0", 53)
         )
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
 
     async def periodically_get_reliable_peers(self):
         sleep_interval = 0
         while True:
-            sleep_interval = min(15, sleep_interval + 1)
-            await asyncio.sleep(sleep_interval * 60)
             try:
                 # TODO: double check this. It shouldn't take this long to connect.
                 crawl_db = await aiosqlite.connect(self.db_path, timeout=600)
@@ -140,6 +140,9 @@ class DNSServer:
                 )
             except Exception as e:
                 log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
+
+            sleep_interval = min(15, sleep_interval + 1)
+            await asyncio.sleep(sleep_interval * 60)
 
     async def get_peers_to_respond(self, ipv4_count, ipv6_count):
         peers = []
@@ -205,7 +208,9 @@ class DNSServer:
             }
 
             qname = request.q.qname
-            qn = str(qname)
+            # DNS labels are mixed case with DNS resolvers that implement the use of bit 0x20 to improve
+            # transaction identity. See https://datatracker.ietf.org/doc/html/draft-vixie-dnsext-dns0x20-00
+            qn = str(qname).lower()
             qtype = request.q.qtype
             qt = QTYPE[qtype]
             if qn == D or qn.endswith("." + D):

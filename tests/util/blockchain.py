@@ -1,19 +1,19 @@
+from __future__ import annotations
+
 import os
 import pickle
+import tempfile
 from pathlib import Path
 from typing import List, Optional
-
-import aiosqlite
-import tempfile
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.simulator.block_tools import BlockTools
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.simulator.block_tools import BlockTools
 
 
 async def create_blockchain(constants: ConsensusConstants, db_version: int):
@@ -21,9 +21,7 @@ async def create_blockchain(constants: ConsensusConstants, db_version: int):
 
     if db_path.exists():
         db_path.unlink()
-    connection = await aiosqlite.connect(db_path)
-    wrapper = DBWrapper2(connection, db_version)
-    await wrapper.add_connection(await aiosqlite.connect(db_path))
+    wrapper = await DBWrapper2.create(database=db_path, reader_count=1, db_version=db_version)
 
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from secrets import token_bytes
 from typing import List, Optional
@@ -5,7 +7,7 @@ from typing import List, Optional
 import pytest
 import pytest_asyncio
 
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
@@ -13,22 +15,18 @@ from chia.full_node.full_node_store import FullNodeStore
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
+from chia.simulator.block_tools import create_block_tools_async, get_signage_point
+from chia.simulator.block_tools import test_constants as test_constants_original
+from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.simulator.block_tools import get_signage_point, create_block_tools_async
-from tests.blockchain.blockchain_test_utils import (
-    _validate_and_add_block,
-    _validate_and_add_block_no_error,
-)
-from tests.setup_nodes import test_constants as test_constants_original
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.util.blockchain import create_blockchain
-from tests.util.keyring import TempKeyring
 
-
-test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2 ** 12})
+test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12})
 log = logging.getLogger(__name__)
 
 
@@ -488,7 +486,7 @@ class TestFullNodeStore:
             blocks_4[-1].reward_chain_block.signage_point_index
             < test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA
         )
-        await _validate_and_add_block(blockchain, blocks_4[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(blockchain, blocks_4[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
 
         sb = blockchain.block_record(blocks_4[-1].header_hash)
         store.new_peak(sb, blocks_4[-1], None, None, None, blockchain)
