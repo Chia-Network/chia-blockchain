@@ -296,7 +296,7 @@ def check(use_cache: bool) -> int:
         with cache_path.open(mode="w") as file:
             dump_cache(cache=cache, file=file)
 
-    return 1 if overall_fail else 0
+    sys.exit(1 if overall_fail else 0)
 
 
 @main.command()
@@ -344,7 +344,7 @@ def build() -> int:
         if file_fail:
             overall_fail = True
 
-    return 1 if overall_fail else 0
+    sys.exit(1 if overall_fail else 0)
 
 
 sys.exit(main(auto_envvar_prefix="CHIA_MANAGE_CLVM"))
