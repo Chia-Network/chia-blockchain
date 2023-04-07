@@ -434,6 +434,9 @@ class MempoolManager:
         if cost == 0:
             return Err.UNKNOWN, None, []
 
+        if cost > self.max_block_clvm_cost:
+            return Err.BLOCK_COST_EXCEEDS_MAX, None, []
+
         # this is not very likely to happen, but it's here to ensure SQLite
         # never runs out of precision in its computation of fees.
         # sqlite's integers are signed int64, so the max value they can

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import random
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -2722,3 +2723,57 @@ def test_spends_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> No
         assert mi.spend_bundle.coin_spends[0].coin == expected_coin
         assert last_fpc is None or last_fpc >= mi.fee_per_cost
         last_fpc = mi.fee_per_cost
+
+
+def rand_hash() -> bytes32:
+    rng = random.Random()
+    ret = bytearray(32)
+    for i in range(32):
+        ret[i] = rng.getrandbits(8)
+    return bytes32(ret)
+
+
+def item_cost(cost: int, fee_rate: float) -> MempoolItem:
+    fee = cost * fee_rate
+    amount = int(fee + 100)
+    coin = Coin(rand_hash(), rand_hash(), amount)
+    return mk_item([coin], cost=cost, fee=int(cost * fee_rate))
+
+
+@pytest.mark.parametrize(
+    "items,add,expected",
+    [
+        # the max size is 100
+        # we need to evict two items
+        ([50, 25, 13, 12, 5], 10, [10, 50, 25, 13]),
+        # we don't need to evict anything
+        ([50, 25, 13], 10, [10, 50, 25, 13]),
+        # we need to evict everything
+        ([95, 5], 10, [10]),
+        # we evict a single item
+        ([75, 15, 9], 10, [10, 75, 15]),
+    ],
+)
+def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(100)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(100)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    fee_rate: float = 3.0
+    for i in items:
+        mempool.add_to_pool(item_cost(i, fee_rate))
+        fee_rate -= 0.1
+
+    # now, add the item we're testing
+    mempool.add_to_pool(item_cost(add, 3.1))
+
+    ordered_items = list(mempool.spends_by_feerate())
+
+    assert len(ordered_items) == len(expected)
+
+    for mi, expected_cost in zip(ordered_items, expected):
+        assert mi.cost == expected_cost
