@@ -7,11 +7,12 @@ import cProfile
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional, cast
 
 import aiosqlite
 import click
@@ -21,6 +22,7 @@ from chia.cmds.init_funcs import chia_init
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import Message, NodeType
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -44,6 +46,9 @@ class ExitOnError(logging.Handler):
 
 @contextmanager
 def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
+
     if not profile:
         yield
         return
@@ -107,6 +112,9 @@ async def run_sync_test(
     node_profiler: bool,
     start_at_checkpoint: Optional[str],
 ) -> None:
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
+
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler("test-full-sync.log")
@@ -144,7 +152,7 @@ async def run_sync_test(
         )
 
         try:
-            full_node.set_server(FakeServer())  # type: ignore[arg-type]
+            full_node.set_server(cast(ChiaServer, FakeServer()))
             await full_node._start()
 
             peak = full_node.blockchain.get_peak()
@@ -153,7 +161,7 @@ async def run_sync_test(
             else:
                 height = 0
 
-            peer: WSChiaConnection = FakePeer()  # type: ignore[assignment]
+            peer: WSChiaConnection = cast(WSChiaConnection, FakePeer())
 
             print()
             counter = 0

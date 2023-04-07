@@ -41,7 +41,7 @@ class ManageClvmError(Exception):
     pass
 
 
-class CacheEntry(typing.TypedDict):
+class CacheEntry(typing_extensions.TypedDict):
     clvm: str
     hex: str
     hash: str
@@ -68,7 +68,7 @@ class WrongCacheVersionError(CacheVersionError):
         super().__init__(f"Cache has wrong version, expected {expected_version!r} got: {found_version!r}")
 
 
-class Cache(typing.TypedDict):
+class Cache(typing_extensions.TypedDict):
     entries: CacheEntries
     version: CacheVersion
 
