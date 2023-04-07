@@ -126,10 +126,24 @@ class DAOCATWallet:
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin} was added")
-
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
-        lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
-        # breakpoint()  # if we get here, then success
+        # This is the bottom layer inner_puzzle, now you must find the lockup puzzle
+        # Check if it is empty (attempt shortcut)
+        active_votes_list = []
+        lockup_puz = get_lockup_puzzle(
+            self.dao_cat_info.limitations_program_hash,
+            active_votes_list,
+            inner_puzzle,
+        )
+
+        # Check if this is actually correct
+        if construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash() != coin.puzzle_hash:
+            # It's got restrictions, go look at the parent
+            # TODO: write this code
+            breakpoint()
+        assert construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash() == coin.puzzle_hash
+        lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
+
         await self.add_lineage(coin.name(), lineage_proof)
 
         lineage = await self.get_lineage_proof_for_coin(coin)
@@ -154,7 +168,7 @@ class DAOCATWallet:
         #     Should the incoming coins to this wallet already have a proposal ID?
         # Matt - I changed the dao_cat_info to use previous_votes instead of active_proposal_votes
         locked_coins = self.dao_cat_info.locked_coins
-        locked_coins.append(LockedCoinInfo(coin, inner_puzzle, []))
+        locked_coins.append(LockedCoinInfo(coin, lockup_puz, active_votes_list))
         dao_cat_info: DAOCATInfo = DAOCATInfo(
             self.dao_cat_info.dao_wallet_id,
             self.dao_cat_info.free_cat_wallet_id,
@@ -210,15 +224,24 @@ class DAOCATWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def create_vote_spend(self, amount: uint64, proposal_id: bytes32, is_yes_vote: bool) -> SpendBundle:
+    async def create_vote_spend(
+        self,
+        amount: uint64,
+        proposal_id: bytes32,
+        is_yes_vote: bool,
+        curry_vals: Optional[List[uint64, uint64, bytes32]] = None,
+    ) -> SpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
         change = sum(c.coin.amount for c in coins) - amount
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
-        dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
-        YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
+        if curry_vals is None:
+            dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
+            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZ = dao_wallet.get_proposal_curry_values(proposal_id)
+        else:
+            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZ = curry_vals
         # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
@@ -286,7 +309,7 @@ class DAOCATWallet:
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
                 )
-                inner_solution = await self.standard_wallet.make_solution(
+                inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
             if is_yes_vote:
@@ -301,7 +324,7 @@ class DAOCATWallet:
                     inner_solution,
                     coin.amount,
                     proposal_id,
-                    [YES_VOTES, TOTAL_VOTES, INNERPUZ],
+                    [YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZ],
                     vote_info,
                     vote_amount,
                     coin.puzzle_hash,
@@ -350,7 +373,6 @@ class DAOCATWallet:
             raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
         # get the lockup puzzle hash
         lockup_puzzle = await self.get_new_puzzle()
-
         # create the cat spend
         txs = await cat_wallet.generate_signed_transactions([amount], [lockup_puzzle.get_tree_hash()])
         new_cats = []
@@ -436,8 +458,8 @@ class DAOCATWallet:
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
         # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
-        dao_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.dao_wallet_id)
-        YES_VOTES, TOTAL_VOTES, INNERPUZ = await dao_wallet.get_proposal_curry_values(proposal_id)
+        dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
+        YES_VOTES, TOTAL_VOTES, INNERPUZ = dao_wallet.get_proposal_curry_values(proposal_id)
         proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in locked_coins:
             coin = lci.coin

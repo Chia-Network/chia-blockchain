@@ -141,6 +141,7 @@
       TREASURY_ID
       YES_VOTES
       TOTAL_VOTES
+      SPEND_OR_UPDATE_FLAG
       INNERPUZHASH
     )
   )
@@ -148,6 +149,7 @@
       proposal_singleton_struct
       (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
         INNERPUZHASH
+        (sha256 ONE SPEND_OR_UPDATE_FLAG)
         (sha256 ONE TOTAL_VOTES)
         (sha256 ONE YES_VOTES)
         (sha256 ONE TREASURY_ID)

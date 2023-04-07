@@ -144,13 +144,13 @@ def get_lockup_puzzle(cat_tail_hash: bytes32, previous_votes_list: List[bytes32]
 
 
 def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32) -> Program:
-    curried_args = uncurry_lockup(lockup_puzzle)
+    curried_args = uncurry_lockup(lockup_puzzle).as_iter()
     (
-        _PROPOSAL_MOD_HASH,
-        _SINGLETON_MOD_HASH,
-        _SINGLETON_LAUNCHER_HASH,
-        _LOCKUP_MOD_HASH,
-        _CAT_MOD_HASH,
+        PROPOSAL_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_PUZHASH,
+        LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
         CAT_TAIL_HASH,
         ACTIVE_VOTES,
         INNERPUZ,
@@ -407,6 +407,25 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
 def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
+
+
+def get_curry_vals_from_proposal_puzzle(proposal_puzzle):
+    curried_args = uncurry_proposal(proposal_puzzle).as_iter()
+    (
+        SINGLETON_STRUCT,
+        PROPOSAL_MOD_HASH,
+        PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        TREASURY_MOD_HASH,
+        LOCKUP_MOD_HASH,
+        CAT_TAIL_HASH,
+        TREASURY_ID,
+        YES_VOTES,
+        TOTAL_VOTES,
+        SPEND_OR_UPDATE_FLAG,
+        PROPOSED_PUZ_HASH,
+    ) = curried_args
+    return YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, PROPOSED_PUZ_HASH
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
