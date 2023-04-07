@@ -6,6 +6,7 @@ import json
 import logging
 import multiprocessing.context
 import time
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
@@ -668,7 +669,7 @@ class WalletStateManager:
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
         return None
 
-    async def auto_claim_coins(self):
+    async def auto_claim_coins(self) -> None:
         # Get unspent merkle coin
         unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK)
         current_timestamp = self.blockchain.get_latest_timestamp()
@@ -676,6 +677,9 @@ class WalletStateManager:
         tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
         min_amount = uint64(self.config.get("auto_claim_min_amount", 0))
         for coin in unspent_coins:
+            if coin.metadata is None:
+                self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
+                continue
             metadata = json.loads(coin.metadata)
             if min_amount <= coin.coin.amount and metadata["is_recipient"]:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
@@ -1109,7 +1113,7 @@ class WalletStateManager:
             await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
         return None
 
-    async def add_coin_states(
+    async def _add_coin_states(
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
@@ -1133,6 +1137,8 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_names)
 
         for coin_name, coin_state in zip(coin_names, coin_states):
+            if peer.closed:
+                raise ConnectionError("Connection closed")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.get(coin_name)
             rollback_wallets = None
@@ -1485,6 +1491,23 @@ class WalletStateManager:
                 else:
                     await self.retry_store.remove_state(coin_state)
                 continue
+
+    async def add_coin_states(
+        self,
+        coin_states: List[CoinState],
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
+    ) -> bool:
+        try:
+            await self._add_coin_states(coin_states, peer, fork_height)
+        except Exception as e:
+            log_level = logging.DEBUG if peer.closed else logging.ERROR
+            self.log.log(log_level, f"add_coin_states failed - exception {e}, traceback: {traceback.format_exc()}")
+            return False
+
+        await self.blockchain.clean_block_records()
+
+        return True
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
