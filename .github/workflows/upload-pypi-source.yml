@@ -64,12 +64,12 @@ jobs:
         exclude:
           - os:
               matrix: macos
-            python-version: '3.7'
+            major_dot_minor: '3.7'
           - os:
               matrix: macos
             arch:
               matrix: arm
-            python-version: '3.8'
+            major_dot_minor: '3.8'
           - os:
               matrix: windows
             arch:
