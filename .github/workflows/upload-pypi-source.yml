@@ -81,6 +81,7 @@ jobs:
 
     - uses: ./.github/actions/install
       with:
+        python-version: ${{ matrix.python.major_dot_minor }}
         development: true
 
     - uses: chia-network/actions/activate-venv@main
@@ -130,6 +131,7 @@ jobs:
 
     - uses: ./.github/actions/install
       with:
+        python-version: ${{ matrix.python.major_dot_minor }}
         development: true
 
     - uses: chia-network/actions/activate-venv@main
@@ -169,6 +171,7 @@ jobs:
 
     - uses: ./.github/actions/install
       with:
+        python-version: ${{ matrix.python.major_dot_minor }}
         development: true
 
     - uses: chia-network/actions/activate-venv@main
