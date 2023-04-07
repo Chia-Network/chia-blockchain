@@ -9,7 +9,7 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.clawback.cb_drivers import create_merkle_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.puzzle_decorator import PuzzleDecoratorType
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 
 
 class ClawbackPuzzleDecorator:
