@@ -32,10 +32,12 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram  #
 clvm_suffix = ".clvm"
 clsp_suffix = ".clsp"
 hex_suffix = ".clsp.hex"
-hash_suffix = ".clsp.hex.sha256tree"
-all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "hash": hash_suffix, "clvm": clvm_suffix}
-# TODO: could be cli options
+all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "clvm": clvm_suffix}
+# TODO: these could be cli options
 top_levels = {"chia"}
+hashes_path = pathlib.Path("chia/wallet/puzzles/deployed_puzzle_hashes.json")
+
+HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text())
 
 
 class ManageClvmError(Exception):
@@ -101,8 +103,7 @@ def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
 def generate_hash_bytes(hex_bytes: bytes) -> bytes:
     cleaned_blob = bytes.fromhex(hex_bytes.decode("utf-8"))
     serialize_program = SerializedProgram.from_bytes(cleaned_blob)
-    result = serialize_program.get_tree_hash().hex()
-    return (result + "\n").encode("utf-8")
+    return serialize_program.get_tree_hash()
 
 
 @typing_extensions.final
@@ -110,14 +111,14 @@ def generate_hash_bytes(hex_bytes: bytes) -> bytes:
 class ClvmPaths:
     clvm: pathlib.Path
     hex: pathlib.Path
-    hash: pathlib.Path
+    hash: bytes
 
     @classmethod
     def from_clvm(cls, clvm: pathlib.Path) -> ClvmPaths:
         return cls(
             clvm=clvm,
             hex=clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix),
-            hash=clvm.with_name(clvm.name[: -len(clsp_suffix)] + hash_suffix),
+            hash=bytes.fromhex(HASHES[clvm.with_name(clvm.name[: -len(clsp_suffix)]).stem]),
         )
 
 
@@ -131,7 +132,7 @@ class ClvmBytes:
     def from_clvm_paths(cls, paths: ClvmPaths) -> ClvmBytes:
         return cls(
             hex=paths.hex.read_bytes(),
-            hash=paths.hash.read_bytes(),
+            hash=paths.hash,
         )
 
     @classmethod
@@ -213,20 +214,19 @@ def check(use_cache: bool) -> int:
     cache_modified = False
 
     found_stems = find_stems(top_levels)
-    for name in ["hex", "hash"]:
-        found = found_stems[name]
-        suffix = all_suffixes[name]
-        extra = found - found_stems["clsp"]
+    found = found_stems["hex"]
+    suffix = all_suffixes["hex"]
+    extra = found - found_stems["clsp"]
 
-        print()
-        print(f"Extra {suffix} files:")
+    print()
+    print(f"Extra {suffix} files:")
 
-        if len(extra) == 0:
-            print("    -")
-        else:
-            overall_fail = True
-            for stem in extra:
-                print(f"    {stem.with_name(stem.name + suffix)}")
+    if len(extra) == 0:
+        print("    -")
+    else:
+        overall_fail = True
+        for stem in extra:
+            print(f"    {stem.with_name(stem.name + suffix)}")
 
     print()
     print("Checking that no .clvm files begin with `(mod`")
@@ -265,7 +265,7 @@ def check(use_cache: bool) -> int:
             if not cache_hit:
                 with tempfile.TemporaryDirectory() as temporary_directory:
                     generated_paths = ClvmPaths.from_clvm(
-                        clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clsp_suffix}")
+                        clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}")
                     )
 
                     compile_clvm(
