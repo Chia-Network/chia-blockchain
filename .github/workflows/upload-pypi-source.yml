@@ -116,7 +116,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.9'
+          - major_dot_minor: '3.8'
         check:
           - name: black
             command: black --check --diff .
