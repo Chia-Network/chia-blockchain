@@ -29,10 +29,11 @@ from clvm_tools_rs import compile_clvm  # noqa: E402
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram  # noqa: E402
 
-clvm_suffix = ".clsp"
+clvm_suffix = ".clvm"
+clsp_suffix = ".clsp"
 hex_suffix = ".clsp.hex"
 hash_suffix = ".clsp.hex.sha256tree"
-all_suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
+all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "hash": hash_suffix, "clvm": clvm_suffix}
 # TODO: could be cli options
 top_levels = {"chia"}
 
@@ -42,7 +43,7 @@ class ManageClvmError(Exception):
 
 
 class CacheEntry(typing.TypedDict):
-    clvm: str
+    clsp: str
     hex: str
     hash: str
 
@@ -115,8 +116,8 @@ class ClvmPaths:
     def from_clvm(cls, clvm: pathlib.Path) -> ClvmPaths:
         return cls(
             clvm=clvm,
-            hex=clvm.with_name(clvm.name[: -len(clvm_suffix)] + hex_suffix),
-            hash=clvm.with_name(clvm.name[: -len(clvm_suffix)] + hash_suffix),
+            hex=clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix),
+            hash=clvm.with_name(clvm.name[: -len(clsp_suffix)] + hash_suffix),
         )
 
 
@@ -173,7 +174,7 @@ def create_cache_entry(reference_paths: ClvmPaths, reference_bytes: ClvmBytes) -
     hash_hasher.update(reference_bytes.hash)
 
     return {
-        "clvm": clvm_hasher.hexdigest(),
+        "clsp": clvm_hasher.hexdigest(),
         "hex": hex_hasher.hexdigest(),
         "hash": hash_hasher.hexdigest(),
     }
@@ -215,7 +216,7 @@ def check(use_cache: bool) -> int:
     for name in ["hex", "hash"]:
         found = found_stems[name]
         suffix = all_suffixes[name]
-        extra = found - found_stems["clvm"]
+        extra = found - found_stems["clsp"]
 
         print()
         print(f"Extra {suffix} files:")
@@ -228,9 +229,23 @@ def check(use_cache: bool) -> int:
                 print(f"    {stem.with_name(stem.name + suffix)}")
 
     print()
-    print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
+    print("Checking that no .clvm files begin with `(mod`")
     for stem_path in sorted(found_stems["clvm"]):
-        clvm_path = stem_path.with_name(stem_path.name + clvm_suffix)
+        with open(stem_path.with_name(stem_path.name + clvm_suffix)) as file:
+            file_lines = file.readlines()
+            for line in file_lines:
+                non_comment: str = line.split(";")[0]
+                if "(" in non_comment:
+                    paren_index: int = non_comment.find("(")
+                    if len(non_comment) >= paren_index + 4 and non_comment[paren_index : paren_index + 4] == "(mod":
+                        overall_fail = True
+                        print(f"FAIL    : {stem_path.name + clvm_suffix} contains `(mod`")
+                    break
+
+    print()
+    print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
+    for stem_path in sorted(found_stems["clsp"]):
+        clvm_path = stem_path.with_name(stem_path.name + clsp_suffix)
         if clvm_path.name in excludes:
             used_excludes.add(clvm_path.name)
             continue
@@ -250,7 +265,7 @@ def check(use_cache: bool) -> int:
             if not cache_hit:
                 with tempfile.TemporaryDirectory() as temporary_directory:
                     generated_paths = ClvmPaths.from_clvm(
-                        clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
+                        clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clsp_suffix}")
                     )
 
                     compile_clvm(
@@ -303,11 +318,11 @@ def check(use_cache: bool) -> int:
 def build() -> int:
     overall_fail = False
 
-    found_stems = find_stems(top_levels, suffixes={"clvm": clvm_suffix})
+    found_stems = find_stems(top_levels, suffixes={"clsp": clsp_suffix})
 
-    print(f"Building all existing {clvm_suffix} files to {hex_suffix}:")
-    for stem_path in sorted(found_stems["clvm"]):
-        clvm_path = stem_path.with_name(stem_path.name + clvm_suffix)
+    print(f"Building all existing {clsp_suffix} files to {hex_suffix}:")
+    for stem_path in sorted(found_stems["clsp"]):
+        clvm_path = stem_path.with_name(stem_path.name + clsp_suffix)
         if clvm_path.name in excludes:
             continue
 
@@ -319,7 +334,7 @@ def build() -> int:
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
-                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
+                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clsp_suffix}")
                 )
 
                 compile_clvm(
