@@ -44,6 +44,11 @@ class ManageClvmError(Exception):
     pass
 
 
+@dataclasses.dataclass(frozen=True)
+class LoadClvmPathError(Exception):
+    missing_files: typing.List[str]
+
+
 class CacheEntry(typing.TypedDict):
     clsp: str
     hex: str
@@ -115,10 +120,19 @@ class ClvmPaths:
 
     @classmethod
     def from_clvm(cls, clvm: pathlib.Path) -> ClvmPaths:
+        hex_path = clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix)
+        stem_filename = clvm.with_name(clvm.name[: -len(clsp_suffix)]).stem
+        missing_files = []
+        if not hex_path.exists():
+            missing_files.append(str(hex_path))
+        if stem_filename not in HASHES:
+            missing_files.append(f"{stem_filename} entry in {hashes_path}")
+        if missing_files != []:
+            raise LoadClvmPathError(missing_files)
         return cls(
             clvm=clvm,
-            hex=clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix),
-            hash=bytes.fromhex(HASHES[clvm.with_name(clvm.name[: -len(clsp_suffix)]).stem]),
+            hex=hex_path,
+            hash=bytes.fromhex(HASHES[stem_filename]),
         )
 
 
@@ -242,6 +256,8 @@ def check(use_cache: bool) -> int:
                         print(f"FAIL    : {stem_path.name + clvm_suffix} contains `(mod`")
                     break
 
+    missing_files: typing.List[str] = []
+
     print()
     print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
     for stem_path in sorted(found_stems["clsp"]):
@@ -255,7 +271,11 @@ def check(use_cache: bool) -> int:
 
         cache_key = str(stem_path)
         try:
-            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
+            try:
+                reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
+            except LoadClvmPathError as e:
+                missing_files.extend(e.missing_files)
+                continue
             reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths)
 
             new_cache_entry = create_cache_entry(reference_paths=reference_paths, reference_bytes=reference_bytes)
@@ -296,6 +316,13 @@ def check(use_cache: bool) -> int:
 
         if file_fail:
             overall_fail = True
+
+    if missing_files != []:
+        overall_fail = True
+        print()
+        print("Missing files (run tools/manage_clvm.py build to build them):")
+        for filename in missing_files:
+            print(f" - {filename}")
 
     unused_excludes = sorted(excludes - used_excludes)
     if len(unused_excludes) > 0:
