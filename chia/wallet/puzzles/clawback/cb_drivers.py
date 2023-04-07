@@ -13,7 +13,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.merkle_utils import build_merkle_tree
-from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.puzzle_decorator import PuzzleDecoratorType
 
 P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clvm")
 P2_CURRIED_PUZZLE_HASH = load_clvm_maybe_recompile("p2_puzzle_hash.clvm")
