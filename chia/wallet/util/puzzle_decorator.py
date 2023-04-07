@@ -1,6 +1,7 @@
 # General puzzle wrapper
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Dict, List, Tuple
 
 from typing_extensions import Protocol
@@ -8,7 +9,11 @@ from typing_extensions import Protocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.clawback.clawback_puzzle_decorator import ClawbackPuzzleDecorator
-from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+
+
+class PuzzleDecoratorType(Enum):
+    # Puzzle Decorator Types
+    CLAWBACK = 1
 
 
 class PuzzleDecoratorProtocol(Protocol):

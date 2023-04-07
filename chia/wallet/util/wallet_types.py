@@ -30,9 +30,9 @@ class WalletType(IntEnum):
 
 
 class CoinType(IntEnum):
-    # Wallet Types
-    NORMAL_COIN = 0
-    CLAWBACK_COIN = 1
+    # Coin Types
+    NORMAL = 0
+    CLAWBACK = 1
 
 
 class AmountWithPuzzlehash(TypedDict):

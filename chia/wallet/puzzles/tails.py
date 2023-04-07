@@ -68,12 +68,7 @@ class GenesisById(LimitationsProgram):
         return Program.to([])
 
     @classmethod
-    async def generate_issuance_bundle(
-        cls,
-        wallet,
-        _: Dict,
-        amount: uint64,
-    ) -> Tuple[TransactionRecord, SpendBundle]:
+    async def generate_issuance_bundle(cls, wallet, _: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
         coins = await wallet.standard_wallet.select_coins(amount)
 
         origin = coins.copy().pop()

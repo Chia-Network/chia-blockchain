@@ -68,7 +68,7 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.puzzles.clawback.cb_puzzles import generate_clawback_spend_bundle, match_clawback_puzzle
+from chia.wallet.puzzles.clawback.cb_drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -197,10 +197,8 @@ class WalletStateManager:
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.db_path = db_path
-        if "puzzle_decorators" in self.config and fingerprint in self.config["puzzle_decorators"]:
-            self.decorator_manager = PuzzleDecoratorManager.create(self.config["puzzle_decorators"][fingerprint])
-        else:
-            self.decorator_manager = PuzzleDecoratorManager.create([])
+        puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
+        self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
@@ -672,18 +670,14 @@ class WalletStateManager:
 
     async def auto_claim_coins(self):
         # Get unspent merkle coin
-        unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK_COIN)
+        unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK)
         current_timestamp = self.blockchain.get_latest_timestamp()
         clawback_coins: List[Tuple[Coin, Dict[str, Any]]] = []
         tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
+        min_amount = uint64(self.config.get("auto_claim_min_amount", 0))
         for coin in unspent_coins:
             metadata = json.loads(coin.metadata)
-            if (
-                self.config.get("auto_claim_min_amount", 0) < coin.coin.amount
-                and coin.coin_type == CoinType.CLAWBACK_COIN.value
-                and metadata["is_recipient"]
-                and coin.spent == 0
-            ):
+            if min_amount <= coin.coin.amount and metadata["is_recipient"]:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata["time_lock"]:
                     clawback_coins.append((coin.coin, metadata))
@@ -1087,7 +1081,7 @@ class WalletStateManager:
                 False,
                 WalletType.STANDARD_WALLET,
                 1,
-                CoinType.CLAWBACK_COIN.value,
+                CoinType.CLAWBACK,
                 json.dumps(metadata),
             )
             # Add merkle coin
@@ -1106,7 +1100,7 @@ class WalletStateManager:
                 False,
                 WalletType.STANDARD_WALLET,
                 1,
-                CoinType.CLAWBACK_COIN.value,
+                CoinType.CLAWBACK,
                 json.dumps(metadata),
             )
             # Add merkle coin
@@ -1139,7 +1133,7 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_names)
 
         for coin_name, coin_state in zip(coin_names, coin_states):
-            self.log.debug("Add coin state: %s: %s", coin_name.hex(), coin_state)
+            self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.get(coin_name)
             rollback_wallets = None
             try:
@@ -1236,7 +1230,7 @@ class WalletStateManager:
                                 farmer_reward or pool_reward,
                                 wallet_identifier.type,
                                 wallet_identifier.id,
-                                CoinType.NORMAL_COIN.value,
+                                CoinType.NORMAL,
                                 None,
                             )
                             await self.coin_store.add_coin_record(record)
@@ -1607,7 +1601,7 @@ class WalletStateManager:
                 await self.tx_store.add_transaction_record(tx_record)
         # We only add normal coins here
         coin_record: WalletCoinRecord = WalletCoinRecord(
-            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id, CoinType.NORMAL_COIN.value, None
+            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id, CoinType.NORMAL, None
         )
         await self.coin_store.add_coin_record(coin_record, coin_name)
 

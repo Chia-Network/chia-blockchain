@@ -52,7 +52,7 @@ def list_to_binary_tree(objects: List[Any]) -> Any:
     midpoint = (size + 1) >> 1
     first_half = objects[:midpoint]
     last_half = objects[midpoint:]
-    return list_to_binary_tree(first_half), list_to_binary_tree(last_half)
+    return (list_to_binary_tree(first_half), list_to_binary_tree(last_half))
 
 
 def build_merkle_tree(objects: List[bytes32]) -> Tuple[bytes32, Dict[bytes32, Tuple[int, List[bytes32]]]]:

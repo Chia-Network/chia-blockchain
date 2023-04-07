@@ -1023,7 +1023,7 @@ class WalletRpcApi:
             start,
             end,
             reverse=reverse,
-            coin_type=CoinType.CLAWBACK_COIN,
+            coin_type=CoinType.CLAWBACK,
         )
         return {
             "coins": [
@@ -1064,7 +1064,7 @@ class WalletRpcApi:
                 log.warning(f"Skip merkle coin f{coin_ids[i].hex()}, metadata cannot be None.")
                 continue
             metadata = json.loads(merkle_record.metadata)
-            if merkle_record.coin_type != CoinType.CLAWBACK_COIN.value:
+            if merkle_record.coin_type != CoinType.CLAWBACK.value:
                 log.warning(f"Coin {coin_ids[i].hex()} is not a Clawback coin.")
                 continue
             if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
@@ -2129,7 +2129,7 @@ class WalletRpcApi:
                 False,
                 wallet_type,
                 wallet_id,
-                CoinType.NORMAL_COIN.value,
+                CoinType.NORMAL,
                 None,
             )
             await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())

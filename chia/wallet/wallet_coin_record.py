@@ -7,7 +7,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint32, uint64
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import CoinType, WalletType
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,7 @@ class WalletCoinRecord:
     wallet_id: int
     # Cannot include new attributes in the hash since they will change the coin order in a set.
     # The launcher coin ID will change and will break all hardcode offer tests in CAT/NFT/DL, etc.
-    coin_type: Optional[int] = field(hash=False)
+    coin_type: CoinType = field(hash=False)
     metadata: Optional[str] = field(hash=False)
 
     def name(self) -> bytes32:

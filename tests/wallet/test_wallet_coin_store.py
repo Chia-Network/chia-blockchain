@@ -19,9 +19,15 @@ coin_5 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_6 = Coin(token_bytes(32), coin_4.puzzle_hash, uint64(12312))
 coin_7 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_8 = Coin(token_bytes(32), token_bytes(32), uint64(2))
-record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, 0, None)
-record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, 0, None)
-record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, 0, None)
+record_replaced = WalletCoinRecord(
+    coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+)
+record_1 = WalletCoinRecord(
+    coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+)
+record_2 = WalletCoinRecord(
+    coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+)
 record_3 = WalletCoinRecord(
     coin_3,
     uint32(5),
@@ -30,7 +36,7 @@ record_3 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     0,
-    0,
+    CoinType.NORMAL,
     None,
 )
 record_4 = WalletCoinRecord(
@@ -41,7 +47,7 @@ record_4 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     0,
-    0,
+    CoinType.NORMAL,
     None,
 )
 record_5 = WalletCoinRecord(
@@ -52,7 +58,7 @@ record_5 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     1,
-    0,
+    CoinType.NORMAL,
     None,
 )
 record_6 = WalletCoinRecord(
@@ -63,7 +69,7 @@ record_6 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     2,
-    0,
+    CoinType.NORMAL,
     None,
 )
 record_7 = WalletCoinRecord(
@@ -74,7 +80,7 @@ record_7 = WalletCoinRecord(
     False,
     WalletType.POOLING_WALLET,
     2,
-    0,
+    CoinType.NORMAL,
     None,
 )
 record_8 = WalletCoinRecord(
@@ -85,7 +91,7 @@ record_8 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     1,
-    1,
+    CoinType.CLAWBACK,
     "CLAWBACK",
 )
 
@@ -198,7 +204,7 @@ async def test_get_unspent_coins_for_wallet() -> None:
         assert await store.get_unspent_coins_for_wallet(2) == set()
         assert await store.get_unspent_coins_for_wallet(3) == set()
 
-        assert await store.get_unspent_coins_for_wallet(1, coin_type=CoinType.CLAWBACK_COIN) == set([record_8])
+        assert await store.get_unspent_coins_for_wallet(1, coin_type=CoinType.CLAWBACK) == set([record_8])
 
 
 @pytest.mark.asyncio
@@ -235,7 +241,7 @@ async def test_get_all_unspent_coins() -> None:
         await store.set_spent(coin_1.name(), uint32(12))
         assert await store.get_all_unspent_coins() == set()
 
-        assert await store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK_COIN) == set([record_8])
+        assert await store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK) == set([record_8])
 
 
 @pytest.mark.asyncio
@@ -305,7 +311,7 @@ async def test_delete_coin_record() -> None:
 
 def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
     return WalletCoinRecord(
-        c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0, 0, None
+        c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
     )
 
 
@@ -416,7 +422,7 @@ async def test_count_small_unspent() -> None:
         assert await store.count_small_unspent(3) == 2
         assert await store.count_small_unspent(2) == 1
         assert await store.count_small_unspent(1) == 0
-        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK_COIN) == 1
+        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 1
 
         await store.set_spent(coin_2.name(), uint32(12))
         await store.set_spent(coin_8.name(), uint32(12))
@@ -425,7 +431,7 @@ async def test_count_small_unspent() -> None:
         assert await store.count_small_unspent(4) == 1
         assert await store.count_small_unspent(3) == 1
         assert await store.count_small_unspent(2) == 1
-        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK_COIN) == 0
+        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 0
         assert await store.count_small_unspent(1) == 0
 
 
@@ -446,6 +452,6 @@ async def test_get_coin_records_between() -> None:
         records = await store.get_coin_records_between(1, 0, 3)
         assert len(records) == 1
         assert records[0] == record_5
-        records = await store.get_coin_records_between(1, 0, 4, coin_type=CoinType.CLAWBACK_COIN)
+        records = await store.get_coin_records_between(1, 0, 4, coin_type=CoinType.CLAWBACK)
         assert len(records) == 1
         assert records[0] == record_8

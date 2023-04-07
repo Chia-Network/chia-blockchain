@@ -329,7 +329,7 @@ class Wallet:
         reuse_puzhash: Optional[bool] = None,
     ) -> List[CoinSpend]:
         """
-        Generates an unsigned transaction in form of List(Puzzle, Solutions)
+        Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
         decorator_manager: PuzzleDecoratorManager = self.wallet_state_manager.decorator_manager
