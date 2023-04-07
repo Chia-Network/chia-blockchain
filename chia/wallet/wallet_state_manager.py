@@ -1783,7 +1783,10 @@ class WalletStateManager:
 
     async def add_interested_puzzle_hashes(self, puzzle_hashes: List[bytes32], wallet_ids: List[int]) -> None:
         for puzzle_hash in puzzle_hashes:
-            self.interested_coin_cache[puzzle_hash].extend(wallet_ids)
+            if puzzle_hash in self.interested_coin_cache:
+                self.interested_coin_cache[puzzle_hash].extend(wallet_ids)
+            else:
+                self.interested_coin_cache[puzzle_hash] = wallet_ids
         for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
             await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id)
         if len(puzzle_hashes) > 0:
@@ -1791,7 +1794,10 @@ class WalletStateManager:
 
     async def add_interested_coin_ids(self, coin_ids: List[bytes32], wallet_ids: List[int] = []) -> None:
         for coin_id in coin_ids:
-            self.interested_coin_cache[coin_id].extend(wallet_ids)
+            if coin_id in self.interested_coin_cache:
+                self.interested_coin_cache[coin_id].extend(wallet_ids)
+            else:
+                self.interested_coin_cache[coin_id] = wallet_ids
         for coin_id in coin_ids:
             await self.interested_store.add_interested_coin_id(coin_id)
         if len(coin_ids) > 0:
