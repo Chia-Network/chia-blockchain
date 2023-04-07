@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 
-class CRCATWallet:
+class CRCATWallet(CATWallet):
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo

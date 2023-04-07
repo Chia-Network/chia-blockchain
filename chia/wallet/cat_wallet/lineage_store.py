@@ -29,6 +29,8 @@ class CATLineageStore:
             await conn.execute(
                 (f"CREATE TABLE IF NOT EXISTS {self.table_name}(coin_id text PRIMARY KEY, lineage blob)")
             )
+            try:
+                await conn.execute("ALTER TABLE users_nfts ADD COLUMN minter_did text")
         return self
 
     async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
