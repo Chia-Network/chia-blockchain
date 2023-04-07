@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   mypy:
-    name: Check ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 10
     strategy:
@@ -32,16 +32,19 @@ jobs:
         os:
           - name: Linux
             matrix: linux
+            emoji: 🐧
             runs-on:
               intel: ubuntu-latest
               arm: [linux, arm64]
           - name: macOS
             matrix: macos
+            emoji: 🍎
             runs-on:
               intel: macos-latest
               arm: [macos, arm64]
           - name: Windows
             matrix: windows
+            emoji: 🪟
             runs-on:
               intel: windows-latest
         arch:
@@ -87,7 +90,7 @@ jobs:
         ${{ matrix.check.command }}
 
   check:
-    name: Check ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 10
     strategy:
@@ -96,6 +99,7 @@ jobs:
         os:
           - name: Linux
             matrix: linux
+            emoji: 🐧
             runs-on:
               intel: ubuntu-latest
               arm: [linux, arm64]
