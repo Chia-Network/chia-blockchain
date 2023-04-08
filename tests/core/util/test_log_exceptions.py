@@ -69,10 +69,14 @@ def case_fixture(request: SubRequest) -> ErrorCase:
     # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
 
-
-all_levels = {
-    level: value for level, value in sorted(logging.getLevelNamesMapping().items()) if value is not logging.NOTSET
-}
+all_level_values = [
+    logging.CRITICAL,
+    logging.ERROR,
+    logging.WARNING,
+    logging.INFO,
+    logging.DEBUG,
+]
+all_levels = {logging.getLevelName(value): value for value in all_level_values}
 
 
 def test_consumes_exception(
