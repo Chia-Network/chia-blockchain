@@ -69,6 +69,7 @@ def case_fixture(request: SubRequest) -> ErrorCase:
     # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
 
+
 all_level_values = [
     logging.CRITICAL,
     logging.ERROR,
