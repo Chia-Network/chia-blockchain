@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from pathlib import Path, PureWindowsPath
 from random import randint
 from typing import Any, Dict, List, Optional
@@ -293,7 +294,10 @@ async def async_config_wizard(
     print(f"\nFarming & Prefarm reward address: {final_farming_address}\n")
     print("Configuration Wizard Complete.")
     print("Starting Simulator now...\n\n")
+
+    sys.argv[0] = str(Path(sys.executable).parent / "chia")  # fix path for tests
     await async_start(root_path, config, False, ("simulator",))
+
     # now we make sure the simulator has a genesis block
     print("Please wait, generating genesis block.")
     while True:
