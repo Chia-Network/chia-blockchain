@@ -27,8 +27,6 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_unhardened,
 )
 
-SIMULATOR_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_SIMULATOR_ROOT", "~/.chia/simulator"))).resolve()
-
 
 def get_ph_from_fingerprint(fingerprint: int, key_id: int = 1) -> bytes32:
     priv_key_and_entropy = Keychain().get_private_key_by_fingerprint(fingerprint)
@@ -296,7 +294,7 @@ async def async_config_wizard(
     print("Configuration Wizard Complete.")
     print("Starting Simulator now...\n\n")
     await async_start(root_path, config, False, ("simulator",))
-    # now we create make sure the simulator has a genesis block
+    # now we make sure the simulator has a genesis block
     print("Please wait, generating genesis block.")
     while True:
         try:

@@ -6,15 +6,9 @@ from typing import Any, Optional
 
 import click
 
-from chia.cmds.sim_funcs import (
-    SIMULATOR_ROOT_PATH,
-    async_config_wizard,
-    farm_blocks,
-    print_status,
-    revert_block_height,
-    set_auto_farm,
-)
+from chia.cmds.sim_funcs import async_config_wizard, farm_blocks, print_status, revert_block_height, set_auto_farm
 from chia.util.config import load_config
+from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 
 @click.group("sim", short_help="Configure and make requests to a Chia Simulator Full Node")
