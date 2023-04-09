@@ -811,6 +811,7 @@ class CATWallet(WalletProtocol):
         exclude_cat_coins: Optional[Set[Coin]] = None,
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         reuse_puzhash: Optional[bool] = None,
+        override_memos: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -820,8 +821,11 @@ class CATWallet(WalletProtocol):
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            memos_with_hint: List[bytes] = [puzhash]
-            memos_with_hint.extend(memo_list)
+            if override_memos:
+               memos_with_hint: List[bytes] = memo_list
+            else:
+               memos_with_hint: List[bytes] = [puzhash]
+               memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
@@ -886,7 +890,6 @@ class CATWallet(WalletProtocol):
                     memos=[],
                 )
             )
-        # breakpoint()
         return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:

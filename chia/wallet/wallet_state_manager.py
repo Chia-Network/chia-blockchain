@@ -657,6 +657,14 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
+        # Check if the coin is dao funding spend (hint == treasury_id)
+        hint_list = compute_coin_hints(coin_spend)
+        if hint_list:
+            for wallet in self.wallets.values():
+                if wallet.type() == WalletType.DAO.value:
+                    if wallet.dao_info.treasury_id in hint_list:
+                        return WalletIdentifier.create(wallet)
+
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
@@ -682,14 +690,6 @@ class WalletStateManager:
         dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
         if dao_curried_args is not None:
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
-
-        # Check if the coin is dao funding spend (hint == treasury_id)
-        hint_list = compute_coin_hints(coin_spend)
-        if hint_list:
-            for wallet in self.wallets.values():
-                if wallet.type() == WalletType.DAO.value:
-                    if wallet.dao_info.treasury_id in hint_list:
-                        return WalletIdentifier.create(wallet)
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 

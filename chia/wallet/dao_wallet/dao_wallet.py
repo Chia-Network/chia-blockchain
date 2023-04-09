@@ -1070,15 +1070,16 @@ class DAOWallet(WalletProtocol):
             )
         elif funding_wallet.type() == WalletType.CAT.value:
             cat_wallet: CATWallet = funding_wallet  # type: ignore[assignment]
-            asset_id = bytes32.from_hexstr(cat_wallet.get_asset_id())
+            asset_id = cat_wallet.cat_info.limitations_program_hash
             # generate_signed_transaction has a different type signature in Wallet and CATWallet
             # CATWallet uses a List of amounts and a List of puzhashes as the first two arguments
-            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
+            p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
             tx_records: List[TransactionRecord] = await cat_wallet.generate_signed_transactions(
                 [amount],
                 [p2_singleton_puzhash],
                 fee=fee,
-                memos=[self.dao_info.treasury_id],
+                memos=[[self.dao_info.treasury_id]],
+                override_memos=True,
             )
             return tx_records[0]
         else:
@@ -1088,11 +1089,9 @@ class DAOWallet(WalletProtocol):
         self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: uint32 = uint32(1)
     ) -> TransactionRecord:
         # TODO: add tests for create_add_money_to_treasury_spend
-        # TODO: Do we need to ensure the p2_singleton amount is odd?
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
         tx_record = await self._create_treasury_fund_transaction(funding_wallet, amount, fee)
-
         created_coin = [coin for coin in tx_record.additions if coin.amount == amount][0]
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record

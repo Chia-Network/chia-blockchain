@@ -229,7 +229,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
     await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
 
-    cat_amt = 200000
+    cat_amt = 300000
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
@@ -279,6 +279,8 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_sb.name())
     await full_node_api.process_transaction_records(records=[funding_tx])
 
+    if not trusted:
+        await asyncio.sleep(1)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
@@ -298,13 +300,18 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     )
     await full_node_api.process_transaction_records(records=[cat_funding_tx])
 
+    if not trusted:
+        await asyncio.sleep(1)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
+    cat_bal = await cat_wallet_0.get_confirmed_balance()
+    assert cat_bal == cat_amt - cat_funds
+
     # Check that the funding spend is found
-    cat_id = cat_wallet_0.cat_info.limitations_program_hash
+    cat_id = bytes32.from_hexstr(cat_wallet_0.get_asset_id())
     cat_bal = await dao_wallet_0.get_balance_by_asset_type(cat_id)
-    # assert cat_bal == cat_funds
+    assert cat_bal == cat_funds
 
     # Create the other user's wallet from the treasury id
     async with wallet_node_0.wallet_state_manager.lock:
@@ -323,3 +330,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
 
     xch_bal_1 = await dao_wallet_1.get_balance_by_asset_type()
     assert xch_bal_1 == xch_funds
+
+    # Check that the funding spend is found
+    cat_bal = await dao_wallet_1.get_balance_by_asset_type(cat_id)
+    assert cat_bal == cat_funds
