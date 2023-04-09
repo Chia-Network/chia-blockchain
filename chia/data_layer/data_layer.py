@@ -422,7 +422,7 @@ class DataLayer:
                         if res_json["handles_url"] is True:
                             return d
                 except Exception as e:
-                    self.log.error(f"get_downloader could not get response {e}")
+                    self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
         return None
 
     async def upload_files(self, tree_id: bytes32) -> None:
