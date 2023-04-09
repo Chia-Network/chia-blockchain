@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from shutil import rmtree
 
 from click.testing import CliRunner, Result

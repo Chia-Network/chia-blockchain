@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import click
 
 from chia.cmds.sim import sim_cmd

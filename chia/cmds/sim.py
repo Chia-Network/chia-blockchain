@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 from pathlib import Path
 from typing import Any, Optional
 
 import click
-from chia.util.config import load_config
 
 from chia.cmds.sim_funcs import (
     SIMULATOR_ROOT_PATH,
@@ -13,6 +14,7 @@ from chia.cmds.sim_funcs import (
     revert_block_height,
     set_auto_farm,
 )
+from chia.util.config import load_config
 
 
 @click.group("sim", short_help="Configure and make requests to a Chia Simulator Full Node")
