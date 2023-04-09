@@ -59,7 +59,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
     return None
 
 
-async def async_start(root_path: Path, config: Dict[str, Any], group: str, restart: bool) -> None:
+async def async_start(root_path: Path, config: Dict[str, Any], restart: bool, group: tuple) -> None:
     try:
         daemon = await create_start_daemon_connection(root_path, config)
     except KeychainMaxUnlockAttempts:

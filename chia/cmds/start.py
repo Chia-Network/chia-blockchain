@@ -10,7 +10,7 @@ from chia.util.service_groups import all_groups
 @click.option("-r", "--restart", is_flag=True, type=bool, help="Restart running services")
 @click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context
-def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
+def start_cmd(ctx: click.Context, restart: bool, group: tuple) -> None:
     import asyncio
 
     from chia.cmds.beta_funcs import warn_if_beta_enabled
@@ -20,4 +20,4 @@ def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
     warn_if_beta_enabled(config)
-    asyncio.run(async_start(root_path, config, group, restart))
+    asyncio.run(async_start(root_path, config, restart, group))
