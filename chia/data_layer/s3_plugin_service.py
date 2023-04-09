@@ -71,8 +71,14 @@ class S3Plugin:
             try:
                 full_tree_path = Path(data["full_tree_path"])
                 diff_path = Path(data["diff_path"])
-                self.boto_client.upload_file(full_tree_path, bucket, full_tree_path.name)
-                self.boto_client.upload_file(diff_path, bucket, diff_path.name)
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    await asyncio.get_running_loop().run_in_executor(
+                        pool,
+                        functools.partial(self.boto_client.upload_file, full_tree_path, bucket, full_tree_path.name),
+                    )
+                    await asyncio.get_running_loop().run_in_executor(
+                        pool, functools.partial(self.boto_client.upload_file, diff_path, bucket, diff_path.name)
+                    )
             except ClientError as e:
                 print(f"failed uploading file to aws {e}")
                 return web.json_response({"uploaded": False})
@@ -96,22 +102,21 @@ class S3Plugin:
     async def download(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()
+            url = data["url"]
+            client_folder = Path(data["client_folder"])
+            filename = data["filename"]
+            parse_result = urlparse(url)
+            bucket = parse_result.netloc
+            target_filename = client_folder.joinpath(filename)
+            # Create folder for parent directory
+            target_filename.parent.mkdir(parents=True, exist_ok=True)
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                await asyncio.get_running_loop().run_in_executor(
+                    pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
+                )
         except Exception as e:
             print(f"failed parsing request {request} {e}")
-            return web.json_response({"handles_url": False})
-        url = data["url"]
-        client_folder = Path(data["client_folder"])
-        filename = data["filename"]
-        parse_result = urlparse(url)
-        bucket = parse_result.netloc
-        target_filename = client_folder.joinpath(filename)
-        # Create folder for parent directory
-        target_filename.parent.mkdir(parents=True, exist_ok=True)
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            await asyncio.get_running_loop().run_in_executor(
-                pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
-            )
-
+            return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
 
     def get_bucket(self, store_id: bytes32) -> str:

@@ -419,7 +419,7 @@ class DataLayer:
                 try:
                     async with session.post("http://" + d + "/check_url", json=request_json) as response:
                         res_json = await response.json()
-                        if res_json["handles_url"] is True:
+                        if res_json["handles_url"]:
                             return d
                 except Exception as e:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
@@ -457,10 +457,10 @@ class DataLayer:
                         async with aiohttp.ClientSession() as session:
                             async with session.post("http://" + uploader + "/upload", json=request_json) as response:
                                 res_json = await response.json()
-                                if res_json["uploaded"] is False:
+                                if not res_json["uploaded"]:
                                     break  # todo this will retry all uploaders
-            except:
-                self.log.debug("failed to upload files, clean local disc")
+            except Exception as e:
+                self.log.debug(f"failed to upload files, clean local disc {e}")
                 os.remove(full_tree_path)
                 os.remove(diff_path)
             publish_generation -= 1
@@ -852,7 +852,7 @@ class DataLayer:
                         "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
                     ) as response:
                         res_json = await response.json()
-                        if res_json["handles_store"] is True:
+                        if res_json["handles_store"]:
                             uploaders.append(uploader)
                 except Exception as e:
                     self.log.error(f"get_uploader could not get response {e}")

@@ -152,7 +152,7 @@ async def insert_from_delta_file(
             async with aiohttp.ClientSession() as session:
                 async with session.post("http://" + downloader + "/download", json=request_json) as response:
                     res_json = await response.json()
-                    if res_json["downloaded"] is False:
+                    if not res_json["downloaded"]:
                         break
 
         log.info(f"Successfully downloaded delta file {filename}.")
