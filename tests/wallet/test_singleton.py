@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import INFINITE_COST, Program

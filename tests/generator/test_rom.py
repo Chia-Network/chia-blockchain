@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import List
 
-from clvm_tools import binutils
-from clvm_tools.clvmc import compile_clvm_text
+from clvm_tools_rs import binutils
+from clvm_tools_rs.clvmc import compile_clvm_text
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.generator import run_generator_unsafe

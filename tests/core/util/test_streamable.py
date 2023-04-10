@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hi
 
 import pytest
 from blspy import G1Element
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 from typing_extensions import Literal, get_args
 
 from chia.protocols.wallet_protocol import RespondRemovals

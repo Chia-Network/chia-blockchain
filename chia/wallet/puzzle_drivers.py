@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
-from clvm_tools.binutils import assemble, type_for_atom
+from clvm_tools_rs.binutils import assemble, type_for_atom
 from ir.Type import Type
 
 from chia.types.blockchain_format.program import Program

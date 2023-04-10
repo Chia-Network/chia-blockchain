@@ -4,7 +4,7 @@ from secrets import token_bytes
 from typing import Optional
 
 import pytest
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

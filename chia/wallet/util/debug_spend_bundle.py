@@ -4,7 +4,7 @@ from typing import List
 
 from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
-from clvm_tools.binutils import disassemble as bu_disassemble
+from clvm_tools_rs.binutils import disassemble as bu_disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin

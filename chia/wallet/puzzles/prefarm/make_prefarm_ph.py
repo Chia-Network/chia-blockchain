@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from clvm.casts import int_from_bytes
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.types.blockchain_format.program import Program

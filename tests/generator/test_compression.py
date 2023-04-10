@@ -8,7 +8,7 @@ from unittest import TestCase
 
 from clvm import SExp
 from clvm.serialize import sexp_from_stream
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.full_node.bundle_tools import (
     bundle_suitable_for_compression,

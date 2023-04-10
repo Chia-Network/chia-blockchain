@@ -4,7 +4,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from clvm.casts import int_from_bytes
-from clvm_tools.binutils import disassemble
+from clvm_tools_rs.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram

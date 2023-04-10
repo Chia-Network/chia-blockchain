@@ -4,7 +4,7 @@ import time
 from secrets import token_bytes
 
 from blspy import AugSchemeMPL, PrivateKey
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.simulator.wallet_tools import WalletTool

@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from clvm.EvalError import EvalError
 from clvm.operators import KEYWORD_TO_ATOM
-from clvm_tools.binutils import assemble, disassemble
+from clvm_tools_rs.binutils import assemble, disassemble
 
 from chia.types.blockchain_format.program import Program
 

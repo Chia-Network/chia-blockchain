@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, Dict, List
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
-from clvm_tools.binutils import disassemble
+from clvm_tools_rs.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi

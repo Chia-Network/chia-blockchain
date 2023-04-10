@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from blspy import G2Element
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient

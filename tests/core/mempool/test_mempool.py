@@ -8,7 +8,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 import pytest
 from blspy import G1Element, G2Element
 from clvm.casts import int_to_bytes
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult

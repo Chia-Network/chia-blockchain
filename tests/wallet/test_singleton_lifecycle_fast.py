@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element, G2Element
-from clvm_tools import binutils
+from clvm_tools_rs import binutils
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
