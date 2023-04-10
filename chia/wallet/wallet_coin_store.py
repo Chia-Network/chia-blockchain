@@ -53,7 +53,7 @@ class WalletCoinStore:
             try:
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN coin_type int DEFAULT 0")
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN metadata text")
-                await conn.execute("CREATE INDEX IF NOT EXISTS coin_type on coin_record(coin_type)")
+                await conn.execute("CREATE INDEX IF NOT EXISTS coin_record_coin_type on coin_record(coin_type)")
             except sqlite3.OperationalError:
                 pass
         return self
@@ -63,8 +63,8 @@ class WalletCoinStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                f"SELECT COUNT(*) FROM coin_record WHERE coin_type={coin_type.value} AND amount < ? AND spent=0",
-                (amount_bytes,),
+                "SELECT COUNT(*) FROM coin_record WHERE coin_type=? AND amount < ? AND spent=0",
+                (coin_type.value, amount_bytes),
             )
             return int(0 if row is None else row[0])
 
@@ -172,9 +172,9 @@ class WalletCoinStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * FROM coin_record WHERE coin_type={coin_type.value} AND"
+                f"SELECT * FROM coin_record WHERE coin_type=? AND"
                 f" wallet_id=? {query_str}, rowid LIMIT {start}, {limit}",
-                (wallet_id,),
+                (coin_type.value, wallet_id),
             )
         return [self.coin_record_from_row(row) for row in rows]
 
@@ -194,8 +194,8 @@ class WalletCoinStore:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * FROM coin_record WHERE coin_type={coin_type.value} AND wallet_id=? AND spent_height=0",
-                (wallet_id,),
+                "SELECT * FROM coin_record WHERE coin_type=? AND wallet_id=? AND spent_height=0",
+                (coin_type.value, wallet_id),
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
@@ -203,7 +203,7 @@ class WalletCoinStore:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * FROM coin_record WHERE coin_type={coin_type.value} AND spent_height=0"
+                "SELECT * FROM coin_record WHERE coin_type=? AND spent_height=0", (coin_type.value,)
             )
         return set(self.coin_record_from_row(row) for row in rows)
 

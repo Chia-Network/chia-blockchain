@@ -1,4 +1,3 @@
-# General puzzle wrapper
 from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
@@ -7,12 +6,11 @@ from typing_extensions import Protocol
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.puzzles.clawback.clawback_puzzle_decorator import ClawbackPuzzleDecorator
+from chia.wallet.puzzles.clawback.puzzle_decorator import ClawbackPuzzleDecorator
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 
 
 class PuzzleDecoratorProtocol(Protocol):
-    # Protocol for puzzle decorators
     @staticmethod
     def create(config: Dict[str, Any]) -> PuzzleDecoratorProtocol:
         ...

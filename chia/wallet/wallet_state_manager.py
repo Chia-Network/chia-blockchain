@@ -69,7 +69,7 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.puzzles.clawback.cb_drivers import generate_clawback_spend_bundle, match_clawback_puzzle
+from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -667,6 +667,7 @@ class WalletStateManager:
         if clawback_args is not None:
             return await self.handle_clawback(clawback_args, coin_state, peer)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
+
         return None
 
     async def auto_claim_coins(self) -> None:
@@ -681,7 +682,7 @@ class WalletStateManager:
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
             metadata = json.loads(coin.metadata)
-            if min_amount <= coin.coin.amount and metadata["is_recipient"]:
+            if coin.coin.amount >= min_amount and metadata["is_recipient"]:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata["time_lock"]:
                     clawback_coins.append((coin.coin, metadata))
@@ -712,7 +713,7 @@ class WalletStateManager:
             inner_solution: Program = self.main_wallet.make_solution(
                 primaries=[
                     {
-                        "puzzlehash": recipient_puzhash if metadata["is_recipient"] else sender_puzhash,
+                        "puzzlehash": derivation_record.puzzle_hash,
                         "amount": uint64(coin.amount),
                         "memos": [],
                     }

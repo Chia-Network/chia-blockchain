@@ -30,7 +30,6 @@ class WalletType(IntEnum):
 
 
 class CoinType(IntEnum):
-    # Coin Types
     NORMAL = 0
     CLAWBACK = 1
 
