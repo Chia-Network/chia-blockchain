@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint32, uint64
-from chia.wallet.util.wallet_types import WalletType
+from chia.util.misc import VersionedBlob
+from chia.wallet.util.wallet_types import CoinType, WalletType
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,11 @@ class WalletCoinRecord:
     coinbase: bool
     wallet_type: WalletType
     wallet_id: int
+    # Cannot include new attributes in the hash since they will change the coin order in a set.
+    # The launcher coin ID will change and will break all hardcode offer tests in CAT/NFT/DL, etc.
+    # TODO Change hardcode offer in unit tests
+    coin_type: CoinType = field(hash=False)
+    metadata: Optional[VersionedBlob] = field(hash=False)
 
     def name(self) -> bytes32:
         return self.coin.name()
