@@ -39,7 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
-from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -129,7 +129,7 @@ class DAOCATWallet:
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         # This is the bottom layer inner_puzzle, now you must find the lockup puzzle
         # Check if it is empty (attempt shortcut)
-        active_votes_list = []
+        active_votes_list: List[Optional[bytes32]] = []
         lockup_puz = get_lockup_puzzle(
             self.dao_cat_info.limitations_program_hash,
             active_votes_list,
@@ -137,11 +137,18 @@ class DAOCATWallet:
         )
 
         # Check if this is actually correct
-        if construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash() != coin.puzzle_hash:
+        if (
+            construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash()
+            != coin.puzzle_hash
+        ):
             # It's got restrictions, go look at the parent
             # TODO: write this code
-            breakpoint()
-        assert construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash() == coin.puzzle_hash
+            pass
+            # breakpoint()
+        assert (
+            construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash()
+            == coin.puzzle_hash
+        )
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
 
         await self.add_lineage(coin.name(), lineage_proof)
@@ -229,7 +236,7 @@ class DAOCATWallet:
         amount: uint64,
         proposal_id: bytes32,
         is_yes_vote: bool,
-        curry_vals: Optional[List[uint64, uint64, bytes32]] = None,
+        curry_vals: Optional[Tuple[Program, Program, Program, Program]] = None,
     ) -> SpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
@@ -276,18 +283,19 @@ class DAOCATWallet:
                 # CREATE_COIN new_puzzle coin.amount
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
                 primaries = [
-                    AmountWithPuzzlehash({
-                        "amount": uint64(vote_amount),
-                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                        "memos": [new_innerpuzzle.get_tree_hash()],
-                    })
+                    AmountWithPuzzlehash(
+                        {
+                            "amount": uint64(vote_amount),
+                            "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                            "memos": [new_innerpuzzle.get_tree_hash()],
+                        }
+                    )
                 ]
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
                 )
                 inner_solution = await self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
-
                 )
             else:
                 vote_amount = amount - running_sum
@@ -295,16 +303,20 @@ class DAOCATWallet:
                 # CREATE_COIN old_puzzle change
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
                 primaries = [
-                    AmountWithPuzzlehash({
-                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                        "amount": uint64(vote_amount),
-                        "memos": [new_innerpuzzle.get_tree_hash()],
-                    }),
-                    AmountWithPuzzlehash({
-                        "puzzlehash": lci.inner_puzzle.get_tree_hash(),
-                        "amount": uint64(change),
-                        "memos": [lci.inner_puzzle.get_tree_hash()],
-                    }),
+                    AmountWithPuzzlehash(
+                        {
+                            "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                            "amount": uint64(vote_amount),
+                            "memos": [new_innerpuzzle.get_tree_hash()],
+                        }
+                    ),
+                    AmountWithPuzzlehash(
+                        {
+                            "puzzlehash": lci.inner_puzzle.get_tree_hash(),
+                            "amount": uint64(change),
+                            "memos": [lci.inner_puzzle.get_tree_hash()],
+                        }
+                    ),
                 ]
                 puzzle_announcements = set(
                     Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
@@ -399,11 +411,13 @@ class DAOCATWallet:
 
             # CREATE_COIN new_puzzle coin.amount
             primaries = [
-                AmountWithPuzzlehash({
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [new_innerpuzzle.get_tree_hash()],
-                }),
+                AmountWithPuzzlehash(
+                    {
+                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                        "amount": uint64(coin.amount),
+                        "memos": [new_innerpuzzle.get_tree_hash()],
+                    }
+                ),
             ]
             inner_solution = await self.standard_wallet.make_solution(
                 primaries=primaries,

@@ -176,7 +176,6 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert cat_wallet_1_bal == cat_amt
 
 
-
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -289,15 +288,10 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert xch_bal == xch_funds
 
     cat_funding_tx = await dao_wallet_0.create_add_money_to_treasury_spend(
-        cat_funds,
-        funding_wallet_id=cat_wallet_0.id()
+        cat_funds, funding_wallet_id=cat_wallet_0.id()
     )
     cat_funding_sb = cat_funding_tx.spend_bundle
-    await time_out_assert_not_none(
-        5,
-        full_node_api.full_node.mempool_manager.get_spendbundle,
-        cat_funding_sb.name()
-    )
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_funding_sb.name())
     await full_node_api.process_transaction_records(records=[cat_funding_tx])
 
     if not trusted:

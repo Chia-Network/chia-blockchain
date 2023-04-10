@@ -663,6 +663,7 @@ class WalletStateManager:
         if hint_list:
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DAO.value:
+                    assert isinstance(wallet, DAOWallet)
                     if wallet.dao_info.treasury_id in hint_list:
                         return WalletIdentifier.create(wallet)
 

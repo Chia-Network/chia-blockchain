@@ -822,10 +822,10 @@ class CATWallet(WalletProtocol):
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
             if override_memos:
-               memos_with_hint: List[bytes] = memo_list
+                memos_with_hint: List[bytes] = memo_list
             else:
-               memos_with_hint: List[bytes] = [puzhash]
-               memos_with_hint.extend(memo_list)
+                memos_with_hint = [puzhash]
+                memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])

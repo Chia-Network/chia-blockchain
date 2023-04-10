@@ -129,7 +129,9 @@ def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32] =
         return inner_puzzle.get_tree_hash()
 
 
-def get_lockup_puzzle(cat_tail_hash: bytes32, previous_votes_list: List[bytes32], innerpuz: Program) -> Program:
+def get_lockup_puzzle(
+    cat_tail_hash: bytes32, previous_votes_list: List[Optional[bytes32]], innerpuz: Program
+) -> Program:
     puzzle: Program = DAO_LOCKUP_MOD.curry(
         DAO_PROPOSAL_MOD_HASH,
         SINGLETON_MOD_HASH,
@@ -409,7 +411,7 @@ def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
 
 
-def get_curry_vals_from_proposal_puzzle(proposal_puzzle):
+def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Program, Program, Program, Program]:
     curried_args = uncurry_proposal(proposal_puzzle).as_iter()
     (
         SINGLETON_STRUCT,

@@ -178,9 +178,7 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
     await time_out_assert(20, dao_cat_wallet.get_votable_balance, 0, include_free_cats=False)
 
     txs, new_cats = await dao_cat_wallet.create_new_dao_cats(35, push=True)
-    await time_out_assert(
-        15, tx_in_pool, True, full_node_api.full_node.mempool_manager, txs[0].spend_bundle.name()
-    )
+    await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, txs[0].spend_bundle.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     # coins = await cat_wallet.select_coins(55)
@@ -192,4 +190,4 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
 
     proposed_puzzle_hash = dao_wallet.generate_simple_proposal_innerpuz(ph, 10)
     tx = await dao_wallet.generate_new_proposal(proposed_puzzle_hash, 35)
-    breakpoint()
+    assert tx
