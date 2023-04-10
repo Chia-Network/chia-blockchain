@@ -51,7 +51,7 @@ class EligibleCoinSpends:
             attempting to spend an eligible coin with a different solution than the
             one we're already deduplicating on.
         """
-        cost_saving = uint64(0)
+        cost_saving = 0
         unique_coin_spends: List[CoinSpend] = []
         unique_additions: List[Coin] = []
         new_eligible_spends: Dict[bytes32, DedupCoinSpend] = {}
@@ -96,7 +96,7 @@ class EligibleCoinSpends:
                 duplicate_cost = spend_cost
                 # If we end up including this item, update this entry's cost
                 new_eligible_spends[coin_id] = DedupCoinSpend(current_solution, duplicate_cost)
-            cost_saving = uint64(cost_saving + duplicate_cost)
+            cost_saving += duplicate_cost
         # Update the eligible coin spends data
         self.eligible_spends.update(new_eligible_spends)
-        return (unique_coin_spends, cost_saving, unique_additions)
+        return unique_coin_spends, uint64(cost_saving), unique_additions
