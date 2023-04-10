@@ -28,7 +28,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.clvm_cost import CLVMCost
@@ -42,12 +42,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.api_decorators import api_request
-from chia.util.condition_tools import (
-    conditions_for_solution,
-    parse_sexp_to_conditions,
-    pkm_pairs,
-    pkm_pairs_for_conditions_dict,
-)
+from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -1692,14 +1687,11 @@ class TestMempoolManager:
         unsigned: List[CoinSpend] = spend_bundle_0.coin_spends
 
         assert len(unsigned) == 1
-        coin_spend: CoinSpend = unsigned[0]
-
-        err, con, cost = conditions_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
-        assert con is not None
+        # coin_spend: CoinSpend = unsigned[0]
 
         # TODO(straya): fix this test
         # puzzle, solution = list(coin_spend.solution.as_iter())
-        # conditions_dict = conditions_by_opcode(con)
+        # conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
 
         # pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin.name())
         # assert len(pkm_pairs) == 1
@@ -2628,38 +2620,31 @@ class TestPkmPairsForConditionDict:
 
 class TestParseSexpCondition:
     def test_basic(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"foo", b"bar"]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"foo", b"bar"]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"foo", b"bar"])]
 
     def test_oversized_op(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49, 49]), b"foo", b"bar"]]))
-        assert err is Err.INVALID_CONDITION
-        assert conds is None
+        with pytest.raises(ConsensusError):
+            parse_sexp_to_conditions(Program.to([[bytes([49, 49]), b"foo", b"bar"]]))
 
     def test_empty_op(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[b"", b"foo", b"bar"]]))
-        assert err is Err.INVALID_CONDITION
-        assert conds is None
+        with pytest.raises(ConsensusError):
+            parse_sexp_to_conditions(Program.to([[b"", b"foo", b"bar"]]))
 
     def test_list_op(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[[bytes([49])], b"foo", b"bar"]]))
-        assert err is Err.INVALID_CONDITION
-        assert conds is None
+        with pytest.raises(ConsensusError):
+            parse_sexp_to_conditions(Program.to([[[bytes([49])], b"foo", b"bar"]]))
 
     def test_list_arg(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), [b"foo", b"bar"]]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), [b"foo", b"bar"]]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [])]
 
     def test_list_arg_truncate(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"baz", [b"foo", b"bar"]]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"baz", [b"foo", b"bar"]]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"baz"])]
 
     def test_arg_limit(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"1", b"2", b"3", b"4", b"5", b"6"]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"1", b"2", b"3", b"4", b"5", b"6"]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"1", b"2", b"3", b"4"])]
 
 
