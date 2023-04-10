@@ -6,7 +6,7 @@
   ;; The idea is the other side of this trade requires observing the announcement from a
   ;; `settlement_payments` puzzle hash as a condition of one or more coin spends.
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
   (include utility_macros.clib)
 
   (defun sha256tree (TREE)

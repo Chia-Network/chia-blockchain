@@ -24,8 +24,8 @@
   ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST_HASH are curried into the puzzle
   ;EXAMPLE SOLUTION (0xcafef00d 0x12341234 0x923bf9a7856b19d335a65f12d68957d497e1f0c16c0e14baf6d120e60753a1ce 2 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) () (0xfafafafa 0xfaf5faf5 200)) 0xfadeddab (0x22222222 0x33333333 0x44444444))
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
@@ -52,7 +52,7 @@
 
 
   ; return the full puzzlehash for a singleton with the innerpuzzle curried in
-  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
      (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
                                       inner_puzzle_hash

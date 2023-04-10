@@ -2,7 +2,7 @@
 
   (public_key delegated_puzzle delegated_puzzle_solution)
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
 
   ;; hash a tree
   ;; This is used to calculate a puzzle hash given a puzzle program.
