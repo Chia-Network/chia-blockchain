@@ -1,6 +1,6 @@
 (mod (singleton_full_puzzle_hash amount key_value_list)
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)

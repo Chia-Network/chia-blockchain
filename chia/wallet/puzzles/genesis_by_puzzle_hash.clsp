@@ -1,4 +1,4 @@
-; This is a "limitations_program" for use with cat.clvm.
+; This is a "limitations_program" for use with cat.clsp.
 ;
 ; This checker allows new CATs to be created if their parent has a particular puzzle hash
 (mod (

@@ -1,4 +1,4 @@
-; This is a "limitations_program" for use with cat.clvm.
+; This is a "limitations_program" for use with cat.clsp.
 (mod (
       PUBKEY
       Truths
@@ -9,7 +9,7 @@
       _
     )
 
-    (include condition_codes.clvm)
+    (include condition_codes.clib)
 
     (list (list AGG_SIG_ME PUBKEY delta)) ; Careful with a delta of zero, the bytecode is 80 not 00
 )

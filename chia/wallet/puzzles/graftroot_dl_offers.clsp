@@ -11,9 +11,9 @@
     inner_solution
   )
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
   (include merkle_utils.clib)
-  (include curry-and-treehash.clinc)
+  (include curry-and-treehash.clib)
 
   (defmacro assert items
       (if (r items)

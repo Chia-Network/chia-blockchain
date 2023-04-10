@@ -10,8 +10,8 @@
 ; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
 ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)  ; also imports the constant ONE == 1
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)  ; also imports the constant ONE == 1
   (include singleton_truths.clib)
   (include utility_macros.clib)
 
@@ -20,7 +20,7 @@
   (defun-inline launcher_puzzle_hash_for_singleton_struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
-  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
      (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
                                       inner_puzzle_hash

@@ -29,17 +29,17 @@ from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.make_block_generator import make_spend_bundle
 
-TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_requirement="chia.wallet.puzzles")
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")
 
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clsp", package_or_requirement="chia.wallet.puzzles")
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_spend_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.wallet.puzzles"
 )
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
-TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.wallet.puzzles")
+TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clsp", package_or_requirement="chia.wallet.puzzles")
 
 Nil = Program.from_bytes(b"\x80")
 

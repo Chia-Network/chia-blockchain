@@ -29,9 +29,9 @@ from clvm_tools_rs import compile_clvm  # noqa: E402
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram  # noqa: E402
 
-clvm_suffix = ".clvm"
-hex_suffix = ".clvm.hex"
-hash_suffix = ".clvm.hex.sha256tree"
+clvm_suffix = ".clsp"
+hex_suffix = ".clsp.hex"
+hash_suffix = ".clsp.hex.sha256tree"
 all_suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
 # TODO: could be cli options
 top_levels = {"chia"}
@@ -142,7 +142,7 @@ class ClvmBytes:
 
 
 # These files have the wrong extension for now so we'll just manually exclude them
-excludes = {"condition_codes.clvm", "create-lock-puzzlehash.clvm"}
+excludes: typing.Set[str] = set()
 
 
 def find_stems(
@@ -228,7 +228,7 @@ def check(use_cache: bool) -> int:
                 print(f"    {stem.with_name(stem.name + suffix)}")
 
     print()
-    print("Checking that all existing .clvm files compile to .clvm.hex that match existing caches:")
+    print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
     for stem_path in sorted(found_stems["clvm"]):
         clvm_path = stem_path.with_name(stem_path.name + clvm_suffix)
         if clvm_path.name in excludes:
