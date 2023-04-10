@@ -48,9 +48,13 @@ class WalletCoinStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)")
+
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_record_wallet_type on coin_record(wallet_type)")
+
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
+
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_amount on coin_record(amount)")
+
             try:
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN coin_type int DEFAULT 0")
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN metadata text")

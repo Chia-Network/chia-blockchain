@@ -73,10 +73,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
-
-from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs, subscribe_to_coin_updates
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
