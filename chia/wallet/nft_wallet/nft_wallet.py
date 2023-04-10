@@ -751,7 +751,11 @@ class NFTWallet:
 
         if fee > 0:
             announcement_to_make = nft_coin.coin.name()
+<<<<<<< Updated upstream
             chia_tx = await self.create_tandem_xch_tx(
+=======
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+>>>>>>> Stashed changes
                 fee, Announcement(nft_coin.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
