@@ -3,14 +3,14 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-from blspy import G1Element
+from blspy import G1Element, G2Element
 from chia_rs.chia_rs import CoinState
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -300,6 +300,77 @@ class VCWallet:
             )
         )
         return tx_list
+
+    async def revoke_vc(
+        self, parent_id: bytes32, peer: WSChiaConnection, fee: uint64 = uint64(0), reuse_puzhash: Optional[bool] = None
+    ) -> List[TransactionRecord]:
+        vc_coin_states: CoinState = await self.wallet_state_manager.wallet_node.get_coin_state([parent_id], peer=peer)
+        if vc_coin_states is None:
+            raise ValueError(f"Cannot find verified credential coin: {parent_id.hex()}")
+        vc_coin_state = vc_coin_states[0]
+        cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            vc_coin_state.spent_height, vc_coin_state.coin, peer
+        )
+        vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(cs)
+
+        # Check if we own the DID
+        found_did = False
+        for _, did_wallet in self.wallet_state_manager.wallets.items():
+            if did_wallet.type() == WalletType.DECENTRALIZED_ID:
+                assert isinstance(did_wallet, DIDWallet)
+                if bytes32.fromhex(did_wallet.get_my_DID()) == vc.proof_provider:
+                    found_did = True
+                    break
+        if not found_did:
+            raise ValueError(f"You don't own the DID {vc.proof_provider.hex()}")
+
+        _, provider_inner_puzhash, _ = await did_wallet.get_info_for_recovery()
+
+        # Generate spend specific nonce
+        coins = await did_wallet.select_coins(uint64(1))
+        assert coins is not None
+        coins.add(vc.coin)
+        if fee > 0:
+            coins.update(await self.standard_wallet.select_coins(fee))
+        sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
+        sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
+        nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
+        vc_announcement: Announcement = Announcement(vc.coin.name(), nonce)
+
+        # Assemble final bundle
+        expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
+        did_spend: SpendBundle = await did_wallet.create_message_spend(
+            puzzle_announcements={expected_did_announcement},
+            coin_announcements_to_assert={vc_announcement},
+        )
+        final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_spend])
+        tx: TransactionRecord = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=vc.inner_puzzle_hash,
+            amount=uint64(1),
+            fee_amount=uint64(fee),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=final_bundle,
+            additions=list(final_bundle.additions()),
+            removals=list(final_bundle.removals()),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=final_bundle.name(),
+            memos=list(compute_memos(final_bundle).items()),
+        )
+        if fee > 0:
+            chia_tx: TransactionRecord = await self.create_tandem_xch_tx(fee, vc_announcement, reuse_puzhash)
+            assert tx.spend_bundle is not None
+            assert chia_tx.spend_bundle is not None
+            tx = dataclasses.replace(tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, tx.spend_bundle]))
+            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+            return [tx, chia_tx]
+        else:
+            return [tx]
 
     async def create_tandem_xch_tx(
         self,

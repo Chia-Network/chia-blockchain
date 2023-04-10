@@ -219,6 +219,7 @@ class WalletRpcApi:
             "/vc_spend_vc": self.vc_spend_vc,
             "/add_vc_proofs": self.add_vc_proofs,
             "/get_proofs_for_root": self.get_proofs_for_root,
+            "/vc_revoke_vc": self.vc_revoke_vc,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -3409,3 +3410,29 @@ class WalletRpcApi:
         if vc_proofs is None:
             raise ValueError("no proofs found for specified root")
         return {"proofs": vc_proofs.key_value_pairs}
+
+    async def vc_revoke_vc(self, request) -> Dict:
+        # get VC wallet
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(
+                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
+            )
+
+        txs = await vc_wallet.revoke_vc(
+            bytes32.from_hexstr(request["vc_parent_id"]),
+            self.service.get_full_node_peer(),
+            uint64(request.get("fee", 0)),
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        for tx in txs:
+            await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }

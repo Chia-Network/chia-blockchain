@@ -20,6 +20,7 @@
     my_amount
     ownership_lineage_proof  ; need to solve the covenant layer one last time
     previous_metadata_hash  ; like metadata_hash above but for the previous coin
+    announcement_nonce  ; Anything to announce (for fees/DID to hook onto)
     (
         provider_innerpuzhash  ; DID needs to authorize the transfer program (and therefore this backdoor)
         my_coin_id
@@ -58,6 +59,7 @@
     )
     (list ASSERT_MY_AMOUNT my_amount)
     (list CREATE_COIN inner_puzzle_hash my_amount)
+    (list CREATE_COIN_ANNOUNCEMENT announcement_nonce)
     (list
       -10
       ownership_lineage_proof  ; for covenant layer

@@ -281,6 +281,7 @@ def solve_std_vc_backdoor(
     provider_innerpuzhash: bytes32,
     coin_id: bytes32,
     new_metadata: Program,
+    announcement_nonce: Optional[bytes32] = None,
 ) -> Program:
     """
     Solution to the STANDARD_BRICK_PUZZLE above. Requires proof info about pretty much the whole puzzle stack.
@@ -295,6 +296,7 @@ def solve_std_vc_backdoor(
             amount,
             eml_lineage_proof.to_program(),
             Program.to(eml_lineage_proof.parent_proof_hash),
+            announcement_nonce,
             Program.to(
                 [
                     provider_innerpuzhash,
@@ -745,7 +747,9 @@ class VerifiedCredential(Streamable):
             ),
         )
 
-    def activate_backdoor(self, provider_innerpuzhash: bytes32) -> Tuple[bytes32, CoinSpend]:
+    def activate_backdoor(
+        self, provider_innerpuzhash: bytes32, announcement_nonce: Optional[bytes32] = None
+    ) -> Tuple[bytes32, CoinSpend]:
         """
         Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
 
@@ -770,6 +774,7 @@ class VerifiedCredential(Streamable):
                             provider_innerpuzhash,
                             self.coin.name(),
                             Program.to(None),
+                            announcement_nonce,
                         ),
                         hidden=True,
                     ),

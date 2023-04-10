@@ -151,3 +151,9 @@ async def test_update_vc_proof(self_hostname: str, two_wallet_nodes: Any, truste
     # Add proofs to DB
     assert await api_0.add_vc_proofs({"proofs": proofs.key_value_pairs}) == {}
     assert await api_0.get_proofs_for_root({"root": proof_root.hex()}) == {"proofs": proofs.key_value_pairs}
+
+    # Revoke VC
+    await api_0.vc_revoke_vc({"vc_parent_id": vc_record_updated.vc.coin.parent_coin_info.hex(), "fee": 1})
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    vc_record_revoked = await wallet_node_0.wallet_state_manager.vc_store.get_vc_record(bytes32.from_hexstr(vc_id))
+    assert vc_record_revoked is None
