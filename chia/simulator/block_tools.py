@@ -11,7 +11,6 @@ import ssl
 import sys
 import tempfile
 import time
-from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -19,8 +18,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
+from clvm.casts import int_from_bytes
 
-from chia.cmds.init_funcs import create_default_chia_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -47,8 +46,8 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
 )
 from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import GENERATOR_MOD
 from chia.full_node.signage_point import SignagePoint
+from chia.plotters.chiapos import Params
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
@@ -74,7 +73,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
@@ -101,7 +100,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import config_path_for_filename, load_config, lock_config, override_config, save_config
+from chia.util.config import (
+    config_path_for_filename,
+    create_default_chia_config,
+    load_config,
+    lock_config,
+    override_config,
+    save_config,
+)
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -115,6 +121,9 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+
+GENERATOR_MOD = get_generator()
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -141,6 +150,22 @@ test_constants = DEFAULT_CONSTANTS.replace(
 )
 
 
+def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
+    ret: List[Coin] = []
+    for cs in sb.coin_spends:
+        parent_id = cs.coin.name()
+        _, r = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+        for cond in Program.to(r).as_iter():
+            atoms = cond.as_iter()
+            op = next(atoms).atom
+            if op != ConditionOpcode.CREATE_COIN.value:
+                continue
+            puzzle_hash = next(atoms).atom
+            amount = int_from_bytes(next(atoms).atom)
+            ret.append(Coin(parent_id, puzzle_hash, amount))
+    return ret
+
+
 class BlockTools:
     """
     Tools to generate blocks for testing.
@@ -162,7 +187,6 @@ class BlockTools:
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
     ):
-
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -261,52 +285,58 @@ class BlockTools:
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
-        if self.local_keychain:
-            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=self.log)
-        elif not self.automated_testing and fingerprint is not None:
-            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
-        else:  # if we are automated testing or if we don't have a fingerprint.
-            keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
-            )
-        assert keychain_proxy is not None
-        if fingerprint is None:  # if we are not specifying an existing key
-            await keychain_proxy.delete_all_keys()
-            self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
-            self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-            self.farmer_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy)
-            )
-            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
-        else:
-            self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-            self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+        keychain_proxy: Optional[KeychainProxy]
+        try:
+            if self.local_keychain:
+                keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
+            elif not self.automated_testing and fingerprint is not None:
+                keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            else:  # if we are automated testing or if we don't have a fingerprint.
+                keychain_proxy = await connect_to_keychain_and_validate(
+                    self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
+                )
+            assert keychain_proxy is not None
+            if fingerprint is None:  # if we are not specifying an existing key
+                await keychain_proxy.delete_all_keys()
+                self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
+                self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+                self.farmer_master_sk = await keychain_proxy.add_private_key(
+                    bytes_to_mnemonic(self.farmer_master_sk_entropy)
+                )
+                self.pool_master_sk = await keychain_proxy.add_private_key(
+                    bytes_to_mnemonic(self.pool_master_sk_entropy),
+                )
+            else:
+                self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
 
-        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
-        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+            self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
-        if reward_ph is None:
-            self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-            )
-            self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-            )
-        else:
-            self.farmer_ph = reward_ph
-            self.pool_ph = reward_ph
-        if self.automated_testing:
-            self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
-        else:
-            self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
-        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
+            if reward_ph is None:
+                self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                    master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+                )
+                self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                    master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+                )
+            else:
+                self.farmer_ph = reward_ph
+                self.pool_ph = reward_ph
+            if self.automated_testing:
+                self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
+            else:
+                self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
+            self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
-        self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
-        if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia keys generate`")
+            self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+            if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
+                raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
-        self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
-        await keychain_proxy.close()  # close the keychain proxy
+            self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+        finally:
+            if keychain_proxy is not None:
+                await keychain_proxy.close()  # close the keychain proxy
 
     def change_config(self, new_config: Dict):
         self._config = new_config
@@ -365,23 +395,22 @@ class BlockTools:
             final_dir.mkdir(parents=True, exist_ok=True)
         if tmp_dir is None:
             tmp_dir = self.temp_dir
-        args = Namespace()
-        # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = plot_size
-        # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = 1
-        args.buffer = 100
-        args.tmp_dir = tmp_dir
-        args.tmp2_dir = tmp_dir
-        args.final_dir = final_dir
-        args.plotid = None
-        args.memo = None
-        args.buckets = 0
-        args.stripe_size = 2000
-        args.num_threads = 0
-        args.nobitfield = not bitfield
-        args.exclude_final_dir = False
-        args.list_duplicates = False
+        params = Params(
+            # Can't go much lower than 20, since plots start having no solutions and more buggy
+            size=plot_size,
+            # Uses many plots for testing, in order to guarantee proofs of space at every height
+            num=1,
+            buffer=100,
+            tmp_dir=Path(tmp_dir),
+            tmp2_dir=Path(tmp_dir),
+            final_dir=Path(final_dir),
+            plotid=None,
+            memo=None,
+            buckets=0,
+            stripe_size=2000,
+            num_threads=0,
+            nobitfield=not bitfield,
+        )
         try:
             if plot_keys is None:
                 pool_pk: Optional[G1Element] = None
@@ -394,7 +423,7 @@ class BlockTools:
                 plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
             created, existed = await create_plots(
-                args,
+                params,
                 plot_keys,
                 use_datetime=False,
                 test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
@@ -662,7 +691,7 @@ class BlockTools:
                             transaction_data = None
                             previous_generator = None
                         if transaction_data is not None:
-                            additions = transaction_data.additions()
+                            additions = compute_additions_unchecked(transaction_data)
                             removals = transaction_data.removals()
                         assert last_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
@@ -750,7 +779,7 @@ class BlockTools:
 
                         blocks[full_block.header_hash] = block_record
                         self.log.info(
-                            f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}"
+                            f"Created block {block_record.height} ove=False, iters {block_record.total_iters}"
                         )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
@@ -900,7 +929,7 @@ class BlockTools:
             if transaction_data_included:
                 transaction_data = None
             if transaction_data is not None:
-                additions = transaction_data.additions()
+                additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
             sub_slots_finished += 1
             self.log.info(
@@ -1030,9 +1059,7 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        self.log.info(
-                            f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}"
-                        )
+                        self.log.info(f"Created block {block_record.height } ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1261,7 +1288,6 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
@@ -1382,7 +1408,7 @@ def finish_block(
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
-        new_ip_iters = unfinished_block.total_iters - latest_block.total_iters
+        new_ip_iters = uint64(unfinished_block.total_iters - latest_block.total_iters)
         cc_vdf_input = latest_block.challenge_vdf_output
         rc_vdf_challenge = latest_block.reward_infusion_new_challenge
     else:
@@ -2065,7 +2091,7 @@ def create_test_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info,) = create_test_foliage(
+    (foliage, foliage_transaction_block, transactions_info) = create_test_foliage(
         constants,
         rc_block,
         block_generator,

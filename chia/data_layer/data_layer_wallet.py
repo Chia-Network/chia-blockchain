@@ -4,10 +4,11 @@ import dataclasses
 import logging
 import time
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
+from typing_extensions import final
 
 from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import OfferIntegrityError
@@ -100,9 +101,7 @@ class Mirror:
         )
 
 
-_T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
-
-
+@final
 class DataLayerWallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -115,57 +114,47 @@ class DataLayerWallet:
 
     @classmethod
     async def create(
-        cls: Type[_T_DataLayerWallet],
+        cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
         wallet_info: WalletInfo,
-        name: Optional[str] = None,
-    ) -> _T_DataLayerWallet:
+    ) -> DataLayerWallet:
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
         self.wallet_info = wallet_info
         self.wallet_id = uint8(self.wallet_info.id)
 
         return self
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.DATA_LAYER)
+    def type(cls) -> WalletType:
+        return WalletType.DATA_LAYER
 
     def id(self) -> uint32:
         return self.wallet_info.id
 
     @classmethod
-    async def create_new_dl_wallet(
-        cls: Type[_T_DataLayerWallet],
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        name: Optional[str] = "DataLayer Wallet",
-    ) -> _T_DataLayerWallet:
+    async def create_new_dl_wallet(cls, wallet_state_manager: WalletStateManager) -> DataLayerWallet:
         """
         This must be called under the wallet state manager lock
         """
 
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
 
         for _, w in self.wallet_state_manager.wallets.items():
-            if w.type() == uint8(WalletType.DATA_LAYER):
+            if w.type() == WalletType.DATA_LAYER:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        assert name is not None
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name,
+            "DataLayer Wallet",
             WalletType.DATA_LAYER.value,
             "",
         )
-        self.wallet_id = uint8(self.wallet_info.id)
-
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self)
 
         return self
 
@@ -613,10 +602,12 @@ class DataLayerWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
         )
+        assert dl_tx.spend_bundle is not None
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
                 fee, Announcement(current_coin.name(), b"$"), coin_announcement=True
             )
+            assert chia_tx.spend_bundle is not None
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
@@ -818,6 +809,8 @@ class DataLayerWallet:
                 fee=uint64(excess_fee),
                 coin_announcements_to_consume={Announcement(mirror_coin.name(), b"$")},
             )
+            assert txs[0].spend_bundle is not None
+            assert chia_tx.spend_bundle is not None
             txs = [
                 dataclasses.replace(
                     txs[0], spend_bundle=SpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])
@@ -1216,8 +1209,8 @@ class DataLayerWallet:
         # Build a mapping of launcher IDs to their new innerpuz
         singleton_to_innerpuzhash: Dict[bytes32, bytes32] = {}
         singleton_to_root: Dict[bytes32, bytes32] = {}
-        all_parent_ids: List[bytes32] = [cs.coin.parent_coin_info for cs in offer.bundle.coin_spends]
-        for spend in offer.bundle.coin_spends:
+        all_parent_ids: List[bytes32] = [cs.coin.parent_coin_info for cs in offer.coin_spends()]
+        for spend in offer.coin_spends():
             matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
             if matched and spend.coin.name() not in all_parent_ids:
                 innerpuz, root, launcher_id = curried_args
@@ -1227,7 +1220,7 @@ class DataLayerWallet:
 
         # Create all of the new solutions
         new_spends: List[CoinSpend] = []
-        for spend in offer.bundle.coin_spends:
+        for spend in offer.coin_spends():
             solution = spend.solution.to_program()
             if match_dl_singleton(spend.puzzle_reveal.to_program())[0]:
                 try:
@@ -1283,12 +1276,12 @@ class DataLayerWallet:
                     spend = new_spend
             new_spends.append(spend)
 
-        return Offer({}, SpendBundle(new_spends, offer.bundle.aggregated_signature), offer.driver_dict, offer.old)
+        return Offer({}, SpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict, offer.old)
 
     @staticmethod
     async def get_offer_summary(offer: Offer) -> Dict[str, Any]:
         summary: Dict[str, Any] = {"offered": []}
-        for spend in offer.bundle.coin_spends:
+        for spend in offer.coin_spends():
             solution = spend.solution.to_program()
             matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
             if matched:
@@ -1299,7 +1292,7 @@ class DataLayerWallet:
                 mod, graftroot_curried_args = graftroot.uncurry()
                 if mod == GRAFTROOT_DL_OFFERS:
                     child_spend: CoinSpend = next(
-                        cs for cs in offer.bundle.coin_spends if cs.coin.parent_coin_info == spend.coin.name()
+                        cs for cs in offer.coin_spends() if cs.coin.parent_coin_info == spend.coin.name()
                     )
                     _, child_curried_args = match_dl_singleton(child_spend.puzzle_reveal.to_program())
                     singleton_summary = {

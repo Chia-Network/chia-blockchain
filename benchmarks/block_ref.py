@@ -48,8 +48,7 @@ def random_refs() -> List[uint32]:
 REPETITIONS = 100
 
 
-async def main(db_path: Path):
-
+async def main(db_path: Path) -> None:
     random.seed(0x213FB154)
 
     async with aiosqlite.connect(db_path) as connection:
@@ -92,7 +91,7 @@ async def main(db_path: Path):
 
 @click.command()
 @click.argument("db-path", type=click.Path())
-def entry_point(db_path: Path):
+def entry_point(db_path: Path) -> None:
     asyncio.run(main(Path(db_path)))
 
 

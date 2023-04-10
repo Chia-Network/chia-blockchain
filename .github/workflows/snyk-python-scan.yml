@@ -1,6 +1,8 @@
 name: 🚨 Snyk Python Scan
 on:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
     - long_lived/**
     - main
@@ -8,6 +10,8 @@ on:
     tags:
     - '**'
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
     - '**'
   workflow_dispatch:

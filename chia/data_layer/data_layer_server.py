@@ -117,7 +117,6 @@ class DataLayerServer:
 
 
 async def async_start(root_path: Path) -> int:
-
     shutdown_event = asyncio.Event()
 
     dl_config = load_config(

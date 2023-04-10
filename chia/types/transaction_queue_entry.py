@@ -20,14 +20,14 @@ class TransactionQueueEntry:
     peer: Optional[WSChiaConnection]
     test: bool
 
-    def __lt__(self, other):
+    def __lt__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name < other.spend_name
 
-    def __le__(self, other):
+    def __le__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name <= other.spend_name
 
-    def __gt__(self, other):
+    def __gt__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name > other.spend_name
 
-    def __ge__(self, other):
+    def __ge__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name >= other.spend_name

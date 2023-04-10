@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 from secrets import token_bytes
 from typing import Any, Dict
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
@@ -25,12 +23,10 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.address_type import AddressType
-from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def nft_count(wallet: NFTWallet) -> int:
-    nfts = await wallet.nft_store.get_nft_list()
-    return len(nfts)
+    return await wallet.get_nft_count()
 
 
 @pytest.mark.parametrize(
@@ -150,13 +146,16 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    bt = full_node_api.bt
+async def test_nft_mint_from_did_rpc(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
+) -> None:
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api: FullNodeSimulator = full_node_service._api
     full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
+    wallet_node_maker = wallet_services[0]._node
+    wallet_node_taker = wallet_services[1]._node
+    server_0 = wallet_node_maker.server
+    server_1 = wallet_node_taker.server
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
@@ -192,36 +191,19 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
-    daemon_port = config["daemon_port"]
 
-    def stop_node_cb() -> None:
-        pass
+    assert wallet_services[0].rpc_server is not None
+    assert full_node_service.rpc_server is not None
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
+    client = await WalletRpcClient.create(
         self_hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
     )
-
-    rpc_server = await start_rpc_server(
-        api_maker,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,  # type: ignore
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(self_hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -231,6 +213,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -283,6 +266,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
         nft_ids = set([])
         for i in range(0, n, chunk):
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
@@ -311,14 +295,12 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         # We are using a long time out here because it can take a long time for the NFTs to show up
         # Even with only 10 NFTs it regularly takes longer than 30-40s for them to be found
@@ -341,12 +323,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     finally:
         client.close()
         client_node.close()
-        rpc_server.close()
-        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
-        await rpc_server.await_closed()
-        await rpc_server_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -354,13 +332,16 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    bt = full_node_api.bt
+async def test_nft_mint_from_did_rpc_no_royalties(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
+) -> None:
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api: FullNodeSimulator = full_node_service._api
     full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
+    wallet_node_maker = wallet_services[0]._node
+    wallet_node_taker = wallet_services[1]._node
+    server_0 = wallet_node_maker.server
+    server_1 = wallet_node_taker.server
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
@@ -396,36 +377,19 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
-    daemon_port = config["daemon_port"]
 
-    def stop_node_cb() -> None:
-        pass
+    assert wallet_services[0].rpc_server is not None
+    assert full_node_service.rpc_server is not None
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
+    client = await WalletRpcClient.create(
         self_hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
     )
-
-    rpc_server = await start_rpc_server(
-        api_maker,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,  # type: ignore
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(self_hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -435,6 +399,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -485,6 +450,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         spends = []
 
         for i in range(0, n, chunk):
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
@@ -511,26 +477,20 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         await time_out_assert(60, get_taker_nfts, n)
 
     finally:
         client.close()
         client_node.close()
-        rpc_server.close()
-        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
-        await rpc_server.await_closed()
-        await rpc_server_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -757,13 +717,16 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    bt = full_node_api.bt
+async def test_nft_mint_from_xch_rpc(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
+) -> None:
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api: FullNodeSimulator = full_node_service._api
     full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
+    wallet_node_maker = wallet_services[0]._node
+    wallet_node_taker = wallet_services[1]._node
+    server_0 = wallet_node_maker.server
+    server_1 = wallet_node_taker.server
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
@@ -799,36 +762,19 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
-    daemon_port = config["daemon_port"]
 
-    def stop_node_cb() -> None:
-        pass
+    assert wallet_services[0].rpc_server is not None
+    assert full_node_service.rpc_server is not None
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
+    client = await WalletRpcClient.create(
         self_hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
     )
-
-    rpc_server = await start_rpc_server(
-        api_maker,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,  # type: ignore
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(self_hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -838,6 +784,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -888,7 +835,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
 
         for i in range(0, n, chunk):
-            await time_out_assert(20, wallet_is_synced, True, wallet_node_maker, full_node_api)
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
@@ -912,14 +859,12 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         # We are using a long time out here because it can take a long time for the NFTs to show up
         # Even with only 10 NFTs it regularly takes longer than 30-40s for them to be found
@@ -942,12 +887,8 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     finally:
         client.close()
         client_node.close()
-        rpc_server.close()
-        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
-        await rpc_server.await_closed()
-        await rpc_server_node.await_closed()
 
 
 @pytest.mark.parametrize(

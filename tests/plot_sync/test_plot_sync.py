@@ -12,7 +12,7 @@ import pytest_asyncio
 from blspy import G1Element
 
 from chia.farmer.farmer_api import Farmer
-from chia.harvester.harvester_api import Harvester
+from chia.harvester.harvester import Harvester
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
@@ -586,7 +586,7 @@ async def test_sync_start_and_disconnect_while_sync_is_active(
     # Replace the `Receiver._process` with `disconnecting_process` which triggers a plot manager refresh and disconnects
     # the farmer from the harvester during an active sync.
     original_process = receiver._process
-    receiver._process = functools.partial(disconnecting_process, receiver)  # type: ignore[assignment]
+    receiver._process = functools.partial(disconnecting_process, receiver)  # type: ignore[method-assign]
     # Trigger the refresh which leads to a new sync_start being triggered during the active sync.
     harvester.plot_manager.trigger_refresh()
     await time_out_assert(20, harvester.plot_sync_sender.sync_active)

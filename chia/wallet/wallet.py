@@ -18,7 +18,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -50,12 +50,12 @@ from chia.wallet.wallet_info import WalletInfo
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
 
-
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
+    wallet_info: WalletInfo
     wallet_state_manager: Any
     log: logging.Logger
     wallet_id: uint32
@@ -91,11 +91,11 @@ class Wallet:
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            # we use height=0 here to not enable any soft-fork semantics. It
+            # will only matter once the wallet generates transactions relying on
+            # new conditions, and we can change this by then
             result: NPCResult = get_name_puzzle_conditions(
-                program,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
-                mempool_mode=True,
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=uint32(0)
             )
             self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
@@ -114,8 +114,8 @@ class Wallet:
         return uint128(total_amount)
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.STANDARD_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.STANDARD_WALLET
 
     def id(self) -> uint32:
         return self.wallet_id
@@ -325,6 +325,7 @@ class Wallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -339,12 +340,19 @@ class Wallet:
             for prim in primaries:
                 primaries_amount += prim["amount"]
             total_amount = amount + fee + primaries_amount
-
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         total_balance = await self.get_spendable_balance()
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction, got {total_amount}")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             if total_amount > total_balance:
@@ -363,15 +371,27 @@ class Wallet:
             )
         elif exclude_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
+
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
-
+        self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
         change = spend_value - total_amount
         if negative_change_allowed:
             change = max(0, change)
-
-        assert change >= 0
+        # only kicks in if fee is missing
+        if change < 0 and fee + amount == total_amount:
+            fee_coins = await self.select_coins(
+                # change already includes fee amount
+                uint64(abs(change)),
+                excluded_coin_amounts=exclude_coin_amounts,
+                exclude=([] if exclude_coins is None else list(exclude_coins)) + list(coins or []),
+            )
+            coins = coins.union(fee_coins)
+            spend_value = sum([coin.amount for coin in coins])
+            self.log.info(f"Updated spend_value is {spend_value} and total_amount is {total_amount}")
+            change = spend_value - total_amount
+        assert change >= 0, f"change is negative: {change}"
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -405,7 +425,15 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
+                    if reuse_puzhash:
+                        change_puzzle_hash: bytes32 = coin.puzzle_hash
+                        for primary in primaries:
+                            if change_puzzle_hash == primary["puzzlehash"] and change == primary["amount"]:
+                                # We cannot create two coins has same id, create a new puzhash for the change:
+                                change_puzzle_hash = await self.get_new_puzzlehash()
+                                break
+                    else:
+                        change_puzzle_hash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -454,13 +482,18 @@ class Wallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
-    async def sign_message(self, message: str, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
+    async def sign_message(
+        self, message: str, puzzle_hash: bytes32, is_hex: bool = False
+    ) -> Tuple[G1Element, G2Element]:
         # CHIP-0002 message signing as documented at:
         # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
-        puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+        if is_hex:
+            puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+        else:
+            puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
         return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
 
     async def generate_signed_transaction(
@@ -480,6 +513,7 @@ class Wallet:
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -508,6 +542,7 @@ class Wallet:
             max_coin_amount=max_coin_amount,
             exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_coins,
+            reuse_puzhash=reuse_puzhash,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)

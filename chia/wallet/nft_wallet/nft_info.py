@@ -21,11 +21,16 @@ DEFAULT_STATUS = "DEFAULT"
 class NFTInfo(Streamable):
     """NFT Info for displaying NFT on the UI"""
 
+    nft_id: str
+
     launcher_id: bytes32
     """Launcher coin ID"""
 
     nft_coin_id: bytes32
     """Current NFT coin ID"""
+
+    nft_coin_confirmation_height: uint32
+    """Current NFT coin confirmation height"""
 
     owner_did: Optional[bytes32]
     """Owner DID"""

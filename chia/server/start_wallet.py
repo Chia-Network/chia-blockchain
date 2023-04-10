@@ -39,12 +39,6 @@ def create_wallet_service(
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
-    # add local node to trusted peers if old config
-    if "trusted_peers" not in service_config:
-        full_node_config = config["full_node"]
-        trusted_peer = full_node_config["ssl"]["public_crt"]
-        service_config["trusted_peers"] = {}
-        service_config["trusted_peers"]["local_node"] = trusted_peer
     if "short_sync_blocks_behind_threshold" not in service_config:
         service_config["short_sync_blocks_behind_threshold"] = 20
 
@@ -58,13 +52,11 @@ def create_wallet_service(
     fnp = service_config.get("full_node_peer")
 
     if fnp:
-        node.full_node_peer = PeerInfo(
-            str(get_host_addr(fnp["host"], prefer_ipv6=config.get("prefer_ipv6", False))), fnp["port"]
-        )
-        connect_peers = [node.full_node_peer]
+        connect_peers = [
+            PeerInfo(str(get_host_addr(fnp["host"], prefer_ipv6=config.get("prefer_ipv6", False))), fnp["port"])
+        ]
     else:
         connect_peers = []
-        node.full_node_peer = None
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
     rpc_info: Optional[RpcInfo] = None

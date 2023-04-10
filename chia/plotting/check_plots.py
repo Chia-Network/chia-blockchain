@@ -4,7 +4,7 @@ import logging
 from collections import Counter
 from pathlib import Path
 from time import sleep, time
-from typing import List
+from typing import List, Optional
 
 from blspy import G1Element
 from chiapos import Verifier
@@ -21,20 +21,28 @@ from chia.plotting.util import (
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.hash import std_hash
+from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
 
-def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult):
+def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshResult) -> None:
     log.info(f"event: {event.name}, loaded {len(refresh_result.loaded)} plots, {refresh_result.remaining} remaining")
 
 
-def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
+def check_plots(
+    root_path: Path,
+    num: Optional[int],
+    challenge_start: Optional[int],
+    grep_string: str,
+    list_duplicates: bool,
+    debug_show_memo: bool,
+) -> None:
     config = load_config(root_path, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=0)
+    plot_refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_sleep_milliseconds=uint32(0))
     plot_manager: PlotManager = PlotManager(
         root_path,
         match_str=grep_string,
@@ -97,7 +105,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
-    total_good_plots: Counter = Counter()
+    total_good_plots: Counter[str] = Counter()
     total_size = 0
     bad_plots_list: List[Path] = []
 
@@ -179,7 +187,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
-    for (k, count) in sorted(dict(total_good_plots).items()):
+    for k, count in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
     grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
