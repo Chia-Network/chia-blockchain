@@ -629,11 +629,7 @@ class DIDWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
             announcement_to_make = coin.name()
-<<<<<<< Updated upstream
-            chia_tx = await self.create_tandem_xch_tx(
-=======
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
->>>>>>> Stashed changes
                 fee, Announcement(coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
@@ -736,11 +732,7 @@ class DIDWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
             announcement_to_make = coin.name()
-<<<<<<< Updated upstream
-            chia_tx = await self.create_tandem_xch_tx(
-=======
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(
->>>>>>> Stashed changes
                 fee, Announcement(coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
