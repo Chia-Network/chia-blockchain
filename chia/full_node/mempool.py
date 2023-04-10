@@ -60,7 +60,7 @@ class DedupCoinSpend:
 def run_for_cost_and_additions(
     coin_id: bytes32, puzzle_reveal: SerializedProgram, solution: SerializedProgram, maximum_cost: uint64
 ) -> Tuple[uint64, List[Coin]]:
-    cost, conditions = puzzle_reveal.run_with_cost(maximum_cost, solution)
+    cost, conditions = puzzle_reveal.run_mempool_with_cost(maximum_cost, solution)
     created_coins = []
     for condition in conditions.as_python():
         if condition[0] == ConditionOpcode.CREATE_COIN:

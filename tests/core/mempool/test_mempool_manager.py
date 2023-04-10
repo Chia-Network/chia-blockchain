@@ -36,7 +36,7 @@ from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
 
-IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 TEST_TIMESTAMP = uint64(10040)
