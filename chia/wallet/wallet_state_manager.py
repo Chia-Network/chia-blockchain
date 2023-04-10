@@ -1009,7 +1009,7 @@ class WalletStateManager:
             wallet_identifier = WalletIdentifier.create(new_nft_wallet)
         return wallet_identifier
 
-    async def handle_vc(self, parent_coin_spend: CoinSpend) -> Tuple[Optional[uint32], Optional[WalletType]]:
+    async def handle_vc(self, parent_coin_spend: CoinSpend) -> Optional[WalletIdentifier]:
         # Check the ownership
         vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(parent_coin_spend)
         derivation_record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -1017,14 +1017,14 @@ class WalletStateManager:
         )
         if derivation_record is None:
             self.log.warning(f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet.")
-            return None, None
+            return None
         self.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.VC):
-            return wallet_info.id, WalletType.VC
+            return WalletIdentifier(wallet_info.id, WalletType.VC)
         else:
             # Create a new VC wallet
             vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
-            return vc_wallet.id(), WalletType.VC
+            return WalletIdentifier(vc_wallet.id(), WalletType.VC)
 
     async def add_coin_states(
         self,
