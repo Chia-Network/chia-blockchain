@@ -337,8 +337,8 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
         for exclude in unused_excludes:
             print(f"    {exclude}")
 
-    extra_hashes = [key for key in HASHES if key not in all_hash_stems]
-    if extra_hashes != []:
+    extra_hashes = HASHES.keys() - all_hash_stems
+    if len(extra_hashes) == 0:
         overall_fail = True
         print()
         print("Hashes without corresponding files:")
