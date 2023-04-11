@@ -144,8 +144,10 @@ class ClvmBytes:
 
     @classmethod
     def from_clvm_paths(cls, paths: ClvmPaths) -> ClvmBytes:
-        hex_bytes = paths.hex.read_bytes()
-        return cls.from_hex_bytes(hex_bytes)
+        return cls(
+            hex=paths.hex.read_bytes(),
+            hash=bytes.fromhex(HASHES[paths.hash]),
+        )
 
     @classmethod
     def from_hex_bytes(cls, hex_bytes: bytes) -> ClvmBytes:
