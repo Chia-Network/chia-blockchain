@@ -312,6 +312,7 @@ async def async_config_wizard(
             else:
                 print("Genesis block already exists, exiting.")
             break
+    print(f"\nMake sure your CHIA_ROOT Environment Variable is set to: {root_path}")
 
 
 def print_coin_record(
