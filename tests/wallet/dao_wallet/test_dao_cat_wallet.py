@@ -26,9 +26,9 @@ from chia.wallet.transaction_record import TransactionRecord
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_alternate_proposal_timer.clvm")
-DAO_PROPOSAL_MOD: Program = load_clvm("dao_alternate_proposal.clvm")
-DAO_TREASURY_MOD: Program = load_clvm("dao_alternate_treasury.clvm")
+DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
+DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")
+DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clvm")
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 
 
