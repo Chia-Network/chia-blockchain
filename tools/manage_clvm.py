@@ -351,7 +351,8 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
             dump_cache(cache=cache, file=file)
 
     if fix_hashfile_trailing_whitespace:
-        hashes_path.write_text(json.dumps(HASHES, indent=4, sort_keys=True) + "\n")
+        new_file_content = json.dumps(HASHES, indent=4, sort_keys=True) + "\n"
+        hashes_path.write_bytes(str.encode(new_file_content))
 
     sys.exit(1 if overall_fail else 0)
 
