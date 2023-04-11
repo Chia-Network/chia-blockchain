@@ -351,9 +351,9 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
             dump_cache(cache=cache, file=file)
 
     if fix_hashfile_trailing_whitespace:
-        og_file = r"{}".format(hashes_path.read_text())
+        og_file = hashes_path.read_text()
         # print(f"Original File: {og_file[-10:]}")
-        file_output = r"{}".format(json.dumps(HASHES, indent=4, sort_keys=True) + '\n')
+        file_output = json.dumps(HASHES, indent=4, sort_keys=True) + '\n'
         # print(f"New File: {file_output[-10:]}")
         assert og_file == file_output
         hashes_path.write_text(json.dumps(HASHES, indent=4, sort_keys=True) + "\n")
