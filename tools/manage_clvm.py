@@ -37,8 +37,6 @@ all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "clvm": clvm_suffix}
 top_levels = {"chia"}
 hashes_path = pathlib.Path("chia/wallet/puzzles/deployed_puzzle_hashes.json")
 
-HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
-
 
 class ManageClvmError(Exception):
     pass
@@ -119,13 +117,15 @@ class ClvmPaths:
     hash: str
 
     @classmethod
-    def from_clvm(cls, clvm: pathlib.Path, raise_on_missing: bool = True) -> ClvmPaths:
+    def from_clvm(
+        cls, clvm: pathlib.Path, raise_on_missing: bool = True, hash_dict: typing.Dict[str, str] = {}
+    ) -> ClvmPaths:
         hex_path = clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix)
         stem_filename = clvm.with_name(clvm.name[: -len(clsp_suffix)]).stem
         missing_files = []
         if not hex_path.exists():
             missing_files.append(str(hex_path))
-        if stem_filename not in HASHES:
+        if stem_filename not in hash_dict:
             missing_files.append(f"{stem_filename} entry in {hashes_path}")
         if missing_files != [] and raise_on_missing:
             raise LoadClvmPathError(missing_files)
@@ -143,10 +143,10 @@ class ClvmBytes:
     hash: bytes
 
     @classmethod
-    def from_clvm_paths(cls, paths: ClvmPaths) -> ClvmBytes:
+    def from_clvm_paths(cls, paths: ClvmPaths, hash_dict: typing.Dict[str, str] = {}) -> ClvmBytes:
         return cls(
             hex=paths.hex.read_bytes(),
-            hash=bytes.fromhex(HASHES[paths.hash]),
+            hash=bytes.fromhex(hash_dict[paths.hash]),
         )
 
     @classmethod
@@ -206,6 +206,8 @@ def main() -> None:
 def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
     used_excludes = set()
     overall_fail = False
+
+    HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
 
     cache: Cache
     if not use_cache:
@@ -274,12 +276,12 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
         cache_key = str(stem_path)
         try:
             try:
-                reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
+                reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, hash_dict=HASHES)
             except LoadClvmPathError as e:
                 missing_files.extend(e.missing_files)
                 continue
             all_hash_stems.append(reference_paths.hash)
-            reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths)
+            reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths, hash_dict=HASHES)
 
             new_cache_entry = create_cache_entry(reference_paths=reference_paths, reference_bytes=reference_bytes)
             existing_cache_entry = cache_entries.get(cache_key)
@@ -290,6 +292,7 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
                     generated_paths = ClvmPaths.from_clvm(
                         clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}"),
                         raise_on_missing=False,
+                        hash_dict=HASHES,
                     )
 
                     compile_clvm(
@@ -361,6 +364,8 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
 def build() -> int:
     overall_fail = False
 
+    HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
+
     found_stems = find_stems(top_levels, suffixes={"clsp": clsp_suffix})
     hash_stems = []
     new_hashes = HASHES.copy()
@@ -375,12 +380,13 @@ def build() -> int:
         error = None
 
         try:
-            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, raise_on_missing=False)
+            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, raise_on_missing=False, hash_dict=HASHES)
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
                     clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name),
                     raise_on_missing=False,
+                    hash_dict=HASHES,
                 )
 
                 compile_clvm(
@@ -395,7 +401,9 @@ def build() -> int:
                 # Only add hashes to json file if they didn't already exist in it
                 hash_stems.append(reference_paths.hash)
                 if reference_paths.hash not in new_hashes:
-                    new_hashes[reference_paths.hash] = ClvmBytes.from_clvm_paths(reference_paths).hash.hex()
+                    new_hashes[reference_paths.hash] = ClvmBytes.from_clvm_paths(
+                        reference_paths, hash_dict=HASHES
+                    ).hash.hex()
         except Exception:
             file_fail = True
             error = traceback.format_exc()
