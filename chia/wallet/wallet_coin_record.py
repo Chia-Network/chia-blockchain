@@ -28,8 +28,8 @@ class WalletCoinRecord:
     # Cannot include new attributes in the hash since they will change the coin order in a set.
     # The launcher coin ID will change and will break all hardcode offer tests in CAT/NFT/DL, etc.
     # TODO Change hardcode offer in unit tests
-    coin_type: CoinType = field(hash=False)
-    metadata: Optional[VersionedBlob] = field(hash=False)
+    coin_type: CoinType = field(default=CoinType.NORMAL, hash=False)
+    metadata: Optional[VersionedBlob] = field(default=None, hash=False)
 
     def name(self) -> bytes32:
         return self.coin.name()
