@@ -810,6 +810,7 @@ class FullNodeRpcApi:
         # at set times into the future. This can lead to situations that users do not expect,
         # such as estimating a higher fee for a longer transaction time.
         estimates = make_monotonically_decreasing(estimates)
+        estimates = [uint64(e) for e in estimates]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
         mempool_size = self.service.mempool_manager.mempool.total_mempool_cost()
         mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees()
