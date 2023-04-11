@@ -101,7 +101,7 @@ def default_payments_and_conditions(
         (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 10),
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 10),
     ]
-    conditions = Program.to([make_create_coin_condition(ph, amount, None) for ph, amount in payments])
+    conditions = Program.to([make_create_coin_condition(ph, amount, []) for ph, amount in payments])
     return payments, conditions
 
 
