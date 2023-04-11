@@ -453,7 +453,8 @@ class ChiaServer:
             der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
             if peer_id == self.node_id:
-                raise RuntimeError(f"Trying to connect to a peer ({target_node}) with the same peer_id: {peer_id}")
+                self.log.info(f"Connected to a node with the same peer ID, disconnecting: {target_node} {peer_id}")
+                return False
 
             connection = WSChiaConnection.create(
                 self._local_type,
