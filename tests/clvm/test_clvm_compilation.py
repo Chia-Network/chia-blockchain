@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest import TestCase
 
-from clvm_tools.clvmc import compile_clvm
+from clvm_tools_rs import compile_clvm
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -84,6 +84,10 @@ def path_with_ext(path, ext):
     return Path(str(path) + ext)
 
 
+def path_with_ext_string(path, ext):
+    return str(str(path) + str(ext))
+
+
 class TestClvmCompilation(TestCase):
     """
     These are tests, and not just build scripts to regenerate the bytecode, because
@@ -134,7 +138,7 @@ class TestClvmCompilation(TestCase):
         self.maxDiff = None
         for f in wallet_program_files:
             f = Path(f)
-            compile_clvm(f, path_with_ext(f, ".recompiled"), search_paths=[f.parent])
+            compile_clvm(str(f), path_with_ext_string(f, ".recompiled"), search_paths=[str(f.parent)])
             orig_hex = path_with_ext(f, ".hex").read_text().strip()
             new_hex = path_with_ext(f, ".recompiled").read_text().strip()
             self.assertEqual(orig_hex, new_hex, msg=f"Compilation of {f} does not match {f}.hex")
