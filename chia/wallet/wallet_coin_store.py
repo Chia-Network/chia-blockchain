@@ -170,7 +170,7 @@ class WalletCoinStore:
         start = 0 is most recent transaction
         """
         limit = end - start
-        query_str = "ORDER BY confirmed_height " + "DESC" if reverse else "ASC"
+        query_str = "ORDER BY confirmed_height " + ("DESC" if reverse else "ASC")
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
