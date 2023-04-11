@@ -5,8 +5,9 @@ from secrets import token_bytes
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
-from chia.util.ints import uint32, uint64
-from chia.wallet.util.wallet_types import WalletType
+from chia.util.ints import uint16, uint32, uint64
+from chia.util.misc import VersionedBlob
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from tests.util.db_connection import DBConnection
@@ -18,9 +19,16 @@ coin_4 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_5 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_6 = Coin(token_bytes(32), coin_4.puzzle_hash, uint64(12312))
 coin_7 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
-record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
-record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
+coin_8 = Coin(token_bytes(32), token_bytes(32), uint64(2))
+record_replaced = WalletCoinRecord(
+    coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+)
+record_1 = WalletCoinRecord(
+    coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+)
+record_2 = WalletCoinRecord(
+    coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+)
 record_3 = WalletCoinRecord(
     coin_3,
     uint32(5),
@@ -29,6 +37,8 @@ record_3 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     0,
+    CoinType.NORMAL,
+    None,
 )
 record_4 = WalletCoinRecord(
     coin_4,
@@ -38,6 +48,8 @@ record_4 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     0,
+    CoinType.NORMAL,
+    None,
 )
 record_5 = WalletCoinRecord(
     coin_5,
@@ -47,6 +59,8 @@ record_5 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     1,
+    CoinType.NORMAL,
+    None,
 )
 record_6 = WalletCoinRecord(
     coin_6,
@@ -56,6 +70,8 @@ record_6 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     2,
+    CoinType.NORMAL,
+    None,
 )
 record_7 = WalletCoinRecord(
     coin_7,
@@ -65,6 +81,19 @@ record_7 = WalletCoinRecord(
     False,
     WalletType.POOLING_WALLET,
     2,
+    CoinType.NORMAL,
+    None,
+)
+record_8 = WalletCoinRecord(
+    coin_8,
+    uint32(1),
+    uint32(0),
+    False,
+    False,
+    WalletType.STANDARD_WALLET,
+    1,
+    CoinType.CLAWBACK,
+    VersionedBlob(uint16(1), b"TEST"),
 )
 
 
@@ -103,6 +132,7 @@ async def test_bulk_get() -> None:
         await store.add_coin_record(record_2)
         await store.add_coin_record(record_3)
         await store.add_coin_record(record_4)
+        await store.add_coin_record(record_8)
 
         store = await WalletCoinStore.create(db_wrapper)
         records = await store.get_coin_records([coin_1.name(), coin_2.name(), token_bytes(32), coin_4.name()])
@@ -151,6 +181,7 @@ async def test_get_unspent_coins_for_wallet() -> None:
         await store.add_coin_record(record_5)  # wallet 1
         await store.add_coin_record(record_6)  # this is spent and wallet 2
         await store.add_coin_record(record_7)  # wallet 2
+        await store.add_coin_record(record_8)
 
         assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
         assert await store.get_unspent_coins_for_wallet(2) == set([record_7])
@@ -174,6 +205,8 @@ async def test_get_unspent_coins_for_wallet() -> None:
         assert await store.get_unspent_coins_for_wallet(2) == set()
         assert await store.get_unspent_coins_for_wallet(3) == set()
 
+        assert await store.get_unspent_coins_for_wallet(1, coin_type=CoinType.CLAWBACK) == set([record_8])
+
 
 @pytest.mark.asyncio
 async def test_get_all_unspent_coins() -> None:
@@ -185,6 +218,7 @@ async def test_get_all_unspent_coins() -> None:
         await store.add_coin_record(record_1)  # not spent
         await store.add_coin_record(record_2)  # not spent
         await store.add_coin_record(record_3)  # spent
+        await store.add_coin_record(record_8)  # spent
         assert await store.get_all_unspent_coins() == set([record_1, record_2])
 
         await store.add_coin_record(record_4)  # spent
@@ -207,6 +241,8 @@ async def test_get_all_unspent_coins() -> None:
         await store.set_spent(coin_2.name(), uint32(12))
         await store.set_spent(coin_1.name(), uint32(12))
         assert await store.get_all_unspent_coins() == set()
+
+        assert await store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK) == set([record_8])
 
 
 @pytest.mark.asyncio
@@ -275,7 +311,9 @@ async def test_delete_coin_record() -> None:
 
 
 def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
-    return WalletCoinRecord(c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0)
+    return WalletCoinRecord(
+        c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
+    )
 
 
 @pytest.mark.asyncio
@@ -378,17 +416,22 @@ async def test_count_small_unspent() -> None:
         await store.add_coin_record(r1)
         await store.add_coin_record(r2)
         await store.add_coin_record(r3)
+        await store.add_coin_record(record_8)
 
         assert await store.count_small_unspent(5) == 3
         assert await store.count_small_unspent(4) == 2
         assert await store.count_small_unspent(3) == 2
         assert await store.count_small_unspent(2) == 1
         assert await store.count_small_unspent(1) == 0
+        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 1
 
         await store.set_spent(coin_2.name(), uint32(12))
+        await store.set_spent(coin_8.name(), uint32(12))
 
         assert await store.count_small_unspent(5) == 2
         assert await store.count_small_unspent(4) == 1
         assert await store.count_small_unspent(3) == 1
         assert await store.count_small_unspent(2) == 1
+        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 0
         assert await store.count_small_unspent(1) == 0
+
