@@ -55,13 +55,13 @@ class Service(Generic[_T_RpcServiceProtocol]):
         *,
         config: Dict[str, Any],
         upnp_ports: List[int] = [],
-        server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+        listen: bool = True,
     ) -> None:
         self.root_path = root_path
         self.config = config
@@ -76,6 +76,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
+        self._listen = listen
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
@@ -119,7 +120,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
             self._log.warning(f"No set_server method for {service_name}")
 
         self._upnp_ports = upnp_ports
-        self._server_listen_ports = server_listen_ports
 
         self._api = peer_api
         self._node = node
@@ -151,7 +151,11 @@ class Service(Generic[_T_RpcServiceProtocol]):
             for port in self._upnp_ports:
                 self.upnp.remap(port)
 
-        await self._server.start_server(self.config.get("prefer_ipv6", False), self._on_connect_callback)
+        await self._server.start(
+            listen=self._listen,
+            prefer_ipv6=self.config.get("prefer_ipv6", False),
+            on_connect=self._on_connect_callback,
+        )
         self._advertised_port = self._server.get_port()
 
         for peer in self._reconnect_tasks.keys():

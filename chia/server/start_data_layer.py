@@ -51,7 +51,6 @@ def create_data_layer_service(
         rpc_info = (DataLayerRpcApi, cast(int, service_config["rpc_port"]))
 
     return Service(
-        server_listen_ports=[service_config["port"]],
         root_path=root_path,
         config=config,
         node=data_layer,
@@ -65,6 +64,7 @@ def create_data_layer_service(
         max_request_body_size=service_config.get("rpc_server_max_request_body_size", 26214400),
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        listen=False,
     )
 
 

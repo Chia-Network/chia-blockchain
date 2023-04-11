@@ -53,7 +53,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
     import time
 
     from chia.server.outbound_message import NodeType
-    from chia.util.network import is_trusted_inner
+    from chia.util.network import is_trusted_peer
 
     connections = await rpc_client.get_connections()
     print("Connections:")
@@ -68,7 +68,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
         # Strip IPv6 brackets
         host = host.strip("[]")
 
-        trusted: bool = is_trusted_inner(host, con["node_id"], trusted_peers, False)
+        trusted: bool = is_trusted_peer(host, con["node_id"], trusted_peers, False)
         # Nodetype length is 9 because INTRODUCER will be deprecated
         if NodeType(con["type"]) is NodeType.FULL_NODE:
             peak_height = con.get("peak_height", None)

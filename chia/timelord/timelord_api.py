@@ -43,12 +43,10 @@ class TimelordAPI:
             ):
                 log.info("Skipping peak, already have.")
                 self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
-                return None
             else:
                 log.warning("block that we don't have, changing to it.")
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
-                self.timelord.new_subslot_end = None
 
     @api_request()
     async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
+
+from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,6 +20,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.ints import uint32, uint64
+
+log = logging.getLogger(__name__)
 
 # We impose a limit on the fee a single transaction can pay in order to have the
 # sum of all fees in the mempool be less than 2^63. That's the limit of sqlite's
@@ -255,16 +261,25 @@ class Mempool:
 
         assert item.fee < MEMPOOL_ITEM_FEE_LIMIT
         assert item.npc_result.conds is not None
+        assert item.cost <= self.mempool_info.max_block_clvm_cost
 
-        # TODO: this block could be simplified by removing all items in a single
-        # SQL query. Or at least figure out which items to remove and then
-        # remove them all in a single call to remove_from_pool()
         with self._db_conn:
-            while self.at_full_capacity(item.cost):
-                # pick the item with the lowest fee per cost to remove
-                cursor = self._db_conn.execute("SELECT name FROM tx ORDER BY fee_per_cost ASC, seq DESC LIMIT 1")
-                name = bytes32(cursor.fetchone()[0])
-                self.remove_from_pool([name], MempoolRemoveReason.POOL_FULL)
+            total_cost = int(self.total_mempool_cost())
+            if total_cost + item.cost > self.mempool_info.max_size_in_cost:
+                # pick the items with the lowest fee per cost to remove
+                cursor = self._db_conn.execute(
+                    """SELECT name FROM tx
+                    WHERE name NOT IN (
+                        SELECT name FROM (
+                            SELECT name,
+                            SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
+                            FROM tx) AS tx_with_cost
+                        WHERE total_cost <= ?)
+                    """,
+                    (self.mempool_info.max_size_in_cost - item.cost,),
+                )
+                to_remove: List[bytes32] = [bytes32(row[0]) for row in cursor]
+                self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
             if SQLITE_NO_GENERATED_COLUMNS:
                 self._db_conn.execute(
@@ -312,3 +327,39 @@ class Mempool:
         """
 
         return self.total_mempool_cost() + cost > self.mempool_info.max_size_in_cost
+
+    def create_bundle_from_mempool_items(
+        self, item_inclusion_filter: Callable[[bytes32], bool]
+    ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
+        cost_sum = 0  # Checks that total cost does not exceed block maximum
+        fee_sum = 0  # Checks that total fees don't exceed 64 bits
+        spend_bundles: List[SpendBundle] = []
+        removals: List[Coin] = []
+        additions: List[Coin] = []
+        log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
+        for item in self.spends_by_feerate():
+            if not item_inclusion_filter(item.name):
+                continue
+            log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
+            if (
+                item.cost + cost_sum > self.mempool_info.max_block_clvm_cost
+                or item.fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
+            ):
+                break
+            spend_bundles.append(item.spend_bundle)
+            cost_sum += item.cost
+            fee_sum += item.fee
+            removals.extend(item.removals)
+            if item.npc_result.conds is not None:
+                for spend in item.npc_result.conds.spends:
+                    for puzzle_hash, amount, _ in spend.create_coin:
+                        coin = Coin(spend.coin_id, puzzle_hash, amount)
+                        additions.append(coin)
+        if len(spend_bundles) == 0:
+            return None
+        log.info(
+            f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
+            f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
+        )
+        agg = SpendBundle.aggregate(spend_bundles)
+        return agg, additions, removals

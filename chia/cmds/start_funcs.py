@@ -47,7 +47,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
         passphrase = None
         if await connection.is_keyring_locked():
             passphrase = Keychain.get_cached_master_passphrase()
-            if not Keychain.master_passphrase_is_valid(passphrase):
+            if passphrase is None or not Keychain.master_passphrase_is_valid(passphrase):
                 with ThreadPoolExecutor(max_workers=1, thread_name_prefix="get_current_passphrase") as executor:
                     passphrase = await asyncio.get_running_loop().run_in_executor(executor, get_current_passphrase)
 

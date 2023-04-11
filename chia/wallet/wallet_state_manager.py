@@ -5,6 +5,7 @@ import json
 import logging
 import multiprocessing.context
 import time
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
@@ -235,11 +236,7 @@ class WalletStateManager:
                     wallet_info,
                 )
             elif wallet_type == WalletType.DATA_LAYER:
-                wallet = await DataLayerWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
+                wallet = await DataLayerWallet.create(self, wallet_info)
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
@@ -969,7 +966,7 @@ class WalletStateManager:
             wallet_identifier = WalletIdentifier.create(new_nft_wallet)
         return wallet_identifier
 
-    async def add_coin_states(
+    async def _add_coin_states(
         self,
         coin_states: List[CoinState],
         peer: WSChiaConnection,
@@ -993,6 +990,8 @@ class WalletStateManager:
         local_records = await self.coin_store.get_coin_records(coin_names)
 
         for coin_name, coin_state in zip(coin_names, coin_states):
+            if peer.closed:
+                raise ConnectionError("Connection closed")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.get(coin_name)
             rollback_wallets = None
@@ -1023,13 +1022,16 @@ class WalletStateManager:
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier = await self.determine_coin_type(peer, coin_state, fork_height)
-                        potential_dl = self.get_dl_wallet()
-                        if potential_dl is not None:
+                        try:
+                            dl_wallet = self.get_dl_wallet()
+                        except ValueError:
+                            pass
+                        else:
                             if (
-                                await potential_dl.get_singleton_record(coin_name) is not None
+                                await dl_wallet.get_singleton_record(coin_name) is not None
                                 or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
                             ):
-                                wallet_identifier = WalletIdentifier.create(potential_dl)
+                                wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     if wallet_identifier is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
@@ -1285,15 +1287,11 @@ class WalletStateManager:
                                     and inner_puzhash is not None
                                     and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
                                 ):
-                                    for _, wallet in self.wallets.items():
-                                        if wallet.type() == WalletType.DATA_LAYER.value:
-                                            assert isinstance(wallet, DataLayerWallet)
-                                            dl_wallet = wallet
-                                            break
-                                    else:  # No DL wallet exists yet
+                                    try:
+                                        dl_wallet = self.get_dl_wallet()
+                                    except ValueError:
                                         dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                                             self,
-                                            self.main_wallet,
                                         )
                                     await dl_wallet.track_new_launcher_id(
                                         child.coin.name(),
@@ -1344,6 +1342,23 @@ class WalletStateManager:
                 else:
                     await self.retry_store.remove_state(coin_state)
                 continue
+
+    async def add_coin_states(
+        self,
+        coin_states: List[CoinState],
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
+    ) -> bool:
+        try:
+            await self._add_coin_states(coin_states, peer, fork_height)
+        except Exception as e:
+            log_level = logging.DEBUG if peer.closed else logging.ERROR
+            self.log.log(log_level, f"add_coin_states failed - exception {e}, traceback: {traceback.format_exc()}")
+            return False
+
+        await self.blockchain.clean_block_records()
+
+        return True
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
@@ -1719,9 +1734,11 @@ class WalletStateManager:
 
         return puzzle_hash
 
-    def get_dl_wallet(self) -> Optional[DataLayerWallet]:
-        for _, wallet in self.wallets.items():
+    def get_dl_wallet(self) -> DataLayerWallet:
+        for wallet in self.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:
-                assert isinstance(wallet, DataLayerWallet)
+                assert isinstance(
+                    wallet, DataLayerWallet
+                ), f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
                 return wallet
-        return None
+        raise ValueError("DataLayerWallet not available")
