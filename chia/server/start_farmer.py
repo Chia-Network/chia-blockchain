@@ -60,7 +60,6 @@ def create_farmer_service(
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
         on_connect_callback=farmer.on_connect,
         network_id=network_id,

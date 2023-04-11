@@ -55,7 +55,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
         *,
         config: Dict[str, Any],
         upnp_ports: List[int] = [],
-        server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo] = None,
@@ -121,7 +120,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
             self._log.warning(f"No set_server method for {service_name}")
 
         self._upnp_ports = upnp_ports
-        self._server_listen_ports = server_listen_ports
 
         self._api = peer_api
         self._node = node
