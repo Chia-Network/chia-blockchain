@@ -42,11 +42,6 @@ class ManageClvmError(Exception):
     pass
 
 
-@dataclasses.dataclass(frozen=True)
-class LoadClvmPathError(Exception):
-    missing_files: typing.List[str]
-
-
 class CacheEntry(typing.TypedDict):
     clsp: str
     hex: str
@@ -115,24 +110,22 @@ class ClvmPaths:
     clvm: pathlib.Path
     hex: pathlib.Path
     hash: str
+    missing_files: typing.List[str]
 
     @classmethod
-    def from_clvm(
-        cls, clvm: pathlib.Path, raise_on_missing: bool = True, hash_dict: typing.Dict[str, str] = {}
-    ) -> ClvmPaths:
-        hex_path = clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix)
-        stem_filename = clvm.with_name(clvm.name[: -len(clsp_suffix)]).stem
+    def from_clvm(cls, clvm: pathlib.Path, hash_dict: typing.Dict[str, str] = {}) -> ClvmPaths:
+        stem_filename = clvm.name[: -len(clsp_suffix)]
+        hex_path = clvm.with_name(stem_filename + hex_suffix)
         missing_files = []
         if not hex_path.exists():
             missing_files.append(str(hex_path))
         if stem_filename not in hash_dict:
             missing_files.append(f"{stem_filename} entry in {hashes_path}")
-        if missing_files != [] and raise_on_missing:
-            raise LoadClvmPathError(missing_files)
         return cls(
             clvm=clvm,
             hex=hex_path,
             hash=stem_filename,
+            missing_files=missing_files,
         )
 
 
@@ -275,10 +268,9 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
 
         cache_key = str(stem_path)
         try:
-            try:
-                reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, hash_dict=HASHES)
-            except LoadClvmPathError as e:
-                missing_files.extend(e.missing_files)
+            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, hash_dict=HASHES)
+            if reference_paths.missing_files != []:
+                missing_files.extend(reference_paths.missing_files)
                 continue
             all_hash_stems.append(reference_paths.hash)
             reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths, hash_dict=HASHES)
@@ -291,7 +283,6 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
                 with tempfile.TemporaryDirectory() as temporary_directory:
                     generated_paths = ClvmPaths.from_clvm(
                         clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}"),
-                        raise_on_missing=False,
                         hash_dict=HASHES,
                     )
 
@@ -380,12 +371,11 @@ def build() -> int:
         error = None
 
         try:
-            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, raise_on_missing=False, hash_dict=HASHES)
+            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, hash_dict=HASHES)
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
                     clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name),
-                    raise_on_missing=False,
                     hash_dict=HASHES,
                 )
 
