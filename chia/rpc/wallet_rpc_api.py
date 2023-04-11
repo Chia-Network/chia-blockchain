@@ -2125,15 +2125,7 @@ class WalletRpcApi:
             wallet_type = did_wallet.type()
             assert coin_state.created_height is not None
             coin_record: WalletCoinRecord = WalletCoinRecord(
-                coin_state.coin,
-                uint32(coin_state.created_height),
-                uint32(0),
-                False,
-                False,
-                wallet_type,
-                wallet_id,
-                CoinType.NORMAL,
-                None,
+                coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
             )
             await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())
             await did_wallet.coin_added(coin_state.coin, uint32(coin_state.created_height), peer)

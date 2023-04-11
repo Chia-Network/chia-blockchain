@@ -19,7 +19,7 @@ from chia.wallet.coin_selection import (
     select_smallest_coin_over_target,
     sum_largest_coins,
 )
-from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 log = logging.getLogger(__name__)
@@ -81,17 +81,7 @@ class TestCoinSelection:
         spendable_amount = uint128(spendable_amount)
 
         coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(a)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
         for target_amount in coin_amounts[:100]:  # select the first 100 values
@@ -112,29 +102,13 @@ class TestCoinSelection:
         spendable_amount = uint128(5000000000000 + 10000)
         coin_list: List[WalletCoinRecord] = [
             WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(5000000000000)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
+                Coin(a_hash, a_hash, uint64(5000000000000)), uint32(1), uint32(1), False, True, WalletType(0), 1
             )
         ]
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         # make sure coins are not identical.
@@ -155,15 +129,7 @@ class TestCoinSelection:
         for i in range(100):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(2000)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(2000)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         spendable_amount = uint128(spendable_amount + 2000 * 100)
@@ -188,30 +154,14 @@ class TestCoinSelection:
         for i in range(5):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(5000)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(5000)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
 
         for i in range(10000):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
@@ -235,30 +185,14 @@ class TestCoinSelection:
         spendable_amount = uint128(50000 + 10000)
         new_coin_list: List[WalletCoinRecord] = [
             WalletCoinRecord(
-                Coin(a_hash, std_hash(b"123"), uint64(50000)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
+                Coin(a_hash, std_hash(b"123"), uint64(50000)), uint32(1), uint32(1), False, True, WalletType(0), 1
             )
         ]
 
         for i in range(10000):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         for target_amount in [50000, 10001, 10000, 9999]:
@@ -281,15 +215,7 @@ class TestCoinSelection:
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         # make sure coins are not identical.
@@ -320,17 +246,7 @@ class TestCoinSelection:
     async def test_coin_selection(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(a)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
         spendable_amount = uint128(sum(coin_amounts))
@@ -393,17 +309,7 @@ class TestCoinSelection:
         # test smallest greater than target
         greater_coin_amounts = [1, 2, 5, 20, 400, 700]
         greater_coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(a)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in greater_coin_amounts
         ]
         greater_spendable_amount = uint128(sum(greater_coin_amounts))
@@ -422,17 +328,7 @@ class TestCoinSelection:
 
         # test smallest greater than target with only 1 large coin.
         single_greater_coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(70000)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(70000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
         ]
         single_greater_spendable_amount = uint128(70000)
         target_amount = uint128(50000)
@@ -451,17 +347,7 @@ class TestCoinSelection:
         # test smallest greater than target with only multiple larger then target coins.
         multiple_greater_coin_amounts = [90000, 100000, 120000, 200000, 100000]
         multiple_greater_coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(a)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in multiple_greater_coin_amounts
         ]
         multiple_greater_spendable_amount = uint128(sum(multiple_greater_coin_amounts))
@@ -492,8 +378,6 @@ class TestCoinSelection:
                 True,
                 WalletType(0),
                 1,
-                CoinType.NORMAL,
-                None,
             )
             for i in range(num_coins)
         ]
@@ -547,44 +431,18 @@ class TestCoinSelection:
     async def test_coin_selection_min_coin(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000 + 500 + 40050)
         coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(5000000)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(5000000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
         ]
         for i in range(500):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         for i in range(1, 90):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(i * 10)),
-                    uint32(1),
-                    uint32(1),
-                    False,
-                    True,
-                    WalletType(0),
-                    1,
-                    CoinType.NORMAL,
-                    None,
+                    Coin(a_hash, std_hash(i), uint64(i * 10)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
         # make sure coins are not identical.
@@ -618,7 +476,7 @@ class TestCoinSelection:
         ]
         spendable_amount = uint128(sum(coin.amount for coin in spendable_coins))
         spendable_wallet_coin_records = [
-            WalletCoinRecord(spendable_coin, uint32(1), uint32(1), False, True, WalletType(0), 1, CoinType.NORMAL, None)
+            WalletCoinRecord(spendable_coin, uint32(1), uint32(1), False, True, WalletType(0), 1)
             for spendable_coin in spendable_coins
         ]
         excluded_coins = [Coin(a_hash, a_hash, uint64(3)), Coin(c_hash, c_hash, uint64(9))]
@@ -655,17 +513,7 @@ class TestCoinSelection:
     async def test_coin_selection_with_zero_amount(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(a)),
-                uint32(1),
-                uint32(1),
-                False,
-                True,
-                WalletType(0),
-                1,
-                CoinType.NORMAL,
-                None,
-            )
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
         spendable_amount = uint128(sum(coin_amounts))

@@ -1225,8 +1225,6 @@ class WalletStateManager:
                                 farmer_reward or pool_reward,
                                 wallet_identifier.type,
                                 wallet_identifier.id,
-                                CoinType.NORMAL,
-                                None,
                             )
                             await self.coin_store.add_coin_record(record)
                             # Coin first received
@@ -1614,7 +1612,7 @@ class WalletStateManager:
 
         # We only add normal coins here
         coin_record: WalletCoinRecord = WalletCoinRecord(
-            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id, CoinType.NORMAL, None
+            coin, height, uint32(0), False, coinbase, wallet_type, wallet_id
         )
         await self.coin_store.add_coin_record(coin_record, coin_name)
 
