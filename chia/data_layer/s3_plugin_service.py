@@ -25,7 +25,7 @@ class S3Plugin:
     region: str
     aws_access_key_id: str
     aws_secret_access_key: str
-    store_ids: List[str]
+    store_ids: List[bytes32]
     bukets: Dict[str, List[str]]
     urls: List[str]
     instance_name: str
@@ -35,7 +35,7 @@ class S3Plugin:
         region: str,
         aws_access_key_id: str,
         aws_secret_access_key: str,
-        store_ids: List[str],
+        store_ids: List[bytes32],
         buckets: Dict[str, List[str]],
         urls: List[str],
         instance_name: str,
@@ -47,7 +47,7 @@ class S3Plugin:
             aws_secret_access_key=aws_secret_access_key,
         )
         self.store_ids = store_ids
-        self.bukets = bukets
+        self.buckets = buckets
         self.urls = urls
         self.instance_name = instance_name
 
@@ -59,7 +59,7 @@ class S3Plugin:
             print(f"failed parsing request {request} {e}")
             return web.json_response({"handles_url": False})
         store_id = bytes32.from_hexstr(data["id"])
-        if store_id.hex() in self.store_ids:
+        if store_id in self.store_ids:
             return web.json_response({"handles_store": True})
         return web.json_response({"handles_store": False})
 
@@ -120,8 +120,8 @@ class S3Plugin:
         return web.json_response({"downloaded": True})
 
     def get_bucket(self, store_id: bytes32) -> str:
-        for bucket in self.bukets:
-            if store_id.hex() in self.bukets[bucket]:
+        for bucket in self.buckets:
+            if store_id.hex() in self.buckets[bucket]:
                 return bucket
         raise Exception(f"bucket not found for store id {store_id.hex()}")
 
@@ -139,7 +139,9 @@ def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
     region = config["aws_credentials"]["region"]
     aws_access_key_id = config["aws_credentials"]["access_key_id"]
     aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
-    store_ids = config["store_ids"]
+    store_ids = []
+    for store in config["store_ids"]:
+        store_ids.append(bytes32.from_hexstr(store))
     buckets: Dict[str, List[str]] = config["buckets"]
     urls = config["urls"]
     s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, buckets, urls, instance_name)
