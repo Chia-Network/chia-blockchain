@@ -9,6 +9,8 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.ints import uint64
+from chia.util.misc import VersionedBlob
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -83,9 +85,7 @@ def create_merkle_solution(
     return Program.to([merkle_proof, cb_inner_puz, cb_inner_solution])
 
 
-def match_clawback_puzzle(
-    inner_puzzle: Program, inner_solution: Program, max_cost: int
-) -> Optional[Tuple[uint64, bytes32, bytes32]]:
+def match_clawback_puzzle(inner_puzzle: Program, inner_solution: Program, max_cost: int) -> Optional[ClawbackMetadata]:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurry_puzzle(inner_puzzle).mod:
         return None
@@ -99,24 +99,18 @@ def match_clawback_puzzle(
         for condition in conditions:
             if (
                 condition.opcode == ConditionOpcode.REMARK
-                and len(condition.vars) == 4
+                and len(condition.vars) == 2
                 and condition.vars[0] == bytes(PuzzleDecoratorType.CLAWBACK.name, "utf-8")
             ):
-                return (
-                    uint64(int.from_bytes(condition.vars[1], "big")),
-                    bytes32.from_bytes(condition.vars[2]),
-                    bytes32.from_bytes(condition.vars[3]),
-                )
+                return ClawbackMetadata.from_bytes(VersionedBlob.from_bytes(condition.vars[1]).blob)
     return None
 
 
 def generate_clawback_spend_bundle(
-    coin: Coin, metadata: Dict[str, Any], inner_puzzle: Program, inner_solution: Program
+    coin: Coin, metadata: ClawbackMetadata, inner_puzzle: Program, inner_solution: Program
 ) -> CoinSpend:
-    time_lock: uint64 = uint64(metadata["time_lock"])
-    sender_puzhash: bytes32 = bytes32.fromhex(metadata["sender_puzhash"])
-    recipient_puzhash: bytes32 = bytes32.fromhex(metadata["recipient_puzhash"])
-    puzzle: Program = create_merkle_puzzle(time_lock, sender_puzhash, recipient_puzhash)
+    time_lock: uint64 = metadata.time_lock
+    puzzle: Program = create_merkle_puzzle(time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash)
     if puzzle.get_tree_hash() != coin.puzzle_hash:
         raise ValueError(
             f"Cannot spend merkle coin {coin.name()}, "
@@ -124,6 +118,6 @@ def generate_clawback_spend_bundle(
         )
 
     solution: Program = create_merkle_solution(
-        time_lock, sender_puzhash, recipient_puzhash, inner_puzzle, inner_solution
+        time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash, inner_puzzle, inner_solution
     )
     return CoinSpend(coin, puzzle, solution)

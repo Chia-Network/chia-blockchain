@@ -60,6 +60,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_record import TradeRecord
@@ -1033,7 +1034,9 @@ class WalletRpcApi:
                     "amount": coin.coin.amount,
                     "puzzle_hash": coin.coin.puzzle_hash.hex(),
                     "parent_coin": coin.coin.parent_coin_info.hex(),
-                    "metadata": json.loads(coin.metadata) if coin.metadata is not None else "",
+                    "metadata": ClawbackMetadata.from_bytes(coin.metadata.blob).to_json_dict()
+                    if coin.metadata is not None
+                    else None,
                     "confirmed_height": coin.confirmed_block_height,
                     "spent_height": coin.spent_block_height,
                 }
@@ -1053,7 +1056,7 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.coin_store.get_coin_records(coin_ids, include_spent_coins=False)
             ).values()
         )
-        merkle_coins: List[Tuple[Coin, Dict[str, Any]]] = []
+        merkle_coins: List[Tuple[Coin, ClawbackMetadata]] = []
         clawback_coins = []
         for i in range(len(merkle_records)):
             merkle_record = merkle_records[i]
@@ -1063,7 +1066,7 @@ class WalletRpcApi:
             if merkle_record.metadata is None:
                 log.warning(f"Skip merkle coin f{coin_ids[i].hex()}, metadata cannot be None.")
                 continue
-            metadata = json.loads(merkle_record.metadata)
+            metadata = ClawbackMetadata.from_bytes(merkle_record.metadata.blob)
             if merkle_record.coin_type != CoinType.CLAWBACK.value:
                 log.warning(f"Coin {coin_ids[i].hex()} is not a Clawback coin.")
                 continue

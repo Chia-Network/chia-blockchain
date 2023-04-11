@@ -5,7 +5,8 @@ from secrets import token_bytes
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.util.misc import VersionedBlob
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -92,7 +93,7 @@ record_8 = WalletCoinRecord(
     WalletType.STANDARD_WALLET,
     1,
     CoinType.CLAWBACK,
-    "CLAWBACK",
+    VersionedBlob(uint16(1), b"TEST"),
 )
 
 

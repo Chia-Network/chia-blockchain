@@ -43,6 +43,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.misc import VersionedBlob
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
@@ -70,6 +71,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
+from chia.wallet.puzzles.clawback.metadata import CLAWBACK_VERSION, ClawbackMetadata
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -663,9 +665,9 @@ class WalletStateManager:
 
         # Check if the coin is clawback
         solution = Program.from_bytes(bytes(coin_spend.solution))
-        clawback_args = match_clawback_puzzle(puzzle, solution, self.constants.MAX_BLOCK_COST_CLVM)
-        if clawback_args is not None:
-            return await self.handle_clawback(clawback_args, coin_state, peer)
+        clawback_metadata = match_clawback_puzzle(puzzle, solution, self.constants.MAX_BLOCK_COST_CLVM)
+        if clawback_metadata is not None:
+            return await self.handle_clawback(clawback_metadata, coin_state, peer)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None
@@ -674,17 +676,17 @@ class WalletStateManager:
         # Get unspent merkle coin
         unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK)
         current_timestamp = self.blockchain.get_latest_timestamp()
-        clawback_coins: List[Tuple[Coin, Dict[str, Any]]] = []
+        clawback_coins: List[Tuple[Coin, ClawbackMetadata]] = []
         tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
         min_amount = uint64(self.config.get("auto_claim_min_amount", 0))
         for coin in unspent_coins:
             if coin.metadata is None:
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
-            metadata = json.loads(coin.metadata)
-            if coin.coin.amount >= min_amount and metadata["is_recipient"]:
+            metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
+            if coin.coin.amount >= min_amount and metadata.is_recipient:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
-                if current_timestamp - coin_timestamp >= metadata["time_lock"]:
+                if current_timestamp - coin_timestamp >= metadata.time_lock:
                     clawback_coins.append((coin.coin, metadata))
                     if len(clawback_coins) >= self.config.get("auto_claim_coin_size", 50):
                         await self.claim_clawback_coins(clawback_coins, tx_fee)
@@ -693,16 +695,18 @@ class WalletStateManager:
             print(f"Auto claim fee {tx_fee}")
             await self.claim_clawback_coins(clawback_coins, tx_fee)
 
-    async def claim_clawback_coins(self, merkle_coins: List[Tuple[Coin, Dict[str, Any]]], fee: uint64) -> List[bytes32]:
+    async def claim_clawback_coins(
+        self, merkle_coins: List[Tuple[Coin, ClawbackMetadata]], fee: uint64
+    ) -> List[bytes32]:
         assert len(merkle_coins) > 0
         coin_spends: List[CoinSpend] = []
         message_list: List[bytes32] = [c[0].name() for c in merkle_coins]
         message: bytes32 = std_hash(b"".join(message_list))
         clawback_coins = []
         for coin, metadata in merkle_coins:
-            recipient_puzhash = bytes32.from_hexstr(metadata["recipient_puzhash"])
-            sender_puzhash = bytes32.from_hexstr(metadata["sender_puzhash"])
-            if metadata["is_recipient"]:
+            recipient_puzhash = metadata.recipient_puzzle_hash
+            sender_puzhash = metadata.sender_puzzle_hash
+            if metadata.is_recipient:
                 derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
             else:
                 derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
@@ -1051,67 +1055,51 @@ class WalletStateManager:
 
     async def handle_clawback(
         self,
-        clawback_args: Tuple[uint64, bytes32, bytes32],
+        metadata: ClawbackMetadata,
         coin_state: CoinState,
         peer: WSChiaConnection,
     ) -> Optional[WalletIdentifier]:
         """
         Handle Clawback coins
-        :param clawback_args: uncurried clawback parameters
+        :param metadata: Clawback metadata for spending the merkle coin
         :param coin_state: clawback merkle coin
         :param peer: Fullnode peer
         :return:
         """
-        time_lock, sender_puzhash, recipient_puzhash = clawback_args
         # Record metadata
-        metadata = {
-            "time_lock": int(time_lock),
-            "recipient_puzhash": recipient_puzhash.hex(),
-            "sender_puzhash": sender_puzhash.hex(),
-        }
         assert coin_state.created_height is not None
-
+        is_recipient: Optional[bool] = None
         # Check if the wallet is the sender
         sender_derivation_record: Optional[
             DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        # Check if the wallet is the recipient
+        recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+            metadata.recipient_puzzle_hash
+        )
         if sender_derivation_record is not None:
             self.log.info("Found Clawback merkle coin %s as the sender.", coin_state.coin.name().hex())
-            metadata["is_recipient"] = False
-            coin_record = WalletCoinRecord(
-                coin_state.coin,
-                uint32(coin_state.created_height),
-                uint32(0),
-                False,
-                False,
-                WalletType.STANDARD_WALLET,
-                1,
-                CoinType.CLAWBACK,
-                json.dumps(metadata),
-            )
-            # Add merkle coin
-            await self.coin_store.add_coin_record(coin_record)
-            return None
-        # Check if the wallet is the recipient
-        recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
-        if recipient_derivation_record is not None:
+            is_recipient = False
+        elif recipient_derivation_record is not None:
             self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name().hex())
-            metadata["is_recipient"] = True
-            coin_record = WalletCoinRecord(
-                coin_state.coin,
-                uint32(coin_state.created_height),
-                uint32(0),
-                False,
-                False,
-                WalletType.STANDARD_WALLET,
-                1,
-                CoinType.CLAWBACK,
-                json.dumps(metadata),
-            )
-            # Add merkle coin
-            await self.coin_store.add_coin_record(coin_record)
+            is_recipient = True
             # For the recipient we need to manually subscribe the merkle coin
             await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
+        if is_recipient is not None:
+            metadata = dataclasses.replace(metadata, is_recipient=is_recipient)
+            coin_record = WalletCoinRecord(
+                coin_state.coin,
+                uint32(coin_state.created_height),
+                uint32(0),
+                False,
+                False,
+                WalletType.STANDARD_WALLET,
+                1,
+                CoinType.CLAWBACK,
+                VersionedBlob(CLAWBACK_VERSION.V1.value, bytes(metadata)),
+            )
+            # Add merkle coin
+            await self.coin_store.add_coin_record(coin_record)
         return None
 
     async def _add_coin_states(
@@ -1623,6 +1611,7 @@ class WalletStateManager:
             )
             if tx_record.amount > 0:
                 await self.tx_store.add_transaction_record(tx_record)
+
         # We only add normal coins here
         coin_record: WalletCoinRecord = WalletCoinRecord(
             coin, height, uint32(0), False, coinbase, wallet_type, wallet_id, CoinType.NORMAL, None

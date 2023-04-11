@@ -7,6 +7,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32, uint64
+from chia.util.misc import VersionedBlob
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -47,9 +48,13 @@ class WalletCoinStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)")
+
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_record_wallet_type on coin_record(wallet_type)")
+
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
+
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_amount on coin_record(amount)")
+
             try:
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN coin_type int DEFAULT 0")
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN metadata text")
@@ -88,7 +93,7 @@ class WalletCoinStore:
                     record.wallet_type,
                     record.wallet_id,
                     record.coin_type.value,
-                    record.metadata,
+                    None if record.metadata is None else bytes(record.metadata),
                 ),
             )
 
@@ -111,6 +116,9 @@ class WalletCoinStore:
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
         coin = Coin(bytes32.fromhex(row[6]), bytes32.fromhex(row[5]), uint64.from_bytes(row[7]))
+        metadata: Optional[VersionedBlob] = None
+        if row[11] is not None:
+            metadata = VersionedBlob.from_bytes(row[11])
         return WalletCoinRecord(
             coin,
             uint32(row[1]),
@@ -120,7 +128,7 @@ class WalletCoinStore:
             WalletType(row[8]),
             row[9],
             CoinType(row[10]),
-            row[11],
+            metadata,
         )
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
