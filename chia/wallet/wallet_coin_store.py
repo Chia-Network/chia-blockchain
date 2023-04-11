@@ -69,7 +69,7 @@ class WalletCoinStore:
             row = await execute_fetchone(
                 conn,
                 "SELECT COUNT(*) FROM coin_record WHERE coin_type=? AND amount < ? AND spent=0",
-                (coin_type.value, amount_bytes),
+                (coin_type, amount_bytes),
             )
             return int(0 if row is None else row[0])
 
@@ -92,7 +92,7 @@ class WalletCoinStore:
                     bytes(uint64(record.coin.amount)),
                     record.wallet_type,
                     record.wallet_id,
-                    record.coin_type.value,
+                    record.coin_type,
                     None if record.metadata is None else bytes(record.metadata),
                 ),
             )
@@ -116,9 +116,6 @@ class WalletCoinStore:
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
         coin = Coin(bytes32.fromhex(row[6]), bytes32.fromhex(row[5]), uint64.from_bytes(row[7]))
-        metadata: Optional[VersionedBlob] = None
-        if row[11] is not None:
-            metadata = VersionedBlob.from_bytes(row[11])
         return WalletCoinRecord(
             coin,
             uint32(row[1]),
@@ -128,7 +125,7 @@ class WalletCoinStore:
             WalletType(row[8]),
             row[9],
             CoinType(row[10]),
-            metadata,
+            None if row[11] is None else VersionedBlob.from_bytes(row[11]),
         )
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
@@ -173,16 +170,13 @@ class WalletCoinStore:
         start = 0 is most recent transaction
         """
         limit = end - start
-        if reverse:
-            query_str = "ORDER BY confirmed_height DESC "
-        else:
-            query_str = "ORDER BY confirmed_height ASC "
+        query_str = "ORDER BY confirmed_height " + "DESC" if reverse else "ASC"
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 f"SELECT * FROM coin_record WHERE coin_type=? AND"
                 f" wallet_id=? {query_str}, rowid LIMIT {start}, {limit}",
-                (coin_type.value, wallet_id),
+                (coin_type, wallet_id),
             )
         return [self.coin_record_from_row(row) for row in rows]
 
@@ -203,7 +197,7 @@ class WalletCoinStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT * FROM coin_record WHERE coin_type=? AND wallet_id=? AND spent_height=0",
-                (coin_type.value, wallet_id),
+                (coin_type, wallet_id),
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
@@ -211,7 +205,7 @@ class WalletCoinStore:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM coin_record WHERE coin_type=? AND spent_height=0", (coin_type.value,)
+                "SELECT * FROM coin_record WHERE coin_type=? AND spent_height=0", (coin_type,)
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
