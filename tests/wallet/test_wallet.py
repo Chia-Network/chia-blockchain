@@ -215,7 +215,7 @@ class TestWalletSimulator:
             uint64(500),
             normal_puzhash,
             uint64(0),
-            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
         )
 
         await wallet.push_transaction(tx)

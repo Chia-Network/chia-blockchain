@@ -692,7 +692,6 @@ class WalletStateManager:
                         await self.claim_clawback_coins(clawback_coins, tx_fee)
                         clawback_coins = []
         if len(clawback_coins) > 0:
-            print(f"Auto claim fee {tx_fee}")
             await self.claim_clawback_coins(clawback_coins, tx_fee)
 
     async def claim_clawback_coins(
