@@ -12,6 +12,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.mempool_manager import (
+    MEMPOOL_MIN_FEE_INCREASE,
     MempoolManager,
     TimelockConditions,
     can_replace,
@@ -774,7 +775,6 @@ coins = make_test_coins()
     ],
 )
 def test_can_replace(existing_items: List[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
-
     removals = set(c.name() for c in new_item.spend_bundle.removals())
     assert can_replace(set(existing_items), removals, new_item) == expected
 
@@ -826,7 +826,6 @@ async def test_get_items_not_in_filter() -> None:
 
 @pytest.mark.asyncio
 async def test_total_mempool_fees() -> None:
-
     coin_records: Dict[bytes32, CoinRecord] = {}
 
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
@@ -927,24 +926,26 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
 
 
 @pytest.mark.parametrize(
-    "opcode,arg,expect_eviction",
+    "opcode,arg,expect_eviction, expect_limit",
     [
         # current height: 10 current_time: 10000
         # we step the chain forward 1 block and 19 seconds
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False, 10020),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False, 12),
         # the coin was created at height: 5 timestamp: 9900
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True),
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False, 5 + 7),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False, 9900 + 120),
     ],
 )
 @pytest.mark.asyncio
-async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expect_eviction: bool) -> None:
+async def test_assert_before_expiration(
+    opcode: ConditionOpcode, arg: int, expect_eviction: bool, expect_limit: Optional[int]
+) -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return {TEST_COIN.name(): CoinRecord(TEST_COIN, uint32(5), uint32(0), False, uint64(9900))}.get(coin_id)
 
@@ -972,3 +973,143 @@ async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expec
 
     still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
     assert still_in_pool != expect_eviction
+    if still_in_pool:
+        assert expect_limit is not None
+        item = mempool_manager.get_mempool_item(bundle_name)
+        assert item is not None
+        if opcode in [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, co.ASSERT_BEFORE_SECONDS_RELATIVE]:
+            assert item.assert_before_seconds == expect_limit
+        elif opcode in [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, co.ASSERT_BEFORE_HEIGHT_RELATIVE]:
+            assert item.assert_before_height == expect_limit
+        else:
+            assert False
+
+
+def make_test_spendbundle(coin: Coin, *, fee: int = 0) -> SpendBundle:
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - fee)],
+        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+    ]
+    return spend_bundle_from_conditions(conditions, coin)
+
+
+async def send_spendbundle(
+    mempool_manager: MempoolManager,
+    sb: SpendBundle,
+    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]] = (MempoolInclusionStatus.SUCCESS, None),
+) -> None:
+    result = await add_spendbundle(mempool_manager, sb, sb.name())
+    assert (result[1], result[2]) == expected_result
+
+
+async def make_and_send_spendbundle(
+    mempool_manager: MempoolManager,
+    coin: Coin,
+    *,
+    fee: int = 0,
+    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]] = (MempoolInclusionStatus.SUCCESS, None),
+) -> SpendBundle:
+    sb = make_test_spendbundle(coin, fee=fee)
+    await send_spendbundle(mempool_manager, sb, expected_result)
+    return sb
+
+
+def assert_sb_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
+    assert sb == mempool_manager.get_spendbundle(sb.name())
+
+
+def assert_sb_not_in_pool(mempool_manager: MempoolManager, sb: SpendBundle) -> None:
+    assert mempool_manager.get_spendbundle(sb.name()) is None
+
+
+@pytest.mark.asyncio
+async def test_insufficient_fee_increase() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1_1 = await make_and_send_spendbundle(mempool_manager, coins[0])
+    sb1_2 = await make_and_send_spendbundle(
+        mempool_manager, coins[0], fee=1, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+    )
+    # The old spendbundle must stay
+    assert_sb_in_pool(mempool_manager, sb1_1)
+    assert_sb_not_in_pool(mempool_manager, sb1_2)
+
+
+@pytest.mark.asyncio
+async def test_sufficient_fee_increase() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1_1 = await make_and_send_spendbundle(mempool_manager, coins[0])
+    sb1_2 = await make_and_send_spendbundle(mempool_manager, coins[0], fee=MEMPOOL_MIN_FEE_INCREASE)
+    # sb1_1 gets replaced with sb1_2
+    assert_sb_not_in_pool(mempool_manager, sb1_1)
+    assert_sb_in_pool(mempool_manager, sb1_2)
+
+
+@pytest.mark.asyncio
+async def test_superset() -> None:
+    # Aggregated spendbundle sb12 replaces sb1 since it spends a superset
+    # of coins spent in sb1
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1 = await make_and_send_spendbundle(mempool_manager, coins[0])
+    sb2 = make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE)
+    sb12 = SpendBundle.aggregate([sb2, sb1])
+    await send_spendbundle(mempool_manager, sb12)
+    assert_sb_in_pool(mempool_manager, sb12)
+    assert_sb_not_in_pool(mempool_manager, sb1)
+
+
+@pytest.mark.asyncio
+async def test_superset_violation() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1 = make_test_spendbundle(coins[0])
+    sb2 = make_test_spendbundle(coins[1])
+    sb12 = SpendBundle.aggregate([sb1, sb2])
+    await send_spendbundle(mempool_manager, sb12)
+    assert_sb_in_pool(mempool_manager, sb12)
+    # sb23 must not replace existing sb12 as the former does not spend all
+    # coins that are spent in the latter (specifically, the first coin)
+    sb3 = make_test_spendbundle(coins[2], fee=MEMPOOL_MIN_FEE_INCREASE)
+    sb23 = SpendBundle.aggregate([sb2, sb3])
+    await send_spendbundle(
+        mempool_manager, sb23, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+    )
+    assert_sb_in_pool(mempool_manager, sb12)
+    assert_sb_not_in_pool(mempool_manager, sb23)
+
+
+@pytest.mark.asyncio
+async def test_total_fpc_decrease() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1 = make_test_spendbundle(coins[0])
+    sb2 = make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+    sb12 = SpendBundle.aggregate([sb1, sb2])
+    await send_spendbundle(mempool_manager, sb12)
+    sb3 = await make_and_send_spendbundle(mempool_manager, coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+    assert_sb_in_pool(mempool_manager, sb12)
+    assert_sb_in_pool(mempool_manager, sb3)
+    # sb1234 should not be in pool as it decreases total fees per cost
+    sb4 = make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE)
+    sb1234 = SpendBundle.aggregate([sb12, sb3, sb4])
+    await send_spendbundle(
+        mempool_manager, sb1234, expected_result=(MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT)
+    )
+    assert_sb_not_in_pool(mempool_manager, sb1234)
+
+
+@pytest.mark.asyncio
+async def test_sufficient_total_fpc_increase() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1 = make_test_spendbundle(coins[0])
+    sb2 = make_test_spendbundle(coins[1], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+    sb12 = SpendBundle.aggregate([sb1, sb2])
+    await send_spendbundle(mempool_manager, sb12)
+    sb3 = await make_and_send_spendbundle(mempool_manager, coins[2], fee=MEMPOOL_MIN_FEE_INCREASE * 2)
+    assert_sb_in_pool(mempool_manager, sb12)
+    assert_sb_in_pool(mempool_manager, sb3)
+    # sb1234 has a higher fee per cost than its conflicts and should get
+    # into the mempool
+    sb4 = make_test_spendbundle(coins[3], fee=MEMPOOL_MIN_FEE_INCREASE * 3)
+    sb1234 = SpendBundle.aggregate([sb12, sb3, sb4])
+    await send_spendbundle(mempool_manager, sb1234)
+    assert_sb_in_pool(mempool_manager, sb1234)
+    assert_sb_not_in_pool(mempool_manager, sb12)
+    assert_sb_not_in_pool(mempool_manager, sb3)

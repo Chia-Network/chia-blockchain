@@ -151,7 +151,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             for port in self._upnp_ports:
                 self.upnp.remap(port)
 
-        await self._server.start_server(
+        await self._server.start(
             listen=self._listen,
             prefer_ipv6=self.config.get("prefer_ipv6", False),
             on_connect=self._on_connect_callback,

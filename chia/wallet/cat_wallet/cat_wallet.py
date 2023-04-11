@@ -139,11 +139,10 @@ class CATWallet:
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
-            info = await puzzle_store.wallet_info_for_puzzle_hash(c.puzzle_hash)
-            if info is None:
+            wallet_identifier = await puzzle_store.get_wallet_identifier_for_puzzle_hash(c.puzzle_hash)
+            if wallet_identifier is None:
                 raise ValueError("Internal Error")
-            id, wallet_type = info
-            if id == self.id():
+            if wallet_identifier.id == self.id():
                 cat_coin = c
 
         if cat_coin is None:

@@ -49,7 +49,6 @@ from chia.wallet.trading.offer import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
@@ -373,7 +372,7 @@ class NFTWallet:
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(), b"", p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
             )
-            self.log.debug("Got back ownership inner puzzle: %s", disassemble(inner_puzzle))
+            self.log.debug("Got back ownership inner puzzle: %s", inner_puzzle)
         else:
             self.log.debug("Creating standard NFT")
             inner_puzzle = p2_inner_puzzle
@@ -611,32 +610,6 @@ class NFTWallet:
             name,
         )
 
-    async def create_tandem_xch_tx(
-        self,
-        fee: uint64,
-        announcement_to_assert: Optional[Announcement] = None,
-        reuse_puzhash: Optional[bool] = None,
-    ) -> TransactionRecord:
-        chia_coins = await self.standard_wallet.select_coins(fee)
-        if reuse_puzhash is None:
-            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
-                reuse_puzhash = False
-            else:
-                reuse_puzhash = reuse_puzhash_config.get(
-                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
-                )
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
-            fee=fee,
-            coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-            reuse_puzhash=reuse_puzhash,
-        )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
-
     async def generate_signed_transaction(
         self,
         amounts: List[uint64],
@@ -752,7 +725,7 @@ class NFTWallet:
 
         if fee > 0:
             announcement_to_make = nft_coin.coin.name()
-            chia_tx = await self.create_tandem_xch_tx(
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee, Announcement(nft_coin.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
