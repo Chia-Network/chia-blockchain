@@ -296,7 +296,7 @@ async def async_config_wizard(
     print("Starting Simulator now...\n\n")
 
     sys.argv[0] = str(Path(sys.executable).parent / "chia")  # fix path for tests
-    await async_start(root_path, config, False, ("simulator",))
+    await async_start(root_path, config, ("simulator",), False)
 
     # now we make sure the simulator has a genesis block
     print("Please wait, generating genesis block.")

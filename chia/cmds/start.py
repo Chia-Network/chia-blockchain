@@ -20,4 +20,4 @@ def start_cmd(ctx: click.Context, restart: bool, group: tuple[str, ...]) -> None
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
     warn_if_beta_enabled(config)
-    asyncio.run(async_start(root_path, config, restart, group))
+    asyncio.run(async_start(root_path, config, group, restart))

@@ -7,7 +7,6 @@ from typing import Any, Optional
 import click
 
 from chia.cmds.sim_funcs import async_config_wizard, farm_blocks, print_status, revert_block_height, set_auto_farm
-from chia.util.config import load_config
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 
@@ -95,7 +94,9 @@ def create_simulator_config(
 @click.option("-r", "--restart", is_flag=True, help="Restart running services")
 @click.option("-w", "--wallet", is_flag=True, help="Start wallet")
 @click.pass_context
-def start_cmd(ctx: click.Context, restart: bool, wallet: bool) -> None:
+def sim_start_cmd(ctx: click.Context, restart: bool, wallet: bool) -> None:
+    from chia.cmds.start import start_cmd
+
     group: tuple[str, ...] = ("simulator",)
     if wallet:
         group += ("wallet",)
@@ -106,24 +107,21 @@ def start_cmd(ctx: click.Context, restart: bool, wallet: bool) -> None:
 @click.option("-d", "--daemon", is_flag=True, help="Stop daemon")
 @click.option("-w", "--wallet", is_flag=True, help="Stop wallet")
 @click.pass_context
-def stop_cmd(ctx: click.Context, daemon: bool, wallet: bool) -> None:
-    import sys
+def sim_stop_cmd(ctx: click.Context, daemon: bool, wallet: bool) -> None:
+    from chia.cmds.stop import stop_cmd
 
-    from chia.cmds.stop import async_stop
-
-    config = load_config(ctx.obj["root_path"], "config.yaml")
     group: Any = ("simulator",)
     if wallet:
         group += ("wallet",)
-    sys.exit(asyncio.run(async_stop(ctx.obj["root_path"], config, group, daemon)))
+    stop_cmd(ctx, daemon, group)
 
 
 @sim_cmd.command("status", short_help="Get information about the state of the simulator.")
 @click.option("-f", "--fingerprint", type=int, help="Get detailed information on this fingerprint.")
-@click.option("-k", "--show_key", is_flag=True, help="Show detailed key information.")
-@click.option("-c", "--show_coins", is_flag=True, help="Show all unspent coins.")
-@click.option("-i", "--include_rewards", is_flag=True, help="Should show rewards coins?")
-@click.option("-a", "--show_addresses", is_flag=True, help="Show the balances of all addresses.")
+@click.option("--show-key/--no-show-key", help="Show detailed key information.")
+@click.option("-c", "--show-coins", is_flag=True, help="Show all unspent coins.")
+@click.option("-i", "--include-rewards", is_flag=True, help="Include reward coins when showing coins.")
+@click.option("-a", "--show-addresses", is_flag=True, help="Show the balances of all addresses.")
 @click.pass_context
 def status_cmd(
     ctx: click.Context,
