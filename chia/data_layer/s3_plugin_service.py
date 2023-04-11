@@ -68,9 +68,9 @@ class S3Plugin:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["id"])
             bucket = self.get_bucket(store_id)
+            full_tree_path = Path(data["full_tree_path"])
+            diff_path = Path(data["diff_path"])
             try:
-                full_tree_path = Path(data["full_tree_path"])
-                diff_path = Path(data["diff_path"])
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     await asyncio.get_running_loop().run_in_executor(
                         pool,
