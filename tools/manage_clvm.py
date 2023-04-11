@@ -378,7 +378,7 @@ def build() -> int:
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
-                    clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}"),
+                    clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name),
                     raise_on_missing=False,
                 )
 
