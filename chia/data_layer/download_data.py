@@ -4,8 +4,9 @@ import asyncio
 import logging
 import os
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import aiohttp
 from typing_extensions import Literal
@@ -86,13 +87,20 @@ async def insert_into_data_store_from_file(
     await data_store.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
 
 
+@dataclass
+class WriteFilesResult:
+    result: bool
+    full_tree: Path
+    diff_tree: Path
+
+
 async def write_files_for_root(
     data_store: DataStore,
     tree_id: bytes32,
     root: Root,
     foldername: Path,
     overwrite: bool = False,
-) -> Tuple[bool, Path, Path]:
+) -> WriteFilesResult:
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:
@@ -124,7 +132,7 @@ async def write_files_for_root(
     except FileExistsError:
         pass
 
-    return written, filename_full_tree, filename_diff_tree
+    return WriteFilesResult(written, filename_full_tree, filename_diff_tree)
 
 
 async def insert_from_delta_file(

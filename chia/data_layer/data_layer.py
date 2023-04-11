@@ -440,18 +440,16 @@ class DataLayer:
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
         while publish_generation > 0:
-            res, full_tree_path, diff_path = await write_files_for_root(
-                self.data_store, tree_id, root, self.server_files_location
-            )
-            if not res:
+            write_file_result = await write_files_for_root(self.data_store, tree_id, root, self.server_files_location)
+            if not write_file_result.result:
                 self.log.error("failed to write files")
                 break
             try:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
                         "id": tree_id.hex(),
-                        "full_tree_path": str(full_tree_path),
-                        "diff_path": str(diff_path),
+                        "full_tree_path": str(write_file_result.full_tree),
+                        "diff_path": str(write_file_result.diff_tree),
                     }
                     for uploader in uploaders:
                         async with aiohttp.ClientSession() as session:
@@ -461,8 +459,8 @@ class DataLayer:
                                     break  # todo this will retry all uploaders
             except Exception as e:
                 self.log.debug(f"failed to upload files, clean local disc {e}")
-                os.remove(full_tree_path)
-                os.remove(diff_path)
+                os.remove(write_file_result.full_tree)
+                os.remove(write_file_result.diff_tree)
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
