@@ -100,7 +100,7 @@ def sim_start_cmd(ctx: click.Context, restart: bool, wallet: bool) -> None:
     group: tuple[str, ...] = ("simulator",)
     if wallet:
         group += ("wallet",)
-    start_cmd(ctx, restart, group)
+    ctx.invoke(start_cmd, restart=restart, group=group)
 
 
 @sim_cmd.command("stop", short_help="Stop running services while automatically using the right chia_root.")
@@ -113,7 +113,7 @@ def sim_stop_cmd(ctx: click.Context, daemon: bool, wallet: bool) -> None:
     group: Any = ("simulator",)
     if wallet:
         group += ("wallet",)
-    stop_cmd(ctx, daemon, group)
+    ctx.invoke(stop_cmd, daemon=daemon, group=group)
 
 
 @sim_cmd.command("status", short_help="Get information about the state of the simulator.")
