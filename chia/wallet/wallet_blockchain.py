@@ -89,7 +89,7 @@ class WalletBlockchain(BlockchainInterface):
             await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
             await self.clean_block_records()
 
-    async def receive_block(self, block: HeaderBlock) -> Tuple[AddBlockResult, Optional[Err]]:
+    async def add_block(self, block: HeaderBlock) -> Tuple[AddBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None
         if not self.contains_block(block.prev_header_hash) and block.height > 0:

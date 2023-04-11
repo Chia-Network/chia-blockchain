@@ -58,7 +58,7 @@ dev_dependencies = [
     "isort",
     "flake8",
     "mypy",
-    "black==22.10.0",
+    "black==23.3.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "pyinstaller==5.8.0",
@@ -119,7 +119,6 @@ kwargs = dict(
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",
-        "chia.wallet.settings",
         "chia.wallet.trading",
         "chia.wallet.util",
         "chia.ssl",

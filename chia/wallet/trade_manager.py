@@ -640,11 +640,12 @@ class TradeManager:
 
         addition_dict: Dict[uint32, List[Coin]] = {}
         for addition in additions:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                addition.puzzle_hash
+            )
+            if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
-                    wallet = self.wallet_state_manager.wallets[wallet_id]
+                    wallet = self.wallet_state_manager.wallets[wallet_identifier.id]
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(
@@ -658,7 +659,7 @@ class TradeManager:
                             spend_bundle=None,
                             additions=[addition],
                             removals=[],
-                            wallet_id=wallet_id,
+                            wallet_id=wallet_identifier.id,
                             sent_to=[],
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
@@ -667,17 +668,18 @@ class TradeManager:
                         )
                     )
                 else:  # This is change
-                    addition_dict.setdefault(wallet_id, [])
-                    addition_dict[wallet_id].append(addition)
+                    addition_dict.setdefault(wallet_identifier.id, [])
+                    addition_dict[wallet_identifier.id].append(addition)
 
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
-                removal_dict.setdefault(wallet_id, [])
-                removal_dict[wallet_id].append(removal)
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                removal.puzzle_hash
+            )
+            if wallet_identifier is not None:
+                removal_dict.setdefault(wallet_identifier.id, [])
+                removal_dict[wallet_identifier.id].append(removal)
 
         all_removals: List[bytes32] = [r.name() for removals in removal_dict.values() for r in removals]
 
