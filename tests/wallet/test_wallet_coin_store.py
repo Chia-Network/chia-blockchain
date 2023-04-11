@@ -434,4 +434,3 @@ async def test_count_small_unspent() -> None:
         assert await store.count_small_unspent(2) == 1
         assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 0
         assert await store.count_small_unspent(1) == 0
-
