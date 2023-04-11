@@ -166,6 +166,26 @@ class WalletCoinStore:
 
         return ret
 
+    async def get_coin_records_between(
+        self, wallet_id: int, start: int, end: int, reverse: bool = False, coin_type: CoinType = CoinType.NORMAL
+    ) -> List[WalletCoinRecord]:
+        """Return a list of coins between start and end index. List is in reverse chronological order.
+        start = 0 is most recent transaction
+        """
+        limit = end - start
+        if reverse:
+            query_str = "ORDER BY confirmed_height DESC "
+        else:
+            query_str = "ORDER BY confirmed_height ASC "
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                f"SELECT * FROM coin_record WHERE coin_type=? AND"
+                f" wallet_id=? {query_str}, rowid LIMIT {start}, {limit}",
+                (coin_type.value, wallet_id),
+            )
+        return [self.coin_record_from_row(row) for row in rows]
+
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
         async with self.db_wrapper.reader_no_transaction() as conn:
