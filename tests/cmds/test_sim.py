@@ -71,7 +71,7 @@ def run_all_tests(runner: CliRunner, address: str) -> None:
 
 def _test_sim_status(runner: CliRunner, address: str) -> None:
     # show everything
-    result: Result = runner.invoke(cli, ["dev", "sim", "-n", "ci_test", "status", "-kcia"])
+    result: Result = runner.invoke(cli, ["dev", "sim", "-n", "ci_test", "status", "--show-key", "-cia"])
     assert result.exit_code == 0
     # asserts are grouped by arg
     assert f"Fingerprint: {fingerprint}" and f"Mnemonic seed (24 secret words):\n{mnemonic}" in result.output  # -k
