@@ -417,7 +417,7 @@ class DataLayer:
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post("http://" + d + "/check_url", json=request_json) as response:
+                    async with session.post(d + "/check_url", json=request_json) as response:
                         res_json = await response.json()
                         if res_json["handles_url"]:
                             return d
@@ -455,7 +455,7 @@ class DataLayer:
                     }
                     for uploader in uploaders:
                         async with aiohttp.ClientSession() as session:
-                            async with session.post("http://" + uploader + "/upload", json=request_json) as response:
+                            async with session.post(uploader + "/upload", json=request_json) as response:
                                 res_json = await response.json()
                                 if not res_json["uploaded"]:
                                     break  # todo this will retry all uploaders
