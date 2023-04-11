@@ -357,7 +357,7 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
         # print(f"New File: {file_output[-10:]}")
         assert og_file == file_output
         # hashes_path.write_text(json.dumps(HASHES, indent=4, sort_keys=True) + "\n")
-        hashes_path.write_text(hashes_path.read_text())
+        hashes_path.write_bytes(hashes_path.read_bytes())
 
     return 1 if overall_fail else 0
 
