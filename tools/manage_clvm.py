@@ -37,7 +37,7 @@ all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "clvm": clvm_suffix}
 top_levels = {"chia"}
 hashes_path = pathlib.Path("chia/wallet/puzzles/deployed_puzzle_hashes.json")
 
-HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text())
+HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
 
 
 class ManageClvmError(Exception):
@@ -116,10 +116,10 @@ def generate_hash_bytes(hex_bytes: bytes) -> bytes:
 class ClvmPaths:
     clvm: pathlib.Path
     hex: pathlib.Path
-    hash: bytes
+    hash: str
 
     @classmethod
-    def from_clvm(cls, clvm: pathlib.Path) -> ClvmPaths:
+    def from_clvm(cls, clvm: pathlib.Path, raise_on_missing: bool = True) -> ClvmPaths:
         hex_path = clvm.with_name(clvm.name[: -len(clsp_suffix)] + hex_suffix)
         stem_filename = clvm.with_name(clvm.name[: -len(clsp_suffix)]).stem
         missing_files = []
@@ -127,12 +127,12 @@ class ClvmPaths:
             missing_files.append(str(hex_path))
         if stem_filename not in HASHES:
             missing_files.append(f"{stem_filename} entry in {hashes_path}")
-        if missing_files != []:
+        if missing_files != [] and raise_on_missing:
             raise LoadClvmPathError(missing_files)
         return cls(
             clvm=clvm,
             hex=hex_path,
-            hash=bytes.fromhex(HASHES[stem_filename]),
+            hash=stem_filename,
         )
 
 
@@ -144,10 +144,8 @@ class ClvmBytes:
 
     @classmethod
     def from_clvm_paths(cls, paths: ClvmPaths) -> ClvmBytes:
-        return cls(
-            hex=paths.hex.read_bytes(),
-            hash=paths.hash,
-        )
+        hex_bytes = paths.hex.read_bytes()
+        return cls.from_hex_bytes(hex_bytes)
 
     @classmethod
     def from_hex_bytes(cls, hex_bytes: bytes) -> ClvmBytes:
@@ -202,7 +200,8 @@ def main() -> None:
 
 @main.command()
 @click.option("--use-cache/--no-cache", default=True, show_default=True, envvar="USE_CACHE")
-def check(use_cache: bool) -> int:
+@click.option("--fix-hashfile-trailing-whitespace", default=True, show_default=True)
+def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
     used_excludes = set()
     overall_fail = False
 
@@ -257,6 +256,7 @@ def check(use_cache: bool) -> int:
                     break
 
     missing_files: typing.List[str] = []
+    all_hash_stems: typing.List[str] = []
 
     print()
     print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
@@ -276,6 +276,7 @@ def check(use_cache: bool) -> int:
             except LoadClvmPathError as e:
                 missing_files.extend(e.missing_files)
                 continue
+            all_hash_stems.append(reference_paths.hash)
             reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths)
 
             new_cache_entry = create_cache_entry(reference_paths=reference_paths, reference_bytes=reference_bytes)
@@ -285,7 +286,8 @@ def check(use_cache: bool) -> int:
             if not cache_hit:
                 with tempfile.TemporaryDirectory() as temporary_directory:
                     generated_paths = ClvmPaths.from_clvm(
-                        clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}")
+                        clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}"),
+                        raise_on_missing=False,
                     )
 
                     compile_clvm(
@@ -333,10 +335,21 @@ def check(use_cache: bool) -> int:
         for exclude in unused_excludes:
             print(f"    {exclude}")
 
+    extra_hashes = [key for key in HASHES if key not in all_hash_stems]
+    if extra_hashes != []:
+        overall_fail = True
+        print()
+        print("Hashes without corresponding files:")
+        for extra_hash in extra_hashes:
+            print(f"    {extra_hash}")
+
     if use_cache and cache_modified:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with cache_path.open(mode="w") as file:
             dump_cache(cache=cache, file=file)
+
+    if fix_hashfile_trailing_whitespace:
+        hashes_path.write_text(json.dumps(HASHES, indent=4, sort_keys=True) + "\n")
 
     sys.exit(1 if overall_fail else 0)
 
@@ -346,6 +359,8 @@ def build() -> int:
     overall_fail = False
 
     found_stems = find_stems(top_levels, suffixes={"clsp": clsp_suffix})
+    hash_stems = []
+    new_hashes = HASHES.copy()
 
     print(f"Building all existing {clsp_suffix} files to {hex_suffix}:")
     for stem_path in sorted(found_stems["clsp"]):
@@ -357,11 +372,12 @@ def build() -> int:
         error = None
 
         try:
-            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
+            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, raise_on_missing=False)
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
-                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clsp_suffix}")
+                    clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}"),
+                    raise_on_missing=False,
                 )
 
                 compile_clvm(
@@ -372,6 +388,11 @@ def build() -> int:
 
                 generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
                 reference_paths.hex.write_bytes(generated_bytes.hex)
+
+                # Only add hashes to json file if they didn't already exist in it
+                hash_stems.append(reference_paths.hash)
+                if reference_paths.hash not in new_hashes:
+                    new_hashes[reference_paths.hash] = ClvmBytes.from_clvm_paths(reference_paths).hash.hex()
         except Exception:
             file_fail = True
             error = traceback.format_exc()
@@ -385,6 +406,15 @@ def build() -> int:
 
         if file_fail:
             overall_fail = True
+
+    hashes_path.write_text(
+        json.dumps(
+            {key: value for key, value in new_hashes.items() if key in hash_stems},  # filter out not found files
+            indent=4,
+            sort_keys=True,
+        )
+        + "\n"
+    )
 
     sys.exit(1 if overall_fail else 0)
 

@@ -106,8 +106,8 @@
 
      ;;;;; start library code
 
-     (include condition_codes.clvm)
-     (include curry-and-treehash.clinc)
+     (include condition_codes.clib)
+     (include curry-and-treehash.clib)
      (include cat_truths.clib)
      (include utility_macros.clib)
 
