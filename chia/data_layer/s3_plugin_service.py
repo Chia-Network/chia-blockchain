@@ -36,7 +36,7 @@ class S3Plugin:
         aws_access_key_id: str,
         aws_secret_access_key: str,
         store_ids: List[str],
-        bukets: Dict[str, List[str]],
+        buckets: Dict[str, List[str]],
         urls: List[str],
         instance_name: str,
     ):

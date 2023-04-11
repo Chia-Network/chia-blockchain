@@ -1,4 +1,3 @@
-
 instance-1:
   port: 8998
   aws_credentials:
