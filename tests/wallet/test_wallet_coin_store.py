@@ -20,15 +20,9 @@ coin_5 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_6 = Coin(token_bytes(32), coin_4.puzzle_hash, uint64(12312))
 coin_7 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_8 = Coin(token_bytes(32), token_bytes(32), uint64(2))
-record_replaced = WalletCoinRecord(
-    coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
-)
-record_1 = WalletCoinRecord(
-    coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
-)
-record_2 = WalletCoinRecord(
-    coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
-)
+record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
+record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
+record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_3 = WalletCoinRecord(
     coin_3,
     uint32(5),
@@ -37,8 +31,6 @@ record_3 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     0,
-    CoinType.NORMAL,
-    None,
 )
 record_4 = WalletCoinRecord(
     coin_4,
@@ -48,8 +40,6 @@ record_4 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     0,
-    CoinType.NORMAL,
-    None,
 )
 record_5 = WalletCoinRecord(
     coin_5,
@@ -59,8 +49,6 @@ record_5 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     1,
-    CoinType.NORMAL,
-    None,
 )
 record_6 = WalletCoinRecord(
     coin_6,
@@ -70,8 +58,6 @@ record_6 = WalletCoinRecord(
     False,
     WalletType.STANDARD_WALLET,
     2,
-    CoinType.NORMAL,
-    None,
 )
 record_7 = WalletCoinRecord(
     coin_7,
@@ -81,8 +67,6 @@ record_7 = WalletCoinRecord(
     False,
     WalletType.POOLING_WALLET,
     2,
-    CoinType.NORMAL,
-    None,
 )
 record_8 = WalletCoinRecord(
     coin_8,
@@ -311,9 +295,7 @@ async def test_delete_coin_record() -> None:
 
 
 def record(c: Coin, *, confirmed: int, spent: int) -> WalletCoinRecord:
-    return WalletCoinRecord(
-        c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0, CoinType.NORMAL, None
-    )
+    return WalletCoinRecord(c, uint32(confirmed), uint32(spent), spent != 0, False, WalletType.STANDARD_WALLET, 0)
 
 
 @pytest.mark.asyncio
