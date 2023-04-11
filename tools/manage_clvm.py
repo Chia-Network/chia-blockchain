@@ -351,6 +351,8 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
             dump_cache(cache=cache, file=file)
 
     if fix_hashfile_trailing_whitespace:
+        print(f"Original File: {hashes_path.read_text()}")
+        print(f"New File: {json.dumps(HASHES, indent=4, sort_keys=True) + '\n'}")
         hashes_path.write_text(json.dumps(HASHES, indent=4, sort_keys=True) + "\n")
 
     return 1 if overall_fail else 0
