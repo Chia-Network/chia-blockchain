@@ -452,13 +452,23 @@ class DataLayer:
                         "diff_path": str(write_file_result.diff_tree),
                     }
                     for uploader in uploaders:
+                        self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
                         async with aiohttp.ClientSession() as session:
                             async with session.post(uploader + "/upload", json=request_json) as response:
                                 res_json = await response.json()
                                 if not res_json["uploaded"]:
+                                    self.log.error(
+                                        f"Failed to upload files to {uploader} : {res_json} - will retry later"
+                                    )
                                     break  # todo this will retry all uploaders
+                                else:
+                                    self.log.info(
+                                        f"Uploaded files to {uploader} for store {tree_id.hex()} "
+                                        "generation {publish_generation}"
+                                    )
             except Exception as e:
-                self.log.debug(f"failed to upload files, clean local disc {e}")
+                self.log.error(f"Exception uploading files for {tree_id} - will retry later")
+                self.log.debug(f"Failed to upload files, clean local disc {e}")
                 os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1

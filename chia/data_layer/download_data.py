@@ -157,10 +157,12 @@ async def insert_from_delta_file(
             if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
                 break
         else:
+            log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
             async with aiohttp.ClientSession() as session:
                 async with session.post(downloader + "/download", json=request_json) as response:
                     res_json = await response.json()
                     if not res_json["downloaded"]:
+                        log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
                         break
 
         log.info(f"Successfully downloaded delta file {filename}.")
