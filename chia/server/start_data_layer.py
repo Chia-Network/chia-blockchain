@@ -57,14 +57,12 @@ def create_data_layer_service(
         # TODO: not for peers...
         peer_api=api,
         node_type=NodeType.DATA_LAYER,
-        # TODO: no publicly advertised port, at least not yet
-        advertised_port=service_config["port"],
+        advertised_port=None,
         service_name=SERVICE_NAME,
         network_id=network_id,
         max_request_body_size=service_config.get("rpc_server_max_request_body_size", 26214400),
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        listen=False,
     )
 
 

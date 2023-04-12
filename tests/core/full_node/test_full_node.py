@@ -1938,5 +1938,5 @@ class TestFullNodeProtocol:
 
         initiating_server._local_capabilities_for_handshake = custom_capabilities
 
-        connected = await initiating_server.start_client(PeerInfo(self_hostname, uint16(listening_server._port)), None)
+        connected = await initiating_server.start_client(PeerInfo(self_hostname, listening_server.get_port()), None)
         assert connected == expect_success, custom_capabilities

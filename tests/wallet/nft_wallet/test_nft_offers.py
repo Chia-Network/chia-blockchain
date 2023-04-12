@@ -13,7 +13,7 @@ from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
@@ -69,8 +69,8 @@ async def test_nft_offer_with_fee(
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -299,8 +299,8 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -408,8 +408,8 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -553,8 +553,8 @@ async def test_nft_offer_nft_for_cat(
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
@@ -799,8 +799,8 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))

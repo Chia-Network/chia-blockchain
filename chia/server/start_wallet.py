@@ -68,14 +68,13 @@ def create_wallet_service(
         config=config,
         node=node,
         peer_api=peer_api,
-        listen=False,
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
         network_id=network_id,
         rpc_info=rpc_info,
-        advertised_port=service_config["port"],
+        advertised_port=None,
         connect_to_daemon=connect_to_daemon,
     )
 

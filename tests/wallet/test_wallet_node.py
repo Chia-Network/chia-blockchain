@@ -13,7 +13,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
-from chia.util.ints import uint16, uint32, uint128
+from chia.util.ints import uint32, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.wallet_node import Balance, WalletNode
 
@@ -337,7 +337,7 @@ async def test_get_balance(
     assert not wallet_synced()
     assert await wallet_node.get_balance(wallet_id) == Balance()
     # Generate some funds, get the balance and make sure it's as expected
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
     generated_funds = await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
     expected_generated_balance = Balance(
@@ -366,7 +366,7 @@ async def test_get_balance(
     #       also store the chain data or maybe adjust the weight proof consideration logic in new_valid_weight_proof.
     await full_node_api.farm_blocks_to_puzzlehash(1)
     assert not wallet_synced()
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
     generated_funds += await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
     expected_more_balance = Balance(

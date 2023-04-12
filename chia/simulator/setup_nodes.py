@@ -302,7 +302,7 @@ async def setup_farmer_multi_harvester(
     ]
     farmer_service = await farmer_node_iterators[0].__anext__()
     if start_services:
-        farmer_peer = PeerInfo(block_tools.config["self_hostname"], uint16(farmer_service._server._port))
+        farmer_peer = PeerInfo(block_tools.config["self_hostname"], farmer_service._server.get_port())
     else:
         farmer_peer = None
     harvester_node_iterators = []

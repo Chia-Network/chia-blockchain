@@ -160,7 +160,7 @@ class TestSimulation:
         # enable auto_farming
         await full_node_api.update_autofarm_config(True)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -231,7 +231,7 @@ class TestSimulation:
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -297,7 +297,7 @@ class TestSimulation:
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -328,7 +328,7 @@ class TestSimulation:
         tx_amount = uint64(1)
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -368,7 +368,7 @@ class TestSimulation:
         tx_per_repeat = 2
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -438,7 +438,7 @@ class TestSimulation:
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -472,7 +472,7 @@ class TestSimulation:
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None

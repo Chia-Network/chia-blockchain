@@ -14,7 +14,7 @@ from chia.simulator.time_out_assert import time_out_assert, time_out_assert_cust
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 
@@ -57,7 +57,7 @@ async def test_wallet_tx_retry(
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     reward_ph = await wallet_1.get_new_puzzlehash()
 
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
     await farm_blocks(full_node_1, reward_ph, 2)
     await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=wait_secs)

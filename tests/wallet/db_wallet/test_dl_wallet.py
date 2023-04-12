@@ -14,7 +14,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
 
@@ -51,7 +51,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
 
@@ -101,7 +101,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
 
@@ -158,8 +158,8 @@ class TestDLWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         funds = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet_0)
 
@@ -235,7 +235,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         funds = await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_0)
 
@@ -334,8 +334,8 @@ class TestDLWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         funds = await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_0)
         await full_node_api.farm_blocks_to_wallet(count=5, wallet=wallet_1)

@@ -31,7 +31,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -114,9 +114,7 @@ async def one_wallet_node_and_rpc(
         else:
             wallet_node.config["trusted_peers"] = {}
 
-        await wallet_node.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
-        )
+        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
 
         balance = await full_node_api.farm_rewards_to_wallet(amount=8_000_000_000_000, wallet=wallet)
         assert wallet_service.rpc_server is not None
@@ -162,7 +160,7 @@ async def setup(
     else:
         wallet_node.config["trusted_peers"] = {}
 
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
 
     assert wallet_node._wallet_state_manager is not None
     wallet = wallet_node._wallet_state_manager.main_wallet
