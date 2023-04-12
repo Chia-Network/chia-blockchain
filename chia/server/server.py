@@ -319,6 +319,13 @@ class ChiaServer:
         if peer_id == self.node_id:
             return ws
         connection: Optional[WSChiaConnection] = None
+
+        # TODO: decide here
+        # sock: Optional[socket.socket] = request.get_extra_info("peername")
+        # if sock is None:
+        #     raise ValueError(f"socket is None for {ws}")
+        # remote_port: int = sock[1]
+
         try:
             connection = WSChiaConnection.create(
                 local_type=self._local_type,
@@ -335,6 +342,7 @@ class ChiaServer:
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
             )
+            # await connection.perform_handshake(self._network_id, protocol_version, remote_port, self._local_type)
             await connection.perform_handshake(self._network_id, protocol_version, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
@@ -465,11 +473,23 @@ class ChiaServer:
                 self.log.info(f"Connected to a node with the same peer ID, disconnecting: {target_node} {peer_id}")
                 return False
 
+            # TODO: decide here
+            # sock: Optional[socket.socket] = ws.get_extra_info("peername")
+            # if sock is None:
+            #     raise ValueError(f"socket is None for {ws}")
+            # remote_port: int = sock[1]
+
+            if self._port is None:
+                server_port = 0
+            else:
+                server_port = self.get_port()
+
             connection = WSChiaConnection.create(
                 local_type=self._local_type,
                 ws=ws,
                 api=self.api,
-                server_port=self.get_port(),
+                # server_port=remote_port,
+                server_port=server_port,
                 log=self.log,
                 is_outbound=True,
                 received_message_callback=self.received_message_callback,
@@ -481,7 +501,8 @@ class ChiaServer:
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self.get_port(), self._local_type)
+            await connection.perform_handshake(self._network_id, protocol_version, server_port, self._local_type)
+            # await connection.perform_handshake(self._network_id, protocol_version, remote_port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

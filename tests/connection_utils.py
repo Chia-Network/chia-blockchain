@@ -58,7 +58,7 @@ async def add_dummy_connection(
         type,
         ws,
         server.api,
-        server.get_port(),
+        dummy_port,
         log,
         True,
         server.received_message_callback,

@@ -24,7 +24,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             NodeType.FULL_NODE,
             ws,
             server.api,
-            server.get_port(),
+            dummy_port,
             server.log,
             True,
             server.received_message_callback,
