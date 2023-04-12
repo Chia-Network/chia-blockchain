@@ -94,7 +94,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if peer.peer_server_port is None:
             return None
-        peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
+        peer_info = PeerInfo(peer.peer_info.host, peer.peer_server_port)
         if self.full_node.full_node_peers is not None:
             msg = await self.full_node.full_node_peers.request_peers(peer_info)
             return msg
