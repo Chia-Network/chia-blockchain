@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import pathlib
 import sys
+from io import TextIOWrapper
 from typing import Any, Dict, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
@@ -23,6 +25,20 @@ from chia.wallet.wallet_node import WalletNode
 
 SERVICE_NAME = "data_layer"
 log = logging.getLogger(__name__)
+
+
+class StdOutputLogger(TextIOWrapper):
+    def __init__(self, logger: logging.Logger, level: int = logging.INFO) -> None:
+        self.logger = logger
+        self.level = level
+
+    def write(self, message: str) -> int:
+        if message and not message.isspace():
+            self.logger.log(self.level, message)
+        return 0
+
+    def flush(self) -> None:
+        pass
 
 
 # TODO: Review need for config and if retained then hint it properly.
@@ -79,16 +95,19 @@ async def async_main() -> int:
         root_path=DEFAULT_ROOT_PATH,
     )
 
-    create_all_ssl(
-        root_path=DEFAULT_ROOT_PATH,
-        private_node_names=["data_layer"],
-        public_node_names=["data_layer"],
-        overwrite=False,
-    )
+    with contextlib.redirect_stdout(
+        StdOutputLogger(log, logging.INFO)
+    ) if not sys.stdout.isatty() else contextlib.nullcontext():
+        create_all_ssl(
+            root_path=DEFAULT_ROOT_PATH,
+            private_node_names=["data_layer"],
+            public_node_names=["data_layer"],
+            overwrite=False,
+        )
 
-    service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
-    await service.setup_process_global_state()
-    await service.run()
+        service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
+        await service.setup_process_global_state()
+        await service.run()
 
     return 0
 
