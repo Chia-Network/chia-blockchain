@@ -753,7 +753,7 @@ class WalletNode:
             return False
 
         trusted: bool = self.is_trusted(full_node)
-        self.log.info(f"Starting sync trusted: {trusted} to peer {full_node.peer_host}")
+        self.log.info(f"Starting sync trusted: {trusted} to peer {full_node.peer_info.host}")
         start_time = time.time()
 
         if rollback:
@@ -897,7 +897,7 @@ class WalletNode:
                 await asyncio.gather(*all_tasks)
                 return False
             if peer.peer_node_id not in self.server.all_connections:
-                self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
+                self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_info.host}")
                 await asyncio.gather(*all_tasks)
                 return False
             if trusted:
