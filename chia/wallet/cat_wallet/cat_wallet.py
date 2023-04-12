@@ -705,7 +705,7 @@ class CATWallet:
                         break
             else:
                 change_puzhash = await self.get_new_inner_hash()
-            primaries.append(Payment(change_puzhash, uint64(change), []))
+            primaries.append(Payment(change_puzhash, uint64(change)))
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []

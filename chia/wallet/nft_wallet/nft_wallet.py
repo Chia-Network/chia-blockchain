@@ -950,7 +950,7 @@ class NFTWallet:
                     tx = await wallet.generate_signed_transaction(
                         abs(amount),
                         DESIRED_OFFER_MOD_HASH,
-                        primaries=[Payment(DESIRED_OFFER_MOD_HASH, uint64(payment_sum), [])]
+                        primaries=[Payment(DESIRED_OFFER_MOD_HASH, uint64(payment_sum))]
                         if payment_sum > 0 or old
                         else [],
                         fee=fee,
@@ -1022,7 +1022,6 @@ class NFTWallet:
                                         Payment(
                                             DESIRED_OFFER_MOD_HASH,
                                             uint64(sum(p.amount for _, p in duplicate_payments)),
-                                            [],
                                         ).as_condition_args()
                                     ],
                                 )
