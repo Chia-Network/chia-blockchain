@@ -17,6 +17,8 @@ from botocore.exceptions import ClientError
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
+plugin_id = "2bdf9ed6-f3bc-44f6-a69d-06602c0688d9"
+plugin_version = "Chia S3 Datalayer plugin 0.1.0"
 
 
 class S3Plugin:
@@ -87,6 +89,12 @@ class S3Plugin:
             return web.json_response({"handles_url": False})
         return web.json_response({"uploaded": True})
 
+    async def plugin_id(self, request: web.Request) -> web.Response:
+        return web.json_response({"id": plugin_id, "version": plugin_version})
+
+    async def healthz(self, request: web.Request) -> web.Response:
+        return web.json_response({"success": True})
+
     async def check_url(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
         try:
@@ -150,6 +158,8 @@ def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
     app.add_routes([web.post("/upload", s3_client.upload)])
     app.add_routes([web.post("/check_url", s3_client.check_url)])
     app.add_routes([web.post("/download", s3_client.download)])
+    app.add_routes([web.post("/plugin_id", s3_client.plugin_id)])
+    app.add_routes([web.post("/healthz", s3_client.healthz)])
     return app
 
 
