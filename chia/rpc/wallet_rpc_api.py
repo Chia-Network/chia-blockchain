@@ -3322,7 +3322,7 @@ class WalletRpcApi:
             request.get("start", 0), request.get("count", 50)
         )
         return {
-            "vc_records": vc_list,
+            "vc_records": [{"coin_id": "0x" + vc.vc.coin.name().hex(), **vc.to_json_dict()} for vc in vc_list],
             "proofs": {
                 rec.vc.proof_hash.hex(): None if fetched_proof is None else fetched_proof.key_value_pairs
                 for rec in vc_list
