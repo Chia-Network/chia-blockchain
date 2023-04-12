@@ -27,8 +27,8 @@ from chia.wallet.dao_wallet.dao_utils import (
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
     get_innerpuz_from_lockup_puzzle,
-    get_lockup_puzzle,
     get_latest_lockup_puzzle_for_coin_spend,
+    get_lockup_puzzle,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -144,7 +144,7 @@ class DAOCATWallet:
         ):
             # It's got restrictions, go look at the parent
             wallet_node: Any = self.wallet_state_manager.wallet_node
-            peer: WSChiaConnection = wallet_node.get_full_node_peer()
+            # peer: WSChiaConnection = wallet_node.get_full_node_peer()
             if peer is None:
                 # TODO: how should we handle this? We should try again later? Resync?
                 raise ValueError("Could not find any peers to request puzzle and solution from")

@@ -148,16 +148,19 @@ def get_lockup_puzzle(
     return puzzle
 
 
-def get_latest_lockup_puzzle_for_coin_spend(parent_spend, inner_puzzle=None):
+def get_latest_lockup_puzzle_for_coin_spend(parent_spend: CoinSpend, inner_puzzle: Optional[Program] = None) -> Program:
     puzzle = get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal)
-    solution = parent_spend.solution.rest().rest().first()
+    assert isinstance(puzzle, Program)
+    solution = parent_spend.solution.to_program().rest().rest().first()
     if solution.first() == Program.to(0):
         return puzzle
     new_proposal_id = solution.rest().rest().rest().first().as_atom()
     return add_proposal_to_active_list(puzzle, new_proposal_id, inner_puzzle)
 
 
-def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32, inner_puzzle: Program = None) -> Program:
+def add_proposal_to_active_list(
+    lockup_puzzle: Program, proposal_id: bytes32, inner_puzzle: Optional[Program] = None
+) -> Program:
     curried_args = uncurry_lockup(lockup_puzzle).as_iter()
     (
         PROPOSAL_MOD_HASH,
