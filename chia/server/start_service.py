@@ -153,7 +153,10 @@ class Service(Generic[_T_RpcServiceProtocol]):
             prefer_ipv6=self.config.get("prefer_ipv6", False),
             on_connect=self._on_connect_callback,
         )
-        self._advertised_port = self._server.get_port()
+        try:
+            self._advertised_port = self._server.get_port()
+        except ValueError:
+            pass
 
         for peer in self._reconnect_tasks.keys():
             self.add_peer(peer)
