@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import random
 import time
 import traceback
@@ -58,6 +59,8 @@ class DataLayer:
     none_bytes: bytes32
     lock: asyncio.Lock
     _server: Optional[ChiaServer]
+    downloaders: List[str]
+    uploaders: List[str]
 
     @property
     def server(self) -> ChiaServer:
@@ -73,6 +76,8 @@ class DataLayer:
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
+        downloaders: List[str],
+        uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
     ):
         if name == "":
@@ -96,6 +101,8 @@ class DataLayer:
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()
         self._server = None
+        self.downloaders = downloaders
+        self.uploaders = uploaders
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -352,6 +359,7 @@ class DataLayer:
         random.shuffle(servers_info)
         for server_info in servers_info:
             url = server_info.url
+
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
@@ -375,7 +383,6 @@ class DataLayer:
                 min_generation=uint32(root.generation + 1),
                 max_generation=singleton_record.generation,
             )
-
             try:
                 timeout = self.config.get("client_timeout", 15)
                 proxy_url = self.config.get("proxy_url", None)
@@ -389,6 +396,7 @@ class DataLayer:
                     timeout,
                     self.log,
                     proxy_url,
+                    await self.get_downloader(url),
                 )
                 if success:
                     self.log.info(
@@ -404,7 +412,21 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
+    async def get_downloader(self, url: str) -> Optional[str]:
+        request_json = {"url": url}
+        for d in self.downloaders:
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.post(d + "/check_url", json=request_json) as response:
+                        res_json = await response.json()
+                        if res_json["handles_url"]:
+                            return d
+                except Exception as e:
+                    self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
+        return None
+
     async def upload_files(self, tree_id: bytes32) -> None:
+        uploaders = await self.get_uploaders(tree_id)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {tree_id}.")
@@ -417,12 +439,28 @@ class DataLayer:
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
-        while publish_generation > 0 and await write_files_for_root(
-            self.data_store,
-            tree_id,
-            root,
-            self.server_files_location,
-        ):
+        while publish_generation > 0:
+            write_file_result = await write_files_for_root(self.data_store, tree_id, root, self.server_files_location)
+            if not write_file_result.result:
+                self.log.error("failed to write files")
+                break
+            try:
+                if uploaders is not None and len(uploaders) > 0:
+                    request_json = {
+                        "id": tree_id.hex(),
+                        "full_tree_path": str(write_file_result.full_tree),
+                        "diff_path": str(write_file_result.diff_tree),
+                    }
+                    for uploader in uploaders:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(uploader + "/upload", json=request_json) as response:
+                                res_json = await response.json()
+                                if not res_json["uploaded"]:
+                                    break  # todo this will retry all uploaders
+            except Exception as e:
+                self.log.debug(f"failed to upload files, clean local disc {e}")
+                os.remove(write_file_result.full_tree)
+                os.remove(write_file_result.diff_tree)
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
@@ -802,3 +840,18 @@ class DataLayer:
             target_root_hash=singleton_record.root,
             target_generation=singleton_record.generation,
         )
+
+    async def get_uploaders(self, tree_id: bytes32) -> List[str]:
+        uploaders = []
+        for uploader in self.uploaders:
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.post(
+                        "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
+                    ) as response:
+                        res_json = await response.json()
+                        if res_json["handles_store"]:
+                            uploaders.append(uploader)
+                except Exception as e:
+                    self.log.error(f"get_uploader could not get response {e}")
+        return uploaders
