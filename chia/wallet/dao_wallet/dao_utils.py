@@ -145,16 +145,16 @@ def get_lockup_puzzle(
     return puzzle
 
 
-def get_latest_lockup_puzzle_for_coin_spend(parent_spend):
+def get_latest_lockup_puzzle_for_coin_spend(parent_spend, inner_puzzle=None):
     puzzle = get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal)
     solution = parent_spend.solution.rest().rest().first()
     if solution.first() == Program.to(0):
         return puzzle
     new_proposal_id = solution.rest().rest().rest().first().as_atom()
-    return add_proposal_to_active_list(puzzle, new_proposal_id)
+    return add_proposal_to_active_list(puzzle, new_proposal_id, inner_puzzle)
 
 
-def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32) -> Program:
+def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32, inner_puzzle: Program = None) -> Program:
     curried_args = uncurry_lockup(lockup_puzzle).as_iter()
     (
         PROPOSAL_MOD_HASH,
@@ -167,7 +167,9 @@ def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32) ->
         INNERPUZ,
     ) = curried_args
     new_active_votes = ACTIVE_VOTES.cons(proposal_id)
-    return get_lockup_puzzle(CAT_TAIL_HASH, new_active_votes, INNERPUZ)
+    if inner_puzzle is None:
+        inner_puzzle = INNERPUZ
+    return get_lockup_puzzle(CAT_TAIL_HASH, new_active_votes, inner_puzzle)
 
 
 def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:

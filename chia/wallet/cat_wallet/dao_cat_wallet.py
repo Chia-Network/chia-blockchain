@@ -149,7 +149,7 @@ class DAOCATWallet:
                 # TODO: how should we handle this? We should try again later? Resync?
                 raise ValueError("Could not find any peers to request puzzle and solution from")
             parent_spend = await wallet_node.fetch_puzzle_solution(height, coin.parent_coin_info, peer)
-            lockup_puz = get_latest_lockup_puzzle_for_coin_spend(parent_spend)
+            lockup_puz = get_latest_lockup_puzzle_for_coin_spend(parent_spend, inner_puzzle)
 
         assert (
             construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash()
