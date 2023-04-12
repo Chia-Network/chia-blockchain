@@ -132,6 +132,6 @@ class TestSSL:
         await establish_connection(introducer_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
-    async def test_timelord(self, timelord_service, self_hostname):
+    async def test_timelord(self, timelord_service):
         timelord_server = timelord_service._node.server
         assert timelord_server.webserver is None
