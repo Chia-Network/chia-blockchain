@@ -101,65 +101,18 @@ class TestSSL:
         await establish_connection(full_node_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
-    async def test_wallet(self, simulator_and_wallet, self_hostname):
+    async def test_wallet(self, simulator_and_wallet):
         full_nodes, wallets, bt = simulator_and_wallet
         wallet_node, wallet_server = wallets[0]
-        ca_private_crt_path, ca_private_key_path = private_ssl_ca_paths(bt.root_path, bt.config)
-        chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(bt.root_path, bt.config)
 
-        # Wallet should not accept incoming connections
-        pub_crt = wallet_server.root_path / "p2p.crt"
-        pub_key = wallet_server.root_path / "p2p.key"
-        generate_ca_signed_cert(chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), pub_crt, pub_key)
-        ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
-        with pytest.raises(aiohttp.ClientConnectorError):
-            await establish_connection(wallet_server, self_hostname, ssl_context)
-
-        # Not even signed by private cert
-        priv_crt = wallet_server.root_path / "valid.crt"
-        priv_key = wallet_server.root_path / "valid.key"
-        generate_ca_signed_cert(
-            ca_private_crt_path.read_bytes(),
-            ca_private_key_path.read_bytes(),
-            priv_crt,
-            priv_key,
-        )
-        ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
-        with pytest.raises(aiohttp.ClientConnectorError):
-            await establish_connection(wallet_server, self_hostname, ssl_context)
+        assert wallet_server.webserver is None
 
     @pytest.mark.asyncio
-    async def test_harvester(self, farmer_one_harvester, self_hostname):
+    async def test_harvester(self, farmer_one_harvester):
         harvesters, _, bt = farmer_one_harvester
         harvester_server = harvesters[0]._server
-        ca_private_crt_path, ca_private_key_path = private_ssl_ca_paths(bt.root_path, bt.config)
-        chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(bt.root_path, bt.config)
 
-        # harvester should not accept incoming connections
-        pub_crt = harvester_server.root_path / "p2p.crt"
-        pub_key = harvester_server.root_path / "p2p.key"
-        generate_ca_signed_cert(
-            chia_ca_crt_path.read_bytes(),
-            chia_ca_key_path.read_bytes(),
-            pub_crt,
-            pub_key,
-        )
-        ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
-        with pytest.raises(aiohttp.ClientConnectorError):
-            await establish_connection(harvester_server, self_hostname, ssl_context)
-
-        # Not even signed by private cert
-        priv_crt = harvester_server.root_path / "valid.crt"
-        priv_key = harvester_server.root_path / "valid.key"
-        generate_ca_signed_cert(
-            ca_private_crt_path.read_bytes(),
-            ca_private_key_path.read_bytes(),
-            priv_crt,
-            priv_key,
-        )
-        ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
-        with pytest.raises(aiohttp.ClientConnectorError):
-            await establish_connection(harvester_server, self_hostname, ssl_context)
+        assert harvester_server.webserver is None
 
     @pytest.mark.asyncio
     async def test_introducer(self, introducer_service, self_hostname):
@@ -181,33 +134,4 @@ class TestSSL:
     @pytest.mark.asyncio
     async def test_timelord(self, timelord_service, self_hostname):
         timelord_server = timelord_service._node.server
-        ca_private_crt_path, ca_private_key_path = private_ssl_ca_paths(
-            timelord_service.root_path, timelord_service.config
-        )
-        chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(timelord_service.root_path, timelord_service.config)
-
-        # timelord should not accept incoming connections
-        pub_crt = timelord_server.root_path / "p2p.crt"
-        pub_key = timelord_server.root_path / "p2p.key"
-        generate_ca_signed_cert(
-            chia_ca_crt_path.read_bytes(),
-            chia_ca_key_path.read_bytes(),
-            pub_crt,
-            pub_key,
-        )
-        ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
-        with pytest.raises(aiohttp.ClientConnectorError):
-            await establish_connection(timelord_server, self_hostname, ssl_context)
-
-        # Not even signed by private cert
-        priv_crt = timelord_server.root_path / "valid.crt"
-        priv_key = timelord_server.root_path / "valid.key"
-        generate_ca_signed_cert(
-            ca_private_crt_path.read_bytes(),
-            ca_private_key_path.read_bytes(),
-            priv_crt,
-            priv_key,
-        )
-        ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, priv_crt, priv_key)
-        with pytest.raises(aiohttp.ClientConnectorError):
-            await establish_connection(timelord_server, self_hostname, ssl_context)
+        assert timelord_server.webserver is None
