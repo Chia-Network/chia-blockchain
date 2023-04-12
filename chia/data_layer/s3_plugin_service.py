@@ -64,8 +64,19 @@ class S3Plugin:
             print(f"failed parsing request {request} {e}")
             return web.json_response({"success": False})
         store_id = bytes32.from_hexstr(data["id"])
+        bucket = data.get("bucket", None)
+        dirty = False
         if store_id not in self.store_ids:
             self.store_ids.append(store_id)
+            dirty = True
+        if bucket is not None:
+            if bucket not in self.buckets:
+                self.buckets[bucket] = [store_id.hex()]
+                dirty = True
+            elif store_id.hex() not in self.buckets[bucket]:
+                self.buckets[bucket].append(store_id.hex())
+                dirty = True
+        if dirty:
             try:
                 self.update_config()
             except Exception as e:
@@ -82,8 +93,11 @@ class S3Plugin:
             print(f"failed parsing request {request} {e}")
             return web.json_response({"success": False})
         store_id = bytes32.from_hexstr(data["id"])
+        bucket = data.get("bucket", None)
         try:
             self.store_ids.remove(store_id)
+            if bucket is not None:
+                self.buckets[bucket].remove(store_id.hex())
             self.update_config()
         except Exception as e:
             if not isinstance(e, ValueError):
@@ -193,6 +207,7 @@ class S3Plugin:
             full_config = yaml.safe_load(file)
 
         full_config[self.instance_name]["store_ids"] = store_ids
+        full_config[self.instance_name]["buckets"] = self.buckets
         self.save_config("s3_plugin_config.yml", full_config)
 
     def save_config(self, filename: str, config_data: Any) -> None:
