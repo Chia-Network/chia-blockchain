@@ -56,7 +56,7 @@ class S3Plugin:
         try:
             data = await request.json()
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {e}")
             return web.json_response({"handles_url": False})
         store_id = bytes32.from_hexstr(data["id"])
         if store_id in self.store_ids:
@@ -80,10 +80,10 @@ class S3Plugin:
                         pool, functools.partial(self.boto_client.upload_file, diff_path, bucket, diff_path.name)
                     )
             except ClientError as e:
-                print(f"failed uploading file to aws {e}")
+                log.error(f"failed uploading file to aws {e}")
                 return web.json_response({"uploaded": False})
         except Exception as e:
-            print(f"failed handling request {request} {e}")
+            log.error(f"failed handling request {request} {e}")
             return web.json_response({"handles_url": False})
         return web.json_response({"uploaded": True})
 
@@ -92,7 +92,7 @@ class S3Plugin:
         try:
             data = await request.json()
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {e}")
             return web.json_response({"handles_url": False})
         parse_result = urlparse(data["url"])
         if parse_result.scheme == "s3" and data["url"] in self.urls:
@@ -115,7 +115,7 @@ class S3Plugin:
                     pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
                 )
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {e}")
             return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
 
@@ -150,6 +150,8 @@ def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
     app.add_routes([web.post("/upload", s3_client.upload)])
     app.add_routes([web.post("/check_url", s3_client.check_url)])
     app.add_routes([web.post("/download", s3_client.download)])
+    logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_debug.log"))
+    log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app
 
 
@@ -165,6 +167,7 @@ def run_server() -> None:
     config = load_config(instance_name)
     port = config["port"]
     web.run_app(make_app(config, instance_name), port=port)
+    log.info(f"Stopped s3 plugin {instance_name}")
 
 
 # run this
