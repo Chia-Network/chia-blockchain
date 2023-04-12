@@ -536,7 +536,8 @@ class ChiaServer:
             else:
                 self.banned_peers[connection.peer_host] = ban_until
 
-        if connection.peer_node_id in self.all_connections:
+        present_connection = self.all_connections.get(connection.peer_node_id)
+        if present_connection is connection:
             self.all_connections.pop(connection.peer_node_id)
 
         if not closed_connection:
