@@ -44,7 +44,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
-from chia.wallet.dao_wallet.dao_utils import match_proposal_puzzle, match_treasury_puzzle
+from chia.wallet.dao_wallet.dao_utils import match_funding_puzzle, match_proposal_puzzle, match_treasury_puzzle
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
@@ -655,17 +655,14 @@ class WalletStateManager:
             return None
 
         puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        solution = Program.from_bytes(bytes(coin_spend.solution))
 
         uncurried = uncurry_puzzle(puzzle)
 
-        # Check if the coin is dao funding spend (hint == treasury_id)
-        hint_list = compute_coin_hints(coin_spend)
-        if hint_list:
-            for wallet in self.wallets.values():
-                if wallet.type() == WalletType.DAO.value:
-                    assert isinstance(wallet, DAOWallet)
-                    if wallet.dao_info.treasury_id in hint_list:
-                        return WalletIdentifier.create(wallet)
+        # Check if the coin is dao funding spend
+        funding_puzzle_check = match_funding_puzzle(uncurried, solution)
+        if funding_puzzle_check:
+            return await self.handle_dao_funding(coin_spend)
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -956,6 +953,16 @@ class WalletStateManager:
                 assert isinstance(wallet, DAOWallet)
                 if wallet.dao_info.treasury_id == TREASURY_ID.as_atom():
                     return WalletIdentifier.create(wallet)
+        return None
+
+    async def handle_dao_funding(self, coin_spend: CoinSpend):
+        hint_list = compute_coin_hints(coin_spend)
+        if hint_list:
+            for wallet in self.wallets.values():
+                if wallet.type() == WalletType.DAO.value:
+                    assert isinstance(wallet, DAOWallet)
+                    if wallet.dao_info.treasury_id in hint_list:
+                        return WalletIdentifier.create(wallet)
         return None
 
     async def handle_nft(

@@ -7,11 +7,14 @@ from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
+from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_fullpuz, get_innerpuzzle_from_puzzle
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -474,6 +477,26 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_PROPOSAL_MOD:
                 return curried_args.as_iter()  # type: ignore[no-any-return]
+    except ValueError:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+    return None
+
+
+# This is used in WSM to determine whether we have a dao funding spend
+def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program) -> Optional[bool]:
+    # TODO: handle case where solution is for existing p2_singleton
+    try:
+        if match_cat_puzzle(uncurried):
+            conditions = solution.at("frfr").as_iter()
+        else:
+            conditions = solution.at("rfr").as_iter()
+        for cond in conditions:
+            if (cond.list_len() == 4) and (cond.first().as_int() == 51):
+                maybe_treasury_id = cond.at("rrrff")
+                if cond.at("rf") == get_p2_singleton_puzhash(maybe_treasury_id):
+                    return True
     except ValueError:
         import traceback
 
