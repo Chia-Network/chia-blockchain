@@ -28,6 +28,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_active_votes_from_lockup_puzzle,
     get_innerpuz_from_lockup_puzzle,
     get_lockup_puzzle,
+    get_latest_lockup_puzzle_for_coin_spend,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -142,9 +143,14 @@ class DAOCATWallet:
             != coin.puzzle_hash
         ):
             # It's got restrictions, go look at the parent
-            # TODO: write this code
-            pass
-            # breakpoint()
+            wallet_node: Any = self.wallet_state_manager.wallet_node
+            peer: WSChiaConnection = wallet_node.get_full_node_peer()
+            if peer is None:
+                # TODO: how should we handle this? We should try again later? Resync?
+                raise ValueError("Could not find any peers to request puzzle and solution from")
+            parent_spend = await wallet_node.fetch_puzzle_solution(height, coin.parent_coin_info, peer)
+            lockup_puz = get_latest_lockup_puzzle_for_coin_spend(parent_spend)
+
         assert (
             construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash()
             == coin.puzzle_hash

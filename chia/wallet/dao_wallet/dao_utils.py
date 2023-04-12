@@ -11,7 +11,7 @@ from chia.util.ints import uint64
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import create_fullpuz, get_innerpuzzle_from_puzzle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -143,6 +143,15 @@ def get_lockup_puzzle(
         innerpuz,
     )
     return puzzle
+
+
+def get_latest_lockup_puzzle_for_coin_spend(parent_spend):
+    puzzle = get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal)
+    solution = parent_spend.solution.rest().rest().first()
+    if solution.first() == Program.to(0):
+        return puzzle
+    new_proposal_id = solution.rest().rest().rest().first().as_atom()
+    return add_proposal_to_active_list(puzzle, new_proposal_id)
 
 
 def add_proposal_to_active_list(lockup_puzzle: Program, proposal_id: bytes32) -> Program:
