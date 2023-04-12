@@ -99,8 +99,8 @@ async def async_main() -> int:
         overwrite=False,
     )
 
-    uploaders: List[str] = config["data_layer"]["uploaders"]
-    downloaders: List[str] = config["data_layer"]["downloaders"]
+    uploaders: List[str] = config["data_layer"].get("uploaders", [])
+    downloaders: List[str] = config["data_layer"].get("downloaders", [])
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
     await service.setup_process_global_state()
     await service.run()
