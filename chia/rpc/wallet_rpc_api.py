@@ -3307,7 +3307,9 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(request["vc_id"])
+        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(
+            bytes32.from_hexstr(request["vc_id"])
+        )
         return {"vc_record": vc_record}
 
     async def vc_get_vc_list(self, request) -> Dict:
