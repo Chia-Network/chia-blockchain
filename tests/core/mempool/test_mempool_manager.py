@@ -1346,22 +1346,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     # Mark this coin as spent
     test_coin_records = {coin_id: CoinRecord(coin, uint32(0), TEST_HEIGHT, False, uint64(0))}
     block_record = create_test_block_record(height=new_height)
-    npc_result = NPCResult(
-        None,
-        SpendBundleConditions(
-            [Spend(coin_id, IDENTITY_PUZZLE_HASH, None, 0, None, None, None, None, [], [], 0)],
-            0,
-            0,
-            0,
-            None,
-            None,
-            [],
-            0,
-            100,
-            0,
-        ),
-        uint64(0),
-    )
+    npc_result = NPCResult(None, make_test_conds(spend_ids=[coin_id]), uint64(0))
     await mempool_manager.new_peak(block_record, npc_result)
     # As the coin was a spend in all the mempool items we had, nothing should be left now
     assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
