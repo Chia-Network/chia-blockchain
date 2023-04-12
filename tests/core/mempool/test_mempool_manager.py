@@ -1367,3 +1367,27 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
     assert mempool_manager.mempool.size() == 0
     assert len(list(mempool_manager.mempool.items_by_feerate())) == 0
+
+
+@pytest.mark.asyncio
+async def test_bundle_coin_spends() -> None:
+    # This tests the construction of bundle_coin_spends map for mempool items
+    # We're creating sb123e with 4 coins, one of them being eligible
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000005)))
+    sb123 = SpendBundle.aggregate([make_test_spendbundle(coins[i]) for i in range(3)])
+    eligible_sb = make_test_spendbundle(coins[3], eligible_spend=True)
+    sb123e = SpendBundle.aggregate([sb123, eligible_sb])
+    await send_spendbundle(mempool_manager, sb123e)
+    mi123e = mempool_manager.get_mempool_item(sb123e.name())
+    assert mi123e is not None
+    for i in range(3):
+        assert mi123e.bundle_coin_spends[coins[i].name()] == BundleCoinSpend(
+            coin_spend=sb123.coin_spends[i],
+            eligible_for_dedup=False,
+            additions=[Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, coins[i].amount)],
+        )
+    assert mi123e.bundle_coin_spends[coins[3].name()] == BundleCoinSpend(
+        coin_spend=eligible_sb.coin_spends[0],
+        eligible_for_dedup=True,
+        additions=[Coin(coins[3].name(), IDENTITY_PUZZLE_HASH, coins[3].amount)],
+    )
