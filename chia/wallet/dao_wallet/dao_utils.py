@@ -172,7 +172,7 @@ def add_proposal_to_active_list(
         ACTIVE_VOTES,
         INNERPUZ,
     ) = curried_args
-    new_active_votes = ACTIVE_VOTES.cons(proposal_id)
+    new_active_votes = Program.to(proposal_id).cons(ACTIVE_VOTES)  # (c proposal_id ACTIVE_VOTES)
     if inner_puzzle is None:
         inner_puzzle = INNERPUZ
     return get_lockup_puzzle(CAT_TAIL_HASH, new_active_votes, inner_puzzle)

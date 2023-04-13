@@ -893,7 +893,7 @@ class DAOWallet(WalletProtocol):
         return puzzle
 
     async def generate_new_proposal(
-        self, proposed_puzzle_hash: bytes32, vote_amount: uint64, fee: uint64 = uint64(0)
+        self, proposed_puzzle: Program, vote_amount: uint64, fee: uint64 = uint64(0)
     ) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
@@ -915,8 +915,8 @@ class DAOWallet(WalletProtocol):
             treasury_id=self.dao_info.treasury_id,
             votes_sum=uint64(0),
             total_votes=uint64(0),
-            spend_or_update_flag="x",  # TODO: decide spend or update
-            proposed_puzzle_hash=proposed_puzzle_hash,
+            spend_or_update_flag="s",  # TODO: decide spend or update
+            proposed_puzzle_hash=proposed_puzzle.get_tree_hash(),
         )
 
         full_proposal_puzzle = curry_singleton(launcher_coin.name(), dao_proposal_puzzle)
@@ -978,10 +978,10 @@ class DAOWallet(WalletProtocol):
         )
         assert dao_cat_wallet is not None
 
-        # curry_vals = get_curry_vals_from_proposal_puzzle(dao_proposal_puzzle)
-        # dao_cat_spend = await dao_cat_wallet.create_vote_spend(
-        #     vote_amount, launcher_coin.name(), True, curry_vals=curry_vals
-        # )
+        curry_vals = get_curry_vals_from_proposal_puzzle(dao_proposal_puzzle)
+        dao_cat_spend = await dao_cat_wallet.create_vote_spend(
+            vote_amount, launcher_coin.name(), True, curry_vals=curry_vals
+        )
 
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -1011,7 +1011,7 @@ class DAOWallet(WalletProtocol):
         )
         list_of_coinspends = [CoinSpend(eve_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return unsigned_spend_bundle
+        return unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
 
     async def generate_proposal_vote_spend(
         self,

@@ -21,7 +21,7 @@
   vote_info
   vote_amount
   my_puzhash
-  new_innerpuzhash  ; only include this if we're changing owners
+  new_innerpuzhash  ; only include this if we're changing owners - secured because coin is still made from inner_puz
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -38,39 +38,43 @@
   )
 
   ; loop through conditions and check that they aren't trying to create anything they shouldn't
-  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote)
+  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
         (if (= (f (r (f conditions))) vote_added_puzhash)
           (if seen_vote  ; assert we haven't already made a coin with the new vote included
-            (x)
+            (x "bing")
             (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
-              (if seen_no_vote  ; assert that we haven't already recreated ourself in some fashion
-                (x)
+              (if seen_change  ; assert that we haven't already recreated ourself in some fashion
+                (x "bong")
                 (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
               )
              (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
-               (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 seen_no_vote))
-               (x)
+               (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 seen_change))
+               (x "boo")
              )
             )
           )
-         (if (all (= (f (r (f conditions))) my_puzhash) (not seen_no_vote) (= (f (r (r (f conditions)))) (- my_amount vote_amount)))  ; we recreate ourselves with unused voting power
+         (if (all
+             (= (f (r (f conditions))) my_puzhash)
+             (not seen_change)
+             (= (f (r (r (f conditions)))) (- my_amount vote_amount))
+           )  ; we recreate ourselves with unused voting power
           (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote 1))
-          (x)
+          (x "bip" my_amount vote_amount (- my_amount vote_amount) (f conditions) vote_added_puzhash)
          )
         )
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
-            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote))
-            (x)
+            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change))
+            (x "bap")
           )
-          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_no_vote))
+          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change))
         )
       )
-      (if (all seen_vote seen_no_vote)  ; check all value is accounted for
+      (if (all seen_vote seen_change)  ; check all value is accounted for
         ()
-        (x)
+        (x "bop")
       )
     )
   )
@@ -91,7 +95,7 @@
   )
     (if active_votes
       (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
-        (x)
+        (x "flint")
         (check_not_previously_voted
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
@@ -164,7 +168,24 @@
     )
   )
 
-  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH active_votes innerpuzhash)
+  ; PROPOSAL_MOD_HASH
+  ; SINGLETON_MOD_HASH
+  ; SINGLETON_LAUNCHER_PUZHASH
+  ; LOCKUP_MOD_HASH
+  ; CAT_MOD_HASH
+  ; CAT_TAIL_HASH
+  ; ACTIVE_VOTES  ; "active votes" list
+  ; INNERPUZ
+  (defun calculate_lockup_puzzlehash (
+    PROPOSAL_MOD_HASH
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_PUZHASH
+    LOCKUP_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL_HASH
+    active_votes
+    innerpuzhash
+  )
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
                                      innerpuzhash
                                      (sha256tree active_votes)
@@ -237,7 +258,7 @@
           (c (f ACTIVE_VOTES) unused_votes)
         )
       )
-      (x)  ; proposal ID not found, invalid spend
+      (x "dip")  ; proposal ID not found, invalid spend
     )
   )
 
@@ -309,7 +330,7 @@
         ()
       )
       (if new_proposal_vote_id_or_removal_id  ; this forces the new_proposal_vote_id to be 0 if you're actually exiting, allows for tricks a layer up
-        (x)  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
+        (x "grip")  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
         (a INNERPUZ inner_solution)
       )
     )

@@ -260,15 +260,25 @@ class DAOCATWallet:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
             # my_amount
-            # new_proposal_vote_id_or_removal_id
+            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
             # proposal_curry_vals
             # vote_info
             # vote_amount
             # my_puzhash
+            # new_innerpuzhash  ; only include this if we're changing owners
             coin = lci.coin
 
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
+            # add_proposal_to_active_list also verifies that the lci.inner_puzzle is accurate
+            breakpoint()
+            # We must create either: one coin with the new puzzle and all our value
+            # OR
+            # a coin with the new puzzle and part of our amount AND a coin with our current puzzle and the change
+
+            # We must also create a puzzle announcement which announces the following:
+            # message = (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
+            message = Program.to([proposal_id, amount, is_yes_vote, coin.name()]).get_tree_hash()
             # We also collect 4 pieces of data for the DAOWallet in order to spend the Proposal properly
 
             # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
@@ -283,7 +293,7 @@ class DAOCATWallet:
             voting_coin_id_list = []
             previous_votes_list = []
             lockup_innerpuz_list = []
-            if running_sum + coin.amount < amount:
+            if running_sum + coin.amount <= amount:
                 vote_amount = coin.amount
                 running_sum = running_sum + coin.amount
                 # CREATE_COIN new_puzzle coin.amount
@@ -297,10 +307,10 @@ class DAOCATWallet:
                         }
                     )
                 ]
-                puzzle_announcements = set(
-                    Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
-                )
-                inner_solution = await self.standard_wallet.make_solution(
+                puzzle_announcements = [
+                    message
+                ]
+                inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
             else:
@@ -316,17 +326,20 @@ class DAOCATWallet:
                             "memos": [new_innerpuzzle.get_tree_hash()],
                         }
                     ),
-                    AmountWithPuzzlehash(
-                        {
-                            "puzzlehash": lci.inner_puzzle.get_tree_hash(),
-                            "amount": uint64(change),
-                            "memos": [lci.inner_puzzle.get_tree_hash()],
-                        }
-                    ),
                 ]
-                puzzle_announcements = set(
-                    Program.to([proposal_id, vote_amount, vote_info, coin.name()]).get_tree_hash()
-                )
+                if change > 0:
+                    primaries.append(
+                        AmountWithPuzzlehash(
+                            {
+                                "puzzlehash": lci.inner_puzzle.get_tree_hash(),
+                                "amount": uint64(change),
+                                "memos": [lci.inner_puzzle.get_tree_hash()],
+                            }
+                        )
+                    )
+                puzzle_announcements = [
+                    message
+                ]
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
@@ -336,6 +349,15 @@ class DAOCATWallet:
             voting_coin_id_list.append(coin.name())
             previous_votes_list.append(get_active_votes_from_lockup_puzzle(lci.inner_puzzle))
             lockup_innerpuz_list.append(get_innerpuz_from_lockup_puzzle(lci.inner_puzzle))
+            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+            # inner_solution
+            # my_amount
+            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
+            # proposal_curry_vals
+            # vote_info
+            # vote_amount
+            # my_puzhash
+            # new_innerpuzhash  ; only include this if we're changing owners
             solution = Program.to(
                 [
                     coin.name(),
@@ -346,8 +368,10 @@ class DAOCATWallet:
                     vote_info,
                     vote_amount,
                     coin.puzzle_hash,
+                    0,
                 ]
             )
+            # breakpoint()
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(
@@ -361,6 +385,7 @@ class DAOCATWallet:
                 limitations_program_reveal=limitations_program_reveal,
             )
             spendable_cat_list.append(new_spendable_cat)
+            running_sum += coin.amount
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)

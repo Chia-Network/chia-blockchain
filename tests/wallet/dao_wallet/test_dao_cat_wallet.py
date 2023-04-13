@@ -188,6 +188,6 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
     await time_out_assert(20, dao_cat_wallet.get_votable_balance, 55)
     await time_out_assert(20, dao_cat_wallet.get_votable_balance, 35, include_free_cats=False)
 
-    proposed_puzzle_hash = dao_wallet.generate_simple_proposal_innerpuz(ph, 10)
-    tx = await dao_wallet.generate_new_proposal(proposed_puzzle_hash, 35)
+    proposed_puzzle = dao_wallet.generate_simple_proposal_innerpuz(ph, 10)
+    tx = await dao_wallet.generate_new_proposal(proposed_puzzle, 35)
     assert tx
