@@ -7,11 +7,11 @@ instance-1:
 
   store_ids:
     - id: "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3"
-      bucket: "chia-datalayer-test-bucket-2"
-      urls: ["s3://hello", "s3://goodbye"]
+      upload_bucket: "chia-datalayer-test-bucket-2"
+      download_urls: ["s3://hello", "s3://goodbye"]
     - id: "a14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47"
-      bucket:
-      urls: ["s3://hello", "s3://goodbye"]
+      upload_bucket:
+      download_urls: ["s3://hello", "s3://goodbye"]
 
 instance-2:
   port: 8999
@@ -22,8 +22,8 @@ instance-2:
 
   store_ids:
     - id: "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3"
-      bucket: "chia-datalayer-test-bucket-1"
-      urls: []
+      upload_bucket: "chia-datalayer-test-bucket-1"
+      download_urls: []
     - id: "a14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47"
-      bucket: "chia-datalayer-test-bucket-1"
-      urls: []
+      upload_bucket: "chia-datalayer-test-bucket-1"
+      download_urls: []

@@ -28,10 +28,10 @@ class StoreId:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> StoreId:
-        return StoreId(bytes32.from_hexstr(d["id"]), d.get("bucket", None), d.get("urls", set()))
+        return StoreId(bytes32.from_hexstr(d["id"]), d.get("upload_bucket", None), d.get("download_urls", set()))
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"id": self.id.hex(), "bucket": self.bucket, "urls": self.urls}
+        return {"id": self.id.hex(), "upload_bucket": self.bucket, "download_urls": self.urls}
 
 
 class S3Plugin:
