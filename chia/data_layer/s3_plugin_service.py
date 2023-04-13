@@ -152,12 +152,19 @@ class S3Plugin:
 
 
 def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
-    region = config["aws_credentials"]["region"]
-    aws_access_key_id = config["aws_credentials"]["access_key_id"]
-    aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+    try:
+        region = config["aws_credentials"]["region"]
+        aws_access_key_id = config["aws_credentials"]["access_key_id"]
+        aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+    except KeyError as e:
+        sys.exit(
+            "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
+            f"Missing config key: {e}"
+        )
     store_ids = []
-    for store in config["store_ids"]:
+    for store in config.get("store_ids", []):
         store_ids.append(StoreId.from_dict(store))
+
     s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, instance_name)
     app = web.Application()
     app.add_routes([web.post("/handle_upload", s3_client.handle_upload)])
@@ -175,11 +182,22 @@ def load_config(instance: str) -> Any:
 
 def run_server() -> None:
     instance_name = sys.argv[1]
+    try:
+        config = load_config(instance_name)
+    except KeyError:
+        sys.exit(f"Config for instance {instance_name} not found.")
+
+    if not config:
+        sys.exit(f"Config for instance {instance_name} is empty.")
+
+    try:
+        port = config["port"]
+    except KeyError:
+        sys.exit("Missing port in config file.")
+
     print(f"run instance {instance_name}")
-    config = load_config(instance_name)
-    port = config["port"]
     web.run_app(make_app(config, instance_name), port=port)
 
 
-# run this
-run_server()
+if __name__ == "__main__":
+    run_server()
