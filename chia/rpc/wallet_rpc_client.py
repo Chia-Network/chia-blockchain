@@ -16,7 +16,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletType, CoinType
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -225,10 +225,10 @@ class WalletRpcClient(RpcClient):
 
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
-    async def get_clawback_coins(self, wallet_id: int, start: int = 0, end: int = 50, reverse: bool = False) -> Dict:
+    async def get_coins_by_type(self, wallet_id: int, coin_type: CoinType, start: int = 0, end: int = 50, reverse: bool = False) -> Dict:
         response = await self.fetch(
-            "get_clawback_coins",
-            {"wallet_id": wallet_id, "start": start, "end": end, "reverse": reverse},
+            "get_coins_by_type",
+            {"wallet_id": wallet_id, "start": start, "end": end, "coin_type": coin_type, "reverse": reverse},
         )
         return response
 
@@ -239,7 +239,7 @@ class WalletRpcClient(RpcClient):
     ) -> Dict:
         response = await self.fetch(
             "spend_clawback_coins",
-            {"merkle_coin_ids": merkle_coin_ids, "fee": fee},
+            {"coin_ids": merkle_coin_ids, "fee": fee},
         )
         return response
 
