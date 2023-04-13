@@ -36,6 +36,7 @@ from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.streamable import ConversionError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -1506,11 +1507,18 @@ async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert rpc_server is not None
     api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
     req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
+    try:
+        res = await api.set_auto_claim(req)
+    except ConversionError:
+        pass
+    else:
+        assert False
+    req = {"enabled": False, "batch_size": 0, "min_amount": 100}
     res = await api.set_auto_claim(req)
-    assert not res["auto_claim"]
-    assert res["auto_claim_tx_fee"] == 0
-    assert res["auto_claim_min_amount"] == 100
-    assert res["auto_claim_coin_size"] == 50
+    assert not res["enabled"]
+    assert res["tx_fee"] == 0
+    assert res["min_amount"] == 100
+    assert res["batch_size"] == 50
 
 
 @pytest.mark.asyncio
