@@ -195,8 +195,7 @@ def main() -> None:
 
 @main.command()
 @click.option("--use-cache/--no-cache", default=True, show_default=True, envvar="USE_CACHE")
-@click.option("--fix-hashfile-trailing-whitespace", default=True, show_default=True)
-def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
+def check(use_cache: bool) -> int:
     used_excludes = set()
     overall_fail = False
 
@@ -343,10 +342,6 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with cache_path.open(mode="w") as file:
             dump_cache(cache=cache, file=file)
-
-    if fix_hashfile_trailing_whitespace:
-        new_file_content = json.dumps(HASHES, indent=4, sort_keys=True) + "\n"
-        hashes_path.write_bytes(str.encode(new_file_content))
 
     sys.exit(1 if overall_fail else 0)
 
