@@ -35,7 +35,7 @@ hex_suffix = ".clsp.hex"
 all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "clvm": clvm_suffix}
 # TODO: these could be cli options
 top_levels = {"chia"}
-hashes_path = pathlib.Path("chia/wallet/puzzles/deployed_puzzle_hashes.json")
+hashes_path = root.joinpath("chia/wallet/puzzles/deployed_puzzle_hashes.json")
 
 
 class ManageClvmError(Exception):
@@ -258,9 +258,9 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
     print()
     print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
     for stem_path in sorted(found_stems["clsp"]):
-        clvm_path = stem_path.with_name(stem_path.name + clsp_suffix)
-        if clvm_path.name in excludes:
-            used_excludes.add(clvm_path.name)
+        clsp_path = stem_path.with_name(stem_path.name + clsp_suffix)
+        if clsp_path.name in excludes:
+            used_excludes.add(clsp_path.name)
             continue
 
         file_fail = False
@@ -268,7 +268,7 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
 
         cache_key = str(stem_path)
         try:
-            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, hash_dict=HASHES)
+            reference_paths = ClvmPaths.from_clvm(clvm=clsp_path, hash_dict=HASHES)
             if reference_paths.missing_files != []:
                 missing_files.extend(reference_paths.missing_files)
                 continue
@@ -282,7 +282,7 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
             if not cache_hit:
                 with tempfile.TemporaryDirectory() as temporary_directory:
                     generated_paths = ClvmPaths.from_clvm(
-                        clvm=pathlib.Path(temporary_directory).joinpath(f"{reference_paths.clvm.name}"),
+                        clvm=pathlib.Path(temporary_directory).joinpath(reference_paths.clvm.name),
                         hash_dict=HASHES,
                     )
 
@@ -306,11 +306,11 @@ def check(use_cache: bool, fix_hashfile_trailing_whitespace: bool) -> int:
             error = traceback.format_exc()
 
         if file_fail:
-            print(f"FAIL    : {clvm_path}")
+            print(f"FAIL    : {clsp_path}")
             if error is not None:
                 print(error)
         else:
-            print(f"    pass: {clvm_path}")
+            print(f"    pass: {clsp_path}")
 
         if file_fail:
             overall_fail = True
@@ -363,15 +363,15 @@ def build() -> int:
 
     print(f"Building all existing {clsp_suffix} files to {hex_suffix}:")
     for stem_path in sorted(found_stems["clsp"]):
-        clvm_path = stem_path.with_name(stem_path.name + clsp_suffix)
-        if clvm_path.name in excludes:
+        clsp_path = stem_path.with_name(stem_path.name + clsp_suffix)
+        if clsp_path.name in excludes:
             continue
 
         file_fail = False
         error = None
 
         try:
-            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path, hash_dict=HASHES)
+            reference_paths = ClvmPaths.from_clvm(clvm=clsp_path, hash_dict=HASHES)
 
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generated_paths = ClvmPaths.from_clvm(
@@ -399,11 +399,11 @@ def build() -> int:
             error = traceback.format_exc()
 
         if file_fail:
-            print(f"FAIL     : {clvm_path}")
+            print(f"FAIL     : {clsp_path}")
             if error is not None:
                 print(error)
         else:
-            print(f"    built: {clvm_path}")
+            print(f"    built: {clsp_path}")
 
         if file_fail:
             overall_fail = True
