@@ -106,10 +106,11 @@ def construct_cr_layer(
 
 def match_cr_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[List[bytes32], Program, Program]]:
     if uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
+        extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
         return (
-            [bytes32(provider.as_python()) for provider in uncurried_puzzle.args.at("rrf").as_iter()],
-            uncurried_puzzle.args.at("rrrf"),
-            uncurried_puzzle.args.at("rrrrf"),
+            [bytes32(provider.as_python()) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
+            extra_uncurried_puzzle.args.at("rrf"),
+            uncurried_puzzle.args.at("rf"),
         )
     else:
         return None
@@ -283,7 +284,7 @@ class CRCAT:
 
     @classmethod
     def get_current_from_coin_spend(cls: Type[_T_CRCAT], spend: CoinSpend) -> CRCAT:
-        uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
+        uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal.to_program())
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
         return CRCAT(
@@ -569,7 +570,7 @@ class CRCATSpend:
             inner_puzzle,
             inner_solution,
             CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
-            spend.solution.at("f").at("rrrrf") == Program.to(None),
+            spend.solution.to_program().at("f").at("rrrrf") == Program.to(None),
             list(inner_conditions.as_iter()),
         )
 

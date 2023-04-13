@@ -771,7 +771,9 @@ class TradeManager:
         )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(solver=valid_spend_solver)
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(
+            solver=Solver({**valid_spend_solver.info, **solver.info})
+        )
         await self.maybe_create_wallets_for_offer(complete_offer)
 
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
