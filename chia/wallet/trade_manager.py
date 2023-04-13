@@ -30,6 +30,7 @@ from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -765,10 +766,12 @@ class TradeManager:
 
         success, take_offer, error = result
 
-        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
+        complete_offer, valid_spend_solver = await self.check_for_final_modifications(
+            Offer.aggregate([offer, take_offer]), solver
+        )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(solver=valid_spend_solver)
         await self.maybe_create_wallets_for_offer(complete_offer)
 
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
@@ -884,7 +887,7 @@ class TradeManager:
         offered, requested, infos = offer.summary()
         return {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos}
 
-    async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Offer:
+    async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Tuple[Offer, Solver]:
         for puzzle_info in offer.driver_dict.values():
             if (
                 puzzle_info.check_type(
@@ -895,6 +898,19 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
-                return await DataLayerWallet.finish_graftroot_solutions(offer, solver)
+                return (await DataLayerWallet.finish_graftroot_solutions(offer, solver), Solver({}))
+            elif puzzle_info.check_type(
+                [
+                    AssetType.CAT.value,
+                    AssetType.CR.value,
+                ]
+            ):
+                # get VC wallet
+                for _, wallet in self.wallet_state_manager.wallets.items():
+                    if WalletType(wallet.type()) == WalletType.VC:
+                        assert isinstance(wallet, VCWallet)
+                        return await wallet.add_vc_authorization(offer, solver)
+                else:
+                    raise ValueError("No VCs to approve CR-CATs with")
 
-        return offer
+        return offer, Solver({})

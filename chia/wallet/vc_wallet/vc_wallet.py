@@ -3,10 +3,11 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
 from chia_rs.chia_rs import CoinState
+from clvm.casts import int_to_bytes
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -15,14 +16,19 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, PENDING_VC_ANNOUNCEMENT, CRCATSpend
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
 from chia.wallet.wallet import Wallet
@@ -193,6 +199,8 @@ class VCWallet:
         vc_id: bytes32,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
+        coin_announcements: Optional[Set[bytes]] = None,
+        puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         new_proof_hash: Optional[bytes32] = None,  # Requires that this key posesses the DID to update the specified VC
@@ -234,8 +242,11 @@ class VCWallet:
             chia_tx = await self.create_tandem_xch_tx(
                 fee, Announcement(vc_record.vc.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
+            if coin_announcements is None:
+                coin_announcements = set((announcement_to_make,))
+            else:
+                coin_announcements.add(announcement_to_make)
         else:
-            announcement_to_make = None
             chia_tx = None
         if new_proof_hash is not None:
             if provider_inner_puzhash is None:
@@ -245,7 +256,8 @@ class VCWallet:
             magic_condition = vc_record.vc.standard_magic_condition()
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
-            coin_announcements=None if announcement_to_make is None else set((announcement_to_make,)),
+            coin_announcements=coin_announcements,
+            puzzle_announcements=puzzle_announcements,
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
             magic_conditions=[magic_condition],
@@ -397,6 +409,98 @@ class VCWallet:
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
+
+    async def add_vc_authorization(self, offer: Offer, solver: Solver) -> Tuple[Offer, Solver]:
+        # Gather all of the CRCATs being spent and the CRCATs that each creates
+        crcat_spends: List[CRCATSpend] = []
+        for spend in offer.to_valid_spend().coin_spends:
+            if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program())):
+                crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
+                if not crcat_spend.provider_specified:
+                    crcat_spends.append(crcat_spend)
+
+        # Figure out what VC announcements are needed
+        announcements_to_make: Dict[bytes32, List[bytes32]] = {}
+        announcements_to_assert: Dict[bytes32, List[Announcement]] = {}
+        vcs: Dict[bytes32, VerifiedCredential] = {}
+        coin_args: Dict[str, List[str]] = {}
+        for crcat_spend in crcat_spends:
+            # Check first whether we can approve...
+            available_vcs: List[VCRecord] = [
+                vc_rec
+                for vc_rec in await self.store.get_vc_records_by_providers(crcat_spend.crcat.authorized_providers)
+                if vc_rec.confirmed_at_height != 0
+            ]
+            if len(available_vcs) == 0:
+                raise ValueError(f"No VC available with provider in {crcat_spend.crcat.authorized_providers}")
+            vc: VerifiedCredential = available_vcs[0].vc
+            vc_to_use: bytes32 = vc.launcher_id
+            vcs[vc_to_use] = vc
+            # ...then whether or not we should
+            our_crcat: bool = (
+                await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                    crcat_spend.crcat.inner_puzzle_hash
+                )
+                is not None
+            )
+            outputs_ok: bool = True
+            for cc in [c for c in crcat_spend.inner_conditions if c.at("f") == 51]:
+                if not (
+                    (
+                        await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(bytes32(cc.at("rf").atom))
+                        is not None
+                    )
+                    or (
+                        cc.at("rrr") != Program.to(None)
+                        and bytes32(cc.at("rf").atom) == PENDING_VC_ANNOUNCEMENT.curry(cc).get_tree_hash()
+                    )
+                ):
+                    outputs_ok = False
+            if our_crcat or outputs_ok:
+                announcements_to_make.setdefault(vc_to_use, [])
+                announcements_to_assert.setdefault(vc_to_use, [])
+                announcements_to_make[vc_to_use].append(std_hash(crcat_spend.crcat.coin.name() + b"\xca"))
+                announcements_to_assert[vc_to_use].extend(
+                    [
+                        Announcement(crc.coin.name(), std_hash(crc.inner_puzzle_hash + int_to_bytes(crc.coin.amount)))
+                        for crc in crcat_spend.children
+                    ]
+                )
+
+                coin_args[crcat_spend.crcat.coin.name().hex()] = [
+                    vc.proof_provider.hex(),
+                    vc.launcher_id.hex(),
+                    vc.inner_puzzle_hash.hex(),
+                ]
+            else:
+                raise ValueError("Wallet cannot verify all spends in specified offer")
+
+        vc_spends: List[SpendBundle] = []
+        for launcher_id, vc in vcs.items():
+            vc_spends.append(
+                SpendBundle.aggregate(
+                    [
+                        tx.spend_bundle
+                        for tx in (
+                            await self.generate_signed_transaction(
+                                launcher_id,
+                                puzzle_announcements=set(announcements_to_make[launcher_id]),
+                                coin_announcements_to_consume=set(announcements_to_assert[launcher_id]),
+                            )
+                        )
+                        if tx.spend_bundle is not None
+                    ]
+                )
+            )
+
+        return Offer.from_spend_bundle(
+            SpendBundle.aggregate(
+                [
+                    offer.to_spend_bundle(),
+                    *vc_spends,
+                ]
+            )
+        ), Solver({"vc_authorizations": coin_args})
 
     async def select_coins(
         self,

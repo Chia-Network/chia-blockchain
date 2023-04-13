@@ -41,6 +41,11 @@ PROOF_FLAGS_CHECKER: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
     include_standard_libraries=True,
 )
+PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
+    "conditions_w_fee_announce.clsp",
+    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
+    include_standard_libraries=True,
+)
 
 
 # Basic drivers
@@ -268,10 +273,37 @@ class CRCAT:
 
         return True, ""
 
+    @staticmethod
+    def get_inner_puzzle(puzzle_reveal: UncurriedPuzzle) -> Program:
+        return uncurry_puzzle(puzzle_reveal.args.at("rrf")).args.at("rf")
+
+    @staticmethod
+    def get_inner_solution(solution: Program) -> Program:
+        return solution.at("f").at("rrrrrrf")
+
     @classmethod
-    def get_next_from_coin_spend(cls: Type[_T_CRCAT], parent_spend: CoinSpend) -> List[CRCAT]:
+    def get_current_from_coin_spend(cls: Type[_T_CRCAT], spend: CoinSpend) -> CRCAT:
+        uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
+        first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
+        second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
+        return CRCAT(
+            spend.coin,
+            bytes32(uncurried_puzzle.args.at("rf").atom),
+            spend.solution.to_program().at("rf"),
+            [bytes32(ap.atom) for ap in second_uncurried_cr_layer.args.at("rf").as_iter()],
+            second_uncurried_cr_layer.args.at("rrf"),
+            first_uncurried_cr_layer.args.at("f").get_tree_hash(),
+        )
+
+    @classmethod
+    def get_next_from_coin_spend(
+        cls: Type[_T_CRCAT],
+        parent_spend: CoinSpend,
+        conditions: Optional[Program] = None,  # For optimization purposes, the conditions may already have been run
+    ) -> List[CRCAT]:
         """
         Given a coin spend, this will return the next CR-CATs that were created as an output of that spend.
+        Inner puzzle output conditions may also be supplied as an optimization.
 
         This is the main method to use when syncing. It can also sync from a CAT spend that was not a CR-CAT so long
         as the spend output a remark condition that was (REMARK authorized_providers proofs_checker)
@@ -287,7 +319,8 @@ class CRCAT:
             # If the previous spend is not a CR-CAT:
             # we look for a remark condition that tells us the authorized_providers and proofs_checker
             inner_solution: Program = solution.at("f")
-            conditions: Program = potential_cr_layer.run(inner_solution)
+            if conditions is None:
+                conditions = potential_cr_layer.run(inner_solution)
             for condition in conditions.as_iter():
                 if condition.at("f") == Program.to(1):
                     new_inner_puzzle_hash = bytes32(condition.at("rf").atom)
@@ -303,7 +336,8 @@ class CRCAT:
             _, authorized_providers_as_prog, proofs_checker = cr_first_curry.uncurry()[1].as_iter()
             _, inner_puzzle = self_hash_and_innerpuz.as_iter()
             inner_solution = solution.at("f").at("rrrrrrf")
-            conditions = inner_puzzle.run(inner_solution)
+            if conditions is None:
+                conditions = inner_puzzle.run(inner_solution)
             inner_puzzle_hash: bytes32 = inner_puzzle.get_tree_hash()
             lineage_inner_puzhash = construct_cr_layer(
                 authorized_providers_as_prog,
@@ -514,6 +548,30 @@ class CRCAT:
         The announcement a VC must make to this CAT in order to spend it
         """
         return std_hash(self.coin.name() + b"\xca")
+
+
+@dataclass(frozen=True)
+class CRCATSpend:
+    crcat: CRCAT
+    inner_puzzle: Program
+    inner_solution: Program
+    children: List[CRCAT]
+    provider_specified: bool
+    inner_conditions: List[Program]
+
+    @classmethod
+    def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:
+        inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
+        inner_solution: Program = CRCAT.get_inner_solution(spend.solution.to_program())
+        inner_conditions: Program = inner_puzzle.run(inner_solution)
+        return cls(
+            CRCAT.get_current_from_coin_spend(spend),
+            inner_puzzle,
+            inner_solution,
+            CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
+            spend.solution.at("f").at("rrrrf") == Program.to(None),
+            list(inner_conditions.as_iter()),
+        )
 
 
 @dataclass(frozen=True)

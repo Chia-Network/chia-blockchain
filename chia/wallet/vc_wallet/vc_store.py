@@ -120,6 +120,7 @@ class VCStore:
             )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_id_index ON vc_records(coin_id)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS proof_provider_index ON vc_records(proof_provider)")
 
             await conn.execute("CREATE TABLE IF NOT EXISTS vc_proofs(root text PRIMARY KEY, proofs blob)")
 
@@ -165,6 +166,20 @@ class VCStore:
         if row is not None:
             return _row_to_vc_record(row)
         return None
+
+    async def get_vc_records_by_providers(self, provider_ids: List[bytes32]) -> List[VCRecord]:
+        """
+        Checks DB for VCs with a proof_provider in a specified list and returns them.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            providers_param: str = ",".join(["?"] * len(provider_ids))
+            cursor = await conn.execute(
+                f"SELECT * from vc_records WHERE proof_provider IN {providers_param}", provider_ids
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+        return [_row_to_vc_record(row) for row in rows]
 
     async def get_unconfirmed_vcs(self) -> List[VCRecord]:
         """

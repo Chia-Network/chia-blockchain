@@ -40,6 +40,7 @@ class AssetType(Enum):
     METADATA = "metadata"
     OWNERSHIP = "ownership"
     ROYALTY_TRANSFER_PROGRAM = "royalty transfer program"
+    CR = "credential restricted"
 
 
 def match_puzzle(puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
