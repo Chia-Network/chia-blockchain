@@ -323,10 +323,8 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert cat_wallet_1.cat_info.limitations_program_hash == cat_id
 
     xch_bal_1 = await dao_wallet_1.get_balance_by_asset_type()
-    if trusted:
-        assert xch_bal_1 == xch_funds
+    assert xch_bal_1 == xch_funds
 
     # Check that the funding spend is found
     cat_bal = await dao_wallet_1.get_balance_by_asset_type(cat_id)
-    if trusted:
-        assert cat_bal == cat_funds
+    assert cat_bal == cat_funds

@@ -13,9 +13,10 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
 
 import chia.wallet.singleton
+from chia.full_node.full_node_api import FullNodeAPI
 
 # from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import CoinState
+from chia.protocols.wallet_protocol import CoinState, RequestBlockHeader, RespondBlockHeader
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -569,6 +570,14 @@ class DAOWallet(WalletProtocol):
 
         # get existing xch funds for treasury
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
+
+        # Resync the wallet from when the treasury was created to get the existing funds
+        # TODO: Maybe split this out as an option for users since it may be slow?
+        if not wallet_node.is_trusted(peer):
+            request = RequestBlockHeader(children_state.created_height)
+            response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
+            await wallet_node.sync_from_untrusted_close_to_peak(response.header_block, peer)
+
         return
 
     async def create_tandem_xch_tx(
