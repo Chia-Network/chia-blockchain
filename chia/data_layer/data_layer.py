@@ -396,7 +396,7 @@ class DataLayer:
                     timeout,
                     self.log,
                     proxy_url,
-                    await self.get_downloader(url),
+                    await self.get_downloader(tree_id, url),
                 )
                 if success:
                     self.log.info(
@@ -412,14 +412,14 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
-    async def get_downloader(self, url: str) -> Optional[str]:
-        request_json = {"url": url}
+    async def get_downloader(self, tree_id: bytes32, url: str) -> Optional[str]:
+        request_json = {"id": tree_id.hex(), "url": url}
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(d + "/check_url", json=request_json) as response:
+                    async with session.post(d + "/handle_download", json=request_json) as response:
                         res_json = await response.json()
-                        if res_json["handles_url"]:
+                        if res_json["handles_download"]:
                             return d
                 except Exception as e:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
@@ -857,10 +857,10 @@ class DataLayer:
             async with aiohttp.ClientSession() as session:
                 try:
                     async with session.post(
-                        "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
+                        "http://" + uploader + "/handle_upload", json={"id": tree_id.hex()}
                     ) as response:
                         res_json = await response.json()
-                        if res_json["handles_store"]:
+                        if res_json["handles_upload"]:
                             uploaders.append(uploader)
                 except Exception as e:
                     self.log.error(f"get_uploader could not get response {e}")

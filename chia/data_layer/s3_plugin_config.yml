@@ -5,12 +5,13 @@ instance-1:
     secret_access_key: "xxx"
     region: "xxx"
 
-  store_ids: ["xxx"]
-
-  urls: [ "xxx"]
-
-  buckets:
-    chia-datalayer-test-bucket-2: ["xxx"]
+  store_ids:
+    - id: "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3"
+      bucket: "chia-datalayer-test-bucket-2"
+      urls: ["s3://hello", "s3://goodbye"]
+    - id: "a14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47"
+      bucket:
+      urls: ["s3://hello", "s3://goodbye"]
 
 instance-2:
   port: 8999
@@ -19,9 +20,10 @@ instance-2:
     secret_access_key: "xxx"
     region: "xxx"
 
-  store_ids: ["xxx", "xxx" ]
-
-  urls: [ "xxx"]
-
-  buckets:
-    chia-datalayer-test-bucket-1: [ "xxx", "xxx" ]
+  store_ids:
+    - id: "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3"
+      bucket: "chia-datalayer-test-bucket-1"
+      urls: []
+    - id: "a14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47"
+      bucket: "chia-datalayer-test-bucket-1"
+      urls: []
