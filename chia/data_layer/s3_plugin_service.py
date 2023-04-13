@@ -144,11 +144,19 @@ class S3Plugin:
 
     def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
-        store_ids = []
-        for store in config["store_ids"]:
-            store_ids.append(StoreId.from_dict(store))
+        self.store_ids = read_store_ids_from_config(config)
 
-        self.store_ids = store_ids
+
+def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreId]:
+    store_ids = []
+    for store in config.get("store_ids", []):
+        try:
+            store_ids.append(StoreId.from_dict(store))
+        except Exception as e:
+            print("Ignoring Invalid store id '%s': %s" % (store.get("id", ""), e))
+            pass
+
+    return store_ids
 
 
 def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
@@ -161,9 +169,7 @@ def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
             "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
             f"Missing config key: {e}"
         )
-    store_ids = []
-    for store in config.get("store_ids", []):
-        store_ids.append(StoreId.from_dict(store))
+    store_ids = read_store_ids_from_config(config)
 
     s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, instance_name)
     app = web.Application()
