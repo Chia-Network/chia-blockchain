@@ -130,7 +130,7 @@ class WalletRpcApi:
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
             "/spend_clawback_coins": self.spend_clawback_coins,
-            "/get_clawback_coins": self.get_coins_by_type,
+            "/get_coins_by_type": self.get_coins_by_type,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
