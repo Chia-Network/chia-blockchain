@@ -71,7 +71,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
-from chia.wallet.puzzles.clawback.metadata import CLAWBACK_VERSION, ClawbackMetadata
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -672,37 +672,43 @@ class WalletStateManager:
 
         return None
 
+    def deserialize_coin_metadata(self, metadata: bytes, coin_type: CoinType, to_dict: bool = False) -> Any:
+        if coin_type == CoinType.CLAWBACK:
+            return ClawbackMetadata.from_bytes(metadata).to_json_dict() if to_dict else ClawbackMetadata.from_bytes(metadata)
+        else:
+            return metadata
+
     async def auto_claim_coins(self) -> None:
-        # Get unspent merkle coin
+        # Get unspent clawback coin
         unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK)
         current_timestamp = self.blockchain.get_latest_timestamp()
-        clawback_coins: List[Tuple[Coin, ClawbackMetadata]] = []
-        tx_fee = uint64(self.config.get("auto_claim_tx_fee", 0))
-        min_amount = uint64(self.config.get("auto_claim_min_amount", 0))
+        clawback_coins: Dict[Coin, ClawbackMetadata] = {}
+        tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
+        min_amount = uint64(self.config.get("auto_claim", {}).get("min_amount", 0))
         for coin in unspent_coins:
             if coin.metadata is None:
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
-            metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
+            metadata = self.deserialize_coin_metadata(coin.metadata.blob, CoinType.CLAWBACK)
             if coin.coin.amount >= min_amount and metadata.is_recipient:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata.time_lock:
-                    clawback_coins.append((coin.coin, metadata))
-                    if len(clawback_coins) >= self.config.get("auto_claim_coin_size", 50):
+                    clawback_coins[coin.coin] = metadata
+                    if len(clawback_coins) >= self.config.get("auto_claim", {}).get("btach_size", 50):
                         await self.claim_clawback_coins(clawback_coins, tx_fee)
-                        clawback_coins = []
+                        clawback_coins = {}
         if len(clawback_coins) > 0:
             await self.claim_clawback_coins(clawback_coins, tx_fee)
 
-    async def claim_clawback_coins(
-        self, merkle_coins: List[Tuple[Coin, ClawbackMetadata]], fee: uint64
-    ) -> List[bytes32]:
-        assert len(merkle_coins) > 0
+    async def claim_clawback_coins(self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64) -> List[bytes32]:
+        assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
-        message_list: List[bytes32] = [c[0].name() for c in merkle_coins]
+        message_list: List[bytes32] = []
+        for coin in clawback_coins.keys():
+            message_list.append(coin.name())
         message: bytes32 = std_hash(b"".join(message_list))
-        clawback_coins = []
-        for coin, metadata in merkle_coins:
+        spent_coins = []
+        for coin, metadata in clawback_coins.items():
             recipient_puzhash = metadata.recipient_puzzle_hash
             sender_puzhash = metadata.sender_puzzle_hash
             if metadata.is_recipient:
@@ -724,7 +730,7 @@ class WalletStateManager:
                 coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
             )
             coin_spends.append(generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution))
-            clawback_coins.append(coin.name())
+            spent_coins.append(coin.name())
         spend_bundle = await self.main_wallet.sign_transaction(coin_spends)
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
@@ -739,7 +745,7 @@ class WalletStateManager:
         for coin_spend in coin_spends:
             # This will make sure we don't double spend
             await self.coin_store.set_spent(coin_spend.coin.name(), uint32(0))
-        return clawback_coins
+        return spent_coins
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
@@ -1095,7 +1101,7 @@ class WalletStateManager:
                 WalletType.STANDARD_WALLET,
                 1,
                 CoinType.CLAWBACK,
-                VersionedBlob(CLAWBACK_VERSION.V1.value, bytes(metadata)),
+                VersionedBlob(ClawbackVersion.V1.value, bytes(metadata)),
             )
             # Add merkle coin
             await self.coin_store.add_coin_record(coin_record)

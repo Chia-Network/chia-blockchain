@@ -202,7 +202,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        wallet_node_2.config["auto_claim_tx_fee"] = 100
+        wallet_node_2.config["auto_claim"]["tx_fee"] = 100
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
@@ -300,7 +300,7 @@ class TestWalletSimulator:
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         resp = await api_0.spend_clawback_coins(
-            dict({"merkle_coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
+            dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 1000})
         )
         json.dumps(resp)
         assert len(resp["spent_coins"]) == 1
@@ -343,7 +343,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        wallet_node_2.config["auto_claim"] = False
+        wallet_node_2.config["auto_claim"]["enabled"] = False
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -376,7 +376,7 @@ class TestWalletSimulator:
         await asyncio.sleep(20)
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         resp = await api_1.spend_clawback_coins(
-            dict({"merkle_coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
+            dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
         )
         json.dumps(resp)
         assert len(resp["spent_coins"]) == 1
@@ -419,7 +419,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        wallet_node_2.config["auto_claim"] = False
+        wallet_node_2.config["auto_claim"]["enabled"] = False
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
@@ -470,7 +470,7 @@ class TestWalletSimulator:
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         resp = await api_1.spend_clawback_coins(
-            dict({"merkle_coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
+            dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
         )
         json.dumps(resp)
         assert len(resp["spent_coins"]) == 1
@@ -556,7 +556,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        resp = await api_0.get_clawback_coins(dict({"wallet_id": 1}))
+        resp = await api_0.get_coins_by_type(dict({"wallet_id": 1, "coin_type": 1}))
         json.dumps(resp)
         assert len(resp["coins"]) == 1
         assert resp["coins"][0]["coin_id"] == merkle_coin.name().hex()

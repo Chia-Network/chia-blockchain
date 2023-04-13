@@ -10,6 +10,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 
 def compute_coin_hints(cs: CoinSpend) -> List[bytes32]:
     _, result_program = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
+
     h_list: List[bytes32] = []
 
     for condition_data in result_program.as_python():

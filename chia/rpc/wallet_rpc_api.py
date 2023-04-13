@@ -60,7 +60,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
+from chia.wallet.puzzles.clawback.metadata import ClawbackAutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import create_fullpuz
 from chia.wallet.trade_record import TradeRecord
@@ -130,7 +130,7 @@ class WalletRpcApi:
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
             "/spend_clawback_coins": self.spend_clawback_coins,
-            "/get_clawback_coins": self.get_clawback_coins,
+            "/get_clawback_coins": self.get_coins_by_type,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -571,12 +571,7 @@ class WalletRpcApi:
         :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
         :return:
         """
-        return self.service.set_auto_claim(
-            request.get("enabled", self.service.config.get("auto_claim", True)),
-            request.get("tx_fee", self.service.config.get("auto_claim_tx_fee", 0)),
-            request.get("min_amount", self.service.config.get("auto_claim_min_amount", 0)),
-            request.get("batch_size", self.service.config.get("auto_claim_coin_size", 50)),
-        )
+        return self.service.set_auto_claim(ClawbackAutoClaimSettings.from_json_dict(request))
 
     async def get_auto_claim(self, request) -> EndpointResult:
         """
@@ -585,10 +580,10 @@ class WalletRpcApi:
         :return:
         """
         return {
-            "auto_claim": self.service.wallet_state_manager.config.get("auto_claim", True),
-            "auto_claim_tx_fee": self.service.wallet_state_manager.config.get("auto_claim_tx_fee", 0),
-            "auto_claim_min_amount": self.service.wallet_state_manager.config.get("auto_claim_min_amount", 0),
-            "auto_claim_coin_size": self.service.wallet_state_manager.config.get("auto_claim_coin_size", 50),
+            "enabled": self.service.wallet_state_manager.config.get("auto_claim", {}).get("enabled", True),
+            "tx_fee": self.service.wallet_state_manager.config.get("auto_claim", {}).get("tx_fee", 0),
+            "min_amount": self.service.wallet_state_manager.config.get("auto_claim", {}).get("min_amount", 0),
+            "batch_size": self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50),
         }
 
     ##########################################################################################
@@ -1012,9 +1007,9 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
 
-    async def get_clawback_coins(self, request) -> EndpointResult:
+    async def get_coins_by_type(self, request) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
-
+        coin_type = CoinType(request["coin_type"])
         start = request.get("start", 0)
         end = request.get("end", 50)
         reverse = request.get("reverse", False)
@@ -1024,7 +1019,7 @@ class WalletRpcApi:
             start,
             end,
             reverse=reverse,
-            coin_type=CoinType.CLAWBACK,
+            coin_type=coin_type,
         )
         return {
             "coins": [
@@ -1034,7 +1029,9 @@ class WalletRpcApi:
                     "amount": coin.coin.amount,
                     "puzzle_hash": coin.coin.puzzle_hash.hex(),
                     "parent_coin": coin.coin.parent_coin_info.hex(),
-                    "metadata": ClawbackMetadata.from_bytes(coin.metadata.blob).to_json_dict()
+                    "metadata": self.service.wallet_state_manager.deserialize_coin_metadata(
+                        coin.metadata.blob, coin_type, True
+                    )
                     if coin.metadata is not None
                     else None,
                     "confirmed_height": coin.confirmed_block_height,
@@ -1046,41 +1043,37 @@ class WalletRpcApi:
         }
 
     async def spend_clawback_coins(self, request) -> EndpointResult:
-        if "merkle_coin_ids" not in request:
-            raise ValueError("Merkle coin IDs are required.")
-        coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["merkle_coin_ids"]]
+        if "coin_ids" not in request:
+            raise ValueError("Coin IDs are required.")
+        coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["coin_ids"]]
         tx_fee: uint64 = uint64(request.get("fee", 0))
         # Get inner puzzle
-        merkle_records: List[Optional[WalletCoinRecord]] = list(
-            (
-                await self.service.wallet_state_manager.coin_store.get_coin_records(coin_ids, include_spent_coins=False)
-            ).values()
+        coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+            coin_ids, include_spent_coins=False
         )
-        merkle_coins: List[Tuple[Coin, ClawbackMetadata]] = []
-        clawback_coins = []
-        for i in range(len(merkle_records)):
-            merkle_record = merkle_records[i]
-            if merkle_record is None:
-                log.warning(f"Cannot find merkle coin f{coin_ids[i].hex()}")
+
+        coins: Dict[Coin, ClawbackMetadata] = {}
+        batch_size = request.get(
+            "batch_size", self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
+        )
+        clawback_coins: List[bytes32] = []
+        for coin_id, coin_record in coin_records.items():
+            if coin_record.metadata is None:
+                log.warning(f"Skip merkle coin f{coin_id.hex()}, metadata cannot be None.")
                 continue
-            if merkle_record.metadata is None:
-                log.warning(f"Skip merkle coin f{coin_ids[i].hex()}, metadata cannot be None.")
+            metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
+            if coin_record.coin_type != CoinType.CLAWBACK:
+                log.warning(f"Coin {coin_id.hex()} is not a Clawback coin.")
                 continue
-            metadata = ClawbackMetadata.from_bytes(merkle_record.metadata.blob)
-            if merkle_record.coin_type != CoinType.CLAWBACK.value:
-                log.warning(f"Coin {coin_ids[i].hex()} is not a Clawback coin.")
-                continue
-            if merkle_record.wallet_type != WalletType.STANDARD_WALLET.value:
+            if coin_record.wallet_type != WalletType.STANDARD_WALLET:
                 log.warning("Only support standard XCH wallet.")
                 continue
-            merkle_coins.append((merkle_record.coin, metadata))
-            if len(merkle_coins) >= self.service.wallet_state_manager.config.get("auto_claim_coin_size", 50):
-                clawback_coins.extend(
-                    await self.service.wallet_state_manager.claim_clawback_coins(merkle_coins, tx_fee)
-                )
-                merkle_coins = []
-        if len(merkle_coins) > 0:
-            clawback_coins.extend(await self.service.wallet_state_manager.claim_clawback_coins(merkle_coins, tx_fee))
+            coins[coin_record.coin] = metadata
+            if len(coins) >= batch_size:
+                clawback_coins.extend(await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee))
+                coins = {}
+        if len(coins) > 0:
+            clawback_coins.extend((await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee)))
         return {
             "success": True,
             "spent_coins": [c.hex() for c in clawback_coins],

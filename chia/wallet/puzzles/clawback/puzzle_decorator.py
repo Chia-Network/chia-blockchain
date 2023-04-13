@@ -8,7 +8,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.util.misc import VersionedBlob
 from chia.wallet.puzzles.clawback.drivers import create_merkle_puzzle
-from chia.wallet.puzzles.clawback.metadata import CLAWBACK_VERSION, ClawbackMetadata
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
@@ -52,7 +52,7 @@ class ClawbackPuzzleDecorator:
                 [
                     ConditionOpcode.REMARK.value,
                     PuzzleDecoratorType.CLAWBACK.name,
-                    bytes(VersionedBlob(CLAWBACK_VERSION.V1.value, bytes(metadata))),
+                    bytes(VersionedBlob(ClawbackVersion.V1.value, bytes(metadata))),
                 ]
             ).as_python()
 
