@@ -29,7 +29,7 @@ class StoreConfig:
     @classmethod
     def unmarshal(cls, d: Dict[str, Any]) -> StoreConfig:
         upload_bucket = d.get("upload_bucket", None)
-        if len(upload_bucket) == 0:
+        if upload_bucket and len(upload_bucket) == 0:
             upload_bucket = None
 
         return StoreConfig(bytes32.from_hexstr(d["store_id"]), upload_bucket, d.get("download_urls", set()))
