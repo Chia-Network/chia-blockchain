@@ -856,9 +856,7 @@ class DataLayer:
         for uploader in self.uploaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(
-                        "http://" + uploader + "/handle_upload", json={"store_id": tree_id.hex()}
-                    ) as response:
+                    async with session.post(uploader + "/handle_upload", json={"store_id": tree_id.hex()}) as response:
                         res_json = await response.json()
                         if res_json["handle_upload"]:
                             uploaders.append(uploader)
