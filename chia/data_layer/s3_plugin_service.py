@@ -100,7 +100,7 @@ class S3Plugin:
                 return web.json_response({"uploaded": False})
         except Exception as e:
             print(f"failed handling request {request} {e}")
-            return web.json_response({"handles_url": False})
+            return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
 
     async def handle_download(self, request: web.Request) -> web.Response:
