@@ -1312,7 +1312,7 @@ class WalletRpcApi:
             is_hex = bool(is_hex)
         if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
             for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+                if wallet.type() == WalletType.DECENTRALIZED_ID:
                     assert isinstance(wallet, DIDWallet)
                     assert wallet.did_info.origin_coin is not None
                     if wallet.did_info.origin_coin.name() == entity_id:
@@ -1329,7 +1329,7 @@ class WalletRpcApi:
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.NFT.value:
+                if wallet.type() == WalletType.NFT:
                     assert isinstance(wallet, NFTWallet)
                     nft: Optional[NFTCoinInfo] = await wallet.get_nft(entity_id)
                     if nft is not None:
