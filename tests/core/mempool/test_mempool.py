@@ -2762,3 +2762,74 @@ def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
 
     for mi, expected_cost in zip(ordered_items, expected):
         assert mi.cost == expected_cost
+
+
+@pytest.mark.parametrize("height", [True, False])
+@pytest.mark.parametrize(
+    "items,expected,increase_fee",
+    [
+        # the max size is 100
+        # the max block size is 50
+        # which is also the max size for expiring transactions
+        # the increasing fee will order the transactions in the reverse
+        # insertion order
+        ([10, 11, 12, 13, 14], [14, 13, 12, 11], True),
+        # decreasing fee rate will make the last one fail to be inserted
+        ([10, 11, 12, 13, 14], [10, 11, 12, 13], False),
+        # the last is big enough to evict all previous ones
+        ([10, 11, 12, 13, 50], [50], True),
+        # the last one will not evict any earlier ones, because the fee rate is
+        # lower
+        ([10, 11, 12, 13, 50], [10, 11, 12, 13], False),
+    ],
+)
+def test_limit_expiring_transactions(height: bool, items: List[int], expected: List[int], increase_fee: bool) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(100)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(50)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    mempool.new_tx_block(uint32(10), uint64(100000))
+
+    # fill the mempool with regular transactions (without expiration)
+    fee_rate: float = 3.0
+    for i in range(1, 20):
+        mempool.add_to_pool(item_cost(i, fee_rate))
+        fee_rate -= 0.1
+
+    # now add the expiring transactions from the test case
+    fee_rate = 2.7
+    for cost in items:
+        fee = cost * fee_rate
+        amount = int(fee + 100)
+        coin = Coin(rand_hash(), rand_hash(), amount)
+        if height:
+            ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_height=15))
+        else:
+            ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_seconds=10400))
+        if increase_fee:
+            fee_rate += 0.1
+            assert ret is None
+        else:
+            fee_rate -= 0.1
+
+    ordered_costs = [
+        item.cost
+        for item in mempool.spends_by_feerate()
+        if item.assert_before_height is not None or item.assert_before_seconds is not None
+    ]
+
+    assert ordered_costs == expected
+
+    print("")
+    for item in mempool.spends_by_feerate():
+        if item.assert_before_seconds is not None or item.assert_before_height is not None:
+            ttl = "yes"
+        else:
+            ttl = "No"
+        print(f"- cost: {item.cost} TTL: {ttl}")
+
+    assert mempool.total_mempool_cost() > 90
