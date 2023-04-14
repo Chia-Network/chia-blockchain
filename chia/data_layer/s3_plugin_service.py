@@ -21,17 +21,21 @@ log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class StoreId:
+class StoreConfig:
     id: bytes32
     bucket: Optional[str]
     urls: Set[str]
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> StoreId:
-        return StoreId(bytes32.from_hexstr(d["id"]), d.get("upload_bucket", None), d.get("download_urls", set()))
+    def unmarshal(cls, d: Dict[str, Any]) -> StoreConfig:
+        upload_bucket = d.get("upload_bucket", None)
+        if len(upload_bucket) == 0:
+            upload_bucket = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {"id": self.id.hex(), "upload_bucket": self.bucket, "download_urls": self.urls}
+        return StoreConfig(bytes32.from_hexstr(d["store_id"]), upload_bucket, d.get("download_urls", set()))
+
+    def marshal(self) -> Dict[str, Any]:
+        return {"store_id": self.id.hex(), "upload_bucket": self.bucket, "download_urls": self.urls}
 
 
 class S3Plugin:
@@ -40,7 +44,7 @@ class S3Plugin:
     region: str
     aws_access_key_id: str
     aws_secret_access_key: str
-    store_ids: List[StoreId]
+    store_ids: List[StoreConfig]
     instance_name: str
 
     def __init__(
@@ -48,7 +52,7 @@ class S3Plugin:
         region: str,
         aws_access_key_id: str,
         aws_secret_access_key: str,
-        store_ids: List[StoreId],
+        store_ids: List[StoreConfig],
         instance_name: str,
     ):
         self.boto_client = boto3.client(
@@ -66,19 +70,19 @@ class S3Plugin:
             data = await request.json()
         except Exception as e:
             print(f"failed parsing request {request} {e}")
-            return web.json_response({"handles_upload": False})
+            return web.json_response({"handle_upload": False})
 
-        id = bytes32.from_hexstr(data["id"])
+        id = bytes32.from_hexstr(data["store_id"])
         for store_id in self.store_ids:
-            if store_id.id == id and store_id.bucket and len(store_id.bucket) > 0:
-                return web.json_response({"handles_upload": True, "bucket": store_id.bucket})
+            if store_id.id == id and store_id.bucket:
+                return web.json_response({"handle_upload": True, "bucket": store_id.bucket})
 
-        return web.json_response({"handles_upload": False})
+        return web.json_response({"handle_upload": False})
 
     async def upload(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()
-            store_id = bytes32.from_hexstr(data["id"])
+            store_id = bytes32.from_hexstr(data["store_id"])
             bucket = self.get_bucket(store_id)
             full_tree_path = Path(data["full_tree_path"])
             diff_path = Path(data["diff_path"])
@@ -105,15 +109,15 @@ class S3Plugin:
             data = await request.json()
         except Exception as e:
             print(f"failed parsing request {request} {e}")
-            return web.json_response({"handles_download": False})
+            return web.json_response({"handle_download": False})
 
-        id = bytes32.from_hexstr(data["id"])
+        id = bytes32.from_hexstr(data["store_id"])
         parse_result = urlparse(data["url"])
         for store_id in self.store_ids:
             if store_id.id == id and parse_result.scheme == "s3" and data["url"] in store_id.urls:
-                return web.json_response({"handles_download": True, "urls": list(store_id.urls)})
+                return web.json_response({"handle_download": True, "urls": list(store_id.urls)})
 
-        return web.json_response({"handles_download": False})
+        return web.json_response({"handle_download": False})
 
     async def download(self, request: web.Request) -> web.Response:
         try:
@@ -147,15 +151,14 @@ class S3Plugin:
         self.store_ids = read_store_ids_from_config(config)
 
 
-def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreId]:
+def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
     store_ids = []
-    for store in config.get("store_ids", []):
+    for store in config.get("stores", []):
         try:
-            store_ids.append(StoreId.from_dict(store))
+            store_ids.append(StoreConfig.unmarshal(store))
         except Exception as e:
-            raw_store_id = store.get("id")
-            if "id" in store:
-                bad_store_id = f"{store["id"]!r}"
+            if "store_id" in store:
+                bad_store_id = f"{store['store_id']!r}"
             else:
                 bad_store_id = "<missing>"
             print(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
@@ -164,7 +167,7 @@ def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreId]:
     return store_ids
 
 
-def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
+def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     try:
         region = config["aws_credentials"]["region"]
         aws_access_key_id = config["aws_credentials"]["access_key_id"]
@@ -208,7 +211,3 @@ def run_server() -> None:
 
     print(f"run instance {instance_name}")
     web.run_app(make_app(config, instance_name), port=port)
-
-
-if __name__ == "__main__":
-    run_server()
