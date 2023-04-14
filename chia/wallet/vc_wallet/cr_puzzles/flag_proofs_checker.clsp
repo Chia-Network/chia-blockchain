@@ -1,0 +1,37 @@
+(mod
+  (
+    FLAGS
+    proofs
+  )
+
+  (include utility_macros.clib)
+
+  (defun insertion_sort (sorted insertions)
+    (if insertions
+        (if (or (not sorted) (>s (f (f insertions)) (f (f sorted))))
+            (insertion_sort (c (f insertions) sorted) (r insertions))
+            (insertion_sort (c (f sorted) (insertion_sort (r sorted) (list (f insertions)))) (r insertions))
+        )
+        sorted
+    )
+  )
+
+  (defun merge_sort (proofs)
+    (if (r proofs)
+        (insertion_sort (merge_sort (r proofs)) (merge_sort (list (f proofs))))
+        proofs
+    )
+  )
+
+  (defun pairs_eq (subject comp)
+    (if subject
+        (if (logand (= (f (f subject)) (f (f comp))) (= (r (f subject)) (r (f comp))))
+            (pairs_eq (r subject) (r comp))
+            ()
+        )
+        1
+    )
+  )
+
+  (pairs_eq FLAGS (merge_sort proofs))
+)

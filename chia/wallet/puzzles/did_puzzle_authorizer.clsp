@@ -1,0 +1,41 @@
+(mod
+  (
+    AUTHORIZER_SINGLETON_STRUCT
+    hash_to_authorize
+    (
+      did_innerpuzhash
+      my_coin_id
+    )
+  )
+
+  (include condition_codes.clvm)
+  (include curry.clib)
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+            (sha256 1 TREE)))
+
+  (defun-inline create_did_puzhash
+    (
+        AUTHORIZER_SINGLETON_STRUCT
+        did_innerpuzhash
+    )
+
+    (curry_hashes_inline (f AUTHORIZER_SINGLETON_STRUCT)
+      (sha256tree AUTHORIZER_SINGLETON_STRUCT)
+      did_innerpuzhash
+    )
+  )
+
+  (list
+    (list ASSERT_MY_COIN_ID my_coin_id)
+    (list ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+        (create_did_puzhash AUTHORIZER_SINGLETON_STRUCT did_innerpuzhash)
+        (sha256 my_coin_id hash_to_authorize)
+      )
+    )
+  )
+)

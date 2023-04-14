@@ -1,0 +1,67 @@
+; This is a TRANSFER_PROGRAM for use with nft_ownership_layer.clsp
+
+; Given a DID's singleton struct, assert its announcement of any changes. If no DID's innerpuz is provided, then just
+; return the same metadata and transfer program with no conditions
+(mod
+  (
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH
+    (provider_id . metadata)  ; Truth
+    conditions  ; Truth
+    (
+      provider_innerpuzhash
+      my_coin_id
+      new_metadata
+      new_transfer_program_hash
+    )
+  )
+
+  (include condition_codes.clvm)
+  (include curry.clib)
+  (include sha256tree.clib)
+  (include utility_macros.clib)
+
+  (defconstant ONE 1)
+
+  (defun-inline create_did_puzhash
+    (
+        SINGLETON_MOD_HASH
+        SINGLETON_LAUNCHER_HASH
+        provider_id
+        provider_innerpuzhash
+    )
+
+    (curry_hashes_inline SINGLETON_MOD_HASH
+      (sha256 TWO
+        (sha256 ONE SINGLETON_MOD_HASH)
+        (sha256 TWO
+          (sha256 ONE provider_id)
+          (sha256 ONE SINGLETON_LAUNCHER_HASH)
+        )
+      )
+      provider_innerpuzhash
+    )
+  )
+
+  ; Returning (new_metadata new_transfer_program_hash conditions)
+  (if provider_innerpuzhash
+    (list
+      (if new_metadata new_metadata ())
+      (i new_transfer_program_hash new_transfer_program_hash ())
+      (list
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (create_did_puzhash SINGLETON_MOD_HASH SINGLETON_LAUNCHER_HASH provider_id provider_innerpuzhash)
+            (sha256
+              my_coin_id
+              (sha256tree new_metadata)
+              new_transfer_program_hash
+            )
+          )
+        )
+      )
+    )
+    (list (c provider_id metadata) () ())
+  )
+)

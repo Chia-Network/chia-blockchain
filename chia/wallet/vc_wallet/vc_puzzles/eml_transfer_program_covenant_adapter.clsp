@@ -1,0 +1,30 @@
+; This is a layer that adapts the API between an ownership layer and its transfer program when the transfer program is
+; wrapped with a covenant layer.
+(mod
+  (
+    COVENANT_LAYER
+    METADATA  ; Truth
+    conditions  ; Truth
+    (
+      lineage_proof
+      morpher_solution
+      inner_solution
+    )
+  )
+
+  ; Solution from covenant layer comes back like so:
+  ; ((ASSERT_MY_PARENT_ID 0x...) new_metadata new_tp conditions)
+  (defun fix_condition ((parent_assertion . (new_owner new_tp conditions)))
+    (list new_owner new_tp (c parent_assertion conditions))
+  )
+
+  (fix_condition (a
+    COVENANT_LAYER
+    (list
+      lineage_proof
+      morpher_solution
+      ; Covenant layer doesn't know about truths so we need to pass those down to the inner tp solution
+      (list METADATA conditions inner_solution)
+    )
+  ))
+)

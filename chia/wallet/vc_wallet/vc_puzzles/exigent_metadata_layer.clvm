@@ -1,0 +1,144 @@
+(mod
+  (
+    NFT_OWNERSHIP_LAYER_MOD_HASH
+    METADATA
+    TRANSFER_PROGRAM
+    TRANSFER_PROGRAM_HASH  ; we also include the hash for efficiency's sake
+    INNER_PUZZLE
+    inner_solution
+  )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+  (include utility_macros.clib)
+
+  (defun-inline nft_ownership_layer_puzzle_hash
+    (
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      new_owner
+      TRANSFER_PROGRAM_HASH
+      inner_puzzle_hash
+    )
+      (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
+        inner_puzzle_hash
+        (sha256 ONE TRANSFER_PROGRAM_HASH)
+        TRANSFER_PROGRAM_HASH
+        (sha256tree new_owner)
+        (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
+      )
+  )
+
+  (defun-inline construct_end_conditions
+    (
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      odd_args
+      (new_owner new_tp_hash conditions)
+    )
+    (c
+      (c
+        CREATE_COIN
+        (c
+          (nft_ownership_layer_puzzle_hash
+            NFT_OWNERSHIP_LAYER_MOD_HASH
+            new_owner
+            (if new_tp_hash new_tp_hash TRANSFER_PROGRAM_HASH)
+            (f odd_args)
+          )
+          (r odd_args)
+        )
+      )
+      conditions
+    )
+  )
+
+  (defun wrap_odd_create_coins
+    (
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      METADATA
+      all_conditions
+      conditions
+      (
+        odd_args
+        tp_output
+        condition_to_prepend
+      )
+    )
+    (c
+      (i condition_to_prepend condition_to_prepend (list REMARK))
+      (if conditions
+          (wrap_odd_create_coins
+            NFT_OWNERSHIP_LAYER_MOD_HASH
+            TRANSFER_PROGRAM
+            TRANSFER_PROGRAM_HASH
+            METADATA
+            all_conditions
+            (r conditions)
+            (if (= (f (f conditions)) CREATE_COIN)
+                (if (logand (f (r (r (f conditions)))))
+                    (assert (not odd_args)
+                      ; then
+                      (list (r (f conditions)) tp_output ())
+                    )
+                    ; else - amount is not odd
+                    (list odd_args tp_output (f conditions))
+                )
+                ; else - condition is not a create coin
+                (if (= (f (f conditions)) -10)  ; -10 is "magic" opcode for running transfer program
+                    (assert (not tp_output)
+                      ; then
+                      (list
+                        odd_args
+                        (a TRANSFER_PROGRAM (list METADATA all_conditions (r (f conditions))))
+                        ()
+                      )
+                    )
+                    ; else - condition is not a create coin nor a NEW_OWNER_CONDITION
+                    (list odd_args tp_output (f conditions))
+                )
+            )
+          )
+          ; else - we have no more conditions
+          ; odd_args and tp_args are guaranteed to not be nil or else we'll have a path into atom error
+          (construct_end_conditions
+            NFT_OWNERSHIP_LAYER_MOD_HASH
+            TRANSFER_PROGRAM
+            TRANSFER_PROGRAM_HASH
+            odd_args
+            tp_output
+          )
+      )
+    )
+  )
+
+  (defun main
+    (
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      METADATA
+      conditions
+    )
+    (wrap_odd_create_coins
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      METADATA
+      conditions
+      conditions
+      (list () () ())
+    )
+  )
+
+  ; main
+  (main
+    NFT_OWNERSHIP_LAYER_MOD_HASH
+    TRANSFER_PROGRAM
+    TRANSFER_PROGRAM_HASH
+    METADATA
+    (a INNER_PUZZLE inner_solution)
+  )
+)
