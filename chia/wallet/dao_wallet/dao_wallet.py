@@ -52,7 +52,7 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     uncurry_proposal,
     uncurry_treasury,
     get_active_votes_from_lockup_puzzle,
-    get_innerpuz_from_lockup_puzzle
+    get_innerpuz_from_lockup_puzzle,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -1007,8 +1007,16 @@ class DAOWallet(WalletProtocol):
         for spend in dao_cat_spend.coin_spends:
             vote_amounts.append(spend.coin.amount)
             vote_coins.append(spend.coin.name())
-            previous_votes.append(get_active_votes_from_lockup_puzzle(get_innerpuzzle_from_cat_puzzle(spend.puzzle_reveal)))
-            lockup_inner_puzhashes.append(get_innerpuz_from_lockup_puzzle(get_innerpuzzle_from_cat_puzzle(spend.puzzle_reveal)).get_tree_hash())
+            previous_votes.append(
+                get_active_votes_from_lockup_puzzle(
+                    get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
+                )
+            )
+            lockup_inner_puzhashes.append(
+                get_innerpuz_from_lockup_puzzle(
+                    get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
+                ).get_tree_hash()
+            )
         inner_sol = Program.to(
             [
                 vote_amounts,

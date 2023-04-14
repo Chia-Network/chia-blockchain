@@ -255,8 +255,9 @@ class DAOCATWallet:
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
         treasury_id = dao_wallet.dao_info.treasury_id
         if curry_vals is None:
-
-            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = dao_wallet.get_proposal_curry_values(proposal_id)
+            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = dao_wallet.get_proposal_curry_values(
+                proposal_id
+            )
         else:
             YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = curry_vals
         # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
@@ -310,9 +311,7 @@ class DAOCATWallet:
                         }
                     )
                 ]
-                puzzle_announcements = [
-                    message
-                ]
+                puzzle_announcements = set([message])
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
@@ -340,9 +339,7 @@ class DAOCATWallet:
                             }
                         )
                     )
-                puzzle_announcements = [
-                    message
-                ]
+                puzzle_announcements = set([message])
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
@@ -385,7 +382,7 @@ class DAOCATWallet:
                         YES_VOTES,
                         TOTAL_VOTES,
                         SPEND_OR_UPDATE_FLAG,
-                        INNERPUZHASH
+                        INNERPUZHASH,
                     ],
                     vote_info,
                     vote_amount,
