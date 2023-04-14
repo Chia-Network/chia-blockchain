@@ -155,13 +155,13 @@
   ; main
   (loop_through_list
     (sum_create_coins CONDITIONS)
-    P2_SINGLETON_PUZHASH
-    (sha256 (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
+    P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+    (sha256 (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
     (r p2_singleton_parent_amount_list)
     (f (r (f p2_singleton_parent_amount_list)))
     (for_each_asset_type
       CAT_MOD_HASH
-      P2_SINGLETON_PUZHASH
+      P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
       LIST_OF_TAILHASH_CONDITIONS
       p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)
       CONDITIONS

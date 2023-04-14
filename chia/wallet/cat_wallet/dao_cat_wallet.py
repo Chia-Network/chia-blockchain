@@ -675,6 +675,7 @@ class DAOCATWallet:
             args = match_cat_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
             if args is not None:
                 _, _, inner_puzzle = args
+                inner_puzzle = get_innerpuz_from_lockup_puzzle(inner_puzzle)
                 puzzle_hash = inner_puzzle.get_tree_hash()
                 ret = await self.wallet_state_manager.get_keys(puzzle_hash)
                 if ret is None:

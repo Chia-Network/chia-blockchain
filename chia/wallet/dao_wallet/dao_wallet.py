@@ -51,6 +51,8 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_treasury_rules_from_puzzle,
     uncurry_proposal,
     uncurry_treasury,
+    get_active_votes_from_lockup_puzzle,
+    get_innerpuz_from_lockup_puzzle
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -59,6 +61,8 @@ from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_innerpuzzle_from_puzzle,
     get_most_recent_singleton_coin_from_coin_spend,
 )
+
+from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 
 # from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
@@ -954,6 +958,7 @@ class DAOWallet(WalletProtocol):
             eve_coin=eve_coin,
             full_proposal_puzzle=full_proposal_puzzle,
             dao_proposal_puzzle=dao_proposal_puzzle,
+            proposed_puzzle_reveal=proposed_puzzle,
             launcher_coin=launcher_coin,
             vote_amount=vote_amount,
         )
@@ -968,6 +973,7 @@ class DAOWallet(WalletProtocol):
         eve_coin: Coin,
         full_proposal_puzzle: Program,
         dao_proposal_puzzle: Program,
+        proposed_puzzle_reveal: Program,
         launcher_coin: Coin,
         vote_amount: uint64,
     ) -> SpendBundle:
@@ -982,7 +988,6 @@ class DAOWallet(WalletProtocol):
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
             vote_amount, launcher_coin.name(), True, curry_vals=curry_vals
         )
-
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -995,16 +1000,33 @@ class DAOWallet(WalletProtocol):
         # self_destruct_time ; revealed by the treasury
         # oracle_spend_delay  ; used to recreate the treasury
         # self_destruct_flag ; if not 0, do the self-destruct spend
+        vote_amounts = []
+        vote_coins = []
+        previous_votes = []
+        lockup_inner_puzhashes = []
+        for spend in dao_cat_spend.coin_spends:
+            vote_amounts.append(spend.coin.amount)
+            vote_coins.append(spend.coin.name())
+            previous_votes.append(get_active_votes_from_lockup_puzzle(get_innerpuzzle_from_cat_puzzle(spend.puzzle_reveal)))
+            lockup_inner_puzhashes.append(get_innerpuz_from_lockup_puzzle(get_innerpuzzle_from_cat_puzzle(spend.puzzle_reveal)).get_tree_hash())
         inner_sol = Program.to(
             [
-                vote_amount,
+                vote_amounts,
                 1,
+                vote_coins,
+                previous_votes,
+                lockup_inner_puzhashes,
+                proposed_puzzle_reveal,
+                0,
+                0,
+                0,
+                0,
             ]
         )
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [
-                [eve_coin.parent_coin_info, launcher_coin.amount],
+                [launcher_coin.parent_coin_info, launcher_coin.amount],
                 eve_coin.amount,
                 inner_sol,
             ]
