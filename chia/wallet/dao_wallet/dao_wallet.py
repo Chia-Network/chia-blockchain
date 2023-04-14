@@ -27,6 +27,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
+from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 # from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
@@ -39,8 +40,10 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     SINGLETON_LAUNCHER,
     curry_singleton,
     generate_cat_tail,
+    get_active_votes_from_lockup_puzzle,
     get_curry_vals_from_proposal_puzzle,
     get_finished_state_puzzle,
+    get_innerpuz_from_lockup_puzzle,
     get_new_puzzle_from_proposal_solution,
     get_new_puzzle_from_treasury_solution,
     get_p2_singleton_puzhash,
@@ -51,8 +54,6 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_treasury_rules_from_puzzle,
     uncurry_proposal,
     uncurry_treasury,
-    get_active_votes_from_lockup_puzzle,
-    get_innerpuz_from_lockup_puzzle,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -61,8 +62,6 @@ from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_innerpuzzle_from_puzzle,
     get_most_recent_singleton_coin_from_coin_spend,
 )
-
-from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 
 # from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord

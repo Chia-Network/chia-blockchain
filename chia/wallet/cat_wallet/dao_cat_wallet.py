@@ -24,13 +24,13 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import (
+    DAO_PROPOSAL_TIMER_MOD_HASH,
+    DAO_TREASURY_MOD_HASH,
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
     get_innerpuz_from_lockup_puzzle,
     get_latest_lockup_puzzle_for_coin_spend,
     get_lockup_puzzle,
-    DAO_TREASURY_MOD_HASH,
-    DAO_PROPOSAL_TIMER_MOD_HASH,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
