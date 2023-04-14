@@ -211,3 +211,7 @@ def run_server() -> None:
 
     print(f"run instance {instance_name}")
     web.run_app(make_app(config, instance_name), port=port)
+
+
+if __name__ == "__main__":
+    run_server()
