@@ -44,7 +44,7 @@ class S3Plugin:
     region: str
     aws_access_key_id: str
     aws_secret_access_key: str
-    store_ids: List[StoreConfig]
+    stores: List[StoreConfig]
     instance_name: str
 
     def __init__(
@@ -52,7 +52,7 @@ class S3Plugin:
         region: str,
         aws_access_key_id: str,
         aws_secret_access_key: str,
-        store_ids: List[StoreConfig],
+        stores: List[StoreConfig],
         instance_name: str,
     ):
         self.boto_client = boto3.client(
@@ -61,7 +61,7 @@ class S3Plugin:
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
         )
-        self.store_ids = store_ids
+        self.stores = stores
         self.instance_name = instance_name
 
     async def handle_upload(self, request: web.Request) -> web.Response:
@@ -72,10 +72,10 @@ class S3Plugin:
             print(f"failed parsing request {request} {e}")
             return web.json_response({"handle_upload": False})
 
-        id = bytes32.from_hexstr(data["store_id"])
-        for store_id in self.store_ids:
-            if store_id.id == id and store_id.bucket:
-                return web.json_response({"handle_upload": True, "bucket": store_id.bucket})
+        store_id = bytes32.from_hexstr(data["store_id"])
+        for store in self.stores:
+            if store.id == store_id and store.bucket:
+                return web.json_response({"handle_upload": True, "bucket": store.bucket})
 
         return web.json_response({"handle_upload": False})
 
@@ -111,11 +111,11 @@ class S3Plugin:
             print(f"failed parsing request {request} {e}")
             return web.json_response({"handle_download": False})
 
-        id = bytes32.from_hexstr(data["store_id"])
+        store_id = bytes32.from_hexstr(data["store_id"])
         parse_result = urlparse(data["url"])
-        for store_id in self.store_ids:
-            if store_id.id == id and parse_result.scheme == "s3" and data["url"] in store_id.urls:
-                return web.json_response({"handle_download": True, "urls": list(store_id.urls)})
+        for store in self.stores:
+            if store.id == store_id and parse_result.scheme == "s3" and data["url"] in store.urls:
+                return web.json_response({"handle_download": True, "urls": list(store.urls)})
 
         return web.json_response({"handle_download": False})
 
@@ -139,12 +139,12 @@ class S3Plugin:
             return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
 
-    def get_bucket(self, id: bytes32) -> str:
-        for store_id in self.store_ids:
-            if store_id.id == id and store_id.bucket and len(store_id.bucket) > 0:
-                return store_id.bucket
+    def get_bucket(self, store_id: bytes32) -> str:
+        for store in self.stores:
+            if store.id == store_id and store.bucket:
+                return store.bucket
 
-        raise Exception(f"bucket not found for store id {id.hex()}")
+        raise Exception(f"bucket not found for store id {store_id.hex()}")
 
     def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
