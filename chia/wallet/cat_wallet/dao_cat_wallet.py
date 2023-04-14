@@ -29,6 +29,8 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_innerpuz_from_lockup_puzzle,
     get_latest_lockup_puzzle_for_coin_spend,
     get_lockup_puzzle,
+    DAO_TREASURY_MOD_HASH,
+    DAO_PROPOSAL_TIMER_MOD_HASH,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -250,11 +252,13 @@ class DAOCATWallet:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
+        dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
+        treasury_id = dao_wallet.dao_info.treasury_id
         if curry_vals is None:
-            dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZ = dao_wallet.get_proposal_curry_values(proposal_id)
+
+            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = dao_wallet.get_proposal_curry_values(proposal_id)
         else:
-            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZ = curry_vals
+            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = curry_vals
         # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
@@ -271,7 +275,6 @@ class DAOCATWallet:
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
             # add_proposal_to_active_list also verifies that the lci.inner_puzzle is accurate
-            breakpoint()
             # We must create either: one coin with the new puzzle and all our value
             # OR
             # a coin with the new puzzle and part of our amount AND a coin with our current puzzle and the change
@@ -358,13 +361,32 @@ class DAOCATWallet:
             # vote_amount
             # my_puzhash
             # new_innerpuzhash  ; only include this if we're changing owners
+
+            # proposal_curry_vals is:
+            # (
+            #   TREASURY_MOD_HASH
+            #   PROPOSAL_TIMER_MOD_HASH
+            #   TREASURY_ID
+            #   YES_VOTES
+            #   TOTAL_VOTES
+            #   SPEND_OR_UPDATE_FLAG
+            #   INNERPUZHASH
+            # )
             solution = Program.to(
                 [
                     coin.name(),
                     inner_solution,
                     coin.amount,
                     proposal_id,
-                    [YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZ],
+                    [
+                        DAO_TREASURY_MOD_HASH,
+                        DAO_PROPOSAL_TIMER_MOD_HASH,
+                        treasury_id,
+                        YES_VOTES,
+                        TOTAL_VOTES,
+                        SPEND_OR_UPDATE_FLAG,
+                        INNERPUZHASH
+                    ],
                     vote_info,
                     vote_amount,
                     coin.puzzle_hash,
