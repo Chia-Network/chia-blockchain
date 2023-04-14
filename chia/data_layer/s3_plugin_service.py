@@ -148,14 +148,14 @@ class S3Plugin:
 
     def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
-        self.store_ids = read_store_ids_from_config(config)
+        self.stores = read_store_ids_from_config(config)
 
 
 def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
-    store_ids = []
+    stores = []
     for store in config.get("stores", []):
         try:
-            store_ids.append(StoreConfig.unmarshal(store))
+            stores.append(StoreConfig.unmarshal(store))
         except Exception as e:
             if "store_id" in store:
                 bad_store_id = f"{store['store_id']!r}"
@@ -164,7 +164,7 @@ def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
             print(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
             pass
 
-    return store_ids
+    return stores
 
 
 def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
@@ -177,9 +177,9 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
             "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
             f"Missing config key: {e.args[0]!r}"
         )
-    store_ids = read_store_ids_from_config(config)
+    stores = read_store_ids_from_config(config)
 
-    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, instance_name)
+    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, stores, instance_name)
     app = web.Application()
     app.add_routes([web.post("/handle_upload", s3_client.handle_upload)])
     app.add_routes([web.post("/upload", s3_client.upload)])
