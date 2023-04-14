@@ -153,7 +153,12 @@ def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreId]:
         try:
             store_ids.append(StoreId.from_dict(store))
         except Exception as e:
-            print("Ignoring Invalid store id '%s': %s" % (store.get("id", ""), e))
+            raw_store_id = store.get("id")
+            if "id" in store:
+                bad_store_id = f"{store["id"]!r}"
+            else:
+                bad_store_id = "<missing>"
+            print(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
             pass
 
     return store_ids
@@ -167,7 +172,7 @@ def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
     except KeyError as e:
         sys.exit(
             "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
-            f"Missing config key: {e}"
+            f"Missing config key: {e.args[0]!r}"
         )
     store_ids = read_store_ids_from_config(config)
 

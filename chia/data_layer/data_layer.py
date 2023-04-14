@@ -467,8 +467,8 @@ class DataLayer:
                                         "generation {publish_generation}"
                                     )
             except Exception as e:
-                self.log.error(f"Exception uploading files for {tree_id} - will retry later")
-                self.log.debug(f"Failed to upload files, clean local disc {e}")
+                self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
+                self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
                 os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
