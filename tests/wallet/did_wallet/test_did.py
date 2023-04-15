@@ -1117,7 +1117,7 @@ class TestDIDWallet:
         )
         assert "spend_bundle" in response
         spend = response["spend_bundle"].coin_spends[0]
-        error, conditions, cost = conditions_dict_for_solution(
+        conditions = conditions_dict_for_solution(
             spend.puzzle_reveal.to_program(),
             spend.solution.to_program(),
             wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
