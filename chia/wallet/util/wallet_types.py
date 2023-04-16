@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, List
 from typing_extensions import TypedDict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import UInt8Enum, uint32, uint64
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
 
 
-class WalletType(IntEnum):
+class WalletType(UInt8Enum):
     # Wallet Types
     STANDARD_WALLET = 0
     ATOMIC_SWAP = 2

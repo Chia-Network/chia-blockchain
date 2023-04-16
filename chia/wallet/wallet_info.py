@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from chia.util.ints import uint8, uint32
+from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.wallet_types import WalletType
 
 
 @streamable
@@ -22,7 +23,7 @@ class WalletInfo(Streamable):
 
     id: uint32
     name: str
-    type: uint8  # WalletType(type)
+    type: WalletType
     data: str
 
 
