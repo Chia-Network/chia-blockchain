@@ -464,7 +464,7 @@ class DataLayer:
                                 else:
                                     self.log.info(
                                         f"Uploaded files to {uploader} for store {tree_id.hex()} "
-                                        "generation {publish_generation}"
+                                        f"generation {publish_generation}"
                                     )
             except Exception as e:
                 self.log.error(f"Exception uploading files for {tree_id} - will retry later")
