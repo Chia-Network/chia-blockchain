@@ -229,11 +229,9 @@ class WalletTransactionStore:
         Returns the list of all farming rewards.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            fee_int = TransactionType.FEE_REWARD.value
-            pool_int = TransactionType.COINBASE_REWARD.value
             rows = await conn.execute_fetchall(
                 "SELECT transaction_record from transaction_record WHERE confirmed=1 and (type=? or type=?)",
-                (fee_int, pool_int),
+                (TransactionType.FEE_REWARD, TransactionType.COINBASE_REWARD),
             )
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 

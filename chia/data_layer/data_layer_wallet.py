@@ -357,7 +357,7 @@ class DataLayerWallet:
             wallet_id=uint32(0),  # This is being called before the wallet is created so we're using a temp ID of 0
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
+            type=TransactionType.INCOMING_TX,
             name=full_spend.name(),
         )
         singleton_record = SingletonRecord(
@@ -599,7 +599,7 @@ class DataLayerWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=TransactionType.OUTGOING_TX,
             name=singleton_record.coin_id,
         )
         assert dl_tx.spend_bundle is not None
@@ -797,7 +797,7 @@ class DataLayerWallet:
                 wallet_id=self.id(),  # This is being called before the wallet is created so we're using a temp ID of 0
                 sent_to=[],
                 trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
+                type=TransactionType.OUTGOING_TX,
                 name=mirror_bundle.name(),
             )
         ]

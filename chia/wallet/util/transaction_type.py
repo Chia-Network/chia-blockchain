@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from enum import IntEnum
+from chia.util.ints import UInt32Enum
 
 
-class TransactionType(IntEnum):
+class TransactionType(UInt32Enum):
     INCOMING_TX = 0
     OUTGOING_TX = 1
     COINBASE_REWARD = 2

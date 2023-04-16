@@ -813,7 +813,7 @@ class WalletRpcApi:
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
         if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
-            if tr.type == uint32(TransactionType.INCOMING_TX.value):
+            if tr.type == TransactionType.INCOMING_TX:
                 # Fetch incoming tx coin spend
                 peer = self.service.get_full_node_peer()
                 assert len(tr.additions) == 1

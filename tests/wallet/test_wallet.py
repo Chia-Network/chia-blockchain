@@ -67,9 +67,9 @@ class TestWalletSimulator:
         farm_rewards = 0
 
         for tx in all_txs:
-            if TransactionType(tx.type) == TransactionType.COINBASE_REWARD:
+            if tx.type == TransactionType.COINBASE_REWARD:
                 pool_rewards += 1
-            elif TransactionType(tx.type) == TransactionType.FEE_REWARD:
+            elif tx.type == TransactionType.FEE_REWARD:
                 farm_rewards += 1
 
         assert pool_rewards == num_blocks
@@ -676,7 +676,7 @@ class TestWalletSimulator:
             wallet_id=wallet.id(),
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=TransactionType.OUTGOING_TX,
             name=name,
             memos=list(compute_memos(stolen_sb).items()),
         )

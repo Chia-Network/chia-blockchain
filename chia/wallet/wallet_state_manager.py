@@ -1068,15 +1068,15 @@ class WalletStateManager:
                         if record is None:
                             farmer_reward = False
                             pool_reward = False
-                            tx_type: int
+                            tx_type: TransactionType
                             if self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin):
                                 farmer_reward = True
-                                tx_type = TransactionType.FEE_REWARD.value
+                                tx_type = TransactionType.FEE_REWARD
                             elif self.is_pool_reward(uint32(coin_state.created_height), coin_state.coin):
                                 pool_reward = True
-                                tx_type = TransactionType.COINBASE_REWARD.value
+                                tx_type = TransactionType.COINBASE_REWARD
                             else:
-                                tx_type = TransactionType.INCOMING_TX.value
+                                tx_type = TransactionType.INCOMING_TX
                             record = WalletCoinRecord(
                                 coin_state.coin,
                                 uint32(coin_state.created_height),
@@ -1121,7 +1121,7 @@ class WalletStateManager:
                                     wallet_id=wallet_identifier.id,
                                     sent_to=[],
                                     trade_id=None,
-                                    type=uint32(tx_type),
+                                    type=tx_type,
                                     name=bytes32(token_bytes()),
                                     memos=[],
                                 )
@@ -1179,7 +1179,7 @@ class WalletStateManager:
                                         wallet_id=wallet_identifier.id,
                                         sent_to=[],
                                         trade_id=None,
-                                        type=uint32(TransactionType.OUTGOING_TX.value),
+                                        type=TransactionType.OUTGOING_TX,
                                         name=bytes32(token_bytes()),
                                         memos=[],
                                     )
@@ -1463,7 +1463,7 @@ class WalletStateManager:
                 wallet_id=wallet_id,
                 sent_to=[],
                 trade_id=None,
-                type=uint32(tx_type),
+                type=tx_type,
                 name=coin_name,
                 memos=[],
             )

@@ -655,7 +655,7 @@ class DIDWallet:
             wallet_id=self.wallet_info.id,
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=TransactionType.OUTGOING_TX,
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
@@ -757,7 +757,7 @@ class DIDWallet:
             wallet_id=self.wallet_info.id,
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=TransactionType.OUTGOING_TX,
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
@@ -868,7 +868,7 @@ class DIDWallet:
             wallet_id=self.wallet_info.id,
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=TransactionType.OUTGOING_TX,
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
@@ -949,7 +949,7 @@ class DIDWallet:
             wallet_id=self.wallet_info.id,
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
+            type=TransactionType.INCOMING_TX,
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
@@ -1077,7 +1077,7 @@ class DIDWallet:
             wallet_id=self.wallet_info.id,
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
+            type=TransactionType.OUTGOING_TX,
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
@@ -1308,7 +1308,7 @@ class DIDWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
+            type=TransactionType.INCOMING_TX,
             name=bytes32(token_bytes()),
             memos=[],
         )

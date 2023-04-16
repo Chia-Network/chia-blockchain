@@ -46,7 +46,7 @@ class TransactionRecord(Streamable):
     # included it in the mempool, and what the error message (if any) was
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
-    type: uint32  # TransactionType
+    type: TransactionType
 
     # name is also called bundle_id and tx_id
     name: bytes32

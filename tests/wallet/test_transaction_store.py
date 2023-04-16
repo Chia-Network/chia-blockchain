@@ -34,7 +34,7 @@ tr1 = TransactionRecord(
     uint32(1),  # wallet_id
     [],  # List[Tuple[str, uint8, Optional[str]]] sent_to
     bytes32(token_bytes(32)),  # trade_id
-    uint32(TransactionType.OUTGOING_TX),  # type
+    TransactionType.OUTGOING_TX,
     bytes32(token_bytes(32)),  # name
     [],  # List[Tuple[bytes32, List[bytes]]] memos
 )

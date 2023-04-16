@@ -163,7 +163,7 @@ class CATWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
+            type=TransactionType.INCOMING_TX,
             name=bytes32(token_bytes()),
             memos=[],
         )
@@ -856,7 +856,7 @@ class CATWallet:
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
+                type=TransactionType.OUTGOING_TX,
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
             )

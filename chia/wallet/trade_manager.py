@@ -276,7 +276,7 @@ class TradeManager:
                     wallet_id=wallet.id(),
                     sent_to=[],
                     trade_id=None,
-                    type=uint32(TransactionType.INCOMING_TX.value),
+                    type=TransactionType.INCOMING_TX,
                     name=cancellation_addition.name(),
                     memos=[],
                 )
@@ -360,7 +360,7 @@ class TradeManager:
                         wallet_id=wallet.id(),
                         sent_to=[],
                         trade_id=None,
-                        type=uint32(TransactionType.INCOMING_TX.value),
+                        type=TransactionType.INCOMING_TX,
                         name=cancellation_addition.name(),
                         memos=[],
                     )
@@ -662,7 +662,7 @@ class TradeManager:
                             wallet_id=wallet_identifier.id,
                             sent_to=[],
                             trade_id=offer.name(),
-                            type=uint32(TransactionType.INCOMING_TRADE.value),
+                            type=TransactionType.INCOMING_TRADE,
                             name=std_hash(final_spend_bundle.name() + addition.name()),
                             memos=[],
                         )
@@ -708,7 +708,7 @@ class TradeManager:
                     wallet_id=wallet.id(),
                     sent_to=[],
                     trade_id=offer.name(),
-                    type=uint32(TransactionType.OUTGOING_TRADE.value),
+                    type=TransactionType.OUTGOING_TRADE,
                     name=std_hash(final_spend_bundle.name() + removal_tree_hash),
                     memos=[],
                 )
@@ -804,7 +804,7 @@ class TradeManager:
             wallet_id=uint32(0),
             sent_to=[],
             trade_id=bytes32([1] * 32),
-            type=uint32(TransactionType.OUTGOING_TRADE.value),
+            type=TransactionType.OUTGOING_TRADE,
             name=final_spend_bundle.name(),
             memos=[],
         )

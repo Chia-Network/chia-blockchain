@@ -659,9 +659,9 @@ class TestCATTrades:
         sum_of_outgoing = uint64(0)
         sum_of_incoming = uint64(0)
         for tx in txs:
-            if tx.type == TransactionType.OUTGOING_TX.value:
+            if tx.type == TransactionType.OUTGOING_TX:
                 sum_of_outgoing = uint64(sum_of_outgoing + tx.amount)
-            elif tx.type == TransactionType.INCOMING_TX.value:
+            elif tx.type == TransactionType.INCOMING_TX:
                 sum_of_incoming = uint64(sum_of_incoming + tx.amount)
         assert (sum_of_outgoing - sum_of_incoming) == 0
 
