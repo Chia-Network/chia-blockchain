@@ -117,11 +117,11 @@ async def pprint_pool_wallet_state(
     address_prefix: str,
     pool_state_dict: Optional[Dict[str, Any]],
 ) -> None:
-    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value and pool_wallet_info.target is None:
+    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         print(f"Current state: INVALID_STATE. Please leave/join again after block height {expected_leave_height}")
     else:
-        print(f"Current state: {PoolSingletonState(pool_wallet_info.current.state).name}")
+        print(f"Current state: {pool_wallet_info.current.state.name}")
     print(f"Current state from block height: {pool_wallet_info.singleton_block_height}")
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
     print(
@@ -136,15 +136,15 @@ async def pprint_pool_wallet_state(
         f"{encode_puzzle_hash(pool_wallet_info.p2_singleton_puzzle_hash, address_prefix)}"
     )
     if pool_wallet_info.target is not None:
-        print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
+        print(f"Target state: {pool_wallet_info.target.state.name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
-    if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
+    if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING:
         balances: Dict[str, Any] = await wallet_client.get_wallet_balance(wallet_id)
         balance = balances["confirmed_wallet_balance"]
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
-    if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value:
+    if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
         print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
         if pool_state_dict is not None:
             print(f"Current difficulty: {pool_state_dict['current_difficulty']}")
@@ -166,7 +166,7 @@ async def pprint_pool_wallet_state(
             except Exception:
                 print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
-    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value:
+    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         if pool_wallet_info.target is not None:
             print(f"Expected to leave after block height: {expected_leave_height}")
