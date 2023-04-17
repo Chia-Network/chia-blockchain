@@ -69,7 +69,7 @@ class S3Plugin:
         try:
             data = await request.json()
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"handle_upload": False})
 
         store_id = bytes32.from_hexstr(data["store_id"])
@@ -96,10 +96,10 @@ class S3Plugin:
                         pool, functools.partial(self.boto_client.upload_file, diff_path, bucket, diff_path.name)
                     )
             except ClientError as e:
-                print(f"failed uploading file to aws {e}")
+                log.error(f"failed uploading file to aws {type(e).__name__} {e}")
                 return web.json_response({"uploaded": False})
         except Exception as e:
-            print(f"failed handling request {request} {e}")
+            log.error(f"failed handling request {request} {type(e).__name__} {e}")
             return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
 
@@ -108,7 +108,7 @@ class S3Plugin:
         try:
             data = await request.json()
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"handle_download": False})
 
         store_id = bytes32.from_hexstr(data["store_id"])
@@ -135,7 +135,7 @@ class S3Plugin:
                     pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
                 )
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
 
@@ -161,7 +161,7 @@ def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
                 bad_store_id = f"{store['store_id']!r}"
             else:
                 bad_store_id = "<missing>"
-            print(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
+            log.info(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
             pass
 
     return stores
@@ -185,6 +185,8 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/upload", s3_client.upload)])
     app.add_routes([web.post("/handle_download", s3_client.handle_download)])
     app.add_routes([web.post("/download", s3_client.download)])
+    logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
+    log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app
 
 
@@ -209,8 +211,8 @@ def run_server() -> None:
     except KeyError:
         sys.exit("Missing port in config file.")
 
-    print(f"run instance {instance_name}")
     web.run_app(make_app(config, instance_name), port=port)
+    log.info(f"Stopped s3 plugin {instance_name}")
 
 
 if __name__ == "__main__":
