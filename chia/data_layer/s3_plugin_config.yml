@@ -1,4 +1,5 @@
 instance-1:
+  log_filename: "s3_plugin.log"
   port: 8998
   aws_credentials:
     access_key_id: "xxx"
