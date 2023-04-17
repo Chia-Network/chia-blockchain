@@ -3341,15 +3341,15 @@ class WalletRpcApi:
         """
         vc_id: bytes32 = bytes32.from_hexstr(request["vc_id"])
         new_puzhash: Optional[bytes32] = None
-        if "new_puzhash" in request:
+        if "new_puzhash" in request and request["new_puzhash"] is not None:
             new_puzhash = bytes32.from_hexstr(request["new_puzhash"])
 
         new_proof_hash: Optional[bytes32] = None
-        if "new_proof_hash" in request:
+        if "new_proof_hash" in request and request["new_proof_hash"] is not None:
             new_proof_hash = bytes32.from_hexstr(request["new_proof_hash"])
 
         provider_inner_puzhash: Optional[bytes32] = None
-        if "provider_inner_puzhash" in request:
+        if "provider_inner_puzhash" in request and request["provider_inner_puzhash"] is not None:
             provider_inner_puzhash = bytes32.from_hexstr(request["provider_inner_puzhash"])
 
         # get VC wallet
