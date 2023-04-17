@@ -118,7 +118,7 @@ class TransactionRecord(Streamable):
         if len(past_receipts) < minimum_send_attempts:
             # we haven't tried enough peers yet
             return True
-        if any([x[0] for x in past_receipts if x[0] == MempoolInclusionStatus.SUCCESS.value]):
+        if any([x[1] for x in past_receipts if x[1] == MempoolInclusionStatus.SUCCESS.value]):
             # we managed to push it to mempool at least once
             return True
         if any([x[1] for x in past_receipts if x[1] in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)]):
