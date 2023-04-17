@@ -504,6 +504,7 @@ class DataLayer:
                             self.log.error(f"failed to upload to uploader {uploader}")
                         else:
                             self.log.debug(f"uploaded to uploader {uploader}")
+
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
