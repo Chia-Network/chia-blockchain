@@ -114,14 +114,13 @@ class TransactionRecord(Streamable):
         return formatted
 
     def is_valid(self) -> bool:
-        past_receipts = self.sent_to
-        if len(past_receipts) < minimum_send_attempts:
+        if len(self.sent_to) < minimum_send_attempts:
             # we haven't tried enough peers yet
             return True
-        if any([x[1] for x in past_receipts if x[1] == MempoolInclusionStatus.SUCCESS.value]):
+        if any(x[1] == MempoolInclusionStatus.SUCCESS for x in self.sent_to):
             # we managed to push it to mempool at least once
             return True
-        if any([x[2] for x in past_receipts if x[2] in (Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name)]):
+        if any(x[2] in (Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name) for x in self.sent_to):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
         return False
