@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import functools
+import json
 import logging
 import sys
 from dataclasses import dataclass
@@ -139,6 +140,34 @@ class S3Plugin:
             return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
 
+    async def add_missing_files(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            store_id = bytes32.from_hexstr(data["store_id"])
+            bucket_str = self.get_bucket(store_id)
+            files = json.loads(data["files"])
+            my_bucket = self.boto_client.Bucket(bucket_str)
+            existing_file_list = []
+            for my_bucket_object in my_bucket.objects.all():
+                existing_file_list.append(my_bucket_object.key)
+
+            try:
+                for file in files:
+                    file_path = Path(file)
+                    if file_path.name not in existing_file_list:
+                        with concurrent.futures.ThreadPoolExecutor() as pool:
+                            await asyncio.get_running_loop().run_in_executor(
+                                pool,
+                                functools.partial(self.boto_client.upload_file, file_path, bucket_str, file_path.name),
+                            )
+            except ClientError as e:
+                print(f"failed uploading file to aws {e}")
+                return web.json_response({"uploaded": False})
+        except Exception as e:
+            print(f"failed handling request {request} {e}")
+            return web.json_response({"uploaded": False})
+        return web.json_response({"uploaded": True})
+
     def get_bucket(self, store_id: bytes32) -> str:
         for store in self.stores:
             if store.id == store_id and store.bucket:
@@ -185,6 +214,7 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/upload", s3_client.upload)])
     app.add_routes([web.post("/handle_download", s3_client.handle_download)])
     app.add_routes([web.post("/download", s3_client.download)])
+    app.add_routes([web.post("/add_missing_files", s3_client.add_missing_files)])
     logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
     log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app

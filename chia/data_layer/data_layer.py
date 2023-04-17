@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import random
@@ -482,10 +483,27 @@ class DataLayer:
             return
         max_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
+        files = []
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
-            await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
+            res = await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
+            if res.result is False:
+                self.log.error(f"failed to write files for root generation {generation} store id {store_id}")
+            else:
+                files.append(res.diff_tree)
+                files.append(res.full_tree)
 
+        uploaders = await self.get_uploaders(store_id)
+        if uploaders is not None and len(uploaders) > 0:
+            request_json = {"store_id": store_id.hex(), "files": json.dumps(files)}
+            for uploader in uploaders:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(uploader + "/add_missing_files", json=request_json) as response:
+                        res_json = await response.json()
+                        if not res_json["uploaded"]:
+                            self.log.error(f"failed to upload to uploader {uploader}")
+                        else:
+                            self.log.debug(f"uploaded to uploader {uploader}")
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
