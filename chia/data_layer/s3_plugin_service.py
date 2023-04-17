@@ -149,7 +149,7 @@ class S3Plugin:
             parse_result = urlparse(url)
             should_download = False
             for store in self.stores:
-                if store.id == filename_tree_id and parse_result.scheme == "s3" and data["url"] in store.urls:
+                if store.id == filename_tree_id and parse_result.scheme == "s3" and url in store.urls:
                     should_download = True
 
             # filename must follow the DataLayer naming convention
