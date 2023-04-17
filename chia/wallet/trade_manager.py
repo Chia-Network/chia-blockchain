@@ -508,11 +508,11 @@ class TradeManager:
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
                     # For the XCH wallet also include the fee amount to the coins we use to pay this offer
-                    get_coin_amount = abs(amount)
+                    amount_to_select = abs(amount)
                     if wallet.type() == WalletType.STANDARD_WALLET:
-                        get_coin_amount += fee
+                        amount_to_select += fee
                     coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(get_coin_amount), min_coin_amount, max_coin_amount
+                        asset_id, uint64(amount_to_select), min_coin_amount, max_coin_amount
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
