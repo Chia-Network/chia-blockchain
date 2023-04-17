@@ -30,6 +30,11 @@ class WalletType(IntEnum):
     VC = 13
 
 
+class CoinType(IntEnum):
+    NORMAL = 0
+    CLAWBACK = 1
+
+
 class AmountWithPuzzlehash(TypedDict):
     amount: uint64
     puzzlehash: bytes32

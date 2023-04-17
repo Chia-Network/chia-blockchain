@@ -11,7 +11,7 @@ from chia.util.config import load_config
 
 
 @click.group("passphrase", short_help="Manage your keyring passphrase")
-def passphrase_cmd():
+def passphrase_cmd() -> None:
     pass
 
 
@@ -109,7 +109,7 @@ def hint_cmd() -> None:
 
 
 @hint_cmd.command("display", short_help="Display the keyring passphrase hint")
-def display_hint():
+def display_hint() -> None:
     from .passphrase_funcs import display_passphrase_hint
 
     display_passphrase_hint()
@@ -117,14 +117,14 @@ def display_hint():
 
 @hint_cmd.command("set", short_help="Set or update the keyring passphrase hint")
 @click.argument("hint", nargs=1)
-def set_hint(hint):
+def set_hint(hint: str) -> None:
     from .passphrase_funcs import set_passphrase_hint
 
     set_passphrase_hint(hint)
 
 
 @hint_cmd.command("remove", short_help="Remove the keyring passphrase hint")
-def remove_hint():
+def remove_hint() -> None:
     from .passphrase_funcs import remove_passphrase_hint
 
     remove_passphrase_hint()
