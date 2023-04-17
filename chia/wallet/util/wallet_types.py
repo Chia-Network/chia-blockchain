@@ -28,7 +28,6 @@ class WalletType(IntEnum):
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
     VC = 13
-    CRCAT = 5671
 
 
 class AmountWithPuzzlehash(TypedDict):

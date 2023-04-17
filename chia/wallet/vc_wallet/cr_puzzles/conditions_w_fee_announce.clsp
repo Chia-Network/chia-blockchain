@@ -1,3 +1,0 @@
-(mod (CONDITIONS nonce)
-  (c (list 60 nonce) CONDITIONS)
-)

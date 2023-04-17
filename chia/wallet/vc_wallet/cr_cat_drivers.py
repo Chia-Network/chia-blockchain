@@ -41,11 +41,6 @@ PROOF_FLAGS_CHECKER: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
     include_standard_libraries=True,
 )
-PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
-    "conditions_w_fee_announce.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
 
 
 # Basic drivers

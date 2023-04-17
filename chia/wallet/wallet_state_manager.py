@@ -41,7 +41,6 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
@@ -76,8 +75,6 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
-from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT
-from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
@@ -247,12 +244,6 @@ class WalletStateManager:
                 wallet = await DataLayerWallet.create(self, wallet_info)
             elif wallet_info.type == WalletType.VC:
                 wallet = await VCWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-            elif wallet_info.type == WalletType.CRCAT:
-                wallet = await CRCATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -745,27 +736,8 @@ class WalletStateManager:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
-            is_crcat: bool = False
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
-                # Check if it is a CRCAT
-                if CRCAT.is_cr_cat(uncurry_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))):
-                    is_crcat = True
-                else:
-                    return None
-            if is_crcat:
-                # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
-                # Just use the first cat coin
-                crcat: CRCAT = CRCAT.get_next_from_coin_spend(coin_spend)[0]
-                # Check if we already have a wallet
-                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT):
-                    crcat_info: CRCATInfo = CRCATInfo.from_json_dict(json.loads(wallet_info.data))
-                    if crcat_info.limitations_program_hash == crcat.tail_hash:
-                        return WalletIdentifier(wallet_info.id, WalletType(wallet_info.type))
-                # Cannot find a wallet, create a new one
-                crcat_wallet = await CRCATWallet.get_or_create_wallet_for_cat(
-                    self, self.main_wallet, crcat.tail_hash.hex(), crcat.authorized_providers, crcat.proofs_checker
-                )
-                return WalletIdentifier.create(crcat_wallet)
+                return None
             if bytes(tail_hash).hex()[2:] in self.default_cats or self.config.get(
                 "automatically_add_unknown_cats", False
             ):
