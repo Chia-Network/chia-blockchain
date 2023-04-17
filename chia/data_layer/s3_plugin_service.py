@@ -15,6 +15,7 @@ import yaml
 from aiohttp import web
 from botocore.exceptions import ClientError
 
+from chia.data_layer.download_data import is_filename_valid
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
@@ -86,6 +87,19 @@ class S3Plugin:
             bucket = self.get_bucket(store_id)
             full_tree_path = Path(data["full_tree_path"])
             diff_path = Path(data["diff_path"])
+
+            # Pull the store_id from the filename to make sure we only download for configured stores
+            full_tree_path_tree_id = bytes32(bytes.fromhex(full_tree_path.name.split("-")[0]))
+            diff_path_tree_id = bytes32(bytes.fromhex(diff_path.name.split("-")[0]))
+
+            # filenames must follow the DataLayer naming convention
+            if (
+                not is_filename_valid(full_tree_path.name)
+                or not is_filename_valid(diff_path.name)
+                or not (full_tree_path_tree_id == diff_path_tree_id == store_id)
+            ):
+                return web.json_response({"uploaded": False})
+
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     await asyncio.get_running_loop().run_in_executor(
@@ -125,7 +139,19 @@ class S3Plugin:
             url = data["url"]
             client_folder = Path(data["client_folder"])
             filename = data["filename"]
+            # Pull the store_id from the filename to make sure we only download for configured stores
+            filename_tree_id = bytes32(bytes.fromhex(filename.split("-")[0]))
+
             parse_result = urlparse(url)
+            should_download = False
+            for store in self.stores:
+                if store.id == filename_tree_id and parse_result.scheme == "s3" and data["url"] in store.urls:
+                    should_download = True
+
+            # filename must follow the DataLayer naming convention
+            if not should_download or not is_filename_valid(filename):
+                return web.json_response({"downloaded": False})
+
             bucket = parse_result.netloc
             target_filename = client_folder.joinpath(filename)
             # Create folder for parent directory
