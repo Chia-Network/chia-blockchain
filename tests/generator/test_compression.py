@@ -18,7 +18,6 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
     spend_bundle_to_serialized_coin_spend_entry_list,
 )
-from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -310,7 +309,7 @@ class TestDecompression(TestCase):
         p_with_cses = DECOMPRESS_BLOCK.curry(
             DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end), cse2, DESERIALIZE_MOD
         )
-        generator_args = create_generator_args([SerializedProgram.from_bytes(original_generator)])
+        generator_args = Program.to([[original_generator]])
         cost, out = p_with_cses.run_with_cost(INFINITE_COST, generator_args)
 
         print()

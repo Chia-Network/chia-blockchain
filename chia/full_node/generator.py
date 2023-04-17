@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -41,15 +41,6 @@ def create_block_generator(
     return BlockGenerator(generator, generator_list, generator_heights)
 
 
-def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Program:
-    """
-    `create_generator_args`: The format and contents of these arguments affect consensus.
-    """
-    gen_ref_list = [bytes(g) for g in generator_ref_list]
-    ret: Program = Program.to([gen_ref_list])
-    return ret
-
-
 def create_compressed_generator(
     original_generator: CompressorArg,
     compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]],
@@ -64,8 +55,3 @@ def create_compressed_generator(
         DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
     return BlockGenerator(program, [original_generator.generator], [original_generator.block_height])
-
-
-def setup_generator_args(self: BlockGenerator) -> Tuple[SerializedProgram, Program]:
-    args = create_generator_args(self.generator_refs)
-    return self.program, args

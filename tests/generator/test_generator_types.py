@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict
 from unittest import TestCase
 
-from chia.full_node.generator import create_block_generator, create_generator_args
+from chia.full_node.generator import create_block_generator
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import GeneratorBlockCacheInterface
@@ -43,12 +43,10 @@ class TestGeneratorTypes(TestCase):
         print(gen)
 
     def test_make_generator_args(self):
-        generator_ref_list = [gen1]
-        gen_args = create_generator_args(generator_ref_list)
-        gen_args_as_program = Program.from_bytes(bytes(gen_args))
+        gen_args = Program.to([[bytes(gen1)]])
 
         # First Argument to the block generator is the first template generator
-        arg2 = gen_args_as_program.first().first()
+        arg2 = gen_args.first().first()
         print(arg2)
         assert arg2 == bytes(gen1)
 
