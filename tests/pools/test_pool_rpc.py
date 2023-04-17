@@ -63,7 +63,7 @@ async def manage_temporary_pool_plot(
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path: Path = Path(tmpdir)
         bt.add_plot_directory(tmp_path)
-        plot_id = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
+        plot_id, _ = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
         assert plot_id is not None
         await bt.refresh_plots()
 
