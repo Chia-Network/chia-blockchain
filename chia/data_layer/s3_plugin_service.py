@@ -177,6 +177,20 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
             "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
             f"Missing config key: {e.args[0]!r}"
         )
+
+    log.setLevel(logging.INFO)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler(config.get("log_filename", "s3_plugin.log"))
+    fh.setLevel(logging.INFO)
+    # create formatter and add it to the handlers
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"
+    )
+
+    fh.setFormatter(file_log_formatter)
+    # add the handlers to logger
+    log.addHandler(fh)
+
     stores = read_store_ids_from_config(config)
 
     s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, stores, instance_name)
@@ -185,7 +199,6 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/upload", s3_client.upload)])
     app.add_routes([web.post("/handle_download", s3_client.handle_download)])
     app.add_routes([web.post("/download", s3_client.download)])
-    logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
     log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app
 
