@@ -16,6 +16,8 @@ from chia.wallet.util.transaction_type import TransactionType
 
 T = TypeVar("T")
 
+minimum_send_attempts = 6
+
 
 @dataclass
 class ItemAndTransactionRecords(Generic[T]):
@@ -113,7 +115,7 @@ class TransactionRecord(Streamable):
 
     def is_valid(self) -> bool:
         past_receipts = self.sent_to
-        if len(past_receipts) < 6:
+        if len(past_receipts) < minimum_send_attempts:
             # we haven't tried enough peers yet
             return True
         if any([x[0] for x in past_receipts if x[0] == MempoolInclusionStatus.SUCCESS.value]):
