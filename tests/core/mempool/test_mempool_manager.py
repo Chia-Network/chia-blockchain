@@ -138,11 +138,12 @@ def make_test_conds(
     before_seconds_relative: Optional[int] = None,
     before_seconds_absolute: Optional[int] = None,
     cost: int = 0,
+    spend_ids: List[bytes32] = [TEST_COIN_ID],
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
         [
             Spend(
-                TEST_COIN.name(),
+                spend_id,
                 IDENTITY_PUZZLE_HASH,
                 None if height_relative is None else uint32(height_relative),
                 None if seconds_relative is None else uint64(seconds_relative),
@@ -154,6 +155,7 @@ def make_test_conds(
                 [],
                 0,
             )
+            for spend_id in spend_ids
         ],
         0,
         uint32(height_absolute),
@@ -619,11 +621,11 @@ def mk_item(
     # can_replace()
     spends = [CoinSpend(c, SerializedProgram(), SerializedProgram()) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
-    npc_results = NPCResult(None, make_test_conds(cost=cost), uint64(cost))
+    npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]), uint64(cost))
     return MempoolItem(
         spend_bundle,
         uint64(fee),
-        npc_results,
+        npc_result,
         spend_bundle.name(),
         uint32(0),
         None if assert_height is None else uint32(assert_height),
