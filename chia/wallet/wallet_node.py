@@ -253,7 +253,15 @@ class WalletNode:
     def set_auto_claim(self, auto_claim_config: ClawbackAutoClaimSettings) -> Dict[str, Any]:
         if auto_claim_config.batch_size < 1:
             auto_claim_config = dataclasses.replace(auto_claim_config, batch_size=uint16(50))
+        # Update in memory config
+        self.config["auto_claim"] = {}
+        self.config["auto_claim"]["enabled"] = auto_claim_config.enabled
+        self.config["auto_claim"]["tx_fee"] = int(auto_claim_config.tx_fee)
+        self.config["auto_claim"]["min_amount"] = int(auto_claim_config.min_amount)
+        self.config["auto_claim"]["batch_size"] = int(auto_claim_config.batch_size)
+        # Update config file
         with lock_and_load_config(self.root_path, "config.yaml") as config:
+            config["wallet"]["auto_claim"] = {}
             config["wallet"]["auto_claim"]["enabled"] = auto_claim_config.enabled
             config["wallet"]["auto_claim"]["tx_fee"] = int(auto_claim_config.tx_fee)
             config["wallet"]["auto_claim"]["min_amount"] = int(auto_claim_config.min_amount)
