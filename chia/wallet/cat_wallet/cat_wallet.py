@@ -506,21 +506,20 @@ class CATWallet:
                     raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
                 pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                error, conditions, cost = conditions_dict_for_solution(
+                conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
                     spend.solution.to_program(),
                     self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 )
-                if conditions is not None:
-                    synthetic_pk = synthetic_secret_key.get_g1()
-                    for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                    ):
-                        try:
-                            assert bytes(synthetic_pk) == pk
-                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                        except AssertionError:
-                            raise ValueError("This spend bundle cannot be signed by the CAT wallet")
+                synthetic_pk = synthetic_secret_key.get_g1()
+                for pk, msg in pkm_pairs_for_conditions_dict(
+                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                ):
+                    try:
+                        assert bytes(synthetic_pk) == pk
+                        sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                    except AssertionError:
+                        raise ValueError("This spend bundle cannot be signed by the CAT wallet")
 
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])

@@ -396,7 +396,7 @@ class DataLayer:
                     timeout,
                     self.log,
                     proxy_url,
-                    await self.get_downloader(url),
+                    await self.get_downloader(tree_id, url),
                 )
                 if success:
                     self.log.info(
@@ -412,14 +412,14 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
-    async def get_downloader(self, url: str) -> Optional[str]:
-        request_json = {"url": url}
+    async def get_downloader(self, tree_id: bytes32, url: str) -> Optional[str]:
+        request_json = {"store_id": tree_id.hex(), "url": url}
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(d + "/check_url", json=request_json) as response:
+                    async with session.post(d + "/handle_download", json=request_json) as response:
                         res_json = await response.json()
-                        if res_json["handles_url"]:
+                        if res_json["handle_download"]:
                             return d
                 except Exception as e:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
@@ -447,7 +447,7 @@ class DataLayer:
             try:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
-                        "id": tree_id.hex(),
+                        "store_id": tree_id.hex(),
                         "full_tree_path": str(write_file_result.full_tree),
                         "diff_path": str(write_file_result.diff_tree),
                     }
@@ -456,19 +456,19 @@ class DataLayer:
                         async with aiohttp.ClientSession() as session:
                             async with session.post(uploader + "/upload", json=request_json) as response:
                                 res_json = await response.json()
-                                if not res_json["uploaded"]:
-                                    self.log.error(
-                                        f"Failed to upload files to {uploader} : {res_json} - will retry later"
-                                    )
-                                    break  # todo this will retry all uploaders
-                                else:
+                                if res_json["uploaded"]:
                                     self.log.info(
                                         f"Uploaded files to {uploader} for store {tree_id.hex()} "
-                                        f"generation {publish_generation}"
+                                        "generation {publish_generation}"
                                     )
+                                else:
+                                    self.log.error(
+                                        f"Failed to upload files to, will retry later: {uploader} : {res_json}"
+                                    )
+                                    break  # todo this will retry all uploaders
             except Exception as e:
-                self.log.error(f"Exception uploading files for {tree_id} - will retry later")
-                self.log.debug(f"Failed to upload files, clean local disc {e}")
+                self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
+                self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
                 os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
@@ -856,11 +856,9 @@ class DataLayer:
         for uploader in self.uploaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(
-                        "http://" + uploader + "/check_store_id", json={"id": tree_id.hex()}
-                    ) as response:
+                    async with session.post(uploader + "/handle_upload", json={"store_id": tree_id.hex()}) as response:
                         res_json = await response.json()
-                        if res_json["handles_store"]:
+                        if res_json["handle_upload"]:
                             uploaders.append(uploader)
                 except Exception as e:
                     self.log.error(f"get_uploader could not get response {e}")

@@ -5,8 +5,9 @@ import concurrent.futures
 import functools
 import logging
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
 
 import boto3 as boto3
@@ -19,15 +20,31 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 log = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class StoreConfig:
+    id: bytes32
+    bucket: Optional[str]
+    urls: Set[str]
+
+    @classmethod
+    def unmarshal(cls, d: Dict[str, Any]) -> StoreConfig:
+        upload_bucket = d.get("upload_bucket", None)
+        if upload_bucket and len(upload_bucket) == 0:
+            upload_bucket = None
+
+        return StoreConfig(bytes32.from_hexstr(d["store_id"]), upload_bucket, d.get("download_urls", set()))
+
+    def marshal(self) -> Dict[str, Any]:
+        return {"store_id": self.id.hex(), "upload_bucket": self.bucket, "download_urls": self.urls}
+
+
 class S3Plugin:
     boto_client: boto3.client
     port: int
     region: str
     aws_access_key_id: str
     aws_secret_access_key: str
-    store_ids: List[bytes32]
-    bukets: Dict[str, List[str]]
-    urls: List[str]
+    stores: List[StoreConfig]
     instance_name: str
 
     def __init__(
@@ -35,9 +52,7 @@ class S3Plugin:
         region: str,
         aws_access_key_id: str,
         aws_secret_access_key: str,
-        store_ids: List[bytes32],
-        buckets: Dict[str, List[str]],
-        urls: List[str],
+        stores: List[StoreConfig],
         instance_name: str,
     ):
         self.boto_client = boto3.client(
@@ -46,27 +61,28 @@ class S3Plugin:
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
         )
-        self.store_ids = store_ids
-        self.buckets = buckets
-        self.urls = urls
+        self.stores = stores
         self.instance_name = instance_name
 
-    async def check_store_id(self, request: web.Request) -> web.Response:
+    async def handle_upload(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
             print(f"failed parsing request {request} {e}")
-            return web.json_response({"handles_url": False})
-        store_id = bytes32.from_hexstr(data["id"])
-        if store_id in self.store_ids:
-            return web.json_response({"handles_store": True})
-        return web.json_response({"handles_store": False})
+            return web.json_response({"handle_upload": False})
+
+        store_id = bytes32.from_hexstr(data["store_id"])
+        for store in self.stores:
+            if store.id == store_id and store.bucket:
+                return web.json_response({"handle_upload": True, "bucket": store.bucket})
+
+        return web.json_response({"handle_upload": False})
 
     async def upload(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()
-            store_id = bytes32.from_hexstr(data["id"])
+            store_id = bytes32.from_hexstr(data["store_id"])
             bucket = self.get_bucket(store_id)
             full_tree_path = Path(data["full_tree_path"])
             diff_path = Path(data["diff_path"])
@@ -84,20 +100,24 @@ class S3Plugin:
                 return web.json_response({"uploaded": False})
         except Exception as e:
             print(f"failed handling request {request} {e}")
-            return web.json_response({"handles_url": False})
+            return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
 
-    async def check_url(self, request: web.Request) -> web.Response:
+    async def handle_download(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
             print(f"failed parsing request {request} {e}")
-            return web.json_response({"handles_url": False})
+            return web.json_response({"handle_download": False})
+
+        store_id = bytes32.from_hexstr(data["store_id"])
         parse_result = urlparse(data["url"])
-        if parse_result.scheme == "s3" and data["url"] in self.urls:
-            return web.json_response({"handles_url": True})
-        return web.json_response({"handles_url": False})
+        for store in self.stores:
+            if store.id == store_id and parse_result.scheme == "s3" and data["url"] in store.urls:
+                return web.json_response({"handle_download": True, "urls": list(store.urls)})
+
+        return web.json_response({"handle_download": False})
 
     async def download(self, request: web.Request) -> web.Response:
         try:
@@ -120,35 +140,50 @@ class S3Plugin:
         return web.json_response({"downloaded": True})
 
     def get_bucket(self, store_id: bytes32) -> str:
-        for bucket in self.buckets:
-            if store_id.hex() in self.buckets[bucket]:
-                return bucket
+        for store in self.stores:
+            if store.id == store_id and store.bucket:
+                return store.bucket
+
         raise Exception(f"bucket not found for store id {store_id.hex()}")
 
     def update_instance_from_config(self) -> None:
         config = load_config(self.instance_name)
-        store_ids = config["store_ids"]
-        buckets: Dict[str, List[str]] = config["buckets"]
-        urls = config["urls"]
-        self.buckets = buckets
-        self.store_ids = store_ids
-        self.urls = urls
+        self.stores = read_store_ids_from_config(config)
 
 
-def make_app(config: Dict[str, Any], instance_name: str):  # type: ignore
-    region = config["aws_credentials"]["region"]
-    aws_access_key_id = config["aws_credentials"]["access_key_id"]
-    aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
-    store_ids = []
-    for store in config["store_ids"]:
-        store_ids.append(bytes32.from_hexstr(store))
-    buckets: Dict[str, List[str]] = config["buckets"]
-    urls = config["urls"]
-    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, store_ids, buckets, urls, instance_name)
+def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
+    stores = []
+    for store in config.get("stores", []):
+        try:
+            stores.append(StoreConfig.unmarshal(store))
+        except Exception as e:
+            if "store_id" in store:
+                bad_store_id = f"{store['store_id']!r}"
+            else:
+                bad_store_id = "<missing>"
+            print(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
+            pass
+
+    return stores
+
+
+def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
+    try:
+        region = config["aws_credentials"]["region"]
+        aws_access_key_id = config["aws_credentials"]["access_key_id"]
+        aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+    except KeyError as e:
+        sys.exit(
+            "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
+            f"Missing config key: {e.args[0]!r}"
+        )
+    stores = read_store_ids_from_config(config)
+
+    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, stores, instance_name)
     app = web.Application()
-    app.add_routes([web.post("/check_store_id", s3_client.check_store_id)])
+    app.add_routes([web.post("/handle_upload", s3_client.handle_upload)])
     app.add_routes([web.post("/upload", s3_client.upload)])
-    app.add_routes([web.post("/check_url", s3_client.check_url)])
+    app.add_routes([web.post("/handle_download", s3_client.handle_download)])
     app.add_routes([web.post("/download", s3_client.download)])
     return app
 
@@ -161,11 +196,22 @@ def load_config(instance: str) -> Any:
 
 def run_server() -> None:
     instance_name = sys.argv[1]
+    try:
+        config = load_config(instance_name)
+    except KeyError:
+        sys.exit(f"Config for instance {instance_name} not found.")
+
+    if not config:
+        sys.exit(f"Config for instance {instance_name} is empty.")
+
+    try:
+        port = config["port"]
+    except KeyError:
+        sys.exit("Missing port in config file.")
+
     print(f"run instance {instance_name}")
-    config = load_config(instance_name)
-    port = config["port"]
     web.run_app(make_app(config, instance_name), port=port)
 
 
-# run this
-run_server()
+if __name__ == "__main__":
+    run_server()

@@ -118,8 +118,7 @@ def test_p2_singleton():
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
     cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
-    err, conditions = parse_sexp_to_conditions(result)
-    assert err is None
+    conditions = parse_sexp_to_conditions(result)
 
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
