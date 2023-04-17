@@ -121,7 +121,7 @@ class TransactionRecord(Streamable):
         if any([x[1] for x in past_receipts if x[1] == MempoolInclusionStatus.SUCCESS.value]):
             # we managed to push it to mempool at least once
             return True
-        if any([x[2] for x in past_receipts if x[2] in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)]):
+        if any([x[2] for x in past_receipts if x[2] in (Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name)]):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
         return False
