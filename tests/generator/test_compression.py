@@ -18,7 +18,7 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
     spend_bundle_to_serialized_coin_spend_entry_list,
 )
-from chia.full_node.generator import create_generator_args, run_generator_unsafe
+from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -28,6 +28,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.make_block_generator import make_spend_bundle
+from tests.generator.test_rom import run_generator_unsafe
 
 TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="chia.wallet.puzzles")
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")

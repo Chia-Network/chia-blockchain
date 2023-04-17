@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
 from chia.consensus.condition_costs import ConditionCost
-from chia.full_node.generator import run_generator_unsafe
+from chia.full_node.generator import GENERATOR_MOD
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -84,6 +84,12 @@ EXPECTED_OUTPUT = (
     "000000000000000001ff8201f48080ff856578747261ff8464617461ff83666f72ff8463"
     "6f696e8080ff856578747261ff8464617461ff83666f72ff85626c6f636b80"
 )
+
+
+def run_generator_unsafe(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
+    """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
+    args = Program.to([[bytes(g) for g in self.generator_refs]])
+    return GENERATOR_MOD.run_with_cost(max_cost, self.program, args)
 
 
 def as_atom_list(prg: Program) -> List[bytes]:
