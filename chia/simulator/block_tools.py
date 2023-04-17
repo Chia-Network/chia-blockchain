@@ -120,9 +120,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_MOD = get_generator()
+from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{

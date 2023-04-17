@@ -8,9 +8,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorBlockCacheInterface
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_MOD = get_generator()
 
 DECOMPRESS_BLOCK = load_clvm_maybe_recompile("block_program_zero.clsp", package_or_requirement="chia.wallet.puzzles")
 DECOMPRESS_PUZZLE = load_clvm_maybe_recompile("decompress_puzzle.clsp", package_or_requirement="chia.wallet.puzzles")

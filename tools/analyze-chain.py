@@ -21,9 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.full_block import FullBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_ROM = bytes(get_generator())
+from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
 
 
 # returns an optional error code and an optional PySpendBundleConditions (from chia_rs)
@@ -42,7 +40,7 @@ def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
     try:
         start_time = time()
         err, result = run_generator(
-            GENERATOR_ROM,
+            bytes(GENERATOR_MOD),
             env_data,
             max_cost,
             flags,
