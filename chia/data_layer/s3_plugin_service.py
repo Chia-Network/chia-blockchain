@@ -88,20 +88,20 @@ class S3Plugin:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket = self.get_bucket(store_id)
-            full_tree_path_name = Path(data["full_tree_path"]).name
-            diff_path_name = Path(data["diff_path"]).name
-            full_tree_path = self.server_files_path / full_tree_path_name
-            diff_path = self.server_files_path / diff_path_name
+            full_tree_name: str = data["full_tree_filename"]
+            diff_name: str = data["diff_filename"]
+            full_tree_path = self.server_files_path.joinpath(full_tree_name)
+            diff_path = self.server_files_path.joinpath(diff_name)
 
             # Pull the store_id from the filename to make sure we only upload for configured stores
-            full_tree_path_tree_id = bytes32(bytes.fromhex(full_tree_path_name.split("-")[0]))
-            diff_path_tree_id = bytes32(bytes.fromhex(diff_path_name.split("-")[0]))
+            full_tree_id = bytes32(bytes.fromhex(full_tree_name.split("-")[0]))
+            diff_tree_id = bytes32(bytes.fromhex(diff_name.split("-")[0]))
 
             # filenames must follow the DataLayer naming convention
             if (
-                not is_filename_valid(full_tree_path_name)
-                or not is_filename_valid(diff_path_name)
-                or not (full_tree_path_tree_id == diff_path_tree_id == store_id)
+                not is_filename_valid(full_tree_name)
+                or not is_filename_valid(diff_name)
+                or not (full_tree_id == diff_tree_id == store_id)
             ):
                 return web.json_response({"uploaded": False})
 

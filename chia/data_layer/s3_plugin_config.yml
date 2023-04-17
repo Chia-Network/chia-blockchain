@@ -17,7 +17,7 @@ instance-1:
 
 instance-2:
   port: 8999
-  server_files_location: "/tmp/"
+  server_files_location: "/Users/test/.chia/mainnet/data_layer/db/server_files_location_testnet10"
   aws_credentials:
     access_key_id: "xxx"
     secret_access_key: "xxx"
