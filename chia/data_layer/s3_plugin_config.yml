@@ -1,5 +1,6 @@
 instance-1:
   log_filename: "s3_plugin.log"
+  server_files_location: "/Users/test/.chia/mainnet/data_layer/db/server_files_location_testnet10"
   port: 8998
   aws_credentials:
     access_key_id: "xxx"
@@ -16,6 +17,7 @@ instance-1:
 
 instance-2:
   port: 8999
+  server_files_location: "/tmp/"
   aws_credentials:
     access_key_id: "xxx"
     secret_access_key: "xxx"

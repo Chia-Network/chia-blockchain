@@ -45,6 +45,7 @@ class S3Plugin:
     region: str
     aws_access_key_id: str
     aws_secret_access_key: str
+    server_files_path: Path
     stores: List[StoreConfig]
     instance_name: str
 
@@ -53,6 +54,7 @@ class S3Plugin:
         region: str,
         aws_access_key_id: str,
         aws_secret_access_key: str,
+        server_files_path: Path,
         stores: List[StoreConfig],
         instance_name: str,
     ):
@@ -64,6 +66,7 @@ class S3Plugin:
         )
         self.stores = stores
         self.instance_name = instance_name
+        self.server_files_path = server_files_path
 
     async def handle_upload(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
@@ -85,17 +88,19 @@ class S3Plugin:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket = self.get_bucket(store_id)
-            full_tree_path = Path(data["full_tree_path"])
-            diff_path = Path(data["diff_path"])
+            full_tree_path_name = Path(data["full_tree_path"]).name
+            diff_path_name = Path(data["diff_path"]).name
+            full_tree_path = self.server_files_path / full_tree_path_name
+            diff_path = self.server_files_path / diff_path_name
 
-            # Pull the store_id from the filename to make sure we only download for configured stores
-            full_tree_path_tree_id = bytes32(bytes.fromhex(full_tree_path.name.split("-")[0]))
-            diff_path_tree_id = bytes32(bytes.fromhex(diff_path.name.split("-")[0]))
+            # Pull the store_id from the filename to make sure we only upload for configured stores
+            full_tree_path_tree_id = bytes32(bytes.fromhex(full_tree_path_name.split("-")[0]))
+            diff_path_tree_id = bytes32(bytes.fromhex(diff_path_name.split("-")[0]))
 
             # filenames must follow the DataLayer naming convention
             if (
-                not is_filename_valid(full_tree_path.name)
-                or not is_filename_valid(diff_path.name)
+                not is_filename_valid(full_tree_path_name)
+                or not is_filename_valid(diff_path_name)
                 or not (full_tree_path_tree_id == diff_path_tree_id == store_id)
             ):
                 return web.json_response({"uploaded": False})
@@ -137,7 +142,6 @@ class S3Plugin:
         try:
             data = await request.json()
             url = data["url"]
-            client_folder = Path(data["client_folder"])
             filename = data["filename"]
             # Pull the store_id from the filename to make sure we only download for configured stores
             filename_tree_id = bytes32(bytes.fromhex(filename.split("-")[0]))
@@ -153,9 +157,10 @@ class S3Plugin:
                 return web.json_response({"downloaded": False})
 
             bucket = parse_result.netloc
-            target_filename = client_folder.joinpath(filename)
+            target_filename = self.server_files_path.joinpath(filename)
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
+            log.info(f"downloading {url} to {target_filename}...")
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 await asyncio.get_running_loop().run_in_executor(
                     pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
@@ -198,14 +203,24 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
         region = config["aws_credentials"]["region"]
         aws_access_key_id = config["aws_credentials"]["access_key_id"]
         aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+        server_files_location = config["server_files_location"]
+        server_files_path = Path(server_files_location).resolve()
     except KeyError as e:
         sys.exit(
-            "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
-            f"Missing config key: {e.args[0]!r}"
+            "config file must have server_files_location, aws_credentials with region, access_key_id. "
+            f", and secret_access_key. Missing config key: {e.args[0]!r}"
         )
+
     stores = read_store_ids_from_config(config)
 
-    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, stores, instance_name)
+    s3_client = S3Plugin(
+        region=region,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        server_files_path=server_files_path,
+        stores=stores,
+        instance_name=instance_name,
+    )
     app = web.Application()
     app.add_routes([web.post("/handle_upload", s3_client.handle_upload)])
     app.add_routes([web.post("/upload", s3_client.upload)])
