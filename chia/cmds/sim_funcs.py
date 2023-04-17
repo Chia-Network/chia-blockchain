@@ -231,7 +231,6 @@ async def generate_plots(config: Dict[str, Any], root_path: Path, fingerprint: i
     """
     Pre-Generate plots for the new simulator instance.
     """
-    from time import time
 
     from chia.simulator.block_tools import BlockTools, test_constants
     from chia.simulator.start_simulator import PLOT_SIZE, PLOTS
@@ -248,11 +247,10 @@ async def generate_plots(config: Dict[str, Any], root_path: Path, fingerprint: i
         keychain=Keychain(),
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-    starting_time = time()
-    await bt.setup_plots(
+    existing_plots = await bt.setup_plots(
         num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE, bitfield=bitfield
     )
-    print(f"{'New plots generated.' if time() - starting_time > 5 else 'Using Existing Plots'}\n")
+    print(f"{'New plots generated.' if existing_plots else 'Using Existing Plots'}\n")
 
 
 async def get_current_height(root_path: Path) -> int:
