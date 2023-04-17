@@ -254,13 +254,13 @@ class SpendSim:
                 result = self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
 
                 if result is not None:
-                    bundle, additions, removals = result
+                    bundle, additions = result
                     generator_bundle = bundle
                     return_additions = additions
-                    return_removals = removals
+                    return_removals = bundle.removals()
 
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
-                    await self.coin_store._set_spent([r.name() for r in removals], uint32(self.block_height + 1))
+                    await self.coin_store._set_spent([r.name() for r in return_removals], uint32(self.block_height + 1))
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)

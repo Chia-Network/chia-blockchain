@@ -917,12 +917,12 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
     assert mempool_manager.peak is not None
     result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
-    agg, additions, removals = result
+    agg, additions = result
     # The second spend bundle has a higher FPC so it should get picked first
     assert agg == sb2
     # The first spend bundle hits the maximum block clvm cost and gets skipped
     assert additions == [Coin(coins[1].name(), IDENTITY_PUZZLE_HASH, coins[1].amount - 2)]
-    assert removals == [coins[1]]
+    assert agg.removals() == [coins[1]]
 
 
 @pytest.mark.parametrize(
