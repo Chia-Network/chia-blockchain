@@ -963,7 +963,10 @@ class DAOWallet(WalletProtocol):
         )
         assert tx_record
         assert tx_record.spend_bundle is not None
+
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
+        breakpoint()
+        eve_spend.debug()
         return full_spend
 
     async def generate_proposal_eve_spend(

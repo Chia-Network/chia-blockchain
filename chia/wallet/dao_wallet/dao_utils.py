@@ -108,12 +108,13 @@ def get_spend_p2_singleton_puzzle(
     # CONDITIONS  - this may also include announcements to spend an NFT
     # LIST_OF_TAILHASH_CONDITIONS
     # P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+    treasury_struct = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     puzzle: Program = SPEND_P2_SINGLETON_MOD.curry(
         [
             CAT_MOD_HASH,
             xch_conditions,
             asset_conditions,
-            P2_SINGLETON_MOD.curry(treasury_id),
+            P2_SINGLETON_MOD.curry(treasury_struct),
         ]
     )
 
