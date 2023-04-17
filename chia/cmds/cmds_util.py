@@ -62,7 +62,7 @@ async def validate_client_connection(
     root_path: Path,
     fingerprint: Optional[int],
     login_to_wallet: bool,
-    catch_errors: bool = True,
+    consume_errors: bool = True,
 ) -> Optional[int]:
     try:
         await rpc_client.healthz()
@@ -72,7 +72,7 @@ async def validate_client_connection(
                 rpc_client.close()
     except ClientConnectorError:
         rpc_client.close()
-        if not catch_errors:
+        if not consume_errors:
             await rpc_client.await_closed()
             raise
         print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
@@ -88,7 +88,7 @@ async def get_any_service_client(
     root_path: Path = DEFAULT_ROOT_PATH,
     fingerprint: Optional[int] = None,
     login_to_wallet: bool = True,
-    catch_errors: bool = True,
+    consume_errors: bool = True,
 ) -> AsyncIterator[Tuple[Optional[_T_RpcClient], Dict[str, Any], Optional[int]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
@@ -111,14 +111,14 @@ async def get_any_service_client(
         # check if we can connect to node, and if we can then validate
         # fingerprint access, otherwise return fingerprint and shutdown client
         fingerprint = await validate_client_connection(
-            node_client, node_type, rpc_port, root_path, fingerprint, login_to_wallet, catch_errors
+            node_client, node_type, rpc_port, root_path, fingerprint, login_to_wallet, consume_errors
         )
         if node_client.session.closed:
             yield None, config, fingerprint
         else:
             yield node_client, config, fingerprint
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not catch_errors:
+        if not consume_errors:
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 

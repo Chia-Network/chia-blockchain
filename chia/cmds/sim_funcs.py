@@ -254,7 +254,7 @@ async def generate_plots(config: Dict[str, Any], root_path: Path, fingerprint: i
 
 
 async def get_current_height(root_path: Path) -> int:
-    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path=root_path, catch_errors=False) as (
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path=root_path, consume_errors=False) as (
         node_client,
         _,
         _,
