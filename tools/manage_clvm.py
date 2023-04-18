@@ -36,6 +36,7 @@ all_suffixes = {"clsp": clsp_suffix, "hex": hex_suffix, "clvm": clvm_suffix}
 # TODO: these could be cli options
 top_levels = {"chia"}
 hashes_path = root.joinpath("chia/wallet/puzzles/deployed_puzzle_hashes.json")
+std_libraries = root.joinpath("chia/wallet/puzzles")
 
 
 class ManageClvmError(Exception):
@@ -137,9 +138,12 @@ class ClvmBytes:
 
     @classmethod
     def from_clvm_paths(cls, paths: ClvmPaths, hash_dict: typing.Dict[str, str] = {}) -> ClvmBytes:
+        hex_bytes = paths.hex.read_bytes()
         return cls(
             hex=paths.hex.read_bytes(),
-            hash=bytes.fromhex(hash_dict[paths.hash]),
+            hash=bytes.fromhex(hash_dict[paths.hash])
+            if paths.hash in hash_dict
+            else generate_hash_bytes(hex_bytes=hex_bytes),
         )
 
     @classmethod
@@ -288,7 +292,7 @@ def check(use_cache: bool) -> int:
                     compile_clvm(
                         input_path=os.fspath(reference_paths.clvm),
                         output_path=os.fspath(generated_paths.hex),
-                        search_paths=[os.fspath(reference_paths.clvm.parent)],
+                        search_paths=[os.fspath(reference_paths.clvm.parent), str(std_libraries)],
                     )
 
                     generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
@@ -377,7 +381,7 @@ def build() -> int:
                 compile_clvm(
                     input_path=os.fspath(reference_paths.clvm),
                     output_path=os.fspath(generated_paths.hex),
-                    search_paths=[os.fspath(reference_paths.clvm.parent)],
+                    search_paths=[os.fspath(reference_paths.clvm.parent), str(std_libraries)],
                 )
 
                 generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
