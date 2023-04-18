@@ -1178,3 +1178,37 @@ def _mint_vc(
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_vc))
+
+
+@vcs_cmd.command("get", short_help="Get a list of existing VCs")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option(
+    "-s", "--start", help="The index to start the list at", type=int, required=False, default=0, show_default=True
+)
+@click.option(
+    "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
+)
+def _get_vcs(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    start: int,
+    count: int,
+) -> None:
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import get_vcs
+
+    extra_params = {
+        "start": start,
+        "count": count,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_vcs))

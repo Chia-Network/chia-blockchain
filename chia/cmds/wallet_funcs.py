@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import pathlib
 import sys
@@ -1157,3 +1158,22 @@ async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
             address_prefix=selected_network_address_prefix(config),
             mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
         )
+
+
+async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    vc_records, proofs = await wallet_client.vc_get_vc_list(args["start"], args["count"])
+    print("Proofs:")
+    print("")
+    print(json.dumps(proofs, indent=4))
+    for record in vc_records:
+        print("")
+        print(f"Launcher ID: {record.vc.launcher_id.hex()}")
+        print(f"Coin ID: {record.vc.coin.name().hex()}")
+        print(
+            f"Inner Address: {encode_puzzle_hash(record.vc.inner_puzzle_hash, selected_network_address_prefix(config))}"
+        )
+        if record.vc.proof_hash is None:
+            pass
+        else:
+            print(f"Proof Hash: {record.vc.proof_hash.hex()}")
