@@ -333,17 +333,18 @@ def test_int_enum(enum_type: Type[SizedIntEnum], int_type: Type[StructStream]) -
 @pytest.mark.parametrize(
     "enum_type, value, exception",
     [
-        (Int8Enum, int8.MAXIMUM_EXCLUSIVE, TypeError),
+        # Python 3.11 raises TypeError, Python 3.9 raises ValueError
+        (Int8Enum, int8.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
         (Int8Enum, "text", ValueError),
-        (Int16Enum, int16.MAXIMUM_EXCLUSIVE, TypeError),
+        (Int16Enum, int16.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
         (Int16Enum, "text", ValueError),
-        (Int32Enum, int32.MAXIMUM_EXCLUSIVE, TypeError),
+        (Int32Enum, int32.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
         (Int32Enum, "text", ValueError),
-        (UInt8Enum, uint8.MAXIMUM_EXCLUSIVE, TypeError),
+        (UInt8Enum, uint8.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
         (UInt8Enum, "text", ValueError),
-        (UInt16Enum, uint16.MAXIMUM_EXCLUSIVE, TypeError),
+        (UInt16Enum, uint16.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
         (UInt16Enum, "text", ValueError),
-        (UInt32Enum, uint32.MAXIMUM_EXCLUSIVE, TypeError),
+        (UInt32Enum, uint32.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
         (UInt32Enum, "text", ValueError),
     ],
 )
