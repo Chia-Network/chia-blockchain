@@ -12,7 +12,7 @@
     inner_or_hidden_solution
   )
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
   (include curry.clib)
   (include sha256tree.clib)
   (include utility_macros.clib)

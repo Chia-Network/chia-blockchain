@@ -25,7 +25,7 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 # Mods
 EXTIGENT_METADATA_LAYER = load_clvm_maybe_recompile(
-    "exigent_metadata_layer.clvm",
+    "exigent_metadata_layer.clsp",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 )

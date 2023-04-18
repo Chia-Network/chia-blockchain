@@ -8,8 +8,8 @@
     inner_solution
   )
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
   (include utility_macros.clib)
 
   (defun-inline nft_ownership_layer_puzzle_hash
