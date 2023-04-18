@@ -108,12 +108,13 @@ def get_spend_p2_singleton_puzzle(
     # CONDITIONS  - this may also include announcements to spend an NFT
     # LIST_OF_TAILHASH_CONDITIONS
     # P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+    treasury_struct = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     puzzle: Program = SPEND_P2_SINGLETON_MOD.curry(
         [
             CAT_MOD_HASH,
             xch_conditions,
             asset_conditions,
-            P2_SINGLETON_MOD.curry(treasury_id),
+            P2_SINGLETON_MOD.curry(treasury_struct),
         ]
     )
 
@@ -263,7 +264,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Program) -> DAORules:
     curried_args = uncurry_treasury(puzzle_reveal)
     (
         _DAO_TREASURY_MOD_HASH,
-        _DAO_PROPOSAL_VALIDATOR_MOD,
+        _DAO_PROPOSAL_VALIDATOR,
         proposal_timelock,
         soft_close_length,
         attendance_required,
@@ -362,19 +363,39 @@ def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
 def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
     curried_args = uncurry_treasury(treasury_puzzle)
     (
-        singleton_struct,
-        DAO_TREASURY_MOD_HASH,
-        DAO_PROPOSAL_MOD_HASH,
-        DAO_PROPOSAL_TIMER_MOD_HASH,
-        DAO_LOCKUP_MOD_HASH,
-        CAT_MOD_HASH,
-        cat_tail_hash,
-        current_cat_issuance,
-        attendance_required_percentage,
-        proposal_pass_percentage,
+        _DAO_TREASURY_MOD_HASH,
+        proposal_validator,
         proposal_timelock,
+        soft_close_length,
+        attendance_required,
+        pass_percentage,
+        self_destruct_length,
+        oracle_spend_delay,
     ) = curried_args
-    return bytes32(cat_tail_hash.as_atom())
+
+    curried_args = uncurry_proposal_validator(proposal_validator)
+    (
+        SINGLETON_STRUCT,
+        PROPOSAL_MOD_HASH,
+        PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        LOCKUP_MOD_HASH,
+        TREASURY_MOD_HASH,
+        CAT_TAIL_HASH,
+    ) = curried_args.as_iter()
+    return bytes32(CAT_TAIL_HASH.as_atom())
+
+
+def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
+    try:
+        mod, curried_args = proposal_validator_program.uncurry()
+    except ValueError as e:
+        log.debug("Cannot uncurry treasury puzzle: error: %s", e)
+        raise e
+
+    if mod != DAO_PROPOSAL_VALIDATOR_MOD:
+        raise ValueError("Not a Treasury mod.")
+    return curried_args
 
 
 def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:

@@ -43,15 +43,15 @@
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
         (if (= (f (r (f conditions))) vote_added_puzhash)
           (if seen_vote  ; assert we haven't already made a coin with the new vote included
-            (x "bing")
+            (x)
             (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
               (if seen_change  ; assert that we haven't already recreated ourself in some fashion
-                (x "bong")
+                (x)
                 (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
               )
              (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 seen_change))
-               (x "boo")
+               (x)
              )
             )
           )
@@ -61,20 +61,20 @@
              (= (f (r (r (f conditions)))) (- my_amount vote_amount))
            )  ; we recreate ourselves with unused voting power
           (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote 1))
-          (x "bip" my_amount vote_amount (- my_amount vote_amount) (f conditions) vote_added_puzhash)
+          (x)
          )
         )
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change))
-            (x "bap")
+            (x)
           )
           (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change))
         )
       )
       (if (all seen_vote seen_change)  ; check all value is accounted for
         ()
-        (x "bop")
+        (x)
       )
     )
   )
@@ -95,7 +95,7 @@
   )
     (if active_votes
       (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
-        (x "flint")
+        (x)
         (check_not_previously_voted
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
@@ -110,7 +110,7 @@
           proposal_curry_vals
         )
       )
-      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; the problem might be here
           (calculate_proposal_puzzlehash
             PROPOSAL_MOD_HASH
             CAT_MOD_HASH
@@ -152,7 +152,7 @@
     (calculate_singleton_puzzle_hash
       proposal_singleton_struct
       (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
-        INNERPUZHASH
+        (sha256 ONE INNERPUZHASH)
         (sha256 ONE SPEND_OR_UPDATE_FLAG)
         (sha256 ONE TOTAL_VOTES)
         (sha256 ONE YES_VOTES)
@@ -258,7 +258,7 @@
           (c (f ACTIVE_VOTES) unused_votes)
         )
       )
-      (x "dip")  ; proposal ID not found, invalid spend
+      (x)  ; proposal ID not found, invalid spend
     )
   )
 
@@ -330,7 +330,7 @@
         ()
       )
       (if new_proposal_vote_id_or_removal_id  ; this forces the new_proposal_vote_id to be 0 if you're actually exiting, allows for tricks a layer up
-        (x "grip")  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
+        (x)  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
         (a INNERPUZ inner_solution)
       )
     )

@@ -12,7 +12,7 @@
   SPEND_OR_UPDATE_FLAG  ; this is one of 's', 'u', 'd' - other types may be added in the future
   PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
   vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-  vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+  vote_info ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
   vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
   previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
                                  ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
@@ -367,7 +367,7 @@
       	vote_amounts_or_proposal_validator_hash
       	previous_votes_or_pass_margin
       	lockup_innerpuzhashes_or_attendance_required
-      	vote_info_or_money_receiver_hash
+      	vote_info
       	0
       	(if (any YES_VOTES TOTAL_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
       	  ()
