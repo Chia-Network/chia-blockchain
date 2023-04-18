@@ -879,16 +879,10 @@ class DataLayer:
         return uploaders
 
     async def check_plugins(self) -> PluginStatus:
-        uploader_status = {}
-        downloader_status = {}
-
-        coros = {asyncio.create_task(get_plugin_info(url=plugin)) for plugin in {*self.uploaders, *self.downloaders}}
-        results = await asyncio.gather(*coros)
-        for result in results:
-            url, status = result
-            if url in self.uploaders:
-                uploader_status[url] = status
-            if url in self.downloaders:
-                downloader_status[url] = status
+        coros = [get_plugin_info(url=plugin)) for plugin in {*self.uploaders, *self.downloaders}]
+        results = dict(await asyncio.gather(*coros))
+        
+        uploader_status = {url: results.get(url, "unknown") for url in self.uploaders}
+        downloader_status = {url: results.get(url, "unknown") for url in self.downloaders}
 
         return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)
