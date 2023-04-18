@@ -1484,55 +1484,41 @@ class DAOWallet(WalletProtocol):
                     return
             index = index + 1
 
-            # Search for the timer coin
-            if not ended:
-                wallet_node: Any = self.wallet_state_manager.wallet_node
-                peer: WSChiaConnection = wallet_node.get_full_node_peer()
-                if peer is None:
-                    raise ValueError("Could not find any peers to request puzzle and solution from")
-                children = await wallet_node.fetch_children(singleton_id, peer)
-                assert len(children) > 0
-                found = False
-                parent_coin_id = singleton_id
+        # Search for the timer coin
+        if not ended:
+            wallet_node: Any = self.wallet_state_manager.wallet_node
+            peer: WSChiaConnection = wallet_node.get_full_node_peer()
+            if peer is None:
+                raise ValueError("Could not find any peers to request puzzle and solution from")
+            children = await wallet_node.fetch_children(singleton_id, peer)
+            assert len(children) > 0
+            found = False
+            parent_coin_id = singleton_id
 
-                if self.dao_info.current_treasury_innerpuz is None:
-                    raise ValueError("self.dao_info.current_treasury_innerpuz is None")
-                treasury_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
-                (
-                    singleton_struct,
-                    DAO_TREASURY_MOD_HASH,
-                    DAO_PROPOSAL_MOD_HASH,
-                    DAO_PROPOSAL_TIMER_MOD_HASH,
-                    DAO_LOCKUP_MOD_HASH,
-                    CAT_MOD_HASH,
-                    cat_tail_hash,
-                    current_cat_issuance,
-                    attendance_required_percentage,
-                    proposal_pass_percentage,
-                    proposal_timelock,
-                ) = treasury_args
+            if self.dao_info.current_treasury_innerpuz is None:
+                raise ValueError("self.dao_info.current_treasury_innerpuz is None")
 
-                timer_coin_puzhash = get_proposal_timer_puzzle(
-                    cat_tail_hash.as_atom(),
-                    singleton_id,
-                    singleton_struct.rest().first().as_atom(),
-                ).get_tree_hash()
+            timer_coin_puzhash = get_proposal_timer_puzzle(
+                CAT_TAIL_HASH.as_atom(),
+                singleton_id,
+                self.dao_info.treasury_id,
+            ).get_tree_hash()
 
-                while not found and len(children) > 0:
-                    children = await wallet_node.fetch_children(parent_coin_id, peer)
-                    if len(children) == 0:
+            while not found and len(children) > 0:
+                children = await wallet_node.fetch_children(parent_coin_id, peer)
+                if len(children) == 0:
+                    break
+                children_state = [child for child in children if child.coin.amount == 1]
+                assert children_state is not None
+                assert len(children_state) > 0
+                child_state = children_state[0]
+                for child in children:
+                    if child.coin.puzzle_hash == timer_coin_puzhash:
+                        found = True
+                        timer_coin = child.coin
                         break
-                    children_state = [child for child in children if child.coin.amount % 2 == 1]
-                    assert children_state is not None
-                    assert len(children_state) > 0
-                    child_state = children_state[0]
-                    for child in children:
-                        if children.coin.puzzle_hash == timer_coin_puzhash:
-                            found = True
-                            timer_coin = children.coin
-                            break
-                    child_coin = child_state.coin
-                    parent_coin_id = child_coin.name()
+                child_coin = child_state.coin
+                parent_coin_id = child_coin.name()
 
         # If we reach here then we don't currently know about this coin
         new_proposal_info = ProposalInfo(

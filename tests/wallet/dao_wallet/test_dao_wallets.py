@@ -496,5 +496,4 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     assert len(dao_wallet_0.dao_info.proposals_list) == 1
     assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal
-
-    # breakpoint()
+    assert dao_wallet_0.dao_info.proposals_list[0].timer_coin is not None

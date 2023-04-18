@@ -659,9 +659,9 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
-        # Check if the coin is a Proposal
+        # Check if the coin is a Proposal and that it isn't the timer coin (amount == 0)
         dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
-        if dao_curried_args is not None:
+        if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
         funding_puzzle_check = match_funding_puzzle(uncurried, solution)
