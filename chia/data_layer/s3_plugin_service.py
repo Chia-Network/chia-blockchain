@@ -256,7 +256,7 @@ def run_server() -> None:
     except KeyError:
         sys.exit("Missing port in config file.")
 
-    web.run_app(make_app(config, instance_name), port=port)
+    web.run_app(make_app(config, instance_name), port=port, host="localhost")
     log.info(f"Stopped s3 plugin {instance_name}")
 
 
