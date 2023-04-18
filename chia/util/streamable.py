@@ -325,12 +325,12 @@ def recurse_jsonify(d: Any) -> Any:
 
     elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
         return f"0x{bytes(d).hex()}"
+    elif isinstance(d, bool):
+        return d
     elif isinstance(d, int):
         return int(d)
     elif isinstance(d, Enum):
         return d.name
-    elif isinstance(d, bool):
-        return d
     elif d is None or type(d) == str:
         return d
     elif hasattr(d, "to_json_dict"):
