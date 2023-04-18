@@ -31,7 +31,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -1557,21 +1556,6 @@ class WalletNode:
         for reward_chain_hash, height in blocks_to_cache:
             peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
         return True
-
-    async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.call_api(
-            FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
-        )
-        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
-        assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
-        assert solution_response.response.coin_name == coin.name()
-
-        return CoinSpend(
-            coin,
-            solution_response.response.puzzle,
-            solution_response.response.solution,
-        )
 
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None

@@ -18,9 +18,6 @@ class TestPuzzleStore:
         async with DBConnection(1) as wrapper:
             db = await WalletPuzzleStore.create(wrapper)
             derivation_recs = []
-            # wallet_types = [t for t in WalletType]
-            [t for t in WalletType]
-
             for i in range(1000):
                 derivation_recs.append(
                     DerivationRecord(
