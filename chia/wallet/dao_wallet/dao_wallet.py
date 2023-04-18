@@ -1087,7 +1087,7 @@ class DAOWallet(WalletProtocol):
         is_yes_vote: bool,
         fee: uint64 = uint64(0),
         push: bool = True,
-    ) -> None:
+    ) -> SpendBundle:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
         for pi in self.dao_info.proposals_list:
@@ -1096,7 +1096,7 @@ class DAOWallet(WalletProtocol):
                 break
         if proposal_info is None:
             raise ValueError("Unable to find a proposal with that ID.")
-        if proposal_info.current_treasury_coin is None:
+        if proposal_info.timer_coin is None:
             # TODO: we should also check the current_inner puzzle is the finished state puzzle
             raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
         # TODO: we may well want to add in options for more specificity later, but for now this will do
@@ -1106,11 +1106,9 @@ class DAOWallet(WalletProtocol):
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         assert dao_cat_wallet is not None
-
+        assert proposal_info.current_innerpuz is not None
         curry_vals = get_curry_vals_from_proposal_puzzle(proposal_info.current_innerpuz)
-        dao_cat_spend = await dao_cat_wallet.create_vote_spend(
-            vote_amount, proposal_id, True, curry_vals=curry_vals
-        )
+        dao_cat_spend = await dao_cat_wallet.create_vote_spend(vote_amount, proposal_id, True, curry_vals=curry_vals)
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -1127,6 +1125,7 @@ class DAOWallet(WalletProtocol):
         vote_coins = []
         previous_votes = []
         lockup_inner_puzhashes = []
+        assert dao_cat_spend is not None
         for spend in dao_cat_spend.coin_spends:
             vote_amounts.append(spend.coin.amount)
             vote_coins.append(spend.coin.name())
@@ -1155,6 +1154,7 @@ class DAOWallet(WalletProtocol):
             ]
         )
         parent_info = self.get_parent_for_coin(proposal_info.current_coin)
+        assert parent_info is not None
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [
@@ -1171,9 +1171,8 @@ class DAOWallet(WalletProtocol):
         list_of_coinspends = [CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(
-                fee
-            )
+            chia_tx = await self.create_tandem_xch_tx(fee)
+            assert chia_tx.spend_bundle is not None
             spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
         spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
         if push:
@@ -1201,9 +1200,9 @@ class DAOWallet(WalletProtocol):
     async def create_proposal_close_spend(
         self,
         proposal_id: bytes32,
-        fee: uint64 = 0,
+        fee: uint64 = uint64(0),
         push: bool = True,
-    ):
+    ) -> SpendBundle:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
         for pi in self.dao_info.proposals_list:
@@ -1212,10 +1211,11 @@ class DAOWallet(WalletProtocol):
                 break
         if proposal_info is None:
             raise ValueError("Unable to find a proposal with that ID.")
-        if proposal_info.current_treasury_coin is None:
+        if proposal_info.timer_coin is None:
             # TODO: we should also check the current_inner is finished puzzle
             raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
         # TODO: do we need to re-sync proposal state here?
+        assert self.dao_info.current_treasury_innerpuz is not None
         curried_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
         (
             _DAO_TREASURY_MOD_HASH,
@@ -1232,6 +1232,7 @@ class DAOWallet(WalletProtocol):
         # TODO: how do we know this is really the latest height?
         if proposal_info.singleton_block_height + proposal_timelock < current_height:
             raise ValueError("This proposal is not ready to be closed")
+        assert proposal_info.current_innerpuz is not None
         full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -1245,25 +1246,26 @@ class DAOWallet(WalletProtocol):
         # self_destruct_time ; revealed by the treasury
         # oracle_spend_delay  ; used to recreate the treasury
         # self_destruct_flag ; if not 0, do the self-destruct spend
-        solution = Program.to([
-            proposal_validator.get_tree_hash(),
-            0,
-            proposal_timelock,
-            pass_percentage,
-            attendance_required,
-            0,
-            soft_close_length,
-            self_destruct_length,
-            oracle_spend_delay,
-            0,
-        ])
+        solution = Program.to(
+            [
+                proposal_validator.get_tree_hash(),
+                0,
+                proposal_timelock,
+                pass_percentage,
+                attendance_required,
+                0,
+                soft_close_length,
+                self_destruct_length,
+                oracle_spend_delay,
+                0,
+            ]
+        )
         # breakpoint()
         cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, solution)
-        spend_bundle = SpendBundle(cs, AugSchemeMPL.aggregate([]))
+        spend_bundle = SpendBundle([cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(
-                fee
-            )
+            chia_tx = await self.create_tandem_xch_tx(fee)
+            assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         full_spend = SpendBundle.aggregate([spend_bundle])
         if push:
