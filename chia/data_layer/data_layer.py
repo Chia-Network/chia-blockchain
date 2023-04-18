@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import random
@@ -19,6 +20,7 @@ from chia.data_layer.data_layer_util import (
     Layer,
     Offer,
     OfferStore,
+    PluginStatus,
     Proof,
     ProofOfInclusion,
     ProofOfInclusionLayer,
@@ -863,3 +865,26 @@ class DataLayer:
                 except Exception as e:
                     self.log.error(f"get_uploader could not get response {e}")
         return uploaders
+
+    async def check_plugins(self) -> PluginStatus:
+        uploader_status = {}
+        downloader_status = {}
+
+        async def get_plugin_info(url: str) -> Dict[str, Any]:
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.post(url + "/plugin_info", json={}) as response:
+                        ret = {"status": response.status}
+                        if response.status == 200:
+                            ret["response"] = json.loads(await response.text())
+                        return ret
+                except Exception as e:
+                    return {"error": f"{type(e).__name__} {e}"}
+
+        for uploader in self.uploaders:
+            uploader_status[uploader] = await get_plugin_info(uploader)
+
+        for downloader in self.downloaders:
+            downloader_status[downloader] = await get_plugin_info(downloader)
+
+        return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)
