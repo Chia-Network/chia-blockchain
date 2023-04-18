@@ -15,6 +15,7 @@ import yaml
 from aiohttp import web
 from botocore.exceptions import ClientError
 
+from chia.data_layer.download_data import is_filename_valid
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ class S3Plugin:
     region: str
     aws_access_key_id: str
     aws_secret_access_key: str
+    server_files_path: Path
     stores: List[StoreConfig]
     instance_name: str
 
@@ -55,6 +57,7 @@ class S3Plugin:
         region: str,
         aws_access_key_id: str,
         aws_secret_access_key: str,
+        server_files_path: Path,
         stores: List[StoreConfig],
         instance_name: str,
     ):
@@ -66,13 +69,14 @@ class S3Plugin:
         )
         self.stores = stores
         self.instance_name = instance_name
+        self.server_files_path = server_files_path
 
     async def handle_upload(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
         try:
             data = await request.json()
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"handle_upload": False})
 
         store_id = bytes32.from_hexstr(data["store_id"])
@@ -87,8 +91,23 @@ class S3Plugin:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket = self.get_bucket(store_id)
-            full_tree_path = Path(data["full_tree_path"])
-            diff_path = Path(data["diff_path"])
+            full_tree_name: str = data["full_tree_filename"]
+            diff_name: str = data["diff_filename"]
+
+            # filenames must follow the DataLayer naming convention
+            if not is_filename_valid(full_tree_name) or not is_filename_valid(diff_name):
+                return web.json_response({"uploaded": False})
+
+            # Pull the store_id from the filename to make sure we only upload for configured stores
+            full_tree_id = bytes32.fromhex(full_tree_name[:64])
+            diff_tree_id = bytes32.fromhex(diff_name[:64])
+
+            if not (full_tree_id == diff_tree_id == store_id):
+                return web.json_response({"uploaded": False})
+
+            full_tree_path = self.server_files_path.joinpath(full_tree_name)
+            diff_path = self.server_files_path.joinpath(diff_name)
+
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     await asyncio.get_running_loop().run_in_executor(
@@ -99,10 +118,10 @@ class S3Plugin:
                         pool, functools.partial(self.boto_client.upload_file, diff_path, bucket, diff_path.name)
                     )
             except ClientError as e:
-                print(f"failed uploading file to aws {e}")
+                log.error(f"failed uploading file to aws {type(e).__name__} {e}")
                 return web.json_response({"uploaded": False})
         except Exception as e:
-            print(f"failed handling request {request} {e}")
+            log.error(f"failed handling request {request} {type(e).__name__} {e}")
             return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
 
@@ -125,7 +144,7 @@ class S3Plugin:
         try:
             data = await request.json()
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"handle_download": False})
 
         store_id = bytes32.from_hexstr(data["store_id"])
@@ -140,19 +159,35 @@ class S3Plugin:
         try:
             data = await request.json()
             url = data["url"]
-            client_folder = Path(data["client_folder"])
             filename = data["filename"]
+
+            # filename must follow the DataLayer naming convention
+            if not is_filename_valid(filename):
+                return web.json_response({"downloaded": False})
+
+            # Pull the store_id from the filename to make sure we only download for configured stores
+            filename_tree_id = bytes32.fromhex(filename[:64])
             parse_result = urlparse(url)
+            should_download = False
+            for store in self.stores:
+                if store.id == filename_tree_id and parse_result.scheme == "s3" and url in store.urls:
+                    should_download = True
+                    break
+
+            if not should_download:
+                return web.json_response({"downloaded": False})
+
             bucket = parse_result.netloc
-            target_filename = client_folder.joinpath(filename)
+            target_filename = self.server_files_path.joinpath(filename)
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
+            log.info(f"downloading {url} to {target_filename}...")
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 await asyncio.get_running_loop().run_in_executor(
                     pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
                 )
         except Exception as e:
-            print(f"failed parsing request {request} {e}")
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
 
@@ -178,7 +213,7 @@ def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
                 bad_store_id = f"{store['store_id']!r}"
             else:
                 bad_store_id = "<missing>"
-            print(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
+            log.info(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
             pass
 
     return stores
@@ -189,14 +224,24 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
         region = config["aws_credentials"]["region"]
         aws_access_key_id = config["aws_credentials"]["access_key_id"]
         aws_secret_access_key = config["aws_credentials"]["secret_access_key"]
+        server_files_location = config["server_files_location"]
+        server_files_path = Path(server_files_location).resolve()
     except KeyError as e:
         sys.exit(
-            "config file must have aws_credentials with region, access_key_id, and secret_access_key. "
-            f"Missing config key: {e.args[0]!r}"
+            "config file must have server_files_location, aws_credentials with region, access_key_id. "
+            f", and secret_access_key. Missing config key: {e.args[0]!r}"
         )
+
     stores = read_store_ids_from_config(config)
 
-    s3_client = S3Plugin(region, aws_access_key_id, aws_secret_access_key, stores, instance_name)
+    s3_client = S3Plugin(
+        region=region,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        server_files_path=server_files_path,
+        stores=stores,
+        instance_name=instance_name,
+    )
     app = web.Application()
     app.add_routes([web.post("/handle_upload", s3_client.handle_upload)])
     app.add_routes([web.post("/upload", s3_client.upload)])
@@ -204,6 +249,8 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/download", s3_client.download)])
     app.add_routes([web.post("/plugin_id", s3_client.plugin_id)])
     app.add_routes([web.post("/healthz", s3_client.healthz)])
+    logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
+    log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app
 
 
@@ -228,8 +275,8 @@ def run_server() -> None:
     except KeyError:
         sys.exit("Missing port in config file.")
 
-    print(f"run instance {instance_name}")
-    web.run_app(make_app(config, instance_name), port=port)
+    web.run_app(make_app(config, instance_name), port=port, host="localhost")
+    log.info(f"Stopped s3 plugin {instance_name}")
 
 
 if __name__ == "__main__":

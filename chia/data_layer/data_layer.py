@@ -448,8 +448,8 @@ class DataLayer:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
                         "store_id": tree_id.hex(),
-                        "full_tree_path": str(write_file_result.full_tree),
-                        "diff_path": str(write_file_result.diff_tree),
+                        "full_tree_filename": str(write_file_result.full_tree.name),
+                        "diff_filename": str(write_file_result.diff_tree.name),
                     }
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
