@@ -323,9 +323,9 @@ def test_int_enum(enum_type: Type[SizedIntEnum], int_type: Type[StructStream]) -
         one = 1
         max = int_type.MAXIMUM_EXCLUSIVE - 1
 
-    assert TestEnumClass.one.name == "one"  # type: ignore[attr-defined]
-    assert type(TestEnumClass.one.value) == int_type  # type: ignore[attr-defined]
-    assert TestEnumClass.one.value == 1  # type: ignore[attr-defined]
+    assert TestEnumClass.one.name == "one"  # type: ignore[attr-defined] # pylint: disable = no-member
+    assert type(TestEnumClass.one.value) == int_type  # type: ignore[attr-defined] # pylint: disable = no-member
+    assert TestEnumClass.one.value == 1  # type: ignore[attr-defined] # pylint: disable = no-member
     assert int(TestEnumClass.one) == 1
     assert TestEnumClass(1) == TestEnumClass.one
 
