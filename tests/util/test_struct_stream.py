@@ -4,7 +4,7 @@ import io
 import struct
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Iterable, List, Optional, Type
+from typing import Iterable, List, Optional, Tuple, Type, Union
 
 import pytest
 
@@ -15,7 +15,25 @@ from _pytest.fixtures import SubRequest
 from _pytest.mark.structures import ParameterSet
 from typing_extensions import final
 
-from chia.util.ints import int8, int16, int32, int64, int512, uint8, uint16, uint32, uint64, uint128
+from chia.util.ints import (
+    Int8Enum,
+    Int16Enum,
+    Int32Enum,
+    SizedIntEnum,
+    UInt8Enum,
+    UInt16Enum,
+    UInt32Enum,
+    int8,
+    int16,
+    int32,
+    int64,
+    int512,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+    uint128,
+)
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 
@@ -285,3 +303,57 @@ class TestStructStream:
 
     def test_parse_metadata_from_name_correct_minimum(self, good: Good) -> None:
         assert good.cls.MINIMUM == good.minimum
+
+
+@pytest.mark.parametrize(
+    "enum_type, int_type",
+    [
+        (Int8Enum, int8),
+        (Int16Enum, int16),
+        (Int32Enum, int32),
+        (UInt8Enum, uint8),
+        (UInt16Enum, uint16),
+        (UInt32Enum, uint32),
+    ],
+)
+def test_int_enum(enum_type: Type[SizedIntEnum], int_type: Type[StructStream]) -> None:
+    # ignores here are to allow inheritance from `enum_type`
+    class TestEnumClass(enum_type):  # type: ignore[valid-type, misc]
+        min = int_type.MINIMUM
+        one = 1
+        max = int_type.MAXIMUM_EXCLUSIVE - 1
+
+    assert TestEnumClass.one.name == "one"  # type: ignore[attr-defined] # pylint: disable = no-member
+    assert type(TestEnumClass.one.value) == int_type  # type: ignore[attr-defined] # pylint: disable = no-member
+    assert TestEnumClass.one.value == 1  # type: ignore[attr-defined] # pylint: disable = no-member
+    assert int(TestEnumClass.one) == 1
+    assert TestEnumClass(1) == TestEnumClass.one
+
+
+@pytest.mark.parametrize(
+    "enum_type, value, exception",
+    [
+        # Python 3.11 raises TypeError, Python 3.9 raises ValueError
+        (Int8Enum, int8.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
+        (Int8Enum, "text", ValueError),
+        (Int16Enum, int16.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
+        (Int16Enum, "text", ValueError),
+        (Int32Enum, int32.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
+        (Int32Enum, "text", ValueError),
+        (UInt8Enum, uint8.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
+        (UInt8Enum, "text", ValueError),
+        (UInt16Enum, uint16.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
+        (UInt16Enum, "text", ValueError),
+        (UInt32Enum, uint32.MAXIMUM_EXCLUSIVE, (ValueError, TypeError)),
+        (UInt32Enum, "text", ValueError),
+    ],
+)
+def test_int_enum_failure(
+    enum_type: Type[SizedIntEnum],
+    value: Union[int32, uint32],
+    exception: Union[Type[Exception], Tuple[Type[Exception], ...]],
+) -> None:
+    with pytest.raises(exception):
+
+        class BadEnum(enum_type):  # type: ignore[valid-type, misc] # ignore to allow subclassing `enum_type`
+            bad_entry = value

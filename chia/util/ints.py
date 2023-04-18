@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import Enum
+
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 
@@ -61,3 +63,31 @@ class int512(StructStream):
     # [-INT512_MAX, INT512_MAX]
     MAXIMUM_EXCLUSIVE = 2**BITS
     MINIMUM = -(2**BITS) + 1
+
+
+class SizedIntEnum(Enum):
+    pass
+
+
+class Int8Enum(int8, SizedIntEnum):
+    pass
+
+
+class Int16Enum(int16, SizedIntEnum):
+    pass
+
+
+class Int32Enum(int32, SizedIntEnum):
+    pass
+
+
+class UInt8Enum(uint8, SizedIntEnum):
+    pass
+
+
+class UInt16Enum(uint16, SizedIntEnum):
+    pass
+
+
+class UInt32Enum(uint32, SizedIntEnum):
+    pass

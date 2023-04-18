@@ -17,7 +17,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes4, bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import Int8Enum, Int16Enum, Int32Enum, UInt8Enum, UInt16Enum, UInt32Enum, uint8, uint32, uint64
 from chia.util.streamable import (
     ConversionError,
     DefinitionError,
@@ -525,6 +525,112 @@ def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[List[Opt
     assert obj.a == a
     assert obj.b == b
     assert obj.c == c
+
+
+class I8(Int8Enum):
+    min = Int8Enum.MINIMUM
+    max = Int8Enum.MAXIMUM_EXCLUSIVE - 1
+
+
+class I16(Int16Enum):
+    min = Int16Enum.MINIMUM
+    max = Int16Enum.MAXIMUM_EXCLUSIVE - 1
+
+
+class I32(Int32Enum):
+    min = Int32Enum.MINIMUM
+    max = Int32Enum.MAXIMUM_EXCLUSIVE - 1
+
+
+class U8(UInt8Enum):
+    min = UInt8Enum.MINIMUM
+    max = UInt8Enum.MAXIMUM_EXCLUSIVE - 1
+
+
+class U16(UInt16Enum):
+    min = UInt16Enum.MINIMUM
+    max = UInt16Enum.MAXIMUM_EXCLUSIVE - 1
+
+
+class U32(UInt32Enum):
+    min = UInt32Enum.MINIMUM
+    max = UInt32Enum.MAXIMUM_EXCLUSIVE - 1
+
+
+@streamable
+@dataclass(frozen=True)
+class TestClassIntEnums(Streamable):
+    i8: I8
+    i16: I16
+    i32: I32
+    u8: U8
+    u16: U16
+    u32: U32
+
+
+test_enum_min = TestClassIntEnums(I8.min, I16.min, I32.min, U8.min, U16.min, U32.min)
+test_enum_max = TestClassIntEnums(I8.max, I16.max, I32.max, U8.min, U16.max, U32.max)
+
+
+@pytest.mark.parametrize(
+    "byte_data, value",
+    [
+        (b"\x80\x80\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", test_enum_min),
+        (b"\x7f\x7f\xff\x7f\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff", test_enum_max),
+    ],
+)
+def test_int_enum_byte(byte_data: bytes, value: TestClassIntEnums) -> None:
+    assert bytes(value) == byte_data
+    from_bytes = TestClassIntEnums.from_bytes(byte_data)
+    assert from_bytes == value
+
+
+@pytest.mark.parametrize(
+    "json_dict, value",
+    [
+        ({"i8": -128, "i16": -32768, "i32": -2147483648, "u8": 0, "u16": 0, "u32": 0}, test_enum_min),
+        ({"i8": 127, "i16": 32767, "i32": 2147483647, "u8": 0, "u16": 65535, "u32": 4294967295}, test_enum_max),
+    ],
+)
+def test_int_enum_json(json_dict: Dict[str, Any], value: TestClassIntEnums) -> None:
+    assert value.to_json_dict() == json_dict
+    from_json = TestClassIntEnums.from_json_dict(json_dict)
+    assert from_json == value
+
+
+@pytest.mark.parametrize(
+    "byte_data, invalid_value, invalid_class",
+    [
+        (b"\x01\x80\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 1, I8),
+        (b"\x80\x00\x02\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 2, I16),
+        (b"\x80\x80\x00\xff\xff\xff\xfd\x00\x00\x00\x00\x00\x00\x00", -3, I32),
+    ],
+)
+def test_int_enum_invalid_entry_bytes(byte_data: bytes, invalid_value: int, invalid_class: type) -> None:
+    with pytest.raises(ValueError, match=f"{invalid_value} is not a valid {invalid_class.__name__}"):
+        TestClassIntEnums.from_bytes(byte_data)
+
+
+@pytest.mark.parametrize(
+    "json_dict, invalid_value, invalid_class",
+    [
+        ({"i8": 1, "i16": -32768, "i32": -2147483648, "u8": 0, "u16": 0, "u32": 0}, 1, I8),
+        ({"i8": -128, "i16": 2, "i32": -2147483648, "u8": 0, "u16": 0, "u32": 0}, 2, I16),
+        ({"i8": -128, "i16": -32768, "i32": -3, "u8": 0, "u16": 0, "u32": 0}, -3, I32),
+        ({"i8": -128, "i16": -32768, "i32": -2147483648, "u8": 1, "u16": 0, "u32": 0}, 1, U8),
+        ({"i8": -128, "i16": -32768, "i32": -2147483648, "u8": 0, "u16": 2, "u32": 0}, 2, U16),
+        ({"i8": -128, "i16": -32768, "i32": -2147483648, "u8": 0, "u16": 0, "u32": 3}, 3, U32),
+        ({"i8": -128, "i16": -32768, "i32": -2147483648, "u8": "0", "u16": 0, "u32": 3}, "'0'", U8),
+        ({"i8": -128, "i16": -32768, "i32": -2147483648, "u8": 0, "u16": "asd", "u32": 3}, "'asd'", U16),
+    ],
+)
+def test_int_enum_invalid_entry_json(json_dict: Dict[str, Any], invalid_value: object, invalid_class: type) -> None:
+    error = (
+        f"Failed to convert {invalid_value} from type {type(invalid_value).__name__} to {invalid_class.__name__}: "
+        f"ValueError: {invalid_value} is not a valid {invalid_class.__name__}"
+    )
+    with pytest.raises(ConversionError, match=error):
+        TestClassIntEnums.from_json_dict(json_dict)
 
 
 @streamable
