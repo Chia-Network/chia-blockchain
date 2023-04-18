@@ -280,7 +280,6 @@ def solve_std_vc_backdoor(
     eml_lineage_proof: VCLineageProof,
     provider_innerpuzhash: bytes32,
     coin_id: bytes32,
-    new_metadata: Program,
     announcement_nonce: Optional[bytes32] = None,
 ) -> Program:
     """
@@ -301,7 +300,6 @@ def solve_std_vc_backdoor(
                 [
                     provider_innerpuzhash,
                     coin_id,
-                    new_metadata,
                 ]
             ),
         ]
@@ -600,8 +598,10 @@ class VerifiedCredential(Streamable):
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_python())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
-            if magic_condition.at("rrrff") == Program.to(None):
+            if magic_condition.at("rrrf") == Program.to(None):
                 proof_hash_as_prog: Program = metadata_layer.args.at("rfr")
+            elif magic_condition.at("rrrf").atom is not None:
+                raise ValueError("Specified VC was cleared")
             else:
                 new_metadata_param = magic_condition.at("rrrfrrf")
                 if new_metadata_param.atom is None:
@@ -682,12 +682,7 @@ class VerifiedCredential(Streamable):
                     Program.to(self.eml_lineage_proof.parent_proof_hash),
                     self.launcher_id,
                 ],
-                [
-                    None,
-                    None,
-                    None,
-                    None,
-                ],
+                None,
             ]
         )
         return magic_condition
@@ -773,7 +768,6 @@ class VerifiedCredential(Streamable):
                             self.eml_lineage_proof,
                             provider_innerpuzhash,
                             self.coin.name(),
-                            Program.to(None),
                             announcement_nonce,
                         ),
                         hidden=True,

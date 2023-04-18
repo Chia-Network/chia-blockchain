@@ -14,7 +14,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
@@ -633,6 +633,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
+        save_point: uint32 = sim.block_height
         # Yoink the coin away from the inner puzzle
         new_did = (await client.get_coin_records_by_parent_ids([did.name()], include_spent_coins=False))[0].coin
         expected_announcement, yoink_spend = vc.activate_backdoor(ACS_PH)
@@ -694,4 +695,58 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 )
             )
             == 2
+        )
+
+        # Rewind to pre-yoink state
+        await sim.rewind(save_point)
+
+        _, clear_spend, _ = vc.do_spend(
+            ACS,
+            Program.to(
+                [
+                    [51, ACS_PH, vc.coin.amount],
+                    [
+                        -10,
+                        vc.eml_lineage_proof.to_program(),
+                        [
+                            Program.to(vc.eml_lineage_proof.parent_proof_hash),
+                            vc.launcher_id,
+                        ],
+                        ACS_TRANSFER_PROGRAM.get_tree_hash(),
+                    ],
+                ]
+            ),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "VC clear by user",
+                SpendBundle(
+                    [clear_spend],
+                    G2Element(),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        if test_syncing:
+            with pytest.raises(ValueError):
+                VerifiedCredential.get_next_from_coin_spend(clear_spend)
+
+        # Verify the end state
+        cleared_singletons_puzzle_reveal: Program = puzzle_for_singleton(
+            vc.launcher_id,
+            construct_extigent_metadata_layer(
+                None,
+                ACS_TRANSFER_PROGRAM,
+                vc.wrap_inner_with_backdoor(),
+            ),
+        )
+
+        assert (
+            len(
+                await client.get_coin_records_by_puzzle_hashes(
+                    [cleared_singletons_puzzle_reveal.get_tree_hash()], include_spent_coins=False
+                )
+            )
+            > 0
         )

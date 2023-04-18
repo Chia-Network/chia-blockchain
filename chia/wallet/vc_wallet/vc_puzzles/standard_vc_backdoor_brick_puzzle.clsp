@@ -24,7 +24,6 @@
     (
         provider_innerpuzhash  ; DID needs to authorize the transfer program (and therefore this backdoor)
         my_coin_id
-        new_metadata
     )
   )
 
@@ -67,7 +66,7 @@
       (list  ; for transfer program
         provider_innerpuzhash
         my_coin_id
-        new_metadata
+        ()
         DEFAULT_TRANSFER_PROGRAM_HASH
       )
     )
