@@ -487,8 +487,8 @@ class DataLayer:
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
             res = await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
-            files.append(res.diff_tree)
-            files.append(res.full_tree)
+            files.append(str(res.diff_tree))
+            files.append(str(res.full_tree))
 
         uploaders = await self.get_uploaders(store_id)
         if uploaders is not None and len(uploaders) > 0:
