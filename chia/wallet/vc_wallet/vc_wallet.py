@@ -244,7 +244,17 @@ class VCWallet:
             chia_tx = None
         if new_proof_hash is not None:
             if provider_inner_puzhash is None:
-                raise ValueError(f"Provider inner puzzle hash is required for update VC {vc_id.hex()} proof.")
+                for _, wallet in self.wallet_state_manager.wallets.items():
+                    if wallet.type() == WalletType.DECENTRALIZED_ID:
+                        assert isinstance(wallet, DIDWallet)
+                        if wallet.did_info.current_inner is not None and wallet.did_info.origin_coin is not None:
+                            if vc_record.vc.proof_provider == wallet.did_info.origin_coin.name():
+                                provider_inner_puzhash = wallet.did_info.current_inner.get_tree_hash()
+                                break
+                            else:
+                                continue
+                else:
+                    raise ValueError("VC could not be updated with specified DID info")
             magic_condition = vc_record.vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
         else:
             magic_condition = vc_record.vc.standard_magic_condition()

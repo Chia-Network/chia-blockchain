@@ -73,14 +73,12 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     assert new_vc_record is not None
 
     assert did_wallet.did_info.current_inner is not None
-    inner_puzhash = did_wallet.did_info.current_inner.get_tree_hash()
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "bar", "baz": "qux", "corge": "grault"})
     proof_root: bytes32 = proofs.root()
     txs = await client_0.vc_spend_vc(
         vc_record.vc.launcher_id,
         new_proof_hash=proof_root,
-        provider_inner_puzhash=inner_puzhash,
         fee=uint64(100),
     )
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
