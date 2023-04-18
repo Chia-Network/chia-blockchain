@@ -559,7 +559,7 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
 
 
-@wallet_cmd.command("check", help="Check wallet DB integrity", help=check_help_text)
+@wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
 @click.option("-v", "--verbose", help="Print more information", is_flag=True)
 @click.option("--db-path", help="The path to a wallet DB. Default is to scan all active wallet DBs.")
 @click.pass_context
