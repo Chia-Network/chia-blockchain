@@ -1140,3 +1140,41 @@ def _delete_notifications(
         "all": all,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_notifications))
+
+
+@wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
+def vcs_cmd():
+    pass
+
+
+@vcs_cmd.command("mint", short_help="Mint a VC")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-d", "--did", help="The DID of the VC's proof provider", type=str, required=True)
+@click.option("-t", "--target-address", help="The address to send the VC to once it's minted", type=str, required=False)
+@click.option("-m", "--fee", help="Blockchain fee for mint transaction", type=str, required=False)
+def _mint_vc(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    did: str,
+    target_address: Optional[str],
+    fee: Optional[str],
+) -> None:
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import mint_vc
+
+    extra_params = {
+        "did": did,
+        "target_address": target_address,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_vc))

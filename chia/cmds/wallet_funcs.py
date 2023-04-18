@@ -1132,3 +1132,28 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     print(f"Public Key: {pubkey}")
     print(f"Signature: {signature}")
     print(f"Signing Mode: {signing_mode}")
+
+
+async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    vc_record, txs = await wallet_client.vc_mint_vc(
+        decode_puzzle_hash(ensure_valid_address(args["did"], allowed_types={AddressType.DID}, config=config)),
+        None
+        if args["target_address"] is None
+        else decode_puzzle_hash(
+            ensure_valid_address(args["target_address"], allowed_types={AddressType.XCH}, config=config)
+        ),
+        uint64(0) if args["fee"] is None else uint64(int(Decimal(args["fee"]) * units["chia"])),
+    )
+
+    print(f"New VC with launcher ID minted: {vc_record.vc.launcher_id}")
+    print("Relevant TX records:")
+    print("")
+    for tx in txs:
+        print_transaction(
+            tx,
+            verbose=False,
+            name="XCH",
+            address_prefix=selected_network_address_prefix(config),
+            mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
+        )
