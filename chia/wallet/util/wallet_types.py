@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import TYPE_CHECKING, List
 
 from typing_extensions import TypedDict
@@ -29,7 +28,7 @@ class WalletType(UInt8Enum):
     DATA_LAYER_OFFER = 12
 
 
-class CoinType(IntEnum):
+class CoinType(UInt8Enum):
     NORMAL = 0
     CLAWBACK = 1
 
