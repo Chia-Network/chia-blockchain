@@ -4,8 +4,8 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 from typing import Any, List
-from unittest import TestCase
 
+import pytest
 from clvm import SExp
 from clvm.serialize import sexp_from_stream
 from clvm_tools import binutils
@@ -27,7 +27,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.make_block_generator import make_spend_bundle
-from tests.generator.test_rom import run_generator_unsafe
+from tests.generator.test_rom import run_generator
 
 TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="chia.wallet.puzzles")
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")
@@ -99,7 +99,7 @@ def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
     return r
 
 
-class TestCompression(TestCase):
+class TestCompression:
     def test_spend_bundle_suitable(self):
         sb: SpendBundle = make_spend_bundle(1)
         assert bundle_suitable_for_compression(sb)
@@ -108,8 +108,12 @@ class TestCompression(TestCase):
         pass
 
     def test_multiple_input_gen_refs(self):
-        start1, end1 = match_standard_transaction_at_any_index(gen1)
-        start2, end2 = match_standard_transaction_at_any_index(gen2)
+        match = match_standard_transaction_at_any_index(gen1)
+        assert match is not None
+        start1, end1 = match
+        match = match_standard_transaction_at_any_index(gen2)
+        assert match is not None
+        start2, end2 = match
         ca1 = CompressorArg(FAKE_BLOCK_HEIGHT1, SerializedProgram.from_bytes(gen1), start1, end1)
         ca2 = CompressorArg(FAKE_BLOCK_HEIGHT2, SerializedProgram.from_bytes(gen2), start2, end2)
 
@@ -122,7 +126,7 @@ class TestCompression(TestCase):
             gen_args = MultipleCompressorArg([ca1, ca2], split_offset)
             spend_bundle: SpendBundle = make_spend_bundle(1)
             multi_gen = create_multiple_ref_generator(gen_args, spend_bundle)
-            cost, result = run_generator_unsafe(multi_gen, INFINITE_COST)
+            cost, result = run_generator(multi_gen)
             results.append(result)
             assert result is not None
             assert cost > 0
@@ -130,16 +134,20 @@ class TestCompression(TestCase):
 
     def test_compressed_block_results(self):
         sb: SpendBundle = make_spend_bundle(1)
-        start, end = match_standard_transaction_at_any_index(original_generator)
+        match = match_standard_transaction_at_any_index(original_generator)
+        assert match is not None
+        start, end = match
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
         s = simple_solution_generator(sb)
         assert c != s
-        cost_c, result_c = run_generator_unsafe(c, INFINITE_COST)
-        cost_s, result_s = run_generator_unsafe(s, INFINITE_COST)
+        cost_c, result_c = run_generator(c)
+        cost_s, result_s = run_generator(s)
+        print()
         print(result_c)
         assert result_c is not None
         assert result_s is not None
+        print(result_s)
         assert result_c == result_s
 
     def test_get_removals_for_single_coin(self):
@@ -167,7 +175,7 @@ class TestCompression(TestCase):
             assert cs1 == cs2
 
 
-class TestDecompression(TestCase):
+class TestDecompression:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.maxDiff = None

@@ -46,28 +46,31 @@ COMPILED_GENERATOR_CODE = bytes.fromhex(
     "1380ff02ff05ff2b80ff018080"
 )
 
-COMPILED_GENERATOR_CODE = bytes(Program.to(compile_clvm_text(GENERATOR_CODE, [])))
+COMPILED_GENERATOR_CODE = bytes(Program.to(compile_clvm_text(GENERATOR_CODE, [])))  # type: ignore[no-untyped-call]
 
 FIRST_GENERATOR = Program.to(
-    binutils.assemble('((parent_id (c 1 (q "puzzle blob")) 50000 "solution is here" extra data for coin))')
+    binutils.assemble(
+        '((parent_id (c 1 (q "puzzle blob")) 50000 "solution is here" extra data for coin))'
+    )  # type: ignore[no-untyped-call]
 ).as_bin()
 
-SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()
+SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()  # type: ignore[no-untyped-call]
 
 
 FIRST_GENERATOR = Program.to(
     binutils.assemble(
         """
         ((0x0000000000000000000000000000000000000000000000000000000000000000 1 50000
-        ((51 0x0000000000000000000000000000000000000000000000000000000000000001 500)) "extra" "data" "for" "coin" ))"""
+        ((51 0x0000000000000000000000000000000000000000000000000000000000000001 500))
+        "extra" "data" "for" "coin" ))"""  # type: ignore[no-untyped-call]
     )
 ).as_bin()
 
-SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()
+SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()  # type: ignore[no-untyped-call]
 
 
-def to_sp(sexp) -> SerializedProgram:
-    return SerializedProgram.from_bytes(bytes(sexp))
+def to_sp(sexp: bytes) -> SerializedProgram:
+    return SerializedProgram.from_bytes(sexp)
 
 
 def block_generator() -> BlockGenerator:
@@ -86,10 +89,10 @@ EXPECTED_OUTPUT = (
 )
 
 
-def run_generator_unsafe(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
+def run_generator(self: BlockGenerator) -> Tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     args = Program.to([[bytes(g) for g in self.generator_refs]])
-    return GENERATOR_MOD.run_with_cost(max_cost, self.program, args)
+    return GENERATOR_MOD.run_with_cost(MAX_COST, self.program, args)
 
 
 def as_atom_list(prg: Program) -> List[bytes]:
@@ -116,7 +119,7 @@ def as_atom_list(prg: Program) -> List[bytes]:
 
 
 class TestROM:
-    def test_rom_inputs(self):
+    def test_rom_inputs(self) -> None:
         # this test checks that the generator just works
         # It's useful for debugging the generator prior to having the ROM invoke it.
 
@@ -126,18 +129,21 @@ class TestROM:
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 
-    def test_get_name_puzzle_conditions(self, softfork_height):
+    def test_get_name_puzzle_conditions(self, softfork_height: int) -> None:
         # this tests that extra block or coin data doesn't confuse `get_name_puzzle_conditions`
 
         gen = block_generator()
-        cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
+        cost, r = run_generator(gen)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, mempool_mode=False, height=softfork_height)
+        npc_result = get_name_puzzle_conditions(
+            gen, max_cost=MAX_COST, mempool_mode=False, height=uint32(softfork_height)
+        )
         assert npc_result.error is None
         assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
             len(bytes(gen.program)) * COST_PER_BYTE
         )
+        assert npc_result.conds is not None
 
         spend = Spend(
             coin_id=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
@@ -155,20 +161,20 @@ class TestROM:
 
         assert npc_result.conds.spends == [spend]
 
-    def test_coin_extras(self):
+    def test_coin_extras(self) -> None:
         # the ROM supports extra data after a coin. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
+        cost, r = run_generator(gen)
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
             assert as_atom_list(extra_data) == b"extra data for coin".split()
 
-    def test_block_extras(self):
+    def test_block_extras(self) -> None:
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
+        cost, r = run_generator(gen)
         extra_block_data = r.rest()
         assert as_atom_list(extra_block_data) == b"extra data for block".split()
