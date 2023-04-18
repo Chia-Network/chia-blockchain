@@ -376,11 +376,10 @@ class Mempool:
 
     def create_bundle_from_mempool_items(
         self, item_inclusion_filter: Callable[[bytes32], bool]
-    ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
+    ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_bundles: List[SpendBundle] = []
-        removals: List[Coin] = []
         additions: List[Coin] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         for item in self.spends_by_feerate():
@@ -395,7 +394,6 @@ class Mempool:
             spend_bundles.append(item.spend_bundle)
             cost_sum += item.cost
             fee_sum += item.fee
-            removals.extend(item.removals)
             if item.npc_result.conds is not None:
                 for spend in item.npc_result.conds.spends:
                     for puzzle_hash, amount, _ in spend.create_coin:
@@ -408,4 +406,4 @@ class Mempool:
             f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
         )
         agg = SpendBundle.aggregate(spend_bundles)
-        return agg, additions, removals
+        return agg, additions
