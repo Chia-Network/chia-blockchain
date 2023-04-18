@@ -629,3 +629,11 @@ class SyncStatus:
 class PluginStatus:
     uploaders: Dict[str, Dict[str, Any]]
     downloaders: Dict[str, Dict[str, Any]]
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "plugin_status": {
+                "uploaders": self.uploaders,
+                "downloaders": self.downloaders,
+            }
+        }

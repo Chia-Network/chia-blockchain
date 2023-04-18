@@ -49,6 +49,18 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 
 
+async def get_plugin_info(url: str) -> Dict[str, Any]:
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url + "/plugin_info", json={}) as response:
+                ret = {"status": response.status}
+                if response.status == 200:
+                    ret["response"] = json.loads(await response.text())
+                return ret
+        except Exception as e:
+            return {"error": f"{type(e).__name__} {e}"}
+
+
 class DataLayer:
     data_store: DataStore
     db_path: Path
@@ -869,17 +881,6 @@ class DataLayer:
     async def check_plugins(self) -> PluginStatus:
         uploader_status = {}
         downloader_status = {}
-
-        async def get_plugin_info(url: str) -> Dict[str, Any]:
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with session.post(url + "/plugin_info", json={}) as response:
-                        ret = {"status": response.status}
-                        if response.status == 200:
-                            ret["response"] = json.loads(await response.text())
-                        return ret
-                except Exception as e:
-                    return {"error": f"{type(e).__name__} {e}"}
 
         for uploader in self.uploaders:
             uploader_status[uploader] = await get_plugin_info(uploader)

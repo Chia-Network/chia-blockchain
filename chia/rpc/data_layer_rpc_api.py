@@ -435,4 +435,4 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         plugin_status = await self.service.check_plugins()
 
-        return {"plugin_status": {"uploaders": plugin_status.uploaders, "downloaders": plugin_status.downloaders}}
+        return plugin_status.marshal()
