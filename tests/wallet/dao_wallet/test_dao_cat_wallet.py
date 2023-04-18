@@ -148,7 +148,7 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
-        attendance_required=uint64(1000),  # 10%
+        attendance_required=uint64(30),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
@@ -189,5 +189,12 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
     await time_out_assert(20, dao_cat_wallet.get_votable_balance, 35, include_free_cats=False)
 
     proposed_puzzle = dao_wallet.generate_simple_proposal_innerpuz(ph, 10)
-    tx = await dao_wallet.generate_new_proposal(proposed_puzzle, 35)
-    assert tx
+    tx = await dao_wallet.generate_new_proposal(proposed_puzzle, 35, push=True)
+    assert tx is not None
+
+    await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
+    for i in range(1, 10):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    proposal_info = dao_wallet.dao_info.proposals_list[0]
+    assert proposal_info is not None
+    tx = await dao_wallet.create_proposal_close_spend()

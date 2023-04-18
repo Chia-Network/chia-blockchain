@@ -38,6 +38,7 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
     SINGLETON_LAUNCHER,
+    DAO_FINISHED_STATE,
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
@@ -584,15 +585,27 @@ class DAOWallet(WalletProtocol):
         return
 
     async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
+        self,
+        fee: uint64,
+        announcement_to_assert: Optional[Announcement] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         chia_coins = await self.standard_wallet.select_coins(fee)
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
+            (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
             fee=fee,
             coins=chia_coins,
             coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+            reuse_puzhash=reuse_puzhash,
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
@@ -896,7 +909,11 @@ class DAOWallet(WalletProtocol):
         return puzzle
 
     async def generate_new_proposal(
-        self, proposed_puzzle: Program, vote_amount: uint64, fee: uint64 = uint64(0)
+        self,
+        proposed_puzzle: Program,
+        vote_amount: uint64,
+        fee: uint64 = uint64(0),
+        push: bool = True,
     ) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
@@ -965,8 +982,26 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        breakpoint()
-        eve_spend.debug()
+        if push:
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(token_bytes()),
+                memos=[],
+            )
+            await self.wallet_state_manager.add_pending_transaction(record)
         return full_spend
 
     async def generate_proposal_eve_spend(
@@ -1048,54 +1083,210 @@ class DAOWallet(WalletProtocol):
     async def generate_proposal_vote_spend(
         self,
         proposal_id: bytes32,
-        vote_amounts_list: List[uint64],
-        voting_coin_id_list: List[bytes32],
-        previous_votes_list: List[Program],
-        lockup_innerpuz_list: List[Program],
+        vote_amount: uint64,
         is_yes_vote: bool,
+        fee: uint64 = uint64(0),
+        push: bool = True,
     ) -> None:
+        self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
-        for prop in self.dao_info.proposals_list:
-            if prop.proposal_id == proposal_id:
-                proposal_info = prop
+        for pi in self.dao_info.proposals_list:
+            if pi.proposal_id == proposal_id:
+                proposal_info = pi
                 break
-        assert proposal_info is not None
-        # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-        # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-        # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
-        #                                     ; the total number of CATs in circulation according to the treasury
+        if proposal_info is None:
+            raise ValueError("Unable to find a proposal with that ID.")
+        if proposal_info.current_treasury_coin is None:
+            # TODO: we should also check the current_inner puzzle is the finished state puzzle
+            raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
+        # TODO: we may well want to add in options for more specificity later, but for now this will do
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail = cat_wallet.cat_info.limitations_program_hash
+        dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+            self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
+        )
+        assert dao_cat_wallet is not None
+
+        curry_vals = get_curry_vals_from_proposal_puzzle(proposal_info.current_innerpuz)
+        dao_cat_spend = await dao_cat_wallet.create_vote_spend(
+            vote_amount, proposal_id, True, curry_vals=curry_vals
+        )
+        # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+        # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+        # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
         # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-        #                              ; OR this is what percentage of the total votes must be YES - represented as an
-        #                              integer from 0 to 10,000 - typically this is set at 5100 (51%)
-        #
-        # ; either the innerpuz of the locked up CAT we're taking a vote from OR
-        # ; the attendance required - the percentage of the current issuance which must have voted represented as
-        # ; a number from 0 to 10,000 - this is announced by the treasury
-        # lockup_innerpuzhash_or_attendance_required
-        #
-        #
-        # ; we assert this from the treasury and announce it, so the timer knows what the current timelock is
-        # ; we only use this when closing out so set it to 0 and we will do the vote spend case
-        # proposal_timelock
-        #
+        #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        # lockup_innerpuzhashes_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+        #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+        # innerpuz_reveal  ; this is only added during the first vote
+        # soft_close_length  ; revealed by the treasury
+        # self_destruct_time ; revealed by the treasury
+        # oracle_spend_delay  ; used to recreate the treasury
+        # self_destruct_flag ; if not 0, do the self-destruct spend
+        vote_amounts = []
+        vote_coins = []
+        previous_votes = []
+        lockup_inner_puzhashes = []
+        for spend in dao_cat_spend.coin_spends:
+            vote_amounts.append(spend.coin.amount)
+            vote_coins.append(spend.coin.name())
+            previous_votes.append(
+                get_active_votes_from_lockup_puzzle(
+                    get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
+                )
+            )
+            lockup_inner_puzhashes.append(
+                get_innerpuz_from_lockup_puzzle(
+                    get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
+                ).get_tree_hash()
+            )
+        inner_sol = Program.to(
+            [
+                vote_amounts,
+                1,
+                vote_coins,
+                previous_votes,
+                lockup_inner_puzhashes,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ]
+        )
+        parent_info = self.get_parent_for_coin(proposal_info.current_coin)
+        # full solution is (lineage_proof my_amount inner_solution)
+        fullsol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                1,
+                inner_sol,
+            ]
+        )
+        full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
+        list_of_coinspends = [CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)]
+        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        if fee > 0:
+            chia_tx = await self.create_tandem_xch_tx(
+                fee
+            )
+            spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
+        spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
+        if push:
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(token_bytes()),
+                memos=[],
+            )
+            await self.wallet_state_manager.add_pending_transaction(record)
+        return spend_bundle
 
-        # TODO: fill this in when we can take a list of coins in dao_proposal.clvm
-        # voting_info = 0
-        # if is_yes_vote:
-        #     voting_info = 1
-
-        # inner_sol = Program.to(
-        #     [
-        #         vote_amounts_list,
-        #         voting_info,
-        #         voting_coin_id_list,
-        #         previous_votes_list,
-        #         lockup_innerpuz_list,
-        #         0,
-        #     ]
-        # )
-
-        return
+    async def create_proposal_close_spend(
+        self,
+        proposal_id: bytes32,
+        fee: uint64 = 0,
+        push: bool = True,
+    ):
+        self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
+        proposal_info = None
+        for pi in self.dao_info.proposals_list:
+            if pi.proposal_id == proposal_id:
+                proposal_info = pi
+                break
+        if proposal_info is None:
+            raise ValueError("Unable to find a proposal with that ID.")
+        if proposal_info.current_treasury_coin is None:
+            # TODO: we should also check the current_inner is finished puzzle
+            raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
+        # TODO: do we need to re-sync proposal state here?
+        curried_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
+        (
+            _DAO_TREASURY_MOD_HASH,
+            proposal_validator,
+            proposal_timelock,
+            soft_close_length,
+            attendance_required,
+            pass_percentage,
+            self_destruct_length,
+            oracle_spend_delay,
+        ) = curried_args
+        current_block = await self.wallet_state_manager.blockchain.get_peak_block()
+        current_height = current_block.height
+        # TODO: how do we know this is really the latest height?
+        if proposal_info.singleton_block_height + proposal_timelock < current_height:
+            raise ValueError("This proposal is not ready to be closed")
+        full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
+        # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+        # vote_info ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+        # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
+        # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+        #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        # lockup_innerpuzhashes_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+        #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+        # innerpuz_reveal  ; this is only added during the first vote
+        # soft_close_length  ; revealed by the treasury
+        # self_destruct_time ; revealed by the treasury
+        # oracle_spend_delay  ; used to recreate the treasury
+        # self_destruct_flag ; if not 0, do the self-destruct spend
+        solution = Program.to([
+            proposal_validator.get_tree_hash(),
+            0,
+            proposal_timelock,
+            pass_percentage,
+            attendance_required,
+            0,
+            soft_close_length,
+            self_destruct_length,
+            oracle_spend_delay,
+            0,
+        ])
+        # breakpoint()
+        cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, solution)
+        spend_bundle = SpendBundle(cs, AugSchemeMPL.aggregate([]))
+        if fee > 0:
+            chia_tx = await self.create_tandem_xch_tx(
+                fee
+            )
+            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+        full_spend = SpendBundle.aggregate([spend_bundle])
+        if push:
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=DAO_FINISHED_STATE.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(token_bytes()),
+                memos=[],
+            )
+            await self.wallet_state_manager.add_pending_transaction(record)
+        return full_spend
 
     async def _create_treasury_fund_transaction(
         self, funding_wallet: WalletProtocol, amount: uint64, fee: uint64 = uint64(0)
