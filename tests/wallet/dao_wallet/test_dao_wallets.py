@@ -329,6 +329,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     cat_bal = await dao_wallet_1.get_balance_by_asset_type(cat_id)
     assert cat_bal == cat_funds
 
+
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -400,8 +401,6 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         )
         assert dao_wallet_0 is not None
 
-    treasury_id = dao_wallet_0.dao_info.treasury_id
-
     # Get the full node sim to process the wallet creation spend
     tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
     tx_record = tx_queue[0]
@@ -425,7 +424,17 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # get the dao_cat wallet
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
-    
+
+    # Create the other user's wallet from the treasury id
+    # async with wallet_node_0.wallet_state_manager.lock:
+    #     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+    #         wallet_node_1.wallet_state_manager,
+    #         wallet_1,
+    #         treasury_id,
+    #     )
+    # assert dao_wallet_1 is not None
+    # assert dao_wallet_1.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
+
     # Create funding spends for xch and cat
     xch_funds = uint64(500000)
     cat_funds = uint64(100000)
@@ -468,22 +477,24 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         await asyncio.sleep(1)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    
 
     # Create a proposal for xch spend
     recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
     proposal_amount = 10000
     xch_proposal_inner = dao_wallet_0.generate_simple_proposal_innerpuz(
-        [recipient_puzzle_hash],
-        [proposal_amount]
+        recipient_puzzle_hash,
+        proposal_amount,
     )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal)
-    # await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
-    # await full_node_api.process_transaction_records(records=[proposal_txs])
+    proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
-    # if not trusted:
-    #     await asyncio.sleep(1)
-    # for i in range(1, num_blocks):
-    #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    if not trusted:
+        await asyncio.sleep(1)
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    assert len(dao_wallet_0.dao_info.proposals_list) == 1
+    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal
 
     # breakpoint()

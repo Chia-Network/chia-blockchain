@@ -35,10 +35,10 @@ from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL; get_cat_tail_hash_from_treasury_puzzle,
+    DAO_FINISHED_STATE,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
     SINGLETON_LAUNCHER,
-    DAO_FINISHED_STATE,
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
@@ -53,7 +53,6 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_spend_p2_singleton_puzzle,
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
-    uncurry_proposal,
     uncurry_treasury,
 )
 
@@ -1423,7 +1422,7 @@ class DAOWallet(WalletProtocol):
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if singleton_id is None:
             raise ValueError("get_singleton_id_from_puzzle failed")
-        curried_args = uncurry_proposal(puzzle)  # not sure if we're going to use this
+        curried_args = puzzle.uncurry()[1].as_iter()
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
             PROPOSAL_MOD_HASH,
@@ -1435,25 +1434,31 @@ class DAOWallet(WalletProtocol):
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
+            SPEND_OR_UPDATE_FLAG,
             INNERPUZ,
         ) = curried_args
-        if TOTAL_VOTES < self.dao_info.filter_below_vote_amount:
-            return  # ignore all proposals below the filter amount
+
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         if current_coin is None:
             raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
         ended = False
         timer_coin = None
-        if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
+        if solution.at("rrrrrrf").as_int() == 0:
+            # we need to add the vote amounts from the solution to get accurate totals
+            votes_added = solution.at("ff").as_int()
             current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
             if current_innerpuz is None:
                 raise RuntimeError("get_new_puzzle_from_proposal_solution failed")
-            # TODO: find timer coin
         else:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
+            votes_added = 0
             current_innerpuz = get_finished_state_puzzle(singleton_id)
             ended = True
+
+        new_total_votes = TOTAL_VOTES.as_int() + votes_added
+        if new_total_votes < self.dao_info.filter_below_vote_amount:
+            return  # ignore all proposals below the filter amount
 
         index = 0
         for current_info in new_dao_info.proposals_list:
@@ -1533,7 +1538,7 @@ class DAOWallet(WalletProtocol):
         new_proposal_info = ProposalInfo(
             singleton_id,
             puzzle,
-            uint64(0),  # assume we haven't voted any if we don't already know about this
+            uint64(new_total_votes),
             None,
             current_coin,
             current_innerpuz,
