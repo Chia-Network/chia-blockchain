@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -75,11 +75,12 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -93,6 +94,9 @@ log = logging.getLogger(__name__)
 
 
 class WalletRpcApi:
+    max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
+    max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
+
     def __init__(self, wallet_node: WalletNode):
         assert wallet_node is not None
         self.service = wallet_node
@@ -133,6 +137,7 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
+            "/get_coin_records": self.get_coin_records,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -2836,6 +2841,51 @@ class WalletRpcApi:
             "success": True,
             "spend_bundle": sb,
             "nft_id_list": nft_id_list,
+        }
+
+    async def get_coin_records(self, request: Dict[str, Any]) -> EndpointResult:
+        parsed_request = GetCoinRecords.from_json_dict(request)
+
+        if (
+            parsed_request.limit != uint32.MAXIMUM_EXCLUSIVE - 1
+            and parsed_request.limit > self.max_get_coin_records_limit
+        ):
+            raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
+
+        for filter_name, filter in {
+            "coin_id_filter": parsed_request.coin_id_filter,
+            "puzzle_hash_filter": parsed_request.puzzle_hash_filter,
+            "parent_coin_id_filter": parsed_request.parent_coin_id_filter,
+            "amount_filter": parsed_request.amount_filter,
+        }.items():
+            if filter is None:
+                continue
+            if len(filter.values) > self.max_get_coin_records_filter_items:
+                raise ValueError(
+                    f"{filter_name} max items {self.max_get_coin_records_filter_items} exceeded: {len(filter.values)}"
+                )
+
+        result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+            offset=parsed_request.offset,
+            limit=parsed_request.limit,
+            wallet_id=parsed_request.wallet_id,
+            wallet_type=None if parsed_request.wallet_type is None else WalletType(parsed_request.wallet_type),
+            coin_type=None if parsed_request.coin_type is None else CoinType(parsed_request.coin_type),
+            coin_id_filter=parsed_request.coin_id_filter,
+            puzzle_hash_filter=parsed_request.puzzle_hash_filter,
+            parent_coin_id_filter=parsed_request.parent_coin_id_filter,
+            amount_filter=parsed_request.amount_filter,
+            amount_range=parsed_request.amount_range,
+            confirmed_range=parsed_request.confirmed_range,
+            spent_range=parsed_request.spent_range,
+            order=CoinRecordOrder(parsed_request.order),
+            reverse=parsed_request.reverse,
+            include_total_count=parsed_request.include_total_count,
+        )
+
+        return {
+            "coin_records": [coin_record.to_json_dict_parsed_metadata() for coin_record in result.records],
+            "total_count": result.total_count,
         }
 
     async def get_farmed_amount(self, request) -> EndpointResult:
