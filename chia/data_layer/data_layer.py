@@ -449,8 +449,8 @@ class DataLayer:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
                         "store_id": tree_id.hex(),
-                        "full_tree_filename": str(write_file_result.full_tree.name),
-                        "diff_filename": str(write_file_result.diff_tree.name),
+                        "full_tree_filename": write_file_result.full_tree.name,
+                        "diff_filename": write_file_result.diff_tree.name,
                     }
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
@@ -487,8 +487,8 @@ class DataLayer:
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
             res = await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
-            files.append(str(res.diff_tree))
-            files.append(str(res.full_tree))
+            files.append(res.diff_tree.name)
+            files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
         if uploaders is not None and len(uploaders) > 0:
