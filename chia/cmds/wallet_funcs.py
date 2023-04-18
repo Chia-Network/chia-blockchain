@@ -1164,8 +1164,10 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     vc_records, proofs = await wallet_client.vc_get_vc_list(args["start"], args["count"])
     print("Proofs:")
-    for proof in proofs:
-        print(f" - {proof}")
+    for hash, proof_dict in proofs.items():
+        print(f"- {hash}")
+        for proof in proof_dict:
+            print(f"  - {proof}")
     for record in vc_records:
         print("")
         print(f"Launcher ID: {record.vc.launcher_id.hex()}")
@@ -1222,3 +1224,24 @@ async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, finger
     print("Proofs:")
     for proof in proof_dict:
         print(f" - {proof}")
+
+
+async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    txs = await wallet_client.vc_revoke_vc(
+        bytes32.from_hexstr(args["parent_coin_id"]),
+        fee=uint64(0) if args["fee"] is None else uint64(int(Decimal(args["fee"]) * units["chia"])),
+        reuse_puzhash=args["reuse_puzhash"],
+    )
+
+    print("VC successfully revoked!")
+    print("Relevant TX records:")
+    print("")
+    for tx in txs:
+        print_transaction(
+            tx,
+            verbose=False,
+            name="XCH",
+            address_prefix=selected_network_address_prefix(config),
+            mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
+        )

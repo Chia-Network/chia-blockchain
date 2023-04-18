@@ -1319,3 +1319,41 @@ def _get_proofs_for_root(
         "proof_hash": proof_hash,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_proofs_for_root))
+
+
+@vcs_cmd.command("revoke", short_help="Revoke any VC if you have the proper DID and the VCs parent coin")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-p", "--parent-coin-id", help="The ID of the parent coin of the VC", type=str, required=True)
+@click.option("-m", "--fee", help="Blockchain fee for revocation transaction", type=str, required=False)
+@click.option(
+    "--reuse-puzhash/--generate-new-puzhash",
+    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
+    default=False,
+    show_default=True,
+)
+def _revoke_vc(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    parent_coin_id: str,
+    fee: str,
+    reuse_puzhash: bool,
+) -> None:
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import revoke_vc
+
+    extra_params = {
+        "parent_coin_id": parent_coin_id,
+        "fee": fee,
+        "reuse_puzhash": reuse_puzhash,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, revoke_vc))
