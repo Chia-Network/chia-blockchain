@@ -192,23 +192,28 @@ class S3Plugin:
                 for file_name in files:
                     # filenames must follow the DataLayer naming convention
                     if not is_filename_valid(file_name):
-                        return web.json_response({"uploaded": False})
+                        log.error(f"failed uploading file {file_name}, invalid file name")
+                        continue
 
                     # Pull the store_id from the filename to make sure we only upload for configured stores
                     if not (bytes32.fromhex(file_name[:64]) == store_id):
-                        return web.json_response({"uploaded": False})
+                        log.error(f"failed uploading file {file_name}, store id mismatch")
+                        continue
 
                     file_path = self.server_files_path.joinpath(file_name)
-                    if os.path.isfile(file_path):
-                        if file_name not in existing_file_list:
-                            with concurrent.futures.ThreadPoolExecutor() as pool:
-                                await asyncio.get_running_loop().run_in_executor(
-                                    pool,
-                                    functools.partial(my_bucket.upload_file, file_path, file_name),
-                                )
-                    else:
-                        log.error(f"failed uploading file to aws, file  {file_path} does not exist")
+                    if not os.path.isfile(file_path):
+                        log.error(f"failed uploading file to aws, file {file_path} does not exist")
+                        continue
 
+                    if file_name in existing_file_list:
+                        log.debug(f"skip {file_name} already in bucket")
+                        continue
+
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        await asyncio.get_running_loop().run_in_executor(
+                            pool,
+                            functools.partial(my_bucket.upload_file, file_path, file_name),
+                        )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {e}")
                 return web.json_response({"uploaded": False})
