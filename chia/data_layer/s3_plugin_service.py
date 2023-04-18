@@ -183,29 +183,24 @@ class S3Plugin:
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket_str = self.get_bucket(store_id)
             files = json.loads(data["files"])
-            print(f"bucket {bucket_str}")
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            print(f"got bucket {bucket_str}")
             existing_file_list = []
             for my_bucket_object in my_bucket.objects.all():
-                print(f"add check file {my_bucket_object.key}")
                 existing_file_list.append(my_bucket_object.key)
             try:
                 for file in files:
                     file_path = Path(file)
-                    print(f"try file {file_path.name}")
                     if file_path.name not in existing_file_list:
-                        print(f"upload file {file_path.name}")
                         with concurrent.futures.ThreadPoolExecutor() as pool:
                             await asyncio.get_running_loop().run_in_executor(
                                 pool,
                                 functools.partial(my_bucket.upload_file, file_path, file_path.name),
                             )
             except ClientError as e:
-                print(f"failed uploading file to aws {e}")
+                log.error(f"failed uploading file to aws {e}")
                 return web.json_response({"uploaded": False})
         except Exception as e:
-            print(f"failed handling request {request} {e}")
+            log.error(f"failed handling request {request} {e}")
             return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
 
