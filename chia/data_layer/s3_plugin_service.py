@@ -5,6 +5,7 @@ import concurrent.futures
 import functools
 import json
 import logging
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -188,14 +189,26 @@ class S3Plugin:
             for my_bucket_object in my_bucket.objects.all():
                 existing_file_list.append(my_bucket_object.key)
             try:
-                for file in files:
-                    file_path = Path(file)
-                    if file_path.name not in existing_file_list:
-                        with concurrent.futures.ThreadPoolExecutor() as pool:
-                            await asyncio.get_running_loop().run_in_executor(
-                                pool,
-                                functools.partial(my_bucket.upload_file, file_path, file_path.name),
-                            )
+                for file_name in files:
+                    # filenames must follow the DataLayer naming convention
+                    if not is_filename_valid(file_name):
+                        return web.json_response({"uploaded": False})
+
+                    # Pull the store_id from the filename to make sure we only upload for configured stores
+                    if not (bytes32.fromhex(file_name[:64]) == store_id):
+                        return web.json_response({"uploaded": False})
+
+                    file_path = self.server_files_path.joinpath(file_name)
+                    if os.path.isfile(file_path):
+                        if file_name not in existing_file_list:
+                            with concurrent.futures.ThreadPoolExecutor() as pool:
+                                await asyncio.get_running_loop().run_in_executor(
+                                    pool,
+                                    functools.partial(my_bucket.upload_file, file_path, file_name),
+                                )
+                    else:
+                        log.error(f"failed uploading file to aws, file  {file_path} does not exist")
+
             except ClientError as e:
                 log.error(f"failed uploading file to aws {e}")
                 return web.json_response({"uploaded": False})
