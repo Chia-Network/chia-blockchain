@@ -37,12 +37,12 @@ class BlockDict(GeneratorBlockCacheInterface):
 
 
 class TestGeneratorTypes(TestCase):
-    def test_make_generator(self):
+    def test_make_generator(self) -> None:
         block_dict = BlockDict({uint32(1): gen1})
         gen = create_block_generator(gen2, [uint32(1)], block_dict)
         print(gen)
 
-    def test_make_generator_args(self):
+    def test_make_generator_args(self) -> None:
         gen_args = Program.to([[bytes(gen1)]])
 
         # First Argument to the block generator is the first template generator
