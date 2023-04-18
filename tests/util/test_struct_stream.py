@@ -4,7 +4,7 @@ import io
 import struct
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Iterable, List, Optional, Type, Union
+from typing import Iterable, List, Optional, Tuple, Type, Union
 
 import pytest
 
@@ -349,7 +349,9 @@ def test_int_enum(enum_type: Type[SizedIntEnum], int_type: Type[StructStream]) -
     ],
 )
 def test_int_enum_failure(
-    enum_type: Type[SizedIntEnum], value: Union[int32, uint32], exception: Type[Exception]
+    enum_type: Type[SizedIntEnum],
+    value: Union[int32, uint32],
+    exception: Union[Type[Exception], Tuple[Type[Exception], ...]],
 ) -> None:
     with pytest.raises(exception):
 
