@@ -49,16 +49,16 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 
 
-async def get_plugin_info(url: str) -> Dict[str, Any]:
-    async with aiohttp.ClientSession() as session:
-        try:
+async def get_plugin_info(url: str) -> Tuple[str, Dict[str, Any]]:
+    try:
+        async with aiohttp.ClientSession() as session:
             async with session.post(url + "/plugin_info", json={}) as response:
                 ret = {"status": response.status}
                 if response.status == 200:
                     ret["response"] = json.loads(await response.text())
-                return ret
-        except Exception as e:
-            return {"error": f"{type(e).__name__} {e}"}
+                return url, ret
+    except aiohttp.ClientError as e:
+        return url, {"error": f"ClientError: {e}"}
 
 
 class DataLayer:
@@ -882,10 +882,13 @@ class DataLayer:
         uploader_status = {}
         downloader_status = {}
 
-        for uploader in self.uploaders:
-            uploader_status[uploader] = await get_plugin_info(uploader)
-
-        for downloader in self.downloaders:
-            downloader_status[downloader] = await get_plugin_info(downloader)
+        coros = {asyncio.create_task(get_plugin_info(url=plugin)) for plugin in {*self.uploaders, *self.downloaders}}
+        results = await asyncio.gather(*coros)
+        for result in results:
+            url, status = result
+            if url in self.uploaders:
+                uploader_status[url] = status
+            if url in self.downloaders:
+                downloader_status[url] = status
 
         return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)
