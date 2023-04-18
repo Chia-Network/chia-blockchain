@@ -1262,3 +1262,33 @@ def _spend_vc(
         "reuse_puzhash": reuse_puzhash,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, spend_vc))
+
+
+@vcs_cmd.command("add_proof_reveal", short_help="Add a series of proofs that will combine to a single proof hash")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
+@click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
+def _add_proof_reveal(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    proof: List[str],
+    root_only: bool,
+) -> None:
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import add_proof_reveal
+
+    extra_params = {
+        "proofs": proof,
+        "root_only": root_only,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_proof_reveal))

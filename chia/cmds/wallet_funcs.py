@@ -30,6 +30,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vc_wallet.vc_store import VCProofs
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
 
@@ -1200,3 +1201,18 @@ async def spend_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             address_prefix=selected_network_address_prefix(config),
             mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
         )
+
+
+async def add_proof_reveal(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    if len(args["proofs"]) == 0:
+        print("Must specify at least one proof")
+        return
+
+    proof_dict: Dict[str, str] = {proof: "1" for proof in args["proofs"]}
+    if args["root_only"]:
+        print(f"Proof Hash: {VCProofs(proof_dict).root()}")
+        return
+    else:
+        await wallet_client.add_vc_proofs(proof_dict)
+        print("Proofs added to DB successfully!")
+        return
