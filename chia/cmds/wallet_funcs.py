@@ -1177,3 +1177,26 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
             pass
         else:
             print(f"Proof Hash: {record.vc.proof_hash.hex()}")
+
+
+async def spend_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    txs = await wallet_client.vc_spend_vc(
+        bytes32.from_hexstr(args["vc_id"]),
+        new_puzhash=None if args["new_puzhash"] is None else bytes32.from_hexstr(args["new_puzhash"]),
+        new_proof_hash=bytes32.from_hexstr(args["new_proof_hash"]),
+        fee=uint64(0) if args["fee"] is None else uint64(int(Decimal(args["fee"]) * units["chia"])),
+        reuse_puzhash=args["reuse_puzhash"],
+    )
+
+    print("Proofs successfully updated!")
+    print("Relevant TX records:")
+    print("")
+    for tx in txs:
+        print_transaction(
+            tx,
+            verbose=False,
+            name="XCH",
+            address_prefix=selected_network_address_prefix(config),
+            mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
+        )

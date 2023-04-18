@@ -1212,3 +1212,53 @@ def _get_vcs(
         "count": count,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_vcs))
+
+
+@vcs_cmd.command("update_proofs", short_help="Update a VC's proofs if you have the provider DID")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-l", "--vc-id", help="The launcher ID of the VC whose proofs should be updated", type=str, required=True)
+@click.option(
+    "-t",
+    "--new-puzhash",
+    help="The address to send the VC after the proofs have been updated",
+    type=str,
+    required=False,
+)
+@click.option("-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=True)
+@click.option("-m", "--fee", help="Blockchain fee for update transaction", type=str, required=False)
+@click.option(
+    "--reuse-puzhash/--generate-new-puzhash",
+    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
+    default=False,
+    show_default=True,
+)
+def _spend_vc(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    vc_id: str,
+    new_puzhash: Optional[str],
+    new_proof_hash: str,
+    fee: str,
+    reuse_puzhash: bool,
+) -> None:
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import spend_vc
+
+    extra_params = {
+        "vc_id": vc_id,
+        "new_puzhash": new_puzhash,
+        "new_proof_hash": new_proof_hash,
+        "fee": fee,
+        "reuse_puzhash": reuse_puzhash,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, spend_vc))
