@@ -96,8 +96,8 @@ class S3Plugin:
                 return web.json_response({"uploaded": False})
 
             # Pull the store_id from the filename to make sure we only upload for configured stores
-            full_tree_id = bytes32(bytes.fromhex(full_tree_name[:64]))
-            diff_tree_id = bytes32(bytes.fromhex(diff_name[:64]))
+            full_tree_id = bytes32.fromhex(full_tree_name[:64])
+            diff_tree_id = bytes32.fromhex(diff_name[:64])
 
             if not (full_tree_id == diff_tree_id == store_id):
                 return web.json_response({"uploaded": False})
@@ -143,9 +143,13 @@ class S3Plugin:
             data = await request.json()
             url = data["url"]
             filename = data["filename"]
-            # Pull the store_id from the filename to make sure we only download for configured stores
-            filename_tree_id = bytes32(bytes.fromhex(filename.split("-")[0]))
 
+            # filename must follow the DataLayer naming convention
+            if not is_filename_valid(filename):
+                return web.json_response({"downloaded": False})
+
+            # Pull the store_id from the filename to make sure we only download for configured stores
+            filename_tree_id = bytes32.fromhex(filename[:64])
             parse_result = urlparse(url)
             should_download = False
             for store in self.stores:
@@ -153,8 +157,7 @@ class S3Plugin:
                     should_download = True
                     break
 
-            # filename must follow the DataLayer naming convention
-            if not should_download or not is_filename_valid(filename):
+            if not should_download:
                 return web.json_response({"downloaded": False})
 
             bucket = parse_result.netloc
