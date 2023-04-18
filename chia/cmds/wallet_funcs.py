@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import pathlib
 import sys
@@ -1165,8 +1164,8 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     vc_records, proofs = await wallet_client.vc_get_vc_list(args["start"], args["count"])
     print("Proofs:")
-    print("")
-    print(json.dumps(proofs, indent=4))
+    for proof in proofs:
+        print(f" - {proof}")
     for record in vc_records:
         print("")
         print(f"Launcher ID: {record.vc.launcher_id.hex()}")
@@ -1216,3 +1215,10 @@ async def add_proof_reveal(args: Dict, wallet_client: WalletRpcClient, fingerpri
         await wallet_client.add_vc_proofs(proof_dict)
         print("Proofs added to DB successfully!")
         return
+
+
+async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    proof_dict: Dict[str, str] = await wallet_client.get_proofs_for_root(bytes32.from_hexstr(args["proof_hash"]))
+    print("Proofs:")
+    for proof in proof_dict:
+        print(f" - {proof}")

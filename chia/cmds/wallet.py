@@ -1292,3 +1292,30 @@ def _add_proof_reveal(
         "root_only": root_only,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_proof_reveal))
+
+
+@vcs_cmd.command("get_proofs_for_root", short_help="Get the stored proof flags for a given proof hash")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
+def _get_proofs_for_root(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    proof_hash: str,
+) -> None:
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import get_proofs_for_root
+
+    extra_params = {
+        "proof_hash": proof_hash,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_proofs_for_root))
