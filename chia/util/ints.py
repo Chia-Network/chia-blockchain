@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import ReprEnum
+from enum import Enum
 from typing import Union
 
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
@@ -66,27 +66,27 @@ class int512(StructStream):
     MINIMUM = -(2**BITS) + 1
 
 
-class Int8Enum(int8, ReprEnum):
+class Int8Enum(int8, Enum):
     pass
 
 
-class Int16Enum(int16, ReprEnum):
+class Int16Enum(int16, Enum):
     pass
 
 
-class Int32Enum(int32, ReprEnum):
+class Int32Enum(int32, Enum):
     pass
 
 
-class UInt8Enum(uint8, ReprEnum):
+class UInt8Enum(uint8, Enum):
     pass
 
 
-class UInt16Enum(uint16, ReprEnum):
+class UInt16Enum(uint16, Enum):
     pass
 
 
-class UInt32Enum(uint32, ReprEnum):
+class UInt32Enum(uint32, Enum):
     pass
 
 
