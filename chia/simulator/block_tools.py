@@ -45,7 +45,6 @@ from chia.full_node.bundle_tools import (
     detect_potential_template_generator,
     simple_solution_generator,
 )
-from chia.full_node.generator import setup_generator_args
 from chia.full_node.signage_point import SignagePoint
 from chia.plotters.chiapos import Params
 from chia.plotting.create_plots import PlotKeys, create_plots
@@ -121,9 +120,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_MOD = get_generator()
+from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -1718,8 +1715,8 @@ def get_full_block_and_block_record(
 
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
-        block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
+        block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
+        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 

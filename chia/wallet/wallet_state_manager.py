@@ -70,7 +70,11 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import PeerRequestException, last_change_height_cs
+from chia.wallet.util.wallet_sync_utils import (
+    PeerRequestException,
+    fetch_coin_spend_for_coin_state,
+    last_change_height_cs,
+)
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
@@ -621,9 +625,7 @@ class WalletStateManager:
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
 
-        coin_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         if coin_spend is None:
             return None
 
@@ -833,9 +835,7 @@ class WalletStateManager:
     async def get_minter_did(self, launcher_coin: Coin, peer: WSChiaConnection) -> Optional[bytes32]:
         # Get minter DID
         eve_coin = (await self.wallet_node.fetch_children(launcher_coin.name(), peer=peer))[0]
-        eve_coin_spend: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-            eve_coin.spent_height, eve_coin.coin, peer
-        )
+        eve_coin_spend = await fetch_coin_spend_for_coin_state(eve_coin, peer)
         eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
         eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
         if eve_uncurried_nft is None:
@@ -859,9 +859,7 @@ class WalletStateManager:
                 [launcher_parent[0].coin.parent_coin_info], peer=peer
             )
             assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
-            did_spend: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                did_coin[0].spent_height, did_coin[0].coin, peer
-            )
+            did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
             puzzle = Program.from_bytes(bytes(did_spend.puzzle_reveal))
             uncurried = uncurry_puzzle(puzzle)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -1210,9 +1208,7 @@ class WalletStateManager:
                                 curr_coin_state: CoinState = coin_state
 
                                 while curr_coin_state.spent_height is not None:
-                                    cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                                        curr_coin_state.spent_height, curr_coin_state.coin, peer
-                                    )
+                                    cs = await fetch_coin_spend_for_coin_state(curr_coin_state, peer)
                                     success = await pool_wallet.apply_state_transition(
                                         cs, uint32(curr_coin_state.spent_height)
                                     )
@@ -1245,9 +1241,7 @@ class WalletStateManager:
                                     assert len(new_coin_state) == 1
                                     curr_coin_state = new_coin_state[0]
                         if record.wallet_type == WalletType.DATA_LAYER:
-                            singleton_spend = await self.wallet_node.fetch_puzzle_solution(
-                                coin_state.spent_height, coin_state.coin, peer
-                            )
+                            singleton_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                             dl_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=DataLayerWallet)
                             await dl_wallet.singleton_removed(
                                 singleton_spend,
@@ -1268,9 +1262,7 @@ class WalletStateManager:
                             if child.spent_height is None:
                                 # TODO handle spending launcher later block
                                 continue
-                            launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                                child.spent_height, child.coin, peer
-                            )
+                            launcher_spend = await fetch_coin_spend_for_coin_state(child, peer)
                             if launcher_spend is None:
                                 continue
                             try:

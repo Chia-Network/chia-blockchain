@@ -1,0 +1,19 @@
+(mod
+  (
+    MORPHER  ; For no morphing, 1
+    parent_parent_id
+    parent_inner_puz
+    parent_amount
+    parent_solution
+  )
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  (c
+    (list ASSERT_MY_PARENT_ID
+      (calculate_coin_id parent_parent_id (a MORPHER (sha256tree parent_inner_puz)) parent_amount)
+    )
+    (a parent_inner_puz parent_solution)
+  )
+)
