@@ -63,22 +63,21 @@ async def validate_client_connection(
     fingerprint: Optional[int],
     login_to_wallet: bool,
     consume_errors: bool = True,
-) -> Optional[int]:
+) -> Tuple[Optional[int], bool]:
+    connected: bool = True
     try:
         await rpc_client.healthz()
         if type(rpc_client) == WalletRpcClient and login_to_wallet:
             fingerprint = await get_wallet(root_path, rpc_client, fingerprint)
             if fingerprint is None:
-                rpc_client.close()
+                connected = False
     except ClientConnectorError:
-        rpc_client.close()
         if not consume_errors:
-            await rpc_client.await_closed()
             raise
+        connected = False
         print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
         print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
-    await rpc_client.await_closed()  # if close is not already called this does nothing
-    return fingerprint
+    return fingerprint, connected
 
 
 @asynccontextmanager
@@ -109,14 +108,14 @@ async def get_any_service_client(
     node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
     try:
         # check if we can connect to node, and if we can then validate
-        # fingerprint access, otherwise return fingerprint and shutdown client
-        fingerprint = await validate_client_connection(
+        # fingerprint access (if wallet), otherwise return fingerprint and set connected to False
+        fingerprint, connected = await validate_client_connection(
             node_client, node_type, rpc_port, root_path, fingerprint, login_to_wallet, consume_errors
         )
-        if node_client.session.closed:
-            yield None, config, fingerprint
-        else:
+        if connected:
             yield node_client, config, fingerprint
+        else:
+            yield None, config, fingerprint
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors:
             raise
