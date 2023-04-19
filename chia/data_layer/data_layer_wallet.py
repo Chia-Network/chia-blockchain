@@ -50,6 +50,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -217,9 +218,7 @@ class DataLayerWallet:
             await self.new_launcher_spend(spend, peer, height)
         else:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id, peer)
-            launcher_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                launcher_state.spent_height, launcher_state.coin, peer
-            )
+            launcher_spend = await fetch_coin_spend_for_coin_state(launcher_state, peer)
             await self.new_launcher_spend(launcher_spend, peer)
 
     async def new_launcher_spend(
@@ -279,9 +278,7 @@ class DataLayerWallet:
         ] = await self.wallet_state_manager.coin_store.get_coin_record(new_singleton.name())
         while new_singleton_coin_record is not None and new_singleton_coin_record.spent_block_height > 0:
             # We've already synced this before, so we need to sort of force a resync
-            parent_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                new_singleton_coin_record.spent_block_height, new_singleton, peer
-            )
+            parent_spend = await fetch_coin_spend(new_singleton_coin_record.spent_block_height, new_singleton, peer)
             await self.singleton_removed(parent_spend, new_singleton_coin_record.spent_block_height)
             try:
                 additions = compute_additions(parent_spend)
@@ -829,9 +826,7 @@ class DataLayerWallet:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                height, parent_state.coin, peer
-            )
+            parent_spend = await fetch_coin_spend(height, parent_state.coin, peer)
             assert parent_spend is not None
             launcher_id, urls = get_mirror_info(
                 parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program()

@@ -6,7 +6,7 @@ import pytest
 
 from chia.farmer.farmer import Farmer
 from chia.simulator.time_out_assert import time_out_assert
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.keychain import generate_mnemonic
 
 
@@ -18,6 +18,7 @@ def farmer_is_started(farmer):
 async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
+    farmer_service.reconnect_retry_seconds = 1
     # First remove all keys from the keychain
     bt.local_keychain.delete_all_keys()
     # Make sure the farmer service is not initialized yet
@@ -42,6 +43,9 @@ async def test_harvester_handshake(farmer_one_harvester_not_started):
     harvester = harvester_service._node
     farmer = farmer_service._node
 
+    farmer_service.reconnect_retry_seconds = 1
+    harvester_service.reconnect_retry_seconds = 1
+
     def farmer_has_connections():
         return len(farmer.server.get_connections()) > 0
 
@@ -60,7 +64,7 @@ async def test_harvester_handshake(farmer_one_harvester_not_started):
     # Start both services and wait a bit
     await farmer_service.start()
     await harvester_service.start()
-    harvester_service.add_peer(PeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
+    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
     # Handshake task should be started but the handshake should not be done
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
@@ -76,7 +80,7 @@ async def test_harvester_handshake(farmer_one_harvester_not_started):
     assert len(harvester.plot_manager.farmer_public_keys) == 0
     # Re-start the harvester and make sure the handshake task gets started but the handshake still doesn't go through
     await harvester_service.start()
-    harvester_service.add_peer(PeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
+    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
     # Stop the farmer and make sure the handshake_task doesn't block the shutdown

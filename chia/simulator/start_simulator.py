@@ -54,7 +54,6 @@ def create_full_node_simulator_service(
         node_type=NodeType.FULL_NODE,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),

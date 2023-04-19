@@ -60,7 +60,9 @@ jobs:
           - major_dot_minor: '3.11'
         check:
           - name: mypy
-            command: mypy
+            command: |
+              echo "MYPY VERSION IS: $(mypy --version)"
+              mypy
         exclude:
           - os:
               matrix: macos
