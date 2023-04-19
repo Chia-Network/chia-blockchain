@@ -277,9 +277,10 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
             f", and secret_access_key. Missing config key: {e.args[0]!r}"
         )
 
-    log.setLevel(logging.INFO)
+    log_level = config.get("log_level", "INFO")
+    log.setLevel(log_level)
     fh = logging.FileHandler(config.get("log_filename", "s3_plugin.log"))
-    fh.setLevel(logging.INFO)
+    fh.setLevel(log_level)
     # create formatter and add it to the handlers
     file_log_formatter = logging.Formatter(
         fmt="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"
