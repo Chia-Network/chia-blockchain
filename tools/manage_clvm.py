@@ -140,7 +140,7 @@ class ClvmBytes:
     def from_clvm_paths(cls, paths: ClvmPaths, hash_dict: typing.Dict[str, str] = {}) -> ClvmBytes:
         hex_bytes = paths.hex.read_bytes()
         return cls(
-            hex=paths.hex.read_bytes(),
+            hex=hex_bytes,
             hash=bytes.fromhex(hash_dict[paths.hash])
             if paths.hash in hash_dict
             else generate_hash_bytes(hex_bytes=hex_bytes),
