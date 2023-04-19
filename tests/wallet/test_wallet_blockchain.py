@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult
 from chia.protocols import full_node_protocol
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.vdf import VDFProof
@@ -17,11 +17,11 @@ from tests.util.db_connection import DBConnection
 
 class TestWalletBlockchain:
     @pytest.mark.asyncio
-    async def test_wallet_blockchain(self, wallet_node, default_1000_blocks):
-        full_node_api, wallet_node, full_node_server, wallet_server, _ = wallet_node
+    async def test_wallet_blockchain(self, simulator_and_wallet, default_1000_blocks):
+        [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
         for block in default_1000_blocks[:600]:
-            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api.full_node.add_block(block)
 
         res = await full_node_api.request_proof_of_weight(
             full_node_protocol.RequestProofOfWeight(
@@ -40,15 +40,11 @@ class TestWalletBlockchain:
             )
         )
         weight_proof: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
-        success, _, records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
+        records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
-        success, _, records_short = await wallet_node._weight_proof_handler.validate_weight_proof(
-            weight_proof_short, True
-        )
+        records_short = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof_short, True)
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
-        success, _, records_long = await wallet_node._weight_proof_handler.validate_weight_proof(
-            weight_proof_long, True
-        )
+        records_long = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof_long, True)
 
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
@@ -73,28 +69,28 @@ class TestWalletBlockchain:
                 header_block = get_block_header(block, [], [])
                 header_blocks.append(header_block)
 
-            res, err = await chain.receive_block(header_blocks[50])
+            res, err = await chain.add_block(header_blocks[50])
             print(res, err)
-            assert res == ReceiveBlockResult.DISCONNECTED_BLOCK
+            assert res == AddBlockResult.DISCONNECTED_BLOCK
 
-            res, err = await chain.receive_block(header_blocks[400])
+            res, err = await chain.add_block(header_blocks[400])
             print(res, err)
-            assert res == ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            assert res == AddBlockResult.ALREADY_HAVE_BLOCK
 
-            res, err = await chain.receive_block(header_blocks[507])
+            res, err = await chain.add_block(header_blocks[507])
             print(res, err)
-            assert res == ReceiveBlockResult.DISCONNECTED_BLOCK
+            assert res == AddBlockResult.DISCONNECTED_BLOCK
 
-            res, err = await chain.receive_block(
+            res, err = await chain.add_block(
                 dataclasses.replace(header_blocks[506], challenge_chain_ip_proof=VDFProof(2, b"123", True))
             )
-            assert res == ReceiveBlockResult.INVALID_BLOCK
+            assert res == AddBlockResult.INVALID_BLOCK
 
             assert (await chain.get_peak_block()).height == 505
 
             for block in header_blocks[506:]:
-                res, err = await chain.receive_block(block)
-                assert res == ReceiveBlockResult.NEW_PEAK
+                res, err = await chain.add_block(block)
+                assert res == AddBlockResult.NEW_PEAK
                 assert (await chain.get_peak_block()).height == block.height
 
             assert (await chain.get_peak_block()).height == 999

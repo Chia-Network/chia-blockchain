@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain import Blockchain, AddBlockResult
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
@@ -39,7 +39,7 @@ async def check_block_store_invariant(bc: Blockchain):
 async def _validate_and_add_block(
     blockchain: Blockchain,
     block: FullBlock,
-    expected_result: Optional[ReceiveBlockResult] = None,
+    expected_result: Optional[AddBlockResult] = None,
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
     fork_point_with_peak: Optional[uint32] = None,
@@ -48,7 +48,7 @@ async def _validate_and_add_block(
     # block is added to the peak.
     # If expected_result is not None, that result will be enforced.
     # If expected_error is not None, that error will be enforced. If expected_error is not None,
-    # receive_block must return Err.INVALID_BLOCK.
+    # add_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
     await check_block_store_invariant(blockchain)
@@ -62,7 +62,7 @@ async def _validate_and_add_block(
         assert pre_validation_results is not None
         results = pre_validation_results[0]
     if results.error is not None:
-        if expected_result == ReceiveBlockResult.INVALID_BLOCK and expected_error is None:
+        if expected_result == AddBlockResult.INVALID_BLOCK and expected_error is None:
             # We expected an error but didn't specify which one
             await check_block_store_invariant(blockchain)
             return None
@@ -79,10 +79,10 @@ async def _validate_and_add_block(
         result,
         err,
         _,
-    ) = await blockchain.receive_block(block, results, fork_point_with_peak=fork_point_with_peak)
+    ) = await blockchain.add_block(block, results, fork_point_with_peak=fork_point_with_peak)
     await check_block_store_invariant(blockchain)
 
-    if expected_error is None and expected_result != ReceiveBlockResult.INVALID_BLOCK:
+    if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
         # Expecting an error here (but didn't specify which), let's check if we actually got an error
         if err is not None:
             # Got an error
@@ -97,10 +97,10 @@ async def _validate_and_add_block(
         raise AssertionError(f"Expected {expected_result} but got {result}")
     elif expected_result is None:
         # If we expected an error assume that expected_result = INVALID_BLOCK
-        if expected_error is not None and result != ReceiveBlockResult.INVALID_BLOCK:
+        if expected_error is not None and result != AddBlockResult.INVALID_BLOCK:
             raise AssertionError(f"Block should be invalid, but received: {result}")
         # Otherwise, assume that expected_result = NEW_PEAK
-        if expected_error is None and result != ReceiveBlockResult.NEW_PEAK:
+        if expected_error is None and result != AddBlockResult.NEW_PEAK:
             raise AssertionError(f"Block was not added: {result}")
 
 
@@ -121,7 +121,7 @@ async def _validate_and_add_block_multi_error(
 async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,
-    expected_result: List[ReceiveBlockResult],
+    expected_result: List[AddBlockResult],
     skip_prevalidation: Optional[bool] = None,
 ) -> None:
     try:
@@ -146,9 +146,9 @@ async def _validate_and_add_block_no_error(
         blockchain,
         block,
         expected_result=[
-            ReceiveBlockResult.ALREADY_HAVE_BLOCK,
-            ReceiveBlockResult.NEW_PEAK,
-            ReceiveBlockResult.ADDED_AS_ORPHAN,
+            AddBlockResult.ALREADY_HAVE_BLOCK,
+            AddBlockResult.NEW_PEAK,
+            AddBlockResult.ADDED_AS_ORPHAN,
         ],
         skip_prevalidation=skip_prevalidation,
     )

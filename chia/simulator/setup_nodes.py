@@ -32,7 +32,7 @@ from chia.simulator.socket import find_available_listen_port
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.timelord.timelord import Timelord
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
@@ -132,45 +132,6 @@ async def setup_n_nodes(
 
     for keyring in keyrings_to_cleanup:
         keyring.cleanup()
-
-
-async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants,
-    self_hostname: str,
-    key_seed: Optional[bytes32] = None,
-    db_version: int = 1,
-    disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[Tuple[FullNodeAPI, WalletNode, ChiaServer, ChiaServer, BlockTools], None]:
-    with TempKeyring(populate=True) as keychain:
-        btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
-        full_node_iter = setup_full_node(
-            consensus_constants,
-            "blockchain_test.db",
-            self_hostname,
-            btools,
-            simulator=False,
-            db_version=db_version,
-            disable_capabilities=disable_capabilities,
-        )
-
-        wallet_node_iter = setup_wallet_node(
-            btools.config["self_hostname"],
-            consensus_constants,
-            btools,
-            None,
-            key_seed=key_seed,
-        )
-
-        full_node_service = await full_node_iter.__anext__()
-        full_node_api = full_node_service._api
-        wallet_node_service = await wallet_node_iter.__anext__()
-        wallet = wallet_node_service._node
-        s2 = wallet_node_service._node.server
-
-        yield full_node_api, wallet, full_node_api.full_node.server, s2, btools
-
-        await _teardown_nodes([full_node_iter])
-        await _teardown_nodes([wallet_node_iter])
 
 
 async def setup_simulators_and_wallets(
@@ -329,7 +290,6 @@ async def setup_farmer_multi_harvester(
     *,
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]]:
-
     farmer_node_iterators = [
         setup_farmer(
             block_tools,
@@ -342,7 +302,7 @@ async def setup_farmer_multi_harvester(
     ]
     farmer_service = await farmer_node_iterators[0].__anext__()
     if start_services:
-        farmer_peer = PeerInfo(block_tools.config["self_hostname"], uint16(farmer_service._server._port))
+        farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], uint16(farmer_service._server._port))
     else:
         farmer_peer = None
     harvester_node_iterators = []
@@ -472,7 +432,7 @@ async def setup_full_system_inner(
     harvester_iter = setup_harvester(
         shared_b_tools,
         shared_b_tools.root_path / "harvester",
-        PeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
+        UnresolvedPeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
         consensus_constants,
     )
     vdf1_port = uint16(find_available_listen_port("vdf1"))

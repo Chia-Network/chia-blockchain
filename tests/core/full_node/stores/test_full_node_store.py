@@ -7,7 +7,7 @@ from typing import List, Optional
 import pytest
 import pytest_asyncio
 
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
@@ -486,7 +486,7 @@ class TestFullNodeStore:
             blocks_4[-1].reward_chain_block.signage_point_index
             < test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA
         )
-        await _validate_and_add_block(blockchain, blocks_4[-1], expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
+        await _validate_and_add_block(blockchain, blocks_4[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
 
         sb = blockchain.block_record(blocks_4[-1].header_hash)
         store.new_peak(sb, blocks_4[-1], None, None, None, blockchain)

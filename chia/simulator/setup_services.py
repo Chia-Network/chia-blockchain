@@ -30,7 +30,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, lock_and_load_config, save_config
 from chia.util.ints import uint16
@@ -81,13 +81,9 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     with Lockfile.create(daemon_launch_lock_path(root_path)):
-        shutdown_event = asyncio.Event()
-        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
-        await ws_server.start()
-
-        yield ws_server
-
-        await ws_server.stop()
+        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+        async with ws_server.run():
+            yield ws_server
 
 
 async def setup_full_node(
@@ -105,6 +101,8 @@ async def setup_full_node(
 ) -> AsyncGenerator[Service[FullNode], None]:
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
+        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+        gc.collect()
         db_path.unlink()
 
         if db_version > 1:
@@ -200,6 +198,8 @@ async def setup_wallet_node(
         db_path = local_bt.root_path / db_path_replaced
 
         if db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+            gc.collect()
             db_path.unlink()
         service_config["database_path"] = str(db_name)
         service_config["testing"] = True
@@ -233,6 +233,8 @@ async def setup_wallet_node(
         service.stop()
         await service.wait_closed()
         if db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+            gc.collect()
             db_path.unlink()
         keychain.delete_all_keys()
 
@@ -240,7 +242,7 @@ async def setup_wallet_node(
 async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
-    farmer_peer: Optional[PeerInfo],
+    farmer_peer: Optional[UnresolvedPeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ) -> AsyncGenerator[Service[Harvester], None]:

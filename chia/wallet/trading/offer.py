@@ -6,13 +6,15 @@ from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
 from blspy import G2Element
 from clvm_tools.binutils import disassemble
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions_with_cost
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
+from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
@@ -32,8 +34,8 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 
-OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clsp")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
@@ -76,6 +78,8 @@ class Offer:
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
+    _final_spend_bundle: Optional[SpendBundle] = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -137,13 +141,18 @@ class Offer:
 
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
+        max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
             try:
-                adds[cs.coin] = compute_additions(cs)
+                coins, cost = compute_additions_with_cost(cs)
+                max_cost -= cost
+                adds[cs.coin] = coins
             except Exception:
-                pass
+                continue
+            if max_cost < 0:
+                raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
 
     def additions(self) -> List[Coin]:
@@ -166,7 +175,7 @@ class Offer:
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     # It's also a little heuristic, but it should get most things
-    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+    def _get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
         for parent_spend in self._bundle.coin_spends:
@@ -232,8 +241,15 @@ class Offer:
             if coins_for_this_spend != []:
                 offered_coins.setdefault(asset_id, [])
                 offered_coins[asset_id].extend(coins_for_this_spend)
-
         return offered_coins
+
+    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+        try:
+            if self._offered_coins is not None:
+                return self._offered_coins
+        except AttributeError:
+            object.__setattr__(self, "_offered_coins", self._get_offered_coins())
+        return self._offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
@@ -528,7 +544,12 @@ class Offer:
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self._bundle])
 
     def to_spend_bundle(self) -> SpendBundle:
-        # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
+        try:
+            if self._final_spend_bundle is not None:
+                return self._final_spend_bundle
+        except AttributeError:
+            pass
+        # Before we serialize this as a SpendBundle, we need to serialize the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
             puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD
@@ -550,12 +571,14 @@ class Offer:
                 )
             )
 
-        return SpendBundle.aggregate(
+        sb = SpendBundle.aggregate(
             [
                 SpendBundle(additional_coin_spends, G2Element()),
                 self._bundle,
             ]
         )
+        object.__setattr__(self, "_final_spend_bundle", sb)
+        return sb
 
     @classmethod
     def from_spend_bundle(cls, bundle: SpendBundle) -> Offer:
@@ -593,11 +616,16 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Offer):
+            return False  # don't attempt to compare against unrelated types
+        return self.name() == other.name()
+
     def compress(self, version: Optional[int] = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
             mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
-            version = max(lowest_best_version(mods), 5)  # 5 is the version where OFFER_MOD lives
+            version = max(lowest_best_version(mods), 6)  # Clients lower than version 6 should not be able to parse
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 
     @classmethod

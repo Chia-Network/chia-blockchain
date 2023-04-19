@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import G2Element
 
@@ -56,12 +56,14 @@ class NotificationManager:
         else:
             memos: Dict[bytes32, List[bytes]] = compute_memos_for_spend(parent_spend)
             coin_memos: List[bytes] = memos.get(coin_name, [])
-            wallet_info: Optional[
-                Tuple[uint32, WalletType]
-            ] = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(bytes32(coin_memos[0]))
+            if len(coin_memos) == 0 or len(coin_memos[0]) != 32:
+                return False
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                bytes32(coin_memos[0])
+            )
             if (
-                wallet_info is not None
-                and wallet_info[1] == WalletType.STANDARD_WALLET
+                wallet_identifier is not None
+                and wallet_identifier.type == WalletType.STANDARD_WALLET
                 and len(coin_memos) == 2
                 and construct_notification(bytes32(coin_memos[0]), uint64(coin_state.coin.amount)).get_tree_hash()
                 == coin_state.coin.puzzle_hash

@@ -23,7 +23,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -37,6 +37,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -84,7 +85,7 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
-    return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
+    return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
@@ -223,6 +224,18 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
             raise ValueError from error
 
 
+async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol) -> None:
+    expected_balance = await wallet_node.get_balance(wallet.id())
+    expected_balance_dict = expected_balance.to_json_dict()
+    expected_balance_dict["wallet_id"] = wallet.id()
+    expected_balance_dict["wallet_type"] = wallet.type()
+    expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
+    if wallet.type() == WalletType.CAT:
+        assert isinstance(wallet, CATWallet)
+        expected_balance_dict["asset_id"] = wallet.get_asset_id()
+    assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
+
+
 async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
     tx = await client.get_transaction(1, transaction_id)
     return tx.is_in_mempool()
@@ -307,6 +320,22 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     tx = await client.get_transaction(1, transaction_id=tx.name)
     assert tx.confirmed
+
+
+@pytest.mark.asyncio
+async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    await full_node_api.farm_blocks_to_wallet(2, wallet)
+    async with wallet_node.wallet_state_manager.lock:
+        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+        )
+    await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
+    await assert_get_balance(wallet_rpc_client, wallet_node, cat_wallet)
 
 
 @pytest.mark.asyncio
@@ -674,7 +703,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
     # make sure spend is in mempool before farming tx block
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     for i in range(5):
         if check_mempool_spend_count(full_node_api, 0):
             break
@@ -1597,3 +1626,79 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     async with dbw.writer() as conn:
         await conn.execute("DROP TABLE testing_schema")
     assert await wallet_node.reset_sync_db(db_path, fingerprint)
+
+
+@pytest.mark.asyncio
+async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_node: WalletNode = env.wallet_1.node
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    full_node_api: FullNodeSimulator = env.full_node.api
+    full_node_rpc: FullNodeRpcClient = env.full_node.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1, 1)
+
+    # Send to a CAT with an anyone can spend TAIL
+    our_ph: bytes32 = await env.wallet_1.wallet.get_new_puzzlehash()
+    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), Program.to(1))
+    addr = encode_puzzle_hash(
+        cat_puzzle.get_tree_hash(),
+        "txch",
+    )
+    tx_amount = uint64(100)
+
+    tx = await client.send_transaction(1, tx_amount, addr)
+    transaction_id = tx.name
+    spend_bundle = tx.spend_bundle
+    assert spend_bundle is not None
+
+    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    # Do the eve spend back to our wallet
+    cat_coin = next(c for c in spend_bundle.additions() if c.amount == tx_amount)
+    eve_spend = SpendBundle(
+        [
+            CoinSpend(
+                cat_coin,
+                cat_puzzle,
+                Program.to(
+                    [
+                        Program.to([[51, our_ph, tx_amount], [51, None, -113, None, None]]),
+                        None,
+                        cat_coin.name(),
+                        coin_as_list(cat_coin),
+                        [cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_coin.amount],
+                        0,
+                        0,
+                    ]
+                ),
+            )
+        ],
+        G2Element(),
+    )
+    await full_node_rpc.push_tx(eve_spend)
+    await farm_transaction(full_node_api, wallet_node, eve_spend)
+
+    # Make sure we have the CAT
+    res = await client.create_wallet_for_existing_cat(Program.to(None).get_tree_hash())
+    assert res["success"]
+    cat_wallet_id = res["wallet_id"]
+    await time_out_assert(20, get_confirmed_balance, tx_amount, client, cat_wallet_id)
+
+    # Attempt to melt it fully
+    tx = await client.cat_spend(
+        cat_wallet_id,
+        amount=uint64(0),
+        inner_address=encode_puzzle_hash(our_ph, "txch"),
+        cat_discrepancy=(tx_amount * -1, Program.to(None), Program.to(None)),
+    )
+    transaction_id = tx.name
+    spend_bundle = tx.spend_bundle
+    assert spend_bundle is not None
+
+    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    await time_out_assert(20, get_confirmed_balance, 0, client, cat_wallet_id)

@@ -82,8 +82,8 @@ def load_serialized_clvm(
     clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
 ) -> SerializedProgram:
     """
-    This function takes a .clvm file in the given package and compiles it to a
-    .clvm.hex file if the .hex file is missing or older than the .clvm file, then
+    This function takes a .clsp file in the given package and compiles it to a
+    .clsp.hex file if the .hex file is missing or older than the .clsp file, then
     returns the contents of the .hex file as a `Program`.
 
     clvm_filename: file name
@@ -99,12 +99,15 @@ def load_serialized_clvm(
                 # Establish whether the size is zero on entry
                 full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
                 output = full_path.parent / hex_filename
-                search_paths = [full_path.parent]
-                if include_standard_libraries:
-                    # we can't get the dir, but we can get a file then get its parent.
-                    chia_puzzles_path = pathlib.Path(pkg_resources.resource_filename(__name__, "__init__.py")).parent
-                    search_paths.append(chia_puzzles_path)
-                compile_clvm(full_path, output, search_paths=search_paths)
+                if not output.exists() or os.stat(full_path).st_mtime > os.stat(output).st_mtime:
+                    search_paths = [full_path.parent]
+                    if include_standard_libraries:
+                        # we can't get the dir, but we can get a file then get its parent.
+                        chia_puzzles_path = pathlib.Path(
+                            pkg_resources.resource_filename(__name__, "__init__.py")
+                        ).parent
+                        search_paths.append(chia_puzzles_path)
+                    compile_clvm(full_path, output, search_paths=search_paths)
 
         except NotImplementedError:
             # pyinstaller doesn't support `pkg_resources.resource_exists`

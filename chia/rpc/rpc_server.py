@@ -21,7 +21,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import WebServer
+from chia.util.network import WebServer, get_host_addr
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -120,8 +120,8 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
         {
             "type": con.connection_type,
             "local_port": con.local_port,
-            "peer_host": con.peer_host,
-            "peer_port": con.peer_port,
+            "peer_host": con.peer_info.host,
+            "peer_port": con.peer_info.port,
             "peer_server_port": con.peer_server_port,
             "node_id": con.peer_node_id,
             "creation_time": con.creation_time,
@@ -152,6 +152,7 @@ class RpcServer:
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
     client_session: Optional[ClientSession] = None
+    prefer_ipv6: bool = False
 
     @classmethod
     def create(
@@ -161,6 +162,7 @@ class RpcServer:
         stop_cb: Callable[[], None],
         root_path: Path,
         net_config: Dict[str, Any],
+        prefer_ipv6: bool,
     ) -> RpcServer:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
@@ -169,9 +171,17 @@ class RpcServer:
         daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
-        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context, daemon_heartbeat=daemon_heartbeat)
+        return cls(
+            rpc_api,
+            stop_cb,
+            service_name,
+            ssl_context,
+            ssl_client_context,
+            daemon_heartbeat=daemon_heartbeat,
+            prefer_ipv6=prefer_ipv6,
+        )
 
-    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, prefer_ipv6: bool) -> None:
+    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int) -> None:
         if self.webserver is not None:
             raise RuntimeError("RpcServer already started")
         self.webserver = await WebServer.create(
@@ -180,7 +190,7 @@ class RpcServer:
             max_request_body_size=max_request_body_size,
             routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
             ssl_context=self.ssl_context,
-            prefer_ipv6=prefer_ipv6,
+            prefer_ipv6=self.prefer_ipv6,
         )
 
     def close(self) -> None:
@@ -207,7 +217,6 @@ class RpcServer:
         if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
             if data is not None:
-
                 payload = create_payload_dict(
                     "get_connections",
                     data,
@@ -267,7 +276,7 @@ class RpcServer:
     async def open_connection(self, request: Dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
-        target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
+        target_node: PeerInfo = PeerInfo(str(get_host_addr(host, prefer_ipv6=self.prefer_ipv6)), uint16(int(port)))
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
@@ -420,10 +429,13 @@ async def start_rpc_server(
         if max_request_body_size is None:
             max_request_body_size = 1024**2
 
-        rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
         prefer_ipv6 = str2bool(str(net_config.get("prefer_ipv6", False)))
-        await rpc_server.start(self_hostname, rpc_port, max_request_body_size, prefer_ipv6)
+
+        rpc_server = RpcServer.create(
+            rpc_api, rpc_api.service_name, stop_cb, root_path, net_config, prefer_ipv6=prefer_ipv6
+        )
+        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+        await rpc_server.start(self_hostname, rpc_port, max_request_body_size)
 
         if connect_to_daemon:
             rpc_server.connect_to_daemon(self_hostname, daemon_port)

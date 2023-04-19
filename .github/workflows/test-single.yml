@@ -63,6 +63,7 @@ jobs:
             matrix: '3.7'
             exclude_from:
               limited: True
+              main: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
@@ -71,6 +72,7 @@ jobs:
             matrix: '3.8'
             exclude_from:
               limited: True
+              main: True
           - name: '3.9'
             file_name: '3.9'
             action: '3.9'
@@ -85,6 +87,7 @@ jobs:
             matrix: '3.10'
             exclude_from:
               limited: True
+              main: True
           - name: '3.11'
             file_name: '3.11'
             action: '3.11'
@@ -93,6 +96,7 @@ jobs:
             matrix: '3.11'
             exclude_from:
               limited: True
+              main: True
         exclude:
           - os:
               matrix: macos
@@ -128,6 +132,11 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
@@ -184,15 +193,20 @@ jobs:
 
       - name: Checkout test blocks and plots (macOS, Ubuntu)
         if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.tar.gz | tar xzf -
+          gh release download -R Chia-Network/test-cache 0.29.0 --archive=tar.gz -O - | tar xzf -
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
       - name: Checkout test blocks and plots (Windows)
         if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
+          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=zip -O blocks_and_plots.zip
+          Expand-Archive blocks_and_plots.zip -DestinationPath .
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 

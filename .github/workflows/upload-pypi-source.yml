@@ -2,6 +2,8 @@ name: 🚨🚀 Lint and upload source distribution
 
 on:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
       - 'long_lived/**'
       - main
@@ -9,6 +11,8 @@ on:
   release:
     types: [published]
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
       - '**'
 
@@ -66,6 +70,7 @@ jobs:
 
     - name: Lint source with mypy
       run: |
+        echo "MYPY VERSION IS: $(mypy --version)"
         mypy
 
     - name: Lint source with pylint

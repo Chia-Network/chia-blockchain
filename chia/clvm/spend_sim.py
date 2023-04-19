@@ -14,6 +14,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
@@ -64,7 +65,7 @@ class CostLogger:
     def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program, INFINITE_COST, cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE, mempool_mode=True
+            program, INFINITE_COST, mempool_mode=True, height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT
         )
         self.cost_dict[descriptor] = npc_result.cost
         cost_to_subtract: int = 0
@@ -128,7 +129,6 @@ _T_SpendSim = TypeVar("_T_SpendSim", bound="SpendSim")
 
 
 class SpendSim:
-
     db_wrapper: DBWrapper2
     coin_store: CoinStore
     mempool_manager: MempoolManager
@@ -166,8 +166,7 @@ class SpendSim:
                 self.block_height = store_data.block_height
                 self.block_records = store_data.block_records
                 self.blocks = store_data.blocks
-                # Create a protocol to make BlockRecord and SimBlockRecord interchangeable.
-                self.mempool_manager.peak = self.block_records[-1]  # type: ignore[assignment]
+                self.mempool_manager.peak = self.block_records[-1]
             else:
                 self.timestamp = uint64(1)
                 self.block_height = uint32(0)
@@ -187,8 +186,7 @@ class SpendSim:
         await self.db_wrapper.close()
 
     async def new_peak(self) -> None:
-        # Create a protocol to make BlockRecord and SimBlockRecord interchangeable.
-        await self.mempool_manager.new_peak(self.block_records[-1], None)  # type: ignore[arg-type]
+        await self.mempool_manager.new_peak(self.block_records[-1], None)
 
     def new_coin_record(self, coin: Coin, coinbase: bool = False) -> CoinRecord:
         return CoinRecord(
@@ -221,13 +219,12 @@ class SpendSim:
     async def farm_block(
         self,
         puzzle_hash: bytes32 = bytes32(b"0" * 32),
-        item_inclusion_filter: Optional[Callable[[MempoolManager, MempoolItem], bool]] = None,
+        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Tuple[List[Coin], List[Coin]]:
         # Fees get calculated
         fees = uint64(0)
-        if self.mempool_manager.mempool.spends:
-            for _, item in self.mempool_manager.mempool.spends.items():
-                fees = uint64(fees + item.spend_bundle.fees())
+        for item in self.mempool_manager.mempool.all_spends():
+            fees = uint64(fees + item.fee)
 
         # Rewards get created
         next_block_height: uint32 = uint32(self.block_height + 1) if len(self.block_records) > 0 else self.block_height
@@ -251,19 +248,19 @@ class SpendSim:
         generator_bundle: Optional[SpendBundle] = None
         return_additions: List[Coin] = []
         return_removals: List[Coin] = []
-        if (len(self.block_records) > 0) and (self.mempool_manager.mempool.spends):
+        if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
                 result = self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
 
                 if result is not None:
-                    bundle, additions, removals = result
+                    bundle, additions = result
                     generator_bundle = bundle
                     return_additions = additions
-                    return_removals = removals
+                    return_removals = bundle.removals()
 
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
-                    await self.coin_store._set_spent([r.name() for r in removals], uint32(self.block_height + 1))
+                    await self.coin_store._set_spent([r.name() for r in return_removals], uint32(self.block_height + 1))
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
@@ -300,7 +297,8 @@ class SpendSim:
         self.block_records = new_br_list
         self.blocks = new_block_list
         await self.coin_store.rollback_to_block(block_height)
-        self.mempool_manager.mempool.spends = {}
+        old_pool = self.mempool_manager.mempool
+        self.mempool_manager.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
         self.block_height = block_height
         if new_br_list:
             self.timestamp = new_br_list[-1].timestamp
@@ -429,12 +427,12 @@ class SimClient:
             return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
-        return list(self.service.mempool_manager.mempool.spends.keys())
+        return self.service.mempool_manager.mempool.all_spend_ids()
 
     async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
         spends = {}
-        for tx_id, item in self.service.mempool_manager.mempool.spends.items():
-            spends[tx_id] = item
+        for item in self.service.mempool_manager.mempool.all_spends():
+            spends[item.name] = item
         return spends
 
     async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict[str, Any]]:

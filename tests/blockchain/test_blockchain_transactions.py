@@ -5,7 +5,7 @@ import logging
 import pytest
 from clvm.casts import int_to_bytes
 
-from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols import wallet_protocol
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
@@ -39,7 +39,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block), None)
+            await full_node_api_1.full_node.add_block(block, None)
 
         spend_block = blocks[2]
         spend_coin = None
@@ -55,13 +55,12 @@ class TestBlockchainTransactions:
         await full_node_api_1.send_transaction(tx)
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-        assert sb is spend_bundle
+        assert sb == spend_bundle
 
         last_block = blocks[-1]
-        next_spendbundle, additions, removals = full_node_1.mempool_manager.create_bundle_from_mempool(
-            last_block.header_hash
-        )
-        assert next_spendbundle is not None
+        result = full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header_hash)
+        assert result is not None
+        next_spendbundle, _ = result
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -72,7 +71,7 @@ class TestBlockchainTransactions:
         )
 
         next_block = new_blocks[-1]
-        await full_node_1.respond_block(full_node_protocol.RespondBlock(next_block))
+        await full_node_1.add_block(next_block)
 
         assert next_block.header_hash == full_node_1.blockchain.get_peak().header_hash
 
@@ -99,7 +98,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         spend_block = blocks[2]
         spend_coin = None
@@ -136,7 +135,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         spend_block = blocks[2]
 
@@ -172,7 +171,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         spend_block = blocks[2]
 
@@ -191,7 +190,7 @@ class TestBlockchainTransactions:
         )
         # Move chain to height 10, with a spend at height 10
         for block in blocks_spend:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Reorg at height 5, add up to and including height 12
         new_blocks = bt.get_consecutive_blocks(
@@ -203,7 +202,7 @@ class TestBlockchainTransactions:
         )
 
         for block in new_blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Spend the same coin in the new reorg chain at height 13
         new_blocks = bt.get_consecutive_blocks(
@@ -239,7 +238,7 @@ class TestBlockchainTransactions:
             seed=b"spend at 12 is ok",
         )
         for block in new_blocks_reorg:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Spend at height 13 is also OK (same height)
         new_blocks_reorg = bt.get_consecutive_blocks(
@@ -251,7 +250,7 @@ class TestBlockchainTransactions:
             seed=b"spend at 13 is ok",
         )
         for block in new_blocks_reorg:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Spend at height 14 is not OK (already spend)
         new_blocks_reorg = bt.get_consecutive_blocks(
@@ -264,7 +263,7 @@ class TestBlockchainTransactions:
         )
         with pytest.raises(ConsensusError):
             for block in new_blocks_reorg:
-                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+                await full_node_api_1.full_node.add_block(block)
 
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_coin(self, two_nodes, softfork_height):
@@ -280,7 +279,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         spend_block = blocks[2]
 
@@ -301,14 +300,11 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
+        await full_node_api_1.full_node.add_block(new_blocks[-1])
 
         coin_2 = None
         for coin in run_and_get_removals_and_additions(
-            new_blocks[-1],
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            height=softfork_height,
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, height=softfork_height
         )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
@@ -325,14 +321,11 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
+        await full_node_api_1.full_node.add_block(new_blocks[-1])
 
         coin_3 = None
         for coin in run_and_get_removals_and_additions(
-            new_blocks[-1],
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            height=softfork_height,
+            new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM, height=softfork_height
         )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
@@ -350,7 +343,7 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
+        await full_node_api_1.full_node.add_block(new_blocks[-1])
 
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes):
@@ -362,7 +355,7 @@ class TestBlockchainTransactions:
         blocks = bt.get_consecutive_blocks(num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Spends a coinbase created in reorg
         new_blocks = bt.get_consecutive_blocks(
@@ -374,7 +367,7 @@ class TestBlockchainTransactions:
         )
 
         for block in new_blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         spend_block = new_blocks[-1]
         spend_coin = None
@@ -392,7 +385,7 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
+        await full_node_api_1.full_node.add_block(new_blocks[-1])
 
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes):
@@ -406,7 +399,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         spend_block = blocks[-1]
         spend_coin = None
@@ -418,7 +411,7 @@ class TestBlockchainTransactions:
         new_blocks = bt.get_consecutive_blocks(
             1, blocks, seed=b"", farmer_reward_puzzle_hash=coinbase_puzzlehash, transaction_data=spend_bundle
         )
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
+        await full_node_api_1.full_node.add_block(new_blocks[-1])
 
         # Spends a coin in a genesis reorg, that was already spent
         new_blocks = bt.get_consecutive_blocks(
@@ -430,7 +423,7 @@ class TestBlockchainTransactions:
         )
 
         for block in new_blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -440,7 +433,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
         )
 
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
+        await full_node_api_1.full_node.add_block(new_blocks[-1])
 
     @pytest.mark.asyncio
     async def test_assert_my_coin_id(self, two_nodes):
@@ -456,7 +449,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
 
@@ -510,7 +503,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_coin_announcement_consumed(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -524,7 +516,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]
@@ -592,7 +584,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_puzzle_announcement_consumed(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -606,7 +597,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]
@@ -687,7 +678,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]
@@ -751,7 +742,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]
@@ -804,7 +795,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_seconds_relative(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -818,7 +808,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]
@@ -862,7 +852,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_seconds_absolute(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -876,7 +865,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]
@@ -921,7 +910,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -935,7 +923,7 @@ class TestBlockchainTransactions:
         )
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         # Coinbase that gets spent
         block1 = blocks[2]

@@ -3,6 +3,8 @@ name: 📦🚀 Build Installer - Linux DEB AMD64
 on:
   workflow_dispatch:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
       - 'long_lived/**'
       - main
@@ -10,6 +12,8 @@ on:
   release:
     types: [published]
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
       - '**'
 
@@ -48,18 +52,9 @@ jobs:
       run: bash build_scripts/clean-runner.sh || true
 
     - name: Set Env
-      if: github.event_name == 'release' && github.event.action == 'published'
-      run: |
-        PRE_RELEASE=$(jq -r '.release.prerelease' "$GITHUB_EVENT_PATH")
-        RELEASE_TAG=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
-        echo "RELEASE=true" >>$GITHUB_ENV
-        echo "PRE_RELEASE=$PRE_RELEASE" >>$GITHUB_ENV
-        echo "RELEASE_TAG=$RELEASE_TAG" >>$GITHUB_ENV
-        if [ $PRE_RELEASE = false ]; then
-          echo "FULL_RELEASE=true" >>$GITHUB_ENV
-        else
-          echo "FULL_RELEASE=false" >>$GITHUB_ENV
-        fi
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -87,47 +82,25 @@ jobs:
         AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
         GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
-      # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v6
-      id: 'latest-madmax'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        result-encoding: string
-        script: |
-          const release = await github.rest.repos.getLatestRelease({
-            owner: 'Chia-Network',
-            repo: 'chia-plotter-madmax',
-          });
-          return release.data.tag_name;
-
     - name: Get latest madmax plotter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
         mkdir "$GITHUB_WORKSPACE/madmax"
-        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot-${{ steps.latest-madmax.outputs.result }}-x86-64
-        wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-x86-64
+        gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-*-x86-64' -O $GITHUB_WORKSPACE/madmax/chia_plot
+        gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-*-x86-64' -O $GITHUB_WORKSPACE/madmax/chia_plot_k34
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
-      # Get the most recent release from bladebit
-    - uses: actions/github-script@v6
-      if: '!github.event.release.prerelease'
-      id: 'latest-bladebit'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        result-encoding: string
-        script: |
-          const release = await github.rest.repos.getLatestRelease({
-            owner: 'Chia-Network',
-            repo: 'bladebit',
-          });
-          return release.data.tag_name;
-
     - name: Get latest bladebit plotter
       if: '!github.event.release.prerelease'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
         mkdir "$GITHUB_WORKSPACE/bladebit"
-        wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-x86-64.tar.gz
-        tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*-ubuntu-x86-64.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
     - name: Get latest prerelease bladebit plotter
@@ -135,10 +108,9 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        PRERELEASE_URL=$(gh api /repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("ubuntu-x86-64.tar.gz")).browser_download_url')
+        LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
         mkdir "$GITHUB_WORKSPACE/bladebit"
-        wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
-        tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*ubuntu-x86-64.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
     - uses: ./.github/actions/install
@@ -187,7 +159,7 @@ jobs:
 
     - name: Configure AWS Credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}

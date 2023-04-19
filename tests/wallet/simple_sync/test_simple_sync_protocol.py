@@ -50,9 +50,9 @@ async def get_all_messages_in_queue(queue):
 
 class TestSimpleSyncProtocol:
     @pytest.mark.asyncio
-    async def test_subscribe_for_ph(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_ph(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -83,7 +83,9 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
-        assert len(data_response.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
+        # we have already subscribed to this puzzle hash, it will be ignored
+        # we still receive the updates (see below)
+        assert data_response.coin_states == []
 
         # Farm more rewards to check the incoming queue for the updates
         for i in range(0, num_blocks):
@@ -225,9 +227,9 @@ class TestSimpleSyncProtocol:
         assert notified_state.spent_height is not None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_coin_id(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_coin_id(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -322,10 +324,10 @@ class TestSimpleSyncProtocol:
         assert notified_state.spent_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_ph_reorg(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_ph_reorg(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         long_blocks = 20
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -397,10 +399,10 @@ class TestSimpleSyncProtocol:
         assert second_state_coin_2.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_coin_id_reorg(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_coin_id_reorg(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
         long_blocks = 20
-        full_nodes, wallets, _ = wallet_node_simulator
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -464,9 +466,9 @@ class TestSimpleSyncProtocol:
         assert second_coin.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_hint(self, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_hint(self, simulator_and_wallet, self_hostname):
         num_blocks = 4
-        full_nodes, wallets, bt = wallet_node_simulator
+        full_nodes, wallets, bt = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -529,12 +531,9 @@ class TestSimpleSyncProtocol:
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
-        assert len(data_response.coin_states) == 1
-        coin_records: List[CoinRecord] = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
-            True, hint_puzzle_hash
-        )
-        assert len(coin_records) == 1
-        assert data_response.coin_states[0] == coin_records[0].coin_state
+        # we have already subscribed to this puzzle hash. The full node will
+        # ignore the duplicate
+        assert data_response.coin_states == []
 
     @pytest.mark.asyncio
     async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
@@ -623,8 +622,8 @@ class TestSimpleSyncProtocol:
         check_messages_for_hint(all_messages_1)
 
     @pytest.mark.asyncio
-    async def test_ph_subscribe_limits(self, wallet_node_simulator, self_hostname):
-        full_nodes, wallets, _ = wallet_node_simulator
+    async def test_ph_subscribe_limits(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -664,8 +663,8 @@ class TestSimpleSyncProtocol:
         assert not s.has_ph_subscription(phs[5])
 
     @pytest.mark.asyncio
-    async def test_coin_subscribe_limits(self, wallet_node_simulator, self_hostname):
-        full_nodes, wallets, _ = wallet_node_simulator
+    async def test_coin_subscribe_limits(self, simulator_and_wallet, self_hostname):
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server

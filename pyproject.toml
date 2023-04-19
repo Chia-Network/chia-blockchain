@@ -25,6 +25,7 @@ chia_timelord_launcher = "chia.timelord.timelord_launcher:main"
 chia_full_node_simulator = "chia.simulator.start_simulator:main"
 chia_data_layer = "chia.server.start_data_layer:main"
 chia_data_layer_http = "chia.data_layer.data_layer_server:main"
+chia_data_layer_s3_plugin = "chia.data_layer.s3_plugin_service:run_server"
 
 [[tool.poetry.source]]
 name = "chia"
@@ -38,14 +39,16 @@ secondary = false
 
 [tool.poetry.dependencies]
 python = ">=3.7.2, <3.12"
-aiofiles = "22.1.0"  # Async IO for files
-aiohttp = "3.8.3"  # HTTP server for full node rpc
+aiofiles = "23.1.0"  # Async IO for files
+aiohttp = "3.8.4"  # HTTP server for full node rpc
 aiosqlite = "0.17.0"  # asyncio wrapper for sqlite, to store blocks
+anyio = "3.6.2"
 bitstring = "4.0.1"  # Binary data management library
 blspy = "1.0.16"  # Signature library
+boto3 = "1.26.111"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = "1.2"  # bip158-style wallet filters
 chiapos = "1.0.11"  # proof of space
-chia_rs = "0.2.2"
+chia_rs = "0.2.5"
 # TODO: presuming that https://github.com/Chia-Network/chia-blockchain/pull/13805 gets merged
 chiavdf = "1.0.8"  # timelord and vdf verification
 click = "8.1.3"  # For the CLI
@@ -57,23 +60,22 @@ colorlog = "6.7.0"  # Adds color to logs
 concurrent_log_handler = "0.9.20"  # Concurrently log and rotate logs
 cryptography = "39.0.1"  # Python cryptography library for TLS - keyring conflict
 dnslib = "0.9.23"  # dns lib
-dnspython = "2.2.1"  # Query DNS seeds
-filelock = "3.8.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+dnspython = "2.3.0"  # Query DNS seeds
+filelock = "3.9.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 # TODO: required until we drop 3.7 support due to a conflict with flake8 < 6 and importlib-metadata
 keyring = "23.9.3"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = "23.0"
 psutil = "5.9.4"
 pyyaml = "6.0"  # Used for config file format
-setproctitle = "1.2.3"  # Gives the chia processes readable names
+setproctitle = "1.3.2"  # Gives the chia processes readable names
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
-typing-extensions = "4.4.0"  # typing backports like Protocol and TypedDict
+typing-extensions = "4.5.0"  # typing backports like Protocol and TypedDict
 watchdog = "2.2.0"  # Filesystem event watching - watches keyring.yaml
 zstd = "1.5.4.0"
 
 aiohttp_cors = { version = "^0.7.0", optional = true }
-anyio = { version = "^3.6", optional = true }
 # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
-black = { version = "22.10.0", optional = true }
+black = { version = "23.3.0", optional = true }
 build = { version = "^0.9", optional = true }
 coverage = { version = "^7.1.0", optional = true }
 diff-cover = { version = "^7.0.1", optional = true }
@@ -85,7 +87,7 @@ isort = { version = "^5.10.1", optional = true }
 mypy = { version = "^1.0", optional = true }
 pre-commit = { version = "^2.20.0", optional = true }
 py3createtorrent = { version = "^1.1.0", optional = true }
-pyinstaller = { version = "5.6.2", optional = true }
+pyinstaller = { version = "5.8.0", optional = true }
 pylint = { version = "^2.15.5", optional = true }
 pytest = { version = "^7.2.0", optional = true }
 pytest-asyncio = { version = "^0.20.1", optional = true }
@@ -102,7 +104,7 @@ types-setuptools = { version = "^65.5.0.2", optional = true }
 miniupnpc = { version = "2.2.2", source = "chia", optional = true }
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "anyio", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
