@@ -15,7 +15,6 @@ import aiosqlite
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -32,8 +31,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -1133,32 +1130,25 @@ class WalletNode:
 
     async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> None:
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, new_peak_hb)
-        old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-        # In this case we will not rollback so it's OK to check some older updates as well, to ensure
-        # that no recent transactions are being hidden.
-        fork_point: int = 0
-        if syncing:
-            # This usually happens the first time we start up the wallet. We roll back slightly to be
-            # safe, but we don't want to rollback too much (hence 16)
-            fork_point = max(0, current_height - 16)
-        if old_proof is not None:
-            # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
-            # state.
-            fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
-
-        await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
+        fork_point_weight_proof = await self.fetch_and_update_weight_proof(peer, new_peak_hb)
+        # This usually happens the first time we start up the wallet. We roll back slightly to be
+        # safe, but we don't want to rollback too much (hence 16)
+        fork_point_rollback: int = max(0, current_height - 16)
+        # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
+        fork_point_syncing = min(fork_point_rollback, fork_point_weight_proof)
 
         if syncing:
             async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height):
-                await self.long_sync(new_peak_hb.height, peer, fork_point, rollback=True)
+                await self.long_sync(new_peak_hb.height, peer, fork_point_syncing, rollback=True)
             return
 
         # we exit earlier in the case where syncing is False and a Secondary sync is running
         assert self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()
         self.log.info("Secondary peer syncing")
+        # In this case we will not rollback so it's OK to check some older updates as well, to ensure
+        # that no recent transactions are being hidden.
         self._secondary_peer_sync_task = asyncio.create_task(
-            self.long_sync(new_peak_hb.height, peer, fork_point, rollback=False)
+            self.long_sync(new_peak_hb.height, peer, 0, rollback=False)
         )
 
     async def sync_from_untrusted_close_to_peak(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
@@ -1249,9 +1239,7 @@ class WalletNode:
             self.wallet_state_manager.state_changed("coin_removed", wallet_id)
             self.wallet_state_manager.state_changed("coin_added", wallet_id)
 
-    async def fetch_and_validate_the_weight_proof(
-        self, peer: WSChiaConnection, peak: HeaderBlock
-    ) -> Tuple[WeightProof, List[SubEpochSummary], List[BlockRecord]]:
+    async def fetch_and_update_weight_proof(self, peer: WSChiaConnection, peak: HeaderBlock) -> int:
         assert self._weight_proof_handler is not None
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
@@ -1273,18 +1261,11 @@ class WalletNode:
             raise Exception("weight proof peak hash does not match peak")
 
         old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-        start_validation = time.time()
-        (
-            valid,
-            summaries,
-            block_records,
-        ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
-        if not valid:
-            raise Exception("weight proof failed validation")
+        block_records = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
 
-        end_validation = time.time()
-        self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
-        return weight_proof, summaries, block_records
+        await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
+
+        return get_wp_fork_point(self.constants, old_proof, weight_proof)
 
     async def get_puzzle_hashes_to_subscribe(self) -> List[bytes32]:
         all_puzzle_hashes = await self.wallet_state_manager.puzzle_store.get_all_puzzle_hashes()
@@ -1596,21 +1577,6 @@ class WalletNode:
         for reward_chain_hash, height in blocks_to_cache:
             peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
         return True
-
-    async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.call_api(
-            FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
-        )
-        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
-        assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
-        assert solution_response.response.coin_name == coin.name()
-
-        return CoinSpend(
-            coin,
-            solution_response.response.puzzle,
-            solution_response.response.solution,
-        )
 
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None

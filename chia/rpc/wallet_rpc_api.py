@@ -71,6 +71,7 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, CoinType, WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -301,9 +302,7 @@ class WalletRpcApi:
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
     ##########################################################################################
@@ -847,9 +846,7 @@ class WalletRpcApi:
                     [tr.additions[0].parent_coin_info], peer=peer
                 )
                 assert len(coin_state_list) == 1
-                coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state_list[0].spent_height, coin_state_list[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
                 tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")

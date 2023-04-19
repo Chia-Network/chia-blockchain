@@ -51,6 +51,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -347,9 +348,7 @@ class CATWallet:
                     [coin.parent_coin_info], peer=peer
                 )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state[0].spent_height, coin_state[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
                 await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
@@ -506,21 +505,20 @@ class CATWallet:
                     raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
                 pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                error, conditions, cost = conditions_dict_for_solution(
+                conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
                     spend.solution.to_program(),
                     self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 )
-                if conditions is not None:
-                    synthetic_pk = synthetic_secret_key.get_g1()
-                    for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                    ):
-                        try:
-                            assert bytes(synthetic_pk) == pk
-                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                        except AssertionError:
-                            raise ValueError("This spend bundle cannot be signed by the CAT wallet")
+                synthetic_pk = synthetic_secret_key.get_g1()
+                for pk, msg in pkm_pairs_for_conditions_dict(
+                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                ):
+                    try:
+                        assert bytes(synthetic_pk) == pk
+                        sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                    except AssertionError:
+                        raise ValueError("This spend bundle cannot be signed by the CAT wallet")
 
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])

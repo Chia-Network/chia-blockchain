@@ -17,9 +17,9 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.merkle_utils import build_merkle_tree
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 
-P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clvm")
+P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
 P2_CURRIED_PUZZLE_HASH = load_clvm_maybe_recompile("p2_puzzle_hash.clvm")
-AUGMENTED_CONDITION = load_clvm_maybe_recompile("augmented_condition.clvm")
+AUGMENTED_CONDITION = load_clvm_maybe_recompile("augmented_condition.clsp")
 
 
 def create_augmented_cond_puzzle(condition: List[Any], puzzle: Program) -> Program:
@@ -90,7 +90,7 @@ def match_clawback_puzzle(inner_puzzle: Program, inner_solution: Program, max_co
     if MOD != uncurry_puzzle(inner_puzzle).mod:
         return None
     # Fetch Remark condition
-    error, conditions, cost = conditions_for_solution(
+    conditions = conditions_for_solution(
         inner_puzzle,
         inner_solution,
         max_cost,

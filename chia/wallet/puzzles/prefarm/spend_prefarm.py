@@ -22,10 +22,7 @@ def print_conditions(spend_bundle: SpendBundle):
     print("\nConditions:")
     for coin_spend in spend_bundle.coin_spends:
         result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(Program.from_bytes(bytes(coin_spend.solution)))
-        error, result_human = parse_sexp_to_conditions(result)
-        assert error is None
-        assert result_human is not None
-        for cvp in result_human:
+        for cvp in parse_sexp_to_conditions(result):
             print(f"{ConditionOpcode(cvp.opcode).name}: {[var.hex() for var in cvp.vars]}")
     print("")
 

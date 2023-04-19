@@ -50,6 +50,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -170,7 +171,7 @@ class NFTWallet:
             return
         assert coin_states
         parent_coin = coin_states[0].coin
-        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
+        cs = await fetch_coin_spend(height, parent_coin, peer)
         assert cs is not None
         await self.puzzle_solution_received(cs, peer)
 
@@ -464,24 +465,23 @@ class NFTWallet:
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 synthetic_pk = synthetic_secret_key.get_g1()
                 pks[bytes(synthetic_pk)] = synthetic_secret_key
-            error, conditions, cost = conditions_dict_for_solution(
+            conditions = conditions_dict_for_solution(
                 spend.puzzle_reveal.to_program(),
                 spend.solution.to_program(),
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
             )
-            if conditions is not None:
-                for pk, msg in pkm_pairs_for_conditions_dict(
-                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                ):
-                    try:
-                        sk = pks.get(pk)
-                        if sk:
-                            self.log.debug("Found key, signing for pk: %s", pk)
-                            sigs.append(AugSchemeMPL.sign(sk, msg))
-                        else:
-                            self.log.warning("Couldn't find key for: %s", pk)
-                    except AssertionError:
-                        raise ValueError("This spend bundle cannot be signed by the NFT wallet")
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
+                try:
+                    sk = pks.get(pk)
+                    if sk:
+                        self.log.debug("Found key, signing for pk: %s", pk)
+                        sigs.append(AugSchemeMPL.sign(sk, msg))
+                    else:
+                        self.log.warning("Couldn't find key for: %s", pk)
+                except AssertionError:
+                    raise ValueError("This spend bundle cannot be signed by the NFT wallet")
 
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
