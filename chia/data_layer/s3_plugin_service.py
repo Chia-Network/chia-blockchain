@@ -277,6 +277,19 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
             f", and secret_access_key. Missing config key: {e.args[0]!r}"
         )
 
+    log_level = config.get("log_level", "INFO")
+    log.setLevel(log_level)
+    fh = logging.FileHandler(config.get("log_filename", "s3_plugin.log"))
+    fh.setLevel(log_level)
+    # create formatter and add it to the handlers
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"
+    )
+
+    fh.setFormatter(file_log_formatter)
+    # add the handlers to logger
+    log.addHandler(fh)
+
     stores = read_store_ids_from_config(config)
 
     s3_client = S3Plugin(
@@ -295,7 +308,6 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/add_missing_files", s3_client.add_missing_files)])
     app.add_routes([web.post("/plugin_info", s3_client.plugin_info)])
     app.add_routes([web.post("/healthz", s3_client.healthz)])
-    logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
     log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app
 
