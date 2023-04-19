@@ -328,7 +328,7 @@ def load_config(instance: str) -> Any:
 
 
 def run_server() -> None:
-    instance_name = "instance-1"  # sys.argv[1]
+    instance_name = sys.argv[1]
     try:
         config = load_config(instance_name)
     except KeyError:
