@@ -249,7 +249,7 @@ class TestDecompression:
         cse1 = binutils.assemble(  # type: ignore[no-untyped-call]
             "(((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ()))))"
         )
-        cse2 = binutils.assemble(
+        cse2 = binutils.assemble(  # type: ignore[no-untyped-call]
             """
 (
   ((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0)
@@ -263,7 +263,7 @@ class TestDecompression:
 
 )
         """
-        )  # type: ignore[no-untyped-call]
+        )
 
         start = 2 + 44
         end = start + 238
