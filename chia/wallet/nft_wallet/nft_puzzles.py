@@ -22,26 +22,26 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_fo
 from chia.wallet.util.address_type import AddressType
 
 log = logging.getLogger(__name__)
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
-LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
-NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
+LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
+NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-NFT_METADATA_UPDATER = load_clvm_maybe_recompile("nft_metadata_updater_default.clvm")
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile("nft_ownership_layer.clvm")
+NFT_METADATA_UPDATER = load_clvm_maybe_recompile("nft_metadata_updater_default.clsp")
+NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile("nft_ownership_layer.clsp")
 NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm_maybe_recompile(
-    "nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
+    "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
 )
-STANDARD_PUZZLE_MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clvm")
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clvm")
+STANDARD_PUZZLE_MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
+INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clsp")
 
 
 def create_nft_layer_puzzle_with_curry_params(
     metadata: Program, metadata_updater_hash: bytes32, inner_puzzle: Program
 ) -> Program:
-    """Curries params into nft_state_layer.clvm
+    """Curries params into nft_state_layer.clsp
 
     Args to curry:
         NFT_STATE_LAYER_MOD_HASH

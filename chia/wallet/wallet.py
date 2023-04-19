@@ -393,19 +393,8 @@ class Wallet:
         change = spend_value - total_amount
         if negative_change_allowed:
             change = max(0, change)
-        # only kicks in if fee is missing
-        if change < 0 and fee + amount == total_amount:
-            fee_coins = await self.select_coins(
-                # change already includes fee amount
-                uint64(abs(change)),
-                excluded_coin_amounts=exclude_coin_amounts,
-                exclude=([] if exclude_coins is None else list(exclude_coins)) + list(coins or []),
-            )
-            coins = coins.union(fee_coins)
-            spend_value = sum([coin.amount for coin in coins])
-            self.log.info(f"Updated spend_value is {spend_value} and total_amount is {total_amount}")
-            change = spend_value - total_amount
-        assert change >= 0, f"change is negative: {change}"
+
+        assert change >= 0
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -598,50 +587,36 @@ class Wallet:
             memos=list(compute_memos(spend_bundle).items()),
         )
 
+    async def create_tandem_xch_tx(
+        self,
+        fee: uint64,
+        announcement_to_assert: Optional[Announcement] = None,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> TransactionRecord:
+        chia_coins = await self.select_coins(fee)
+        if reuse_puzhash is None:
+            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
+            if reuse_puzhash_config is None:
+                reuse_puzhash = False
+            else:
+                reuse_puzhash = reuse_puzhash_config.get(
+                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
+                )
+        chia_tx = await self.generate_signed_transaction(
+            uint64(0),
+            (await self.get_puzzle_hash(not reuse_puzhash)),
+            fee=fee,
+            coins=chia_coins,
+            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+            reuse_puzhash=reuse_puzhash,
+        )
+        assert chia_tx.spend_bundle is not None
+        return chia_tx
+
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)
         await self.wallet_state_manager.wallet_node.update_ui()
-
-    # This is to be aggregated together with a CAT offer to ensure that the trade happens
-    async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin] = []) -> SpendBundle:
-        list_of_solutions = []
-        utxos = None
-
-        # If we're losing value then get coins with at least that much value
-        # If we're gaining value then our amount doesn't matter
-        if chia_amount < 0:
-            utxos = await self.select_coins(uint64(abs(chia_amount)), exclude)
-        else:
-            utxos = await self.select_coins(uint64(0), exclude)
-
-        assert len(utxos) > 0
-
-        # Calculate output amount given sum of utxos
-        spend_value = sum([coin.amount for coin in utxos])
-        chia_amount = spend_value + chia_amount
-
-        # Create coin solutions for each utxo
-        output_created = None
-        for coin in utxos:
-            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            if output_created is None:
-                newpuzhash = await self.get_new_puzzlehash()
-                primaries: List[AmountWithPuzzlehash] = [
-                    {"puzzlehash": newpuzhash, "amount": uint64(chia_amount), "memos": []}
-                ]
-                solution = self.make_solution(primaries=primaries)
-                output_created = coin
-            list_of_solutions.append(CoinSpend(coin, puzzle, solution))
-
-        await self.hack_populate_secret_keys_for_coin_spends(list_of_solutions)
-        spend_bundle = await sign_coin_spends(
-            list_of_solutions,
-            self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-        )
-        return spend_bundle
 
     async def get_coins_to_offer(
         self,

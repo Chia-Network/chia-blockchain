@@ -8,6 +8,7 @@ from setuptools import setup
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
     "anyio==3.6.2",
+    "boto3==1.26.111",  # AWS S3 for DL s3 plugin
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
@@ -119,7 +120,6 @@ kwargs = dict(
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",
-        "chia.wallet.settings",
         "chia.wallet.trading",
         "chia.wallet.util",
         "chia.ssl",
@@ -141,11 +141,12 @@ kwargs = dict(
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
             "chia_data_layer = chia.server.start_data_layer:main",
             "chia_data_layer_http = chia.data_layer.data_layer_server:main",
+            "chia_data_layer_s3_plugin = chia.data_layer.s3_plugin_service:run_server",
         ]
     },
     package_data={
         "chia": ["pyinstaller.spec"],
-        "": ["*.clvm", "*.clvm.hex", "*.clib", "*.clinc", "*.clsp", "py.typed"],
+        "": ["*.clsp", "*.clsp.hex", "*.clvm", "*.clib", "py.typed"],
         "chia.util": ["initial-*.yaml", "english.txt"],
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],

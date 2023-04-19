@@ -19,6 +19,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
+from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -51,9 +52,15 @@ class Mempool:
     # this separate dictionary
     _items: Dict[bytes32, InternalMempoolItem]
 
+    # the most recent block height and timestamp that we know of
+    _block_height: uint32
+    _timestamp: uint64
+
     def __init__(self, mempool_info: MempoolInfo, fee_estimator: FeeEstimatorInterface):
         self._db_conn = sqlite3.connect(":memory:")
         self._items = {}
+        self._block_height = uint32(0)
+        self._timestamp = uint64(0)
 
         with self._db_conn:
             # name means SpendBundle hash
@@ -81,10 +88,8 @@ class Mempool:
             self._db_conn.execute("CREATE INDEX cost_sum ON tx(cost)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
             self._db_conn.execute(
-                "CREATE INDEX assert_before_height ON tx(assert_before_height) WHERE assert_before_height != NULL"
-            )
-            self._db_conn.execute(
-                "CREATE INDEX assert_before_seconds ON tx(assert_before_seconds) WHERE assert_before_seconds != NULL"
+                "CREATE INDEX assert_before ON tx(assert_before_height, assert_before_seconds) "
+                "WHERE assert_before_height IS NOT NULL OR assert_before_seconds IS NOT NULL"
             )
 
             # This table maps coin IDs to spend bundles hashes
@@ -216,6 +221,8 @@ class Mempool:
             to_remove = [bytes32(row[0]) for row in cursor]
 
         self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+        self._block_height = block_height
+        self._timestamp = timestamp
 
     def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> None:
         """
@@ -254,23 +261,70 @@ class Mempool:
             for iteminfo in removed_items:
                 self.fee_estimator.remove_mempool_item(info, iteminfo)
 
-    def add_to_pool(self, item: MempoolItem) -> None:
+    def add_to_pool(self, item: MempoolItem) -> Optional[Err]:
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
 
         assert item.fee < MEMPOOL_ITEM_FEE_LIMIT
         assert item.npc_result.conds is not None
+        assert item.cost <= self.mempool_info.max_block_clvm_cost
 
-        # TODO: this block could be simplified by removing all items in a single
-        # SQL query. Or at least figure out which items to remove and then
-        # remove them all in a single call to remove_from_pool()
         with self._db_conn:
-            while self.at_full_capacity(item.cost):
-                # pick the item with the lowest fee per cost to remove
-                cursor = self._db_conn.execute("SELECT name FROM tx ORDER BY fee_per_cost ASC, seq DESC LIMIT 1")
-                name = bytes32(cursor.fetchone()[0])
-                self.remove_from_pool([name], MempoolRemoveReason.POOL_FULL)
+            # we have certain limits on transactions that will expire soon
+            # (in the next 15 minutes)
+            block_cutoff = self._block_height + 48
+            time_cutoff = self._timestamp + 900
+            if (item.assert_before_height is not None and item.assert_before_height < block_cutoff) or (
+                item.assert_before_seconds is not None and item.assert_before_seconds < time_cutoff
+            ):
+                # this lists only transactions that expire soon, in order of
+                # lowest fee rate along with the cumulative cost of such
+                # transactions counting from highest to lowest fee rate
+                cursor = self._db_conn.execute(
+                    """
+                    SELECT name,
+                        fee_per_cost,
+                        SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS cumulative_cost
+                    FROM tx
+                    WHERE assert_before_seconds IS NOT NULL AND assert_before_seconds < ?
+                        OR assert_before_height IS NOT NULL AND assert_before_height < ?
+                    ORDER BY cumulative_cost DESC
+                    """,
+                    (time_cutoff, block_cutoff),
+                )
+                to_remove: List[bytes32] = []
+                for row in cursor:
+                    name, fee_per_cost, cumulative_cost = row
+
+                    # there's space for us, stop pruning
+                    if cumulative_cost + item.cost <= self.mempool_info.max_block_clvm_cost:
+                        break
+
+                    # we can't evict any more transactions, abort (and don't
+                    # evict what we put aside in "to_remove" list)
+                    if fee_per_cost > item.fee_per_cost:
+                        return Err.INVALID_FEE_LOW_FEE
+                    to_remove.append(name)
+                self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
+                # if we don't find any entries, it's OK to add this entry
+
+            total_cost = int(self.total_mempool_cost())
+            if total_cost + item.cost > self.mempool_info.max_size_in_cost:
+                # pick the items with the lowest fee per cost to remove
+                cursor = self._db_conn.execute(
+                    """SELECT name FROM tx
+                    WHERE name NOT IN (
+                        SELECT name FROM (
+                            SELECT name,
+                            SUM(cost) OVER (ORDER BY fee_per_cost DESC, seq ASC) AS total_cost
+                            FROM tx) AS tx_with_cost
+                        WHERE total_cost <= ?)
+                    """,
+                    (self.mempool_info.max_size_in_cost - item.cost,),
+                )
+                to_remove = [bytes32(row[0]) for row in cursor]
+                self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
             if SQLITE_NO_GENERATED_COLUMNS:
                 self._db_conn.execute(
@@ -311,6 +365,7 @@ class Mempool:
 
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
         self.fee_estimator.add_mempool_item(info, MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+        return None
 
     def at_full_capacity(self, cost: int) -> bool:
         """
@@ -321,11 +376,10 @@ class Mempool:
 
     def create_bundle_from_mempool_items(
         self, item_inclusion_filter: Callable[[bytes32], bool]
-    ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
+    ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_bundles: List[SpendBundle] = []
-        removals: List[Coin] = []
         additions: List[Coin] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         for item in self.spends_by_feerate():
@@ -340,7 +394,6 @@ class Mempool:
             spend_bundles.append(item.spend_bundle)
             cost_sum += item.cost
             fee_sum += item.fee
-            removals.extend(item.removals)
             if item.npc_result.conds is not None:
                 for spend in item.npc_result.conds.spends:
                     for puzzle_hash, amount, _ in spend.create_coin:
@@ -353,4 +406,4 @@ class Mempool:
             f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
         )
         agg = SpendBundle.aggregate(spend_bundles)
-        return agg, additions, removals
+        return agg, additions

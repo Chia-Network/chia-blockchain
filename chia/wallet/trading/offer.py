@@ -34,8 +34,8 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 
-OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clsp")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)

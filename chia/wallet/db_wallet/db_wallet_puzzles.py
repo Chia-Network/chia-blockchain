@@ -21,14 +21,14 @@ from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 
 ACS_MU: Program = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_TOP_LAYER_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clvm")
+SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clvm")
+GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clsp")
 CURRY_DL_GRAFTROOT = load_clvm_maybe_recompile("curry_dl_graftroot.clsp")
-P2_PARENT = load_clvm_maybe_recompile("p2_parent.clvm")
+P2_PARENT = load_clvm_maybe_recompile("p2_parent.clsp")
 
 
 def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:

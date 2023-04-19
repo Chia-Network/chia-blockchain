@@ -37,7 +37,7 @@
 
   (include *standard-cl-21*)
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
 
   (defconstant ONE 1)
   (defconstant TWO 2)
