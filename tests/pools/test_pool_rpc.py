@@ -65,11 +65,11 @@ async def manage_temporary_pool_plot(
         bt.add_plot_directory(tmp_path)
         plot_id = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
         assert plot_id is not None
-        await bt.refresh_plots()
-
-        plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=plot_id)
-
         try:
+            await bt.refresh_plots()
+
+            plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=plot_id)
+
             yield plot
         finally:
             await bt.delete_plot(plot_id)
