@@ -278,7 +278,6 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
         )
 
     log.setLevel(logging.INFO)
-    # create file handler which logs even debug messages
     fh = logging.FileHandler(config.get("log_filename", "s3_plugin.log"))
     fh.setLevel(logging.INFO)
     # create formatter and add it to the handlers
