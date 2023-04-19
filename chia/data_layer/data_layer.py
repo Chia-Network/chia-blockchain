@@ -462,8 +462,8 @@ class DataLayer:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
                         "store_id": tree_id.hex(),
-                        "full_tree_filename": str(write_file_result.full_tree.name),
-                        "diff_filename": str(write_file_result.diff_tree.name),
+                        "full_tree_filename": write_file_result.full_tree.name,
+                        "diff_filename": write_file_result.diff_tree.name,
                     }
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
@@ -479,7 +479,6 @@ class DataLayer:
                                     self.log.error(
                                         f"Failed to upload files to, will retry later: {uploader} : {res_json}"
                                     )
-                                    break  # todo this will retry all uploaders
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
                 self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
@@ -496,9 +495,24 @@ class DataLayer:
             return
         max_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
+        files = []
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
-            await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
+            res = await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
+            files.append(res.diff_tree.name)
+            files.append(res.full_tree.name)
+
+        uploaders = await self.get_uploaders(store_id)
+        if uploaders is not None and len(uploaders) > 0:
+            request_json = {"store_id": store_id.hex(), "files": json.dumps(files)}
+            for uploader in uploaders:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(uploader + "/add_missing_files", json=request_json) as response:
+                        res_json = await response.json()
+                        if not res_json["uploaded"]:
+                            self.log.error(f"failed to upload to uploader {uploader}")
+                        else:
+                            self.log.debug(f"uploaded to uploader {uploader}")
 
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
