@@ -10,11 +10,11 @@
   ; once we find 'u' we don't need to continue looping
   (defun add_url (METADATA new_url)
     (if METADATA
-      (if (= (f (f METADATA)) 'u')
-        (c (c 'u' (c new_url (r (f METADATA)))) (r METADATA))
-        (c (f METADATA) (add_url (r METADATA) new_url))
-      )
-      ()
+        (if (= (f (f METADATA)) 'u')
+            (c (c 'u' (c new_url (r (f METADATA)))) (r METADATA))
+            (c (f METADATA) (add_url (r METADATA) new_url))
+        )
+        ()
     )
   )
 

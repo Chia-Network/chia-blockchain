@@ -4,23 +4,23 @@
 ;
 ; The genesis_id is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
 (mod (
-      GENESIS_ID
-      Truths
-      parent_is_cat
-      lineage_proof
-      delta
-      inner_conditions
-      _
-    )
+    GENESIS_ID
+    Truths
+    parent_is_cat
+    lineage_proof
+    delta
+    inner_conditions
+    _
+  )
 
-    (include cat_truths.clib)
+  (include cat_truths.clib)
 
-    (if delta
-        (x)
-        (if (= (my_parent_cat_truth Truths) GENESIS_ID)
+  (if delta
+      (x)
+      (if (= (my_parent_cat_truth Truths) GENESIS_ID)
           ()
           (x)
-        )
-    )
+      )
+  )
 
 )
