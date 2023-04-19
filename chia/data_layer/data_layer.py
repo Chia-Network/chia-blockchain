@@ -456,7 +456,7 @@ class DataLayer:
         while publish_generation > 0:
             write_file_result = await write_files_for_root(self.data_store, tree_id, root, self.server_files_location)
             if not write_file_result.result:
-                self.log.error("failed to write files")
+                # this particular return only happens if the files already exist, no need to log anything
                 break
             try:
                 if uploaders is not None and len(uploaders) > 0:
