@@ -659,7 +659,11 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
-        # Check if the coin is dao funding spend
+        # Check if the coin is a Proposal and that it isn't the timer coin (amount == 0)
+        dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
+        if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
+            return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
         funding_puzzle_check = match_funding_puzzle(uncurried, solution)
         if funding_puzzle_check:
             return await self.handle_dao_funding(coin_spend)
@@ -684,11 +688,6 @@ class WalletStateManager:
         dao_curried_args = match_treasury_puzzle(uncurried.mod, uncurried.args)
         if dao_curried_args is not None:
             return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
-
-        # Check if the coin is a Proposal
-        dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
-        if dao_curried_args is not None:
-            return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
@@ -946,12 +945,15 @@ class WalletStateManager:
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            INNERPUZ,
+            SPEND_OR_UPDATE_FLAG,
+            INNERPUZHASH,
         ) = uncurried_args
         for wallet in self.wallets.values():
             if wallet.type() == WalletType.DAO:
                 assert isinstance(wallet, DAOWallet)
                 if wallet.dao_info.treasury_id == TREASURY_ID.as_atom():
+                    assert isinstance(coin_state.created_height, int)
+                    await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
                     return WalletIdentifier.create(wallet)
         return None
 

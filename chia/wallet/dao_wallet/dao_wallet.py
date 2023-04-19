@@ -35,10 +35,10 @@ from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL; get_cat_tail_hash_from_treasury_puzzle,
+    DAO_FINISHED_STATE,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
     SINGLETON_LAUNCHER,
-    DAO_FINISHED_STATE,
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
@@ -53,7 +53,6 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_spend_p2_singleton_puzzle,
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
-    uncurry_proposal,
     uncurry_treasury,
 )
 
@@ -1230,7 +1229,7 @@ class DAOWallet(WalletProtocol):
         current_block = await self.wallet_state_manager.blockchain.get_peak_block()
         current_height = current_block.height
         # TODO: how do we know this is really the latest height?
-        if proposal_info.singleton_block_height + proposal_timelock < current_height:
+        if proposal_info.singleton_block_height + proposal_timelock.as_int() < current_height:
             raise ValueError("This proposal is not ready to be closed")
         assert proposal_info.current_innerpuz is not None
         full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
@@ -1260,8 +1259,20 @@ class DAOWallet(WalletProtocol):
                 0,
             ]
         )
-        # breakpoint()
-        cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, solution)
+        parent_info = self.get_parent_for_coin(proposal_info.current_coin)
+        assert parent_info is not None
+        fullsol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                1,
+                solution,
+            ]
+        )
+        cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
         spend_bundle = SpendBundle([cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee)
@@ -1423,7 +1434,7 @@ class DAOWallet(WalletProtocol):
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if singleton_id is None:
             raise ValueError("get_singleton_id_from_puzzle failed")
-        curried_args = uncurry_proposal(puzzle)  # not sure if we're going to use this
+        curried_args = puzzle.uncurry()[1].as_iter()
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
             PROPOSAL_MOD_HASH,
@@ -1435,106 +1446,103 @@ class DAOWallet(WalletProtocol):
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
+            SPEND_OR_UPDATE_FLAG,
             INNERPUZ,
         ) = curried_args
-        if TOTAL_VOTES < self.dao_info.filter_below_vote_amount:
-            return  # ignore all proposals below the filter amount
+
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         if current_coin is None:
             raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
         ended = False
         timer_coin = None
-        if solution.rest().rest().rest().rest().rest().first() == Program.to(0):
+        if solution.at("rrrrrrf").as_int() == 0:
+            # we need to add the vote amounts from the solution to get accurate totals
+            is_yes_vote = solution.at("rf").as_int()
+            votes_added = solution.at("ff").as_int()
             current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
             if current_innerpuz is None:
                 raise RuntimeError("get_new_puzzle_from_proposal_solution failed")
-            # TODO: find timer coin
         else:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
+            votes_added = 0
             current_innerpuz = get_finished_state_puzzle(singleton_id)
             ended = True
+
+        new_total_votes = TOTAL_VOTES.as_int() + votes_added
+        if new_total_votes < self.dao_info.filter_below_vote_amount:
+            return  # ignore all proposals below the filter amount
+
+        if is_yes_vote == 1:
+            new_yes_votes = YES_VOTES.as_int() + votes_added
+        else:
+            new_yes_votes = YES_VOTES.as_int()
 
         index = 0
         for current_info in new_dao_info.proposals_list:
             # Search for current proposal_info
             if current_info.proposal_id == singleton_id:
                 # If we are receiving a voting spend update
-                if current_info.singleton_block_height <= block_height:
-                    # TODO: what do we do here?
-                    print()
-                else:
-                    new_proposal_info = ProposalInfo(
-                        singleton_id,
-                        puzzle,
-                        current_info.amount_voted,
-                        Program(current_info.is_yes_vote),  # TODO: should is_yes_vote be Optional?
-                        current_coin,
-                        current_innerpuz,
-                        current_info.timer_coin,
-                        block_height,
-                    )
-                    new_dao_info.proposals_list[index] = new_proposal_info
-                    await self.save_info(new_dao_info)
-                    return
+
+                # TODO: what do we do here?
+                # GW: Removed a block height check
+                new_proposal_info = ProposalInfo(
+                    singleton_id,
+                    puzzle,
+                    new_total_votes,
+                    new_yes_votes,
+                    current_coin,
+                    current_innerpuz,
+                    current_info.timer_coin,
+                    block_height,
+                )
+                new_dao_info.proposals_list[index] = new_proposal_info
+                await self.save_info(new_dao_info)
+                return
             index = index + 1
 
-            # Search for the timer coin
-            if not ended:
-                wallet_node: Any = self.wallet_state_manager.wallet_node
-                peer: WSChiaConnection = wallet_node.get_full_node_peer()
-                if peer is None:
-                    raise ValueError("Could not find any peers to request puzzle and solution from")
-                children = await wallet_node.fetch_children(singleton_id, peer)
-                assert len(children) > 0
-                found = False
-                parent_coin_id = singleton_id
+        # Search for the timer coin
+        if not ended:
+            wallet_node: Any = self.wallet_state_manager.wallet_node
+            peer: WSChiaConnection = wallet_node.get_full_node_peer()
+            if peer is None:
+                raise ValueError("Could not find any peers to request puzzle and solution from")
+            children = await wallet_node.fetch_children(singleton_id, peer)
+            assert len(children) > 0
+            found = False
+            parent_coin_id = singleton_id
 
-                if self.dao_info.current_treasury_innerpuz is None:
-                    raise ValueError("self.dao_info.current_treasury_innerpuz is None")
-                treasury_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
-                (
-                    singleton_struct,
-                    DAO_TREASURY_MOD_HASH,
-                    DAO_PROPOSAL_MOD_HASH,
-                    DAO_PROPOSAL_TIMER_MOD_HASH,
-                    DAO_LOCKUP_MOD_HASH,
-                    CAT_MOD_HASH,
-                    cat_tail_hash,
-                    current_cat_issuance,
-                    attendance_required_percentage,
-                    proposal_pass_percentage,
-                    proposal_timelock,
-                ) = treasury_args
+            if self.dao_info.current_treasury_innerpuz is None:
+                raise ValueError("self.dao_info.current_treasury_innerpuz is None")
 
-                timer_coin_puzhash = get_proposal_timer_puzzle(
-                    cat_tail_hash.as_atom(),
-                    singleton_id,
-                    singleton_struct.rest().first().as_atom(),
-                ).get_tree_hash()
+            timer_coin_puzhash = get_proposal_timer_puzzle(
+                CAT_TAIL_HASH.as_atom(),
+                singleton_id,
+                self.dao_info.treasury_id,
+            ).get_tree_hash()
 
-                while not found and len(children) > 0:
-                    children = await wallet_node.fetch_children(parent_coin_id, peer)
-                    if len(children) == 0:
+            while not found and len(children) > 0:
+                children = await wallet_node.fetch_children(parent_coin_id, peer)
+                if len(children) == 0:
+                    break
+                children_state = [child for child in children if child.coin.amount == 1]
+                assert children_state is not None
+                assert len(children_state) > 0
+                child_state = children_state[0]
+                for child in children:
+                    if child.coin.puzzle_hash == timer_coin_puzhash:
+                        found = True
+                        timer_coin = child.coin
                         break
-                    children_state = [child for child in children if child.coin.amount % 2 == 1]
-                    assert children_state is not None
-                    assert len(children_state) > 0
-                    child_state = children_state[0]
-                    for child in children:
-                        if children.coin.puzzle_hash == timer_coin_puzhash:
-                            found = True
-                            timer_coin = children.coin
-                            break
-                    child_coin = child_state.coin
-                    parent_coin_id = child_coin.name()
+                child_coin = child_state.coin
+                parent_coin_id = child_coin.name()
 
         # If we reach here then we don't currently know about this coin
         new_proposal_info = ProposalInfo(
             singleton_id,
             puzzle,
-            uint64(0),  # assume we haven't voted any if we don't already know about this
-            None,
+            uint64(new_total_votes),
+            uint64(new_yes_votes),
             current_coin,
             current_innerpuz,
             timer_coin,  # if this is None then the proposal has finished
