@@ -6,7 +6,9 @@ import functools
 import json
 import logging
 import os
+import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -72,6 +74,53 @@ class S3Plugin:
         self.instance_name = instance_name
         self.server_files_path = server_files_path
 
+    async def add_store_id(self, request: web.Request) -> web.Response:
+        """Add a store id to the config file. Returns False for store ids that are already in the config."""
+        self.update_instance_from_config()
+        try:
+            data = await request.json()
+            store_id = bytes32.from_hexstr(data["store_id"])
+        except Exception as e:
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
+            return web.json_response({"success": False})
+
+        bucket = data.get("bucket", None)
+        urls = data.get("urls", [])
+        if not bucket and not urls:
+            return web.json_response({"success": False, "reason": "bucket or urls must be provided"})
+
+        for stores in self.stores:
+            if store_id == stores.id:
+                return web.json_response({"success": False, "reason": f"store {store_id.hex()} already exists"})
+
+        new_store = StoreConfig(store_id, bucket, urls)
+        self.stores.append(new_store)
+        self.update_config()
+
+        return web.json_response({"success": True, "id": store_id.hex()})
+
+    async def remove_store_id(self, request: web.Request) -> web.Response:
+        """Remove a store id from the config file. Returns True for store ids that are not in the config."""
+        self.update_instance_from_config()
+        try:
+            data = await request.json()
+            store_id = bytes32.from_hexstr(data["store_id"])
+        except Exception as e:
+            log.error(f"failed parsing request {request} {e}")
+            return web.json_response({"success": False})
+
+        dirty = False
+        for i, store in enumerate(self.stores):
+            if store.id == store_id:
+                del self.stores[i]
+                dirty = True
+                break
+
+        if dirty:
+            self.update_config()
+
+        return web.json_response({"success": True, "store_id": store_id.hex()})
+
     async def handle_upload(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
         try:
@@ -127,6 +176,9 @@ class S3Plugin:
             return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
 
+    async def healthz(self, request: web.Request) -> web.Response:
+        return web.json_response({"success": True})
+
     async def plugin_info(self, request: web.Request) -> web.Response:
         return web.json_response(
             {
@@ -135,9 +187,6 @@ class S3Plugin:
                 "instance": self.instance_name,
             }
         )
-
-    async def healthz(self, request: web.Request) -> web.Response:
-        return web.json_response({"success": True})
 
     async def handle_download(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
@@ -247,6 +296,24 @@ class S3Plugin:
         config = load_config(self.instance_name)
         self.stores = read_store_ids_from_config(config)
 
+    def update_config(self) -> None:
+        with open("s3_plugin_config.yml", "r") as file:
+            full_config = yaml.safe_load(file)
+
+        full_config[self.instance_name]["stores"] = [store.marshal() for store in self.stores]
+        self.save_config("s3_plugin_config.yml", full_config)
+
+    def save_config(self, filename: str, config_data: Any) -> None:
+        path: Path = Path(filename)
+        with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
+            tmp_path: Path = Path(tmp_dir) / Path(filename)
+            with open(tmp_path, "w") as f:
+                yaml.safe_dump(config_data, f)
+            try:
+                os.replace(str(tmp_path), path)
+            except PermissionError:
+                shutil.move(str(tmp_path), str(path))
+
 
 def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
     stores = []
@@ -305,6 +372,8 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/upload", s3_client.upload)])
     app.add_routes([web.post("/handle_download", s3_client.handle_download)])
     app.add_routes([web.post("/download", s3_client.download)])
+    app.add_routes([web.post("/add_store_id", s3_client.add_store_id)])
+    app.add_routes([web.post("/remove_store_id", s3_client.remove_store_id)])
     app.add_routes([web.post("/add_missing_files", s3_client.add_missing_files)])
     app.add_routes([web.post("/plugin_info", s3_client.plugin_info)])
     app.add_routes([web.post("/healthz", s3_client.healthz)])
