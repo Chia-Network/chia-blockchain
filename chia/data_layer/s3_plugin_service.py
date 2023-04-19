@@ -21,6 +21,8 @@ from chia.data_layer.download_data import is_filename_valid
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
+plugin_name = "Chia S3 Datalayer plugin"
+plugin_version = "0.1.0"
 
 
 @dataclass(frozen=True)
@@ -124,6 +126,18 @@ class S3Plugin:
             log.error(f"failed handling request {request} {type(e).__name__} {e}")
             return web.json_response({"uploaded": False})
         return web.json_response({"uploaded": True})
+
+    async def plugin_info(self, request: web.Request) -> web.Response:
+        return web.json_response(
+            {
+                "name": plugin_name,
+                "version": plugin_version,
+                "instance": self.instance_name,
+            }
+        )
+
+    async def healthz(self, request: web.Request) -> web.Response:
+        return web.json_response({"success": True})
 
     async def handle_download(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
@@ -279,6 +293,8 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/handle_download", s3_client.handle_download)])
     app.add_routes([web.post("/download", s3_client.download)])
     app.add_routes([web.post("/add_missing_files", s3_client.add_missing_files)])
+    app.add_routes([web.post("/plugin_info", s3_client.plugin_info)])
+    app.add_routes([web.post("/healthz", s3_client.healthz)])
     logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
     log.info(f"Starting s3 plugin {instance_name} on port {config['port']}")
     return app

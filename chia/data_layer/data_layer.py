@@ -20,6 +20,7 @@ from chia.data_layer.data_layer_util import (
     Layer,
     Offer,
     OfferStore,
+    PluginStatus,
     Proof,
     ProofOfInclusion,
     ProofOfInclusionLayer,
@@ -46,6 +47,18 @@ from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+
+
+async def get_plugin_info(url: str) -> Tuple[str, Dict[str, Any]]:
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url + "/plugin_info", json={}) as response:
+                ret = {"status": response.status}
+                if response.status == 200:
+                    ret["response"] = json.loads(await response.text())
+                return url, ret
+    except aiohttp.ClientError as e:
+        return url, {"error": f"ClientError: {e}"}
 
 
 class DataLayer:
@@ -878,3 +891,12 @@ class DataLayer:
                 except Exception as e:
                     self.log.error(f"get_uploader could not get response {e}")
         return uploaders
+
+    async def check_plugins(self) -> PluginStatus:
+        coros = [get_plugin_info(url=plugin) for plugin in {*self.uploaders, *self.downloaders}]
+        results = dict(await asyncio.gather(*coros))
+
+        uploader_status = {url: results.get(url, "unknown") for url in self.uploaders}
+        downloader_status = {url: results.get(url, "unknown") for url in self.downloaders}
+
+        return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)
