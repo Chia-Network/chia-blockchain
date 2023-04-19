@@ -879,9 +879,9 @@ async def transfer_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
             args["with_recovery"],
             args["reuse_puzhash"],
         )
-        print(f"Successfully transfered DID to {args['target_address']}")
+        print(f"Successfully transferred DID to {args['target_address']}")
         print(f"Transaction ID: {response['transaction_id']}")
-        print(f"Trsanction: {response['transaction']}")
+        print(f"Transaction: {response['transaction']}")
     except Exception as e:
         print(f"Failed to transfer DID: {e}")
 
@@ -897,7 +897,7 @@ async def find_lost_did(args: Dict, wallet_client: WalletRpcClient, fingerprint:
         if response["success"]:
             print(f"Successfully found lost DID {args['coin_id']}, latest coin ID: {response['latest_coin_id']}")
         else:
-            print(f"Cannot found lost DID {args['coin_id']}, because of {response['error']}")
+            print(f"Cannot find lost DID {args['coin_id']}: {response['error']}")
     except Exception as e:
         print(f"Failed to find lost DID: {e}")
 

@@ -1017,7 +1017,7 @@ class TestDIDWallet:
         assert await did_wallet_1.get_confirmed_balance() == did_amount
         assert await did_wallet_1.get_unconfirmed_balance() == did_amount
         response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
-
+        assert response['did_id'] == encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
         assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
         assert response["full_puzzle"] == create_singleton_puzzle(
             did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
