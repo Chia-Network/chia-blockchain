@@ -74,56 +74,51 @@ class S3Plugin:
         self.server_files_path = server_files_path
 
     async def add_store_id(self, request: web.Request) -> web.Response:
-        #        self.update_instance_from_config()
-        #        try:
-        #            data = await request.json()
-        #        except Exception as e:
-        #            print(f"failed parsing request {request} {e}")
-        #           return web.json_response({"success": False})
-        #       store_id = bytes32.from_hexstr(data["id"])
-        #       bucket = data.get("bucket", None)
-        #       dirty = False
-        #       if store_id not in self.store_ids:
-        #           self.store_ids.append(store_id)
-        #           dirty = True
-        #       if bucket is not None:
-        #           if bucket not in self.buckets:
-        #               self.buckets[bucket] = [store_id.hex()]
-        #               dirty = True
-        #           elif store_id.hex() not in self.buckets[bucket]:
-        #               self.buckets[bucket].append(store_id.hex())
-        #               dirty = True
-        #       if dirty:
-        #           try:
-        #               self.update_config()
-        #           except Exception as e:
-        #               print(f"failed handling request {request} {e}")
-        #               return web.json_response({"success": False})
+        """Add a store id to the config file. Returns False for store ids that are already in the config."""
+        self.update_instance_from_config()
+        try:
+            data = await request.json()
+            store_id = bytes32.from_hexstr(data["store_id"])
+        except Exception as e:
+            log.error(f"failed parsing request {request} {type(e).__name__} {e}")
+            return web.json_response({"success": False})
 
-        # return web.json_response({"success": True, "id": store_id.hex()})
-        return web.json_response({"success": False})
+        bucket = data.get("bucket", None)
+        urls = data.get("urls", [])
+        if not bucket and not urls:
+            return web.json_response({"success": False, "reason": "bucket or urls must be provided"})
+
+        for stores in self.stores:
+            if store_id == stores.id:
+                return web.json_response({"success": False, "reason": f"store {store_id.hex()} already exists"})
+
+        new_store = StoreConfig(store_id, bucket, urls)
+        self.stores.append(new_store)
+        self.update_config()
+
+        return web.json_response({"success": True, "id": store_id.hex()})
 
     async def remove_store_id(self, request: web.Request) -> web.Response:
-        #       self.update_instance_from_config()
-        #       try:
-        #           data = await request.json()
-        #       except Exception as e:
-        #           print(f"failed parsing request {request} {e}")
-        #           return web.json_response({"success": False})
-        #       store_id = bytes32.from_hexstr(data["id"])
-        #       bucket = data.get("bucket", None)
-        #       try:
-        #           self.store_ids.remove(store_id)
-        #           if bucket is not None:
-        #               self.buckets[bucket].remove(store_id.hex())
-        #           self.update_config()
-        #       except Exception as e:
-        #           if not isinstance(e, ValueError):
-        #               print(f"failed handling request {request} {e}")
-        #               return web.json_response({"success": False})
+        """Remove a store id from the config file. Returns True for store ids that are not in the config."""
+        self.update_instance_from_config()
+        try:
+            data = await request.json()
+            store_id = bytes32.from_hexstr(data["store_id"])
+        except Exception as e:
+            log.error(f"failed parsing request {request} {e}")
+            return web.json_response({"success": False})
 
-        # return web.json_response({"success": True, "id": store_id.hex()})
-        return web.json_response({"success": False})
+        dirty = False
+        for i, store in enumerate(self.stores):
+            if store.id == store_id:
+                del self.stores[i]
+                dirty = True
+                break
+
+        if dirty:
+            self.update_config()
+
+        return web.json_response({"success": True, "store_id": store_id.hex()})
 
     async def handle_upload(self, request: web.Request) -> web.Response:
         self.update_instance_from_config()
@@ -255,18 +250,11 @@ class S3Plugin:
         self.stores = read_store_ids_from_config(config)
 
     def update_config(self) -> None:
-        return
+        with open("s3_plugin_config.yml", "r") as file:
+            full_config = yaml.safe_load(file)
 
-    #      store_ids = []
-    #      for store_id in self.store_ids:
-    #          store_ids.append(store_id.hex())
-
-    #     with open("s3_plugin_config.yml", "r") as file:
-    #         full_config = yaml.safe_load(file)
-
-    #     full_config[self.instance_name]["store_ids"] = store_ids
-    #     full_config[self.instance_name]["buckets"] = self.buckets
-    #     self.save_config("s3_plugin_config.yml", full_config)
+        full_config[self.instance_name]["stores"] = [store.marshal() for store in self.stores]
+        self.save_config("s3_plugin_config.yml", full_config)
 
     def save_config(self, filename: str, config_data: Any) -> None:
         path: Path = Path(filename)
@@ -340,7 +328,7 @@ def load_config(instance: str) -> Any:
 
 
 def run_server() -> None:
-    instance_name = sys.argv[1]
+    instance_name = "instance-1"  # sys.argv[1]
     try:
         config = load_config(instance_name)
     except KeyError:
