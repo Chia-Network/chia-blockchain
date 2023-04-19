@@ -197,4 +197,4 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     proposal_info = dao_wallet.dao_info.proposals_list[0]
     assert proposal_info is not None
-    tx = await dao_wallet.create_proposal_close_spend()
+    tx = await dao_wallet.create_proposal_close_spend(proposal_info.proposal_id)

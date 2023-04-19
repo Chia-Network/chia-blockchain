@@ -1229,7 +1229,7 @@ class DAOWallet(WalletProtocol):
         current_block = await self.wallet_state_manager.blockchain.get_peak_block()
         current_height = current_block.height
         # TODO: how do we know this is really the latest height?
-        if proposal_info.singleton_block_height + proposal_timelock < current_height:
+        if proposal_info.singleton_block_height + proposal_timelock.as_int() < current_height:
             raise ValueError("This proposal is not ready to be closed")
         assert proposal_info.current_innerpuz is not None
         full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
@@ -1259,8 +1259,20 @@ class DAOWallet(WalletProtocol):
                 0,
             ]
         )
-        # breakpoint()
-        cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, solution)
+        parent_info = self.get_parent_for_coin(proposal_info.current_coin)
+        assert parent_info is not None
+        fullsol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                1,
+                solution,
+            ]
+        )
+        cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
         spend_bundle = SpendBundle([cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee)

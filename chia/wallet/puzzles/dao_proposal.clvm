@@ -235,7 +235,7 @@
             PROPOSED_PUZ_HASH
           )
           ONE  ; why would a proposal hold any value
-          (c TREASURY_ID 0)  ; hint to Treasury ID so people can find it
+          (list TREASURY_ID)  ; hint to Treasury ID so people can find it
         )
         output
       )
@@ -249,7 +249,7 @@
     ; this is the code path for if we've not been accepted by the treasury for a long time, and we're "bad" for some reason
     (assert (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
       (list
-      	(list CREATE_COIN dao_finished_state ONE)
+      	(list CREATE_COIN dao_finished_state ONE (list TREASURY_ID))
       	(list ASSERT_HEIGHT_RELATIVE self_destruct_time)
       	(list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
       	  (sha256
@@ -280,7 +280,7 @@
       (c
         (list ASSERT_HEIGHT_RELATIVE soft_close_length)
         (c
-          (list CREATE_COIN dao_finished_state ONE)
+          (list CREATE_COIN dao_finished_state ONE (list TREASURY_ID))
           (c
             (list
         	    ASSERT_PUZZLE_ANNOUNCEMENT
