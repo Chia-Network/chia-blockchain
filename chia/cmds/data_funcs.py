@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -214,3 +215,10 @@ async def get_sync_status_cmd(
         if client is not None:
             res = await client.get_sync_status(store_id=store_id_bytes)
             print(res)
+
+
+async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
+    async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _, _):
+        if client is not None:
+            res = await client.check_plugins()
+            print(json.dumps(res, indent=4, sort_keys=True))

@@ -463,16 +463,18 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             if confirmation not in ["y", "yes"]:
                 print("Not creating offer...")
             else:
-                offer, trade_record = await wallet_client.create_offer_for_ids(
-                    offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
-                )
-                if offer is not None:
-                    with open(pathlib.Path(filepath), "w") as file:
+                with open(pathlib.Path(filepath), "w") as file:
+                    offer, trade_record = await wallet_client.create_offer_for_ids(
+                        offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
+                    )
+                    if offer is not None:
                         file.write(offer.to_bech32())
-                    print(f"Created offer with ID {trade_record.trade_id}")
-                    print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view status")
-                else:
-                    print("Error creating offer")
+                        print(f"Created offer with ID {trade_record.trade_id}")
+                        print(
+                            f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view status"
+                        )
+                    else:
+                        print("Error creating offer")
 
 
 def timestamp_to_time(timestamp):
