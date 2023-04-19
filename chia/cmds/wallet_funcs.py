@@ -832,19 +832,20 @@ async def get_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
 async def get_did_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     coin_id: str = args["coin_id"]
     latest: bool = args["latest"]
+    did_padding_length = 23
     try:
         response = await wallet_client.get_did_info(coin_id, latest)
-        print(f"{'DID:'.ljust(23)} {response['did_id']}")
-        print(f"{'Coin ID:'.ljust(23)} {response['latest_coin']}")
-        print(f"{'Inner P2 Address:'.ljust(23)} {response['p2_address']}")
-        print(f"{'Public Key:'.ljust(23)} {response['public_key']}")
-        print(f"{'Launcher ID:'.ljust(23)} {response['launcher_id']}")
-        print(f"{'DID Metadata:'.ljust(23)} {response['metadata']}")
-        print(f"{'Recovery List Hash:'.ljust(23)} {response['recovery_list_hash']}")
-        print(f"{'Recovery Required Verifications:'.ljust(23)} {response['num_verification']}")
-        print(f"{'Last Spend Puzzle:'.ljust(23)} {response['full_puzzle']}")
-        print(f"{'Last Spend Solution:'.ljust(23)} {response['solution']}")
-        print(f"{'Last Spend Hints:'.ljust(23)} {response['hints']}")
+        print(f"{'DID:'.ljust(did_padding_length)} {response['did_id']}")
+        print(f"{'Coin ID:'.ljust(did_padding_length)} {response['latest_coin']}")
+        print(f"{'Inner P2 Address:'.ljust(did_padding_length)} {response['p2_address']}")
+        print(f"{'Public Key:'.ljust(did_padding_length)} {response['public_key']}")
+        print(f"{'Launcher ID:'.ljust(did_padding_length)} {response['launcher_id']}")
+        print(f"{'DID Metadata:'.ljust(did_padding_length)} {response['metadata']}")
+        print(f"{'Recovery List Hash:'.ljust(did_padding_length)} {response['recovery_list_hash']}")
+        print(f"{'Recovery Required Verifications:'.ljust(did_padding_length)} {response['num_verification']}")
+        print(f"{'Last Spend Puzzle:'.ljust(did_padding_length)} {response['full_puzzle']}")
+        print(f"{'Last Spend Solution:'.ljust(did_padding_length)} {response['solution']}")
+        print(f"{'Last Spend Hints:'.ljust(did_padding_length)} {response['hints']}")
 
     except Exception as e:
         print(f"Failed to get DID details: {e}")

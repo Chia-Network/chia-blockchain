@@ -1826,7 +1826,7 @@ class WalletRpcApi:
         return {
             "success": True,
             "did_id": encode_puzzle_hash(
-                bytes32.from_hexstr(singleton_struct.rest().first().as_python().hex()),
+                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
                 AddressType.DID.hrp(self.service.config),
             ),
             "latest_coin": coin_state.coin.name().hex(),

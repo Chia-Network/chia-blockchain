@@ -806,9 +806,23 @@ def did_message_spend_cmd(
     puzzle_list: List[str] = []
     coin_list: List[str] = []
     if puzzle_announcements is not None:
-        puzzle_list = puzzle_announcements.split(",")
+        try:
+            puzzle_list = puzzle_announcements.split(",")
+            # validate puzzle announcements is list of hex strings
+            for announcement in puzzle_list:
+                bytes.fromhex(announcement)
+        except ValueError:
+            print("Invalid puzzle announcement format, should be a list of hex strings.")
+            return
     if coin_announcements is not None:
-        coin_list = coin_announcements.split(",")
+        try:
+            coin_list = coin_announcements.split(",")
+            # validate that coin announcements is a list of hex strings
+            for announcement in coin_list:
+                bytes.fromhex(announcement)
+        except ValueError:
+            print("Invalid coin announcement format, should be a list of hex strings.")
+            return
     extra_params = {"did_wallet_id": id, "puzzle_announcements": puzzle_list, "coin_announcements": coin_list}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_message_spend))
 
