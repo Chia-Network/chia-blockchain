@@ -10,7 +10,7 @@ from chia.cmds.sim_funcs import async_config_wizard, farm_blocks, print_status, 
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 
-@click.group("sim", short_help="Configure and make requests to a Chia Simulator Full Node")
+@click.group("sim", help="Configure and make requests to a Chia Simulator Full Node")
 @click.option(
     "-p",
     "--rpc-port",
@@ -26,7 +26,7 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
 )
 @click.option(
     "-n",
-    "--simulator_name",
+    "--simulator-name",
     help="This name is used to determine the sub folder to use in the simulator root folder.",
     type=str,
     default="main",
@@ -39,11 +39,11 @@ def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulat
     ctx.obj["rpc_port"] = rpc_port
 
 
-@sim_cmd.command("create", short_help="Guides you through the process of setting up a Chia Simulator")
+@sim_cmd.command("create", help="Guides you through the process of setting up a Chia Simulator")
 @click.option("-f", "--fingerprint", type=int, required=False, help="Use your fingerprint to skip the key prompt")
 @click.option(
     "-r",
-    "--reward_address",
+    "--reward-address",
     type=str,
     required=False,
     help="Use this address instead of the default farming address.",
@@ -55,7 +55,7 @@ def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulat
 @click.option("-a", "--auto-farm", type=bool, default=None, help="Enable or Disable auto farming")
 @click.option(
     "-d",
-    "--docker_mode",
+    "--docker-mode",
     is_flag=True,
     hidden=True,
     help="Run non-interactively in Docker Mode, & generate a new key if keychain is empty.",
@@ -90,7 +90,7 @@ def create_simulator_config(
     )
 
 
-@sim_cmd.command("start", short_help="Start service groups while automatically using the right chia_root.")
+@sim_cmd.command("start", help="Start service groups while automatically using the right chia_root.")
 @click.option("-r", "--restart", is_flag=True, help="Restart running services")
 @click.option("-w", "--wallet", is_flag=True, help="Start wallet")
 @click.pass_context
@@ -103,7 +103,7 @@ def sim_start_cmd(ctx: click.Context, restart: bool, wallet: bool) -> None:
     ctx.invoke(start_cmd, restart=restart, group=group)
 
 
-@sim_cmd.command("stop", short_help="Stop running services while automatically using the right chia_root.")
+@sim_cmd.command("stop", help="Stop running services while automatically using the right chia_root.")
 @click.option("-d", "--daemon", is_flag=True, help="Stop daemon")
 @click.option("-w", "--wallet", is_flag=True, help="Stop wallet")
 @click.pass_context
@@ -116,7 +116,7 @@ def sim_stop_cmd(ctx: click.Context, daemon: bool, wallet: bool) -> None:
     ctx.invoke(stop_cmd, daemon=daemon, group=group)
 
 
-@sim_cmd.command("status", short_help="Get information about the state of the simulator.")
+@sim_cmd.command("status", help="Get information about the state of the simulator.")
 @click.option("-f", "--fingerprint", type=int, help="Get detailed information on this fingerprint.")
 @click.option("--show-key/--no-show-key", help="Show detailed key information.")
 @click.option("-c", "--show-coins", is_flag=True, help="Show all unspent coins.")
@@ -144,9 +144,9 @@ def status_cmd(
     )
 
 
-@sim_cmd.command("revert", short_help="Reset chain to a previous block height.")
+@sim_cmd.command("revert", help="Reset chain to a previous block height.")
 @click.option("-b", "--blocks", type=int, default=1, help="Number of blocks to go back.")
-@click.option("-n", "--new_blocks", type=int, default=1, help="Number of new blocks to add during a reorg.")
+@click.option("-n", "--new-blocks", type=int, default=1, help="Number of new blocks to add during a reorg.")
 @click.option("-r", "--reset", is_flag=True, help="Reset the chain to the genesis block")
 @click.option(
     "-f",
@@ -155,7 +155,7 @@ def status_cmd(
     help="Forcefully delete blocks, this is not a reorg but might be needed in very special circumstances."
     "  Note: Use with caution, this will break all wallets.",
 )
-@click.option("-d", "--disable_prompt", is_flag=True, help="Disable confirmation prompt when force reverting.")
+@click.option("-d", "--disable-prompt", is_flag=True, help="Disable confirmation prompt when force reverting.")
 @click.pass_context
 def revert_cmd(
     ctx: click.Context, blocks: int, new_blocks: int, reset: bool, force: bool, disable_prompt: bool
@@ -185,7 +185,7 @@ def revert_cmd(
     )
 
 
-@sim_cmd.command("farm", short_help="Farm blocks")
+@sim_cmd.command("farm", help="Farm blocks")
 @click.option("-b", "--blocks", type=int, default=1, help="Amount of blocks to create")
 @click.option("-n", "--non-transaction", is_flag=True, help="Allow non-transaction blocks")
 @click.option("-a", "--target-address", type=str, default="", help="Block reward address")
@@ -202,8 +202,8 @@ def farm_cmd(ctx: click.Context, blocks: int, non_transaction: bool, target_addr
     )
 
 
-@sim_cmd.command("autofarm", short_help="Enable or disable auto farming on transaction submission")
-@click.argument("set_autofarm", type=click.Choice(["on", "off"]), nargs=1, required=True)
+@sim_cmd.command("autofarm", help="Enable or disable auto farming on transaction submission")
+@click.argument("set-autofarm", type=click.Choice(["on", "off"]), nargs=1, required=True)
 @click.pass_context
 def autofarm_cmd(ctx: click.Context, set_autofarm: str) -> None:
     autofarm = bool(set_autofarm == "on")

@@ -38,7 +38,7 @@ def test_custom_farming_address() -> None:
     runner: CliRunner = CliRunner()
     address = burn_address
     start_result: Result = runner.invoke(
-        cli, ["dev", "sim", "-n", "ci_test", "create", "-bm", mnemonic, "--reward_address", address]
+        cli, ["dev", "sim", "-n", "ci_test", "create", "-bm", mnemonic, "--reward-address", address]
     )
     assert start_result.exit_code == 0
     assert f"Farming & Prefarm reward address: {address}" in start_result.output
