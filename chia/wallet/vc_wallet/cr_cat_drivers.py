@@ -103,7 +103,7 @@ def match_cr_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[List[byt
     if uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
         return (
-            [bytes32(provider.as_python()) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
+            [bytes32(provider.atom) for provider in extra_uncurried_puzzle.args.at("rf").as_iter()],
             extra_uncurried_puzzle.args.at("rrf"),
             uncurried_puzzle.args.at("rf"),
         )
