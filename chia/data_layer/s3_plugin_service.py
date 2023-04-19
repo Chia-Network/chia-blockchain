@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import functools
+import json
 import logging
 import os
 import shutil
@@ -45,7 +46,7 @@ class StoreConfig:
 
 
 class S3Plugin:
-    boto_client: boto3.client
+    boto_resource: boto3.resource
     port: int
     region: str
     aws_access_key_id: str
@@ -63,7 +64,7 @@ class S3Plugin:
         stores: List[StoreConfig],
         instance_name: str,
     ):
-        self.boto_client = boto3.client(
+        self.boto_resource = boto3.resource(
             "s3",
             region_name=region,
             aws_access_key_id=aws_access_key_id,
@@ -139,7 +140,8 @@ class S3Plugin:
         try:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["store_id"])
-            bucket = self.get_bucket(store_id)
+            bucket_str = self.get_bucket(store_id)
+            my_bucket = self.boto_resource.Bucket(bucket_str)
             full_tree_name: str = data["full_tree_filename"]
             diff_name: str = data["diff_filename"]
 
@@ -161,10 +163,10 @@ class S3Plugin:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     await asyncio.get_running_loop().run_in_executor(
                         pool,
-                        functools.partial(self.boto_client.upload_file, full_tree_path, bucket, full_tree_path.name),
+                        functools.partial(my_bucket.upload_file, full_tree_path, full_tree_path.name),
                     )
                     await asyncio.get_running_loop().run_in_executor(
-                        pool, functools.partial(self.boto_client.upload_file, diff_path, bucket, diff_path.name)
+                        pool, functools.partial(my_bucket.upload_file, diff_path, diff_path.name)
                     )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {type(e).__name__} {e}")
@@ -224,19 +226,64 @@ class S3Plugin:
             if not should_download:
                 return web.json_response({"downloaded": False})
 
-            bucket = parse_result.netloc
+            bucket_str = parse_result.netloc
+            my_bucket = self.boto_resource.Bucket(bucket_str)
             target_filename = self.server_files_path.joinpath(filename)
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 await asyncio.get_running_loop().run_in_executor(
-                    pool, functools.partial(self.boto_client.download_file, bucket, filename, str(target_filename))
+                    pool, functools.partial(my_bucket.download_file, filename, str(target_filename))
                 )
         except Exception as e:
             log.error(f"failed parsing request {request} {type(e).__name__} {e}")
             return web.json_response({"downloaded": False})
         return web.json_response({"downloaded": True})
+
+    async def add_missing_files(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            store_id = bytes32.from_hexstr(data["store_id"])
+            bucket_str = self.get_bucket(store_id)
+            files = json.loads(data["files"])
+            my_bucket = self.boto_resource.Bucket(bucket_str)
+            existing_file_list = []
+            for my_bucket_object in my_bucket.objects.all():
+                existing_file_list.append(my_bucket_object.key)
+            try:
+                for file_name in files:
+                    # filenames must follow the DataLayer naming convention
+                    if not is_filename_valid(file_name):
+                        log.error(f"failed uploading file {file_name}, invalid file name")
+                        continue
+
+                    # Pull the store_id from the filename to make sure we only upload for configured stores
+                    if not (bytes32.fromhex(file_name[:64]) == store_id):
+                        log.error(f"failed uploading file {file_name}, store id mismatch")
+                        continue
+
+                    file_path = self.server_files_path.joinpath(file_name)
+                    if not os.path.isfile(file_path):
+                        log.error(f"failed uploading file to aws, file {file_path} does not exist")
+                        continue
+
+                    if file_name in existing_file_list:
+                        log.debug(f"skip {file_name} already in bucket")
+                        continue
+
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        await asyncio.get_running_loop().run_in_executor(
+                            pool,
+                            functools.partial(my_bucket.upload_file, file_path, file_name),
+                        )
+            except ClientError as e:
+                log.error(f"failed uploading file to aws {e}")
+                return web.json_response({"uploaded": False})
+        except Exception as e:
+            log.error(f"failed handling request {request} {e}")
+            return web.json_response({"uploaded": False})
+        return web.json_response({"uploaded": True})
 
     def get_bucket(self, store_id: bytes32) -> str:
         for store in self.stores:
@@ -314,6 +361,7 @@ def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
     app.add_routes([web.post("/download", s3_client.download)])
     app.add_routes([web.post("/add_store_id", s3_client.add_store_id)])
     app.add_routes([web.post("/remove_store_id", s3_client.remove_store_id)])
+    app.add_routes([web.post("/add_missing_files", s3_client.add_missing_files)])
     app.add_routes([web.post("/plugin_info", s3_client.plugin_info)])
     app.add_routes([web.post("/healthz", s3_client.healthz)])
     logging.basicConfig(level=logging.INFO, filename=config.get("log_filename", "s3_plugin.log"))
