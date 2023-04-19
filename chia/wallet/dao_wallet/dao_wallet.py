@@ -1445,6 +1445,7 @@ class DAOWallet(WalletProtocol):
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:
             # we need to add the vote amounts from the solution to get accurate totals
+            is_yes_vote = solution.at("rf").as_int()
             votes_added = solution.at("ff").as_int()
             current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
             if current_innerpuz is None:
@@ -1460,28 +1461,32 @@ class DAOWallet(WalletProtocol):
         if new_total_votes < self.dao_info.filter_below_vote_amount:
             return  # ignore all proposals below the filter amount
 
+        if is_yes_vote == 1:
+            new_yes_votes = YES_VOTES.as_int() + votes_added
+        else:
+            new_yes_votes = YES_VOTES.as_int()
+
         index = 0
         for current_info in new_dao_info.proposals_list:
             # Search for current proposal_info
             if current_info.proposal_id == singleton_id:
                 # If we are receiving a voting spend update
-                if current_info.singleton_block_height <= block_height:
-                    # TODO: what do we do here?
-                    print()
-                else:
-                    new_proposal_info = ProposalInfo(
-                        singleton_id,
-                        puzzle,
-                        current_info.amount_voted,
-                        Program(current_info.is_yes_vote),  # TODO: should is_yes_vote be Optional?
-                        current_coin,
-                        current_innerpuz,
-                        current_info.timer_coin,
-                        block_height,
-                    )
-                    new_dao_info.proposals_list[index] = new_proposal_info
-                    await self.save_info(new_dao_info)
-                    return
+
+                # TODO: what do we do here?
+                # GW: Removed a block height check
+                new_proposal_info = ProposalInfo(
+                    singleton_id,
+                    puzzle,
+                    new_total_votes,
+                    new_yes_votes,
+                    current_coin,
+                    current_innerpuz,
+                    current_info.timer_coin,
+                    block_height,
+                )
+                new_dao_info.proposals_list[index] = new_proposal_info
+                await self.save_info(new_dao_info)
+                return
             index = index + 1
 
         # Search for the timer coin
@@ -1525,7 +1530,7 @@ class DAOWallet(WalletProtocol):
             singleton_id,
             puzzle,
             uint64(new_total_votes),
-            None,
+            uint64(new_yes_votes),
             current_coin,
             current_innerpuz,
             timer_coin,  # if this is None then the proposal has finished

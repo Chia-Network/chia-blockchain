@@ -17,7 +17,7 @@ class ProposalInfo(Streamable):
     proposal_id: bytes32  # this is launcher_id
     inner_puzzle: Program
     amount_voted: uint64
-    is_yes_vote: Optional[bool]
+    yes_votes: uint64
     current_coin: Coin
     current_innerpuz: Optional[Program]
     timer_coin: Optional[Coin]  # if this is None then the proposal has finished

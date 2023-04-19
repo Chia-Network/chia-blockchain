@@ -317,7 +317,8 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
 # This also returns the proposal puzzle and not the full puzzle
 def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
     # Check if soft_close_length is in solution. If not, then add votes, otherwise close proposal
-    if solution.at("rrrrrrf") != Program.to(0):
+    if solution.at("rrrrrrf") == Program.to(0):
+        curried_args = uncurry_proposal(puzzle_reveal)
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
             PROPOSAL_MOD_HASH,
@@ -331,13 +332,17 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             TOTAL_VOTES,  # how many people responded
             SPEND_OR_UPDATE_FLAG,
             INNERPUZ_HASH,
-        ) = uncurry_proposal(puzzle_reveal)
-        added_votes = solution.first().as_atom()
-        new_total_votes = TOTAL_VOTES.as_atom() + added_votes
-        if solution.rest().first() == Program.to(0):
+        ) = curried_args.as_iter()
+
+        added_votes = solution.at("ff").as_int()
+        new_total_votes = TOTAL_VOTES.as_int() + added_votes
+
+        if solution.at("rf") == Program.to(0):
+            # Vote Type: NO
             new_yes_votes = YES_VOTES
         else:
-            new_yes_votes = YES_VOTES.as_atom() + added_votes
+            # Vote Type: YES
+            new_yes_votes = YES_VOTES.as_int() + added_votes
         return DAO_PROPOSAL_MOD.curry(
             SINGLETON_STRUCT,
             DAO_PROPOSAL_MOD_HASH,
@@ -450,7 +455,7 @@ def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
 
 
 def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Program, Program, Program, Program]:
-    curried_args = uncurry_proposal(proposal_puzzle).as_iter()
+    curried_args = uncurry_proposal(proposal_puzzle)
     (
         SINGLETON_STRUCT,
         PROPOSAL_MOD_HASH,
@@ -464,7 +469,7 @@ def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Progr
         TOTAL_VOTES,
         SPEND_OR_UPDATE_FLAG,
         PROPOSED_PUZ_HASH,
-    ) = curried_args
+    ) = curried_args.as_iter()
     return YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, PROPOSED_PUZ_HASH
 
 
