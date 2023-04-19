@@ -15,25 +15,8 @@ from _pytest.fixtures import SubRequest
 from _pytest.mark.structures import ParameterSet
 from typing_extensions import final
 
-from chia.util.ints import (
-    Int8Enum,
-    Int16Enum,
-    Int32Enum,
-    SizedIntEnum,
-    UInt8Enum,
-    UInt16Enum,
-    UInt32Enum,
-    int8,
-    int16,
-    int32,
-    int64,
-    int512,
-    uint8,
-    uint16,
-    uint32,
-    uint64,
-    uint128,
-)
+from chia.util.ints import int8, int16, int32, int64, int512, uint8, uint16, uint32, uint64, uint128
+from chia.util.misc import Int8Enum, Int16Enum, Int32Enum, SizedIntEnum, UInt8Enum, UInt16Enum, UInt32Enum
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 

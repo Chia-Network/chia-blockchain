@@ -3,11 +3,12 @@ from __future__ import annotations
 import dataclasses
 import signal
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Sequence, Union
 
 from chia.util.errors import InvalidPathError
-from chia.util.ints import uint16
+from chia.util.ints import int8, int16, int32, uint8, uint16, uint32
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 
@@ -115,3 +116,31 @@ if sys.platform == "win32" or sys.platform == "cygwin":
 else:
     termination_signals = [signal.SIGINT, signal.SIGTERM]
     sendable_termination_signals = termination_signals
+
+
+class SizedIntEnum(Enum):
+    pass
+
+
+class Int8Enum(int8, SizedIntEnum):
+    pass
+
+
+class Int16Enum(int16, SizedIntEnum):
+    pass
+
+
+class Int32Enum(int32, SizedIntEnum):
+    pass
+
+
+class UInt8Enum(uint8, SizedIntEnum):
+    pass
+
+
+class UInt16Enum(uint16, SizedIntEnum):
+    pass
+
+
+class UInt32Enum(uint32, SizedIntEnum):
+    pass
