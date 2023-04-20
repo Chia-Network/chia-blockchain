@@ -174,7 +174,7 @@ class VCStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             providers_param: str = ",".join(["?"] * len(provider_ids))
             cursor = await conn.execute(
-                f"SELECT * from vc_records WHERE proof_provider IN {providers_param}", provider_ids
+                f"SELECT * from vc_records WHERE proof_provider IN {providers_param} LIMIT 1000", provider_ids
             )
             rows = await cursor.fetchall()
             await cursor.close()
@@ -186,7 +186,7 @@ class VCStore:
         Returns all VCs that have not yet been marked confirmed (confirmed_height == 0)
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from vc_records WHERE confirmed_height=0")
+            cursor = await conn.execute("SELECT * from vc_records WHERE confirmed_height=0 LIMIT 1000")
             rows = await cursor.fetchall()
             await cursor.close()
         records = [_row_to_vc_record(row) for row in rows]
@@ -214,7 +214,7 @@ class VCStore:
 
     async def get_vc_record_by_coin_id(self, coin_id: bytes32) -> Optional[VCRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from vc_records WHERE coin_id=?", (coin_id.hex(),))
+            cursor = await conn.execute("SELECT * from vc_records WHERE coin_id=? LIMIT 1000", (coin_id.hex(),))
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
