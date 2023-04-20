@@ -78,6 +78,10 @@ class EligibleCoinSpends:
                 # It wasn't, so let's skip this whole item because it's relying on
                 # spending this coin with a different solution and that would
                 # conflict with the coin spends that we're deduplicating already
+                # NOTE: We can miss an opportunity to deduplicate on other solutions
+                # even if they end up saving more cost, as we're going for the first
+                # solution we see from the relatively highest FPC item, to avoid
+                # severe performance and/or time-complexity impact
                 raise ValueError("Solution is different from what we're deduplicating on")
             # Let's calculate the saved cost if we never did that before
             if duplicate_cost is None:
