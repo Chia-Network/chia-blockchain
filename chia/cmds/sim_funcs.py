@@ -257,7 +257,6 @@ async def get_current_height(root_path: Path) -> int:
     async with get_any_service_client(SimulatorFullNodeRpcClient, root_path=root_path, consume_errors=False) as (
         node_client,
         _,
-        _,
     ):
         assert node_client is not None  # this cant be None, because we don't catch errors
         num_blocks = len(await node_client.get_all_blocks())
@@ -393,10 +392,9 @@ async def print_status(
     from chia.cmds.show_funcs import print_blockchain_state
     from chia.cmds.units import units
 
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path, fingerprint) as (
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
         node_client,
         config,
-        _,
     ):
         if node_client is not None:
             # Display keychain info
@@ -445,7 +443,6 @@ async def revert_block_height(
     async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
         node_client,
         _,
-        _,
     ):
         if node_client is not None:
             if use_revert_blocks:
@@ -478,7 +475,6 @@ async def farm_blocks(
     async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
         node_client,
         config,
-        _,
     ):
         if node_client is not None:
             if target_address == "":
@@ -503,7 +499,6 @@ async def set_auto_farm(rpc_port: Optional[int], root_path: Path, set_autofarm: 
     """
     async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
         node_client,
-        _,
         _,
     ):
         if node_client is not None:
