@@ -12,8 +12,7 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
     """
     Calculates the estimated space on the network given two block header hashes.
     """
-    async with get_any_service_client(FullNodeRpcClient, rpc_port) as node_config_fp:
-        client, _ = node_config_fp
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
         if client is not None:
             if delta_block_height:
                 if start == "":

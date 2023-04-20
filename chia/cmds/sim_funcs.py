@@ -392,10 +392,7 @@ async def print_status(
     from chia.cmds.show_funcs import print_blockchain_state
     from chia.cmds.units import units
 
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        config,
-    ):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
         if node_client is not None:
             # Display keychain info
             if show_key:
@@ -440,10 +437,7 @@ async def revert_block_height(
     """
     This function allows users to easily revert the chain to a previous state or perform a reorg.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        _,
-    ):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
         if node_client is not None:
             if use_revert_blocks:
                 if num_new_blocks != 1:
@@ -472,10 +466,7 @@ async def farm_blocks(
     """
     This function is used to generate new blocks.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        config,
-    ):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
         if node_client is not None:
             if target_address == "":
                 target_address = config["simulator"]["farming_address"]
@@ -497,10 +488,7 @@ async def set_auto_farm(rpc_port: Optional[int], root_path: Path, set_autofarm: 
     """
     This function can be used to enable or disable Auto Farming.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        _,
-    ):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
         if node_client is not None:
             current = await node_client.get_auto_farming()
             if current == set_autofarm:

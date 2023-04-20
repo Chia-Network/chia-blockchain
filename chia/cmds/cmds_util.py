@@ -213,10 +213,7 @@ async def execute_with_wallet(
     extra_params: Dict[str, Any],
     function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
 ) -> None:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as (
-        wallet_client,
-        _,
-    ):
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as (wallet_client, _):
         if wallet_client is None:
             return
 
