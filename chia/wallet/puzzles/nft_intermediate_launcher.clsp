@@ -1,0 +1,6 @@
+(mod (LAUNCHER_PH MINT_NUMBER MINT_TOTAL)
+     (include condition_codes.clib)
+     (list
+	(list CREATE_COIN LAUNCHER_PH 1)
+	(list CREATE_COIN_ANNOUNCEMENT (sha256 MINT_NUMBER MINT_TOTAL)))
+)

@@ -1,0 +1,14 @@
+name: 🌄 Daily Full Matrix Test
+
+on:
+  schedule:
+  - cron: '0 13 * * *'
+jobs:
+  trigger_workflow_dispatch:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Workflow Dispatch
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh workflow run test.yml --repo Chia-Network/chia-blockchain --ref main

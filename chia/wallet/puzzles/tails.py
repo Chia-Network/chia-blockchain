@@ -19,10 +19,10 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clvm")
-EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clvm")
+GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clsp")
+GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clsp")
+EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clsp")
+DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clsp")
 
 
 class LimitationsProgram:
