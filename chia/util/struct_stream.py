@@ -37,10 +37,10 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
         raise ValueError(f"cls.BITS must be a multiple of 8: {cls.BITS}")
 
     if cls.SIGNED:
-        cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
+        cls.MAXIMUM = 2 ** (cls.BITS - 1) - 1
         cls.MINIMUM = -(2 ** (cls.BITS - 1))
     else:
-        cls.MAXIMUM_EXCLUSIVE = 2**cls.BITS
+        cls.MAXIMUM = 2**cls.BITS - 1
         cls.MINIMUM = 0
 
     return cls
@@ -50,7 +50,7 @@ class StructStream(int):
     SIZE: int
     BITS: int
     SIGNED: bool
-    MAXIMUM_EXCLUSIVE: int
+    MAXIMUM: int
     MINIMUM: int
 
     """
@@ -65,7 +65,7 @@ class StructStream(int):
         # additional special action to take here beyond verifying that the newly
         # created instance satisfies the bounds limitations of the particular subclass.
         super().__init__()
-        if not (self.MINIMUM <= self < self.MAXIMUM_EXCLUSIVE):
+        if not (self.MINIMUM <= self <= self.MAXIMUM):
             raise ValueError(f"Value {self} does not fit into {type(self).__name__}")
 
     @classmethod
