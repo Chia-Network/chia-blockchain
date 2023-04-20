@@ -31,6 +31,7 @@ from chia.protocols.wallet_protocol import (
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
@@ -75,7 +76,7 @@ async def subscribe_to_phs(
         FullNodeAPI.register_interest_in_puzzle_hash, msg, timeout=300
     )
     if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_puzzle_hash")
+        raise ValueError(f"None response from peer {peer.peer_info.host} for register_interest_in_puzzle_hash")
     return all_coins_state.coin_states
 
 
@@ -93,7 +94,7 @@ async def subscribe_to_coin_updates(
     )
 
     if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_coin")
+        raise ValueError(f"None response from peer {peer.peer_info.host} for register_interest_in_coin")
     return all_coins_state.coin_states
 
 
@@ -408,3 +409,25 @@ async def fetch_header_blocks_in_range(
         assert res_h_blocks is not None
         blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
     return blocks
+
+
+async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
+    solution_response = await peer.call_api(
+        FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+    )
+    if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+        raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
+    assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
+    assert solution_response.response.coin_name == coin.name()
+
+    return CoinSpend(
+        coin,
+        solution_response.response.puzzle,
+        solution_response.response.solution,
+    )
+
+
+async def fetch_coin_spend_for_coin_state(coin_state: CoinState, peer: WSChiaConnection) -> CoinSpend:
+    if coin_state.spent_height is None:
+        raise ValueError("coin_state.coin must be spent coin")
+    return await fetch_coin_spend(uint32(coin_state.spent_height), coin_state.coin, peer)

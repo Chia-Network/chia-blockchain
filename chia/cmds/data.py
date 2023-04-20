@@ -387,3 +387,18 @@ def get_sync_status(
     from chia.cmds.data_funcs import get_sync_status_cmd
 
     run(get_sync_status_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.group("plugins", help="Get information about configured uploader/downloader plugins")
+def plugins_cmd() -> None:
+    pass
+
+
+@plugins_cmd.command("check", help="Calls the plugin_info endpoint on all configured plugins")
+@create_rpc_port_option()
+def check_plugins(
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import check_plugins_cmd
+
+    run(check_plugins_cmd(rpc_port=data_rpc_port))

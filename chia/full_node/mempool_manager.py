@@ -210,10 +210,8 @@ class MempoolManager:
         self.pool.shutdown(wait=True)
 
     def create_bundle_from_mempool(
-        self,
-        last_tb_header_hash: bytes32,
-        item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
+        self, last_tb_header_hash: bytes32, item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None
+    ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
         additions and removals in that spend_bundle
@@ -337,7 +335,9 @@ class MempoolManager:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
             self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
-            self.mempool.add_to_pool(item)
+            err = self.mempool.add_to_pool(item)
+            if err is not None:
+                return item.cost, MempoolInclusionStatus.FAILED, err
             return item.cost, MempoolInclusionStatus.SUCCESS, None
         elif err is Err.MEMPOOL_CONFLICT and item is not None:
             # The transaction has a conflict with another item in the
@@ -433,6 +433,9 @@ class MempoolManager:
 
         if cost == 0:
             return Err.UNKNOWN, None, []
+
+        if cost > self.max_block_clvm_cost:
+            return Err.BLOCK_COST_EXCEEDS_MAX, None, []
 
         # this is not very likely to happen, but it's here to ensure SQLite
         # never runs out of precision in its computation of fees.

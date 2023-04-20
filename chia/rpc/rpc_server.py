@@ -120,8 +120,8 @@ def default_get_connections(server: ChiaServer, request_node_type: Optional[Node
         {
             "type": con.connection_type,
             "local_port": con.local_port,
-            "peer_host": con.peer_host,
-            "peer_port": con.peer_port,
+            "peer_host": con.peer_info.host,
+            "peer_port": con.peer_info.port,
             "peer_server_port": con.peer_server_port,
             "node_id": con.peer_node_id,
             "creation_time": con.creation_time,

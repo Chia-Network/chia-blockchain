@@ -63,16 +63,15 @@ async def manage_temporary_pool_plot(
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path: Path = Path(tmpdir)
         bt.add_plot_directory(tmp_path)
-        plot_id = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
-        assert plot_id is not None
+        bt_plot = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
         await bt.refresh_plots()
 
-        plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=plot_id)
+        plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=bt_plot.plot_id)
 
         try:
             yield plot
         finally:
-            await bt.delete_plot(plot_id)
+            await bt.delete_plot(bt_plot.plot_id)
 
 
 PREFARMED_BLOCKS = 4

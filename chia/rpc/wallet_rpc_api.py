@@ -61,7 +61,7 @@ from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -70,6 +70,7 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -296,9 +297,7 @@ class WalletRpcApi:
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
     ##########################################################################################
@@ -821,9 +820,7 @@ class WalletRpcApi:
                     [tr.additions[0].parent_coin_info], peer=peer
                 )
                 assert len(coin_state_list) == 1
-                coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state_list[0].spent_height, coin_state_list[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
                 tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
@@ -1893,7 +1890,7 @@ class WalletRpcApi:
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
             )
-            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
@@ -1906,14 +1903,14 @@ class WalletRpcApi:
                         did_wallet = wallet
                         break
 
-            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
+            full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
                     did_wallet is not None
                     and did_wallet.did_info.current_inner is not None
-                    and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    and create_singleton_puzzle(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
                     == coin_state.coin.puzzle_hash
                 ):
                     # Check if the old wallet has the inner puzzle
@@ -1928,7 +1925,7 @@ class WalletRpcApi:
                     did_puzzle = DID_INNERPUZ_MOD.curry(
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
-                    full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                    full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                     matched = True
                     if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                         matched = False
@@ -1944,7 +1941,7 @@ class WalletRpcApi:
                             did_puzzle = DID_INNERPUZ_MOD.curry(
                                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                             )
-                            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                             if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
                                 matched = True
                                 break
