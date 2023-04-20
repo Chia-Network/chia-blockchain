@@ -22,6 +22,7 @@ from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
@@ -91,8 +92,8 @@ class VCWallet:
         if coin_states is None:
             self.log.error(f"Cannot find parent coin of the verified credential coin: {coin.name().hex()}")
             return
-        parent_coin = coin_states[0].coin
-        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
+        parent_coin_state = coin_states[0]
+        cs = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         if cs is None:
             self.log.error(f"Cannot get verified credential coin: {coin.name().hex()} puzzle and solution")
             return
@@ -326,9 +327,7 @@ class VCWallet:
         if vc_coin_states is None:
             raise ValueError(f"Cannot find verified credential coin: {parent_id.hex()}")
         vc_coin_state = vc_coin_states[0]
-        cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            vc_coin_state.spent_height, vc_coin_state.coin, peer
-        )
+        cs: CoinSpend = await fetch_coin_spend_for_coin_state(vc_coin_state, peer)
         vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(cs)
 
         # Check if we own the DID
