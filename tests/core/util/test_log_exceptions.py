@@ -8,9 +8,6 @@ from typing import Tuple, Type, Union
 
 import pytest
 
-# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
-
 from chia.util.log_exceptions import log_exceptions
 
 log_message = "Some message that probably, hopefully, won't accidentally come from somewhere else"
@@ -22,52 +19,11 @@ def logger_fixture() -> logging.Logger:
     return logging.getLogger(__name__)
 
 
-@pytest.fixture(name="show_traceback", params=[False, True], ids=["no traceback", "with traceback"])
-def show_traceback_fixture(request: SubRequest) -> bool:
-    # https://github.com/pytest-dev/pytest/issues/8763
-    return request.param  # type: ignore[no-any-return]
-
-
-@pytest.fixture(name="consume", params=[False, True], ids=["propagates", "consumes"])
-def consume_fixture(request: SubRequest) -> bool:
-    # https://github.com/pytest-dev/pytest/issues/8763
-    return request.param  # type: ignore[no-any-return]
-
-
 @dataclasses.dataclass
 class ErrorCase:
     type_to_raise: Type[BaseException]
     type_to_catch: Union[Type[BaseException], Tuple[Type[BaseException], ...]]
     should_match: bool
-
-
-@pytest.fixture(
-    name="case",
-    params=[
-        # default exceptions to catch matching
-        ErrorCase(type_to_raise=Exception, type_to_catch=Exception, should_match=True),
-        ErrorCase(type_to_raise=OSError, type_to_catch=Exception, should_match=True),
-        # default exceptions to catch not matching
-        ErrorCase(type_to_raise=BaseException, type_to_catch=Exception, should_match=False),
-        # raised type the same as specified to catch
-        ErrorCase(type_to_raise=Exception, type_to_catch=Exception, should_match=True),
-        ErrorCase(type_to_raise=BaseException, type_to_catch=BaseException, should_match=True),
-        ErrorCase(type_to_raise=OSError, type_to_catch=OSError, should_match=True),
-        # raised type is subclass of to catch
-        ErrorCase(type_to_raise=AttributeError, type_to_catch=Exception, should_match=True),
-        ErrorCase(type_to_raise=KeyboardInterrupt, type_to_catch=BaseException, should_match=True),
-        ErrorCase(type_to_raise=FileExistsError, type_to_catch=OSError, should_match=True),
-        # multiple to catch matching
-        ErrorCase(type_to_raise=OSError, type_to_catch=(KeyboardInterrupt, Exception), should_match=True),
-        ErrorCase(type_to_raise=SystemExit, type_to_catch=(SystemExit, OSError), should_match=True),
-        # multiple to catch not matching
-        ErrorCase(type_to_raise=AttributeError, type_to_catch=(KeyError, TimeoutError), should_match=False),
-        ErrorCase(type_to_raise=KeyboardInterrupt, type_to_catch=(KeyError, TimeoutError), should_match=False),
-    ],
-)
-def case_fixture(request: SubRequest) -> ErrorCase:
-    # https://github.com/pytest-dev/pytest/issues/8763
-    return request.param  # type: ignore[no-any-return]
 
 
 all_level_values = [
@@ -165,6 +121,32 @@ def test_traceback_is_not_logged(
     assert "\nTraceback " not in record.msg
 
 
+@pytest.mark.parametrize(
+    argnames="case",
+    argvalues=[
+        # default exceptions to catch matching
+        ErrorCase(type_to_raise=Exception, type_to_catch=Exception, should_match=True),
+        ErrorCase(type_to_raise=OSError, type_to_catch=Exception, should_match=True),
+        # default exceptions to catch not matching
+        ErrorCase(type_to_raise=BaseException, type_to_catch=Exception, should_match=False),
+        # raised type the same as specified to catch
+        ErrorCase(type_to_raise=Exception, type_to_catch=Exception, should_match=True),
+        ErrorCase(type_to_raise=BaseException, type_to_catch=BaseException, should_match=True),
+        ErrorCase(type_to_raise=OSError, type_to_catch=OSError, should_match=True),
+        # raised type is subclass of to catch
+        ErrorCase(type_to_raise=AttributeError, type_to_catch=Exception, should_match=True),
+        ErrorCase(type_to_raise=KeyboardInterrupt, type_to_catch=BaseException, should_match=True),
+        ErrorCase(type_to_raise=FileExistsError, type_to_catch=OSError, should_match=True),
+        # multiple to catch matching
+        ErrorCase(type_to_raise=OSError, type_to_catch=(KeyboardInterrupt, Exception), should_match=True),
+        ErrorCase(type_to_raise=SystemExit, type_to_catch=(SystemExit, OSError), should_match=True),
+        # multiple to catch not matching
+        ErrorCase(type_to_raise=AttributeError, type_to_catch=(KeyError, TimeoutError), should_match=False),
+        ErrorCase(type_to_raise=KeyboardInterrupt, type_to_catch=(KeyError, TimeoutError), should_match=False),
+    ],
+)
+@pytest.mark.parametrize(argnames="consume", argvalues=[False, True], ids=["propagates", "consumes"])
+@pytest.mark.parametrize(argnames="show_traceback", argvalues=[False, True], ids=["no traceback", "with traceback"])
 def test_well_everything(
     logger: logging.Logger,
     caplog: pytest.LogCaptureFixture,
