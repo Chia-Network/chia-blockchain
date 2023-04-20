@@ -8,7 +8,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend
 from chia.util.ints import uint64
 
@@ -32,14 +31,17 @@ class DedupCoinSpend:
 class EligibleCoinSpends:
     eligible_spends: Dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
 
-    def get_deduplication_info(self, item: InternalMempoolItem) -> Tuple[List[CoinSpend], uint64, List[Coin]]:
+    def get_deduplication_info(
+        self, *, bundle_coin_spends: Dict[bytes32, BundleCoinSpend], max_cost: int
+    ) -> Tuple[List[CoinSpend], uint64, List[Coin]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
         provides the caller with the necessary information that allows it to perform
         identical spend aggregation on that mempool item if possible
 
         Args:
-            item: the mempool item to check
+            bundle_coin_spends: the mempool item's coin spends data
+            max_cost: the maximum limit when running for cost
 
         Returns:
             List[CoinSpend]: list of unique coin spends in this mempool item
@@ -56,7 +58,7 @@ class EligibleCoinSpends:
         unique_additions: List[Coin] = []
         new_eligible_spends: Dict[bytes32, DedupCoinSpend] = {}
         # See if this item has coin spends that are eligible for deduplication
-        for coin_id, spend_data in item.bundle_coin_spends.items():
+        for coin_id, spend_data in bundle_coin_spends.items():
             if not spend_data.eligible_for_dedup:
                 unique_coin_spends.append(spend_data.coin_spend)
                 unique_additions.extend(spend_data.additions)
@@ -87,10 +89,10 @@ class EligibleCoinSpends:
                         puzzle_reveal=spend_data.coin_spend.puzzle_reveal,
                         solution=spend_data.coin_spend.solution,
                         additions_count=len(spend_data.additions),
-                        max_cost=item.npc_result.cost,
+                        max_cost=max_cost,
                     )
                     # Update this mempool item's coin spends map
-                    item.bundle_coin_spends[coin_id] = BundleCoinSpend(
+                    bundle_coin_spends[coin_id] = BundleCoinSpend(
                         spend_data.coin_spend, spend_data.eligible_for_dedup, spend_data.additions, spend_cost
                     )
                 duplicate_cost = spend_cost

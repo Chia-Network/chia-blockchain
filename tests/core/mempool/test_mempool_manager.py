@@ -30,7 +30,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.eligible_coin_spends import DedupCoinSpend, EligibleCoinSpends, run_for_cost
-from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
@@ -329,32 +328,41 @@ async def generate_and_add_spendbundle(
     return (sb, sb_name, result)
 
 
-def make_bundle_spends_map(spend_bundle: SpendBundle, npc_result: NPCResult) -> Dict[bytes32, BundleCoinSpend]:
+def make_bundle_spends_map_and_fee(
+    spend_bundle: SpendBundle, npc_result: NPCResult
+) -> Tuple[Dict[bytes32, BundleCoinSpend], uint64]:
     bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = {}
     eligibility_and_additions: Dict[bytes32, Tuple[bool, List[Coin]]] = {}
+    removals_amount = 0
+    additions_amount = 0
     assert npc_result.conds is not None
     for spend in npc_result.conds.spends:
         coin_id = bytes32(spend.coin_id)
         spend_additions = []
         for puzzle_hash, amount, _ in spend.create_coin:
             spend_additions.append(Coin(coin_id, puzzle_hash, amount))
+            additions_amount += amount
         eligibility_and_additions[coin_id] = (bool(spend.flags & ELIGIBLE_FOR_DEDUP), spend_additions)
     for coin_spend in spend_bundle.coin_spends:
         coin_id = coin_spend.coin.name()
+        removals_amount += coin_spend.coin.amount
         eligible_for_dedup, spend_additions = eligibility_and_additions.get(coin_id, (False, []))
         bundle_coin_spends[coin_id] = BundleCoinSpend(coin_spend, eligible_for_dedup, spend_additions)
-    return bundle_coin_spends
+    fee = uint64(removals_amount - additions_amount)
+    return bundle_coin_spends, fee
 
 
-def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> InternalMempoolItem:
+def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
         generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0)
     )
-    bundle_coin_spends = make_bundle_spends_map(spend_bundle, npc_result)
-    return InternalMempoolItem(
+    bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result)
+    return MempoolItem(
         spend_bundle=spend_bundle,
+        fee=fee,
         npc_result=npc_result,
+        spend_bundle_name=spend_bundle.name(),
         height_added_to_mempool=TEST_HEIGHT,
         bundle_coin_spends=bundle_coin_spends,
     )
@@ -1205,7 +1213,9 @@ def test_dedup_info_nothing_to_do() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     eligible_coin_spends = EligibleCoinSpends()
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(mempool_item)
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
     assert unique_additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
@@ -1222,7 +1232,9 @@ def test_dedup_info_eligible_1st_time() -> None:
     mempool_item = mempool_item_from_spendbundle(sb)
     eligible_coin_spends = EligibleCoinSpends()
     solution = SerializedProgram.from_program(Program.to(conditions))
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(mempool_item)
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
     assert set(unique_additions) == {
@@ -1244,7 +1256,9 @@ def test_dedup_info_eligible_but_different_solution() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
-        eligible_coin_spends.get_deduplication_info(mempool_item)
+        eligible_coin_spends.get_deduplication_info(
+            bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+        )
 
 
 def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
@@ -1261,7 +1275,9 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
     mempool_item = mempool_item_from_spendbundle(sb)
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(mempool_item)
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
     # Only the eligible one that we encountered more than once gets deduplicated
     assert unique_coin_spends == sb2.coin_spends
     saved_cost = uint64(3600044)
@@ -1303,7 +1319,9 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     mempool_item = mempool_item_from_spendbundle(sb)
-    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(mempool_item)
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
     assert unique_coin_spends == sb3.coin_spends
     saved_cost2 = uint64(1800044)
     assert cost_saving == saved_cost + saved_cost2
