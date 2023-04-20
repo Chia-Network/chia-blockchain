@@ -1308,13 +1308,15 @@ class DAOWallet(WalletProtocol):
             PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
         ) = curried_args.as_iter()
 
-        timer_solution = Program.to([
-            YES_VOTES,
-            TOTAL_VOTES,
-            PROPOSED_PUZ_HASH,
-            proposal_timelock,
-            proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
-        ])
+        timer_solution = Program.to(
+            [
+                YES_VOTES,
+                TOTAL_VOTES,
+                PROPOSED_PUZ_HASH,
+                proposal_timelock,
+                proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
+            ]
+        )
         timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
 
         full_treasury_puz = curry_singleton(proposal_id, self.dao_info.current_treasury_innerpuz)
@@ -1330,18 +1332,23 @@ class DAOWallet(WalletProtocol):
         #   yes_votes
         # )
         puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
-        validator_solution = Program.to([
-            proposal_id,
-            TOTAL_VOTES,
-            YES_VOTES,
-        ])
-        treasury_solution = Program.to([
-            1,
-            [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH, 0, SPEND_OR_UPDATE_FLAG],
-            validator_solution,
-            puzzle_reveal,
-            0,
-        ])
+        validator_solution = Program.to(
+            [
+                proposal_id,
+                TOTAL_VOTES,
+                YES_VOTES,
+            ]
+        )
+        treasury_solution = Program.to(
+            [
+                1,
+                [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH, 0, SPEND_OR_UPDATE_FLAG],
+                validator_solution,
+                puzzle_reveal,
+                0,
+            ]
+        )
+        assert self.dao_info.current_treasury_coin is not None
         parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)
         assert parent_info is not None
         full_treasury_solution = Program.to(
