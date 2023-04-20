@@ -5,8 +5,8 @@ from functools import cmp_to_key
 from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiosqlite import Row
-from chia_rs.chia_rs import Coin
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2

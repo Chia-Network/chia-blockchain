@@ -6,8 +6,8 @@ import time
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
-from chia_rs.chia_rs import CoinState
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -320,7 +320,9 @@ class VCWallet:
     async def revoke_vc(
         self, parent_id: bytes32, peer: WSChiaConnection, fee: uint64 = uint64(0), reuse_puzhash: Optional[bool] = None
     ) -> List[TransactionRecord]:
-        vc_coin_states: CoinState = await self.wallet_state_manager.wallet_node.get_coin_state([parent_id], peer=peer)
+        vc_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [parent_id], peer=peer
+        )
         if vc_coin_states is None:
             raise ValueError(f"Cannot find verified credential coin: {parent_id.hex()}")
         vc_coin_state = vc_coin_states[0]
