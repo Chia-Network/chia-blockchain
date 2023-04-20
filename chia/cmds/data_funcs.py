@@ -218,7 +218,7 @@ async def get_sync_status_cmd(
 
 
 async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
-    async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _, _):
+    async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         if client is not None:
             res = await client.check_plugins()
             print(json.dumps(res, indent=4, sort_keys=True))
