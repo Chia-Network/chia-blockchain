@@ -11,7 +11,7 @@ from chia.util.config import load_config
 from chia.util.service_groups import all_groups, services_for_groups
 
 
-async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_daemon: bool) -> int:
+async def async_stop(root_path: Path, config: Dict[str, Any], group: tuple[str, ...], stop_daemon: bool) -> int:
     from chia.daemon.client import connect_to_daemon_and_validate
 
     daemon = await connect_to_daemon_and_validate(root_path, config)
@@ -51,7 +51,7 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_d
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context
-def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
+def stop_cmd(ctx: click.Context, daemon: bool, group: tuple[str, ...]) -> None:
     from chia.cmds.beta_funcs import warn_if_beta_enabled
 
     root_path = ctx.obj["root_path"]
