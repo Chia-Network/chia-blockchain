@@ -31,7 +31,7 @@ chia_data_layer_s3_plugin = "chia.data_layer.s3_plugin_service:run_server"
 name = "chia"
 url = "https://pypi.chia.net/simple/"
 default = false
-secondary = false
+secondary = true
 
 [tool.poetry.urls]
 "Source" = "https://github.com/Chia-Network/chia-blockchain/"
@@ -65,7 +65,10 @@ filelock = "3.9.0"  # For reading and writing config multiprocess and multithrea
 #       23.13.1 in `main` `setup.py` presently
 keyring = "23.9.3"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = "23.0"
-psutil = "5.9.4"
+psutil = [
+    {version="5.9.4", markers="platform_machine!='aarch64'", source="pypi"},
+    {version="5.9.4", markers="platform_machine=='aarch64'", source="chia"},
+]
 pyyaml = "6.0"  # Used for config file format
 setproctitle = "1.3.2"  # Gives the chia processes readable names
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
