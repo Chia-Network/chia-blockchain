@@ -1040,6 +1040,13 @@ class WalletRpcApi:
         }
 
     async def spend_clawback_coins(self, request) -> EndpointResult:
+        """Spend clawback coins that were sent (to claw them back) or received (to claim them).
+
+        :param coin_ids: list of coin ids to be spent
+        :param batch_size: number of coins to spend per bundle
+        :param fee: transaction fee in mojos
+        :return:
+        """
         if "coin_ids" not in request:
             raise ValueError("Coin IDs are required.")
         coin_ids: List[bytes32] = [bytes32.from_hexstr(coin) for coin in request["coin_ids"]]
@@ -1058,13 +1065,13 @@ class WalletRpcApi:
             if coin_record.metadata is None:
                 log.warning(f"Skip merkle coin f{coin_id.hex()}, metadata cannot be None.")
                 continue
-            metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
             if coin_record.coin_type != CoinType.CLAWBACK:
                 log.warning(f"Coin {coin_id.hex()} is not a Clawback coin.")
                 continue
             if coin_record.wallet_type != WalletType.STANDARD_WALLET:
                 log.warning("Only support standard XCH wallet.")
                 continue
+            metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
             coins[coin_record.coin] = metadata
             if len(coins) >= batch_size:
                 clawback_coins.extend(await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee))

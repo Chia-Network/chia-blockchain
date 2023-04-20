@@ -168,7 +168,7 @@ class Wallet:
         return puzzle_for_pk(pubkey)
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return self.wallet_state_manager.decorator_manager.decorate(puzzle_for_pk(pubkey)).get_tree_hash()
+        return puzzle_for_pk(pubkey).get_tree_hash()
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
@@ -199,7 +199,7 @@ class Wallet:
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
-        return self.wallet_state_manager.decorator_manager.decorate(puzzle_for_pk(public_key))
+        return puzzle_for_pk(public_key)
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
