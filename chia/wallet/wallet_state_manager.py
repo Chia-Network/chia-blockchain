@@ -722,6 +722,10 @@ class WalletStateManager:
             if derivation_record is None:
                 self.log.warning(f"You are not able to spend coin {coin.name().hex()}")
                 continue
+            if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
+                await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(
+                    recipient_puzhash if metadata.is_recipient else sender_puzhash
+                )
             inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             inner_solution: Program = self.main_wallet.make_solution(
                 primaries=[
