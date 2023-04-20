@@ -245,7 +245,7 @@ class TestStructStream:
         assert uint32(b"273") == 273
 
     def test_struct_stream_cannot_be_instantiated_directly(self) -> None:
-        with pytest.raises(ValueError, match="does not fit"):
+        with pytest.raises(AttributeError, match="object has no attribute"):
             StructStream(0)
 
     @pytest.mark.parametrize(

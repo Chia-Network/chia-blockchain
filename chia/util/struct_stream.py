@@ -47,11 +47,11 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
 
 
 class StructStream(int):
-    SIZE = 0
-    BITS = 0
-    SIGNED = False
-    MAXIMUM_EXCLUSIVE = 0
-    MINIMUM = 0
+    SIZE: int
+    BITS: int
+    SIGNED: bool
+    MAXIMUM_EXCLUSIVE: int
+    MINIMUM: int
 
     """
     Create a class that can parse and stream itself based on a struct.pack template string.
