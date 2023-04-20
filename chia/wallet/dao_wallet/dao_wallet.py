@@ -54,6 +54,8 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
     uncurry_treasury,
+    uncurry_proposal,
+    get_proposed_puzzle_reveal_from_solution,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -1200,6 +1202,7 @@ class DAOWallet(WalletProtocol):
         self,
         proposal_id: bytes32,
         fee: uint64 = uint64(0),
+        delegated_solution: Program = Program.to(0),
         push: bool = True,
     ) -> SpendBundle:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
@@ -1272,8 +1275,89 @@ class DAOWallet(WalletProtocol):
                 solution,
             ]
         )
-        cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
-        spend_bundle = SpendBundle([cs], AugSchemeMPL.aggregate([]))
+        proposal_cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
+        # PROPOSAL_MOD_HASH
+        # PROPOSAL_TIMER_MOD_HASH
+        # CAT_MOD_HASH
+        # CAT_TAIL_HASH
+        # (@ MY_PARENT_SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+        # TREASURY_ID
+        # proposal_yes_votes
+        # proposal_total_votes
+        # proposal_innerpuzhash
+        # proposal_timelock
+        # parent_parent  this is the parent of the timer's parent
+        timer_puzzle = get_proposal_timer_puzzle(
+            self.get_cat_tail_hash(),
+            proposal_info.proposal_id,
+            self.dao_info.treasury_id,
+        )
+        curried_args = uncurry_proposal(proposal_info.current_innerpuz)
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,  # proposal timer needs to know which proposal created it, AND
+            CAT_MOD_HASH,
+            TREASURY_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+            TOTAL_VOTES,  # how many people responded
+            SPEND_OR_UPDATE_FLAG,  # this is one of 's', 'u', 'd' - other types may be added in the future
+            PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
+        ) = curried_args.as_iter()
+
+        timer_solution = Program.to([
+            YES_VOTES,
+            TOTAL_VOTES,
+            PROPOSED_PUZ_HASH,
+            proposal_timelock,
+            proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
+        ])
+        timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
+
+        full_treasury_puz = curry_singleton(proposal_id, self.dao_info.current_treasury_innerpuz)
+        # proposal_flag
+        # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
+        # proposal_validator_solution
+        # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+        # delegated_solution  ; this is not secure unless the delegated puzzle secures it
+
+        # (
+        #   proposal_id
+        #   total_votes
+        #   yes_votes
+        # )
+        puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
+        validator_solution = Program.to([
+            proposal_id,
+            TOTAL_VOTES,
+            YES_VOTES,
+        ])
+        treasury_solution = Program.to([
+            1,
+            [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH, 0, SPEND_OR_UPDATE_FLAG],
+            validator_solution,
+            puzzle_reveal,
+            0,
+        ])
+        parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)
+        assert parent_info is not None
+        full_treasury_solution = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                1,
+                treasury_solution,
+            ]
+        )
+        treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
+        # breakpoint()
+        spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee)
             assert chia_tx.spend_bundle is not None
@@ -1300,6 +1384,20 @@ class DAOWallet(WalletProtocol):
             )
             await self.wallet_state_manager.add_pending_transaction(record)
         return full_spend
+
+    async def fetch_proposed_puzzle_reveal(self, proposal_id: bytes32) -> Program:
+        wallet_node: Any = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
+        # The proposal_id is launcher coin, so proposal_id's child is eve and the eve spend contains the reveal
+        children = await wallet_node.fetch_children(proposal_id, peer)
+        eve_state = children[0]
+
+        eve_spend = await wallet_node.fetch_puzzle_solution(eve_state.created_height, eve_state.coin, peer)
+        puzzle_reveal = get_proposed_puzzle_reveal_from_solution(eve_spend.solution)
+        # breakpoint()
+        return puzzle_reveal
 
     async def _create_treasury_fund_transaction(
         self, funding_wallet: WalletProtocol, amount: uint64, fee: uint64 = uint64(0)

@@ -391,6 +391,11 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
     return bytes32(CAT_TAIL_HASH.as_atom())
 
 
+def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:
+    prog = Program.from_bytes(bytes(solution))
+    return prog.at("rrfrrrrrf")
+
+
 def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
     try:
         mod, curried_args = proposal_validator_program.uncurry()

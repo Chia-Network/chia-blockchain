@@ -8,7 +8,7 @@
     PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
     PROPOSAL_SELF_DESTRUCT_TIME ; time in seconds after which proposals can be automatically closed
     ORACLE_SPEND_DELAY  ; timelock delay for oracle spend
-    proposal_flag
+    proposal_flag  ; if this is set then we are closing a proposal
     (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
     proposal_validator_solution
     delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
@@ -52,7 +52,7 @@
 
   (if proposal_flag
     ; if we're checking a proposal (testing if it has passed)
-    (assert (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
+    (if (= (sha256tree delegated_puzzle_reveal) delegated_puzzle_hash)
       ; Merge the treasury conditions with the proposal validator conditions
       ; If the update case then the validator returns the new treasury create coin
       ; If the spend case then we need to recreate the treasury outselves
@@ -77,6 +77,7 @@
     	    )
     	  )
     	)
+      (x "bong")
     )
     ; no proposal_flag so create the oracle announcement
     (list
