@@ -27,7 +27,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
-from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
+from chia.wallet.did_wallet.did_wallet_puzzles import did_metadata_to_program, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -229,7 +229,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+            json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
@@ -472,7 +472,7 @@ class DIDWallet:
             did_info.backup_ids,
             did_info.num_of_backup_ids_needed,
             did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
         parent_coin: Coin = did_info.origin_coin
@@ -526,7 +526,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 self.did_info.num_of_backup_ids_needed,
                 self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                did_metadata_to_program(json.loads(self.did_info.metadata)),
             )
             return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         else:
@@ -543,7 +543,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             origin_coin_name,
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_metadata_to_program(json.loads(self.did_info.metadata)),
         )
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
 
@@ -693,7 +693,7 @@ class DIDWallet:
             backup_ids,
             backup_required,
             self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
@@ -1112,7 +1112,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 self.did_info.origin_coin.name(),
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                did_metadata_to_program(json.loads(self.did_info.metadata)),
             )
         elif origin_id is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
@@ -1120,7 +1120,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 origin_id,
-                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                did_metadata_to_program(json.loads(self.did_info.metadata)),
             )
         else:
             raise ValueError("must have origin coin")
@@ -1145,7 +1145,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             uint64(self.did_info.num_of_backup_ids_needed),
             self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_metadata_to_program(json.loads(self.did_info.metadata)),
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
@@ -1171,7 +1171,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             self.did_info.origin_coin.name(),
-            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_metadata_to_program(json.loads(self.did_info.metadata)),
             old_recovery_list_hash,
         )
         return inner_puzzle

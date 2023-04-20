@@ -175,7 +175,7 @@ def check_is_did_puzzle(puzzle: Program) -> bool:
     return is_singleton(inner_f)
 
 
-def metadata_to_program(metadata: Dict) -> Program:
+def did_metadata_to_program(metadata: Dict) -> Program:
     """
     Convert the metadata dict to a Chialisp program
     :param metadata: User defined metadata
@@ -187,7 +187,7 @@ def metadata_to_program(metadata: Dict) -> Program:
     return Program.to(kv_list)
 
 
-def program_to_metadata(program: Program) -> Dict:
+def did_program_to_metadata(program: Program) -> Dict:
     """
     Convert a program to a metadata dict
     :param program: Chialisp program contains the metadata
