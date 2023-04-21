@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import BinaryIO, SupportsInt, Type, TypeVar, Union
+from typing import BinaryIO, ClassVar, SupportsInt, Type, TypeVar, Union
 
 from typing_extensions import Protocol, SupportsIndex
 
@@ -50,11 +50,11 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
 
 
 class StructStream(int):
-    SIZE: int
-    BITS: int
-    SIGNED: bool
-    MAXIMUM: int
-    MINIMUM: int
+    SIZE: ClassVar[int]
+    BITS: ClassVar[int]
+    SIGNED: ClassVar[bool]
+    MAXIMUM: ClassVar[int]
+    MINIMUM: ClassVar[int]
 
     """
     Create a class that can parse and stream itself based on a struct.pack template string.
