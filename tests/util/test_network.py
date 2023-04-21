@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
 from ipaddress import IPv4Address, IPv6Address
 from typing import Type, Union
 
@@ -21,10 +19,6 @@ class TestNetwork:
         assert get_host_addr("example.net", prefer_ipv6=prefer_ipv6) == IPAddress.create("93.184.216.34")
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform in {"darwin", "win32"}),
-        reason="macOS and Windows runners in GitHub Actions do not seem to support IPv6",
-    )
     async def test_get_host_addr6(self):
         # Run these tests forcing IPv6 resolution
         prefer_ipv6 = True
