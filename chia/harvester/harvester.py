@@ -86,13 +86,20 @@ class Harvester:
         if thread_count == 0:
             thread_count = multiprocessing.cpu_count() // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", False)
-        max_compression_level_allowed = config.get("max_compression_level_allowed", 7)
+        max_compression_level_allowed = config.get("max_compression_level_allowed", 9)
+        use_gpu_harvesting = config.get("use_gpu_harvesting", False)
+        gpu_index = config.get("gpu_index", 0)
+        enforce_gpu_index = config.get("enforce_gpu_index", False)
+
         try:
             self.plot_manager.configure_decompresser(
                 context_count,
                 thread_count,
                 disable_cpu_affinity,
                 max_compression_level_allowed,
+                use_gpu_harvesting,
+                gpu_index,
+                enforce_gpu_index,
             )
         except Exception as e:
             self.log.error(f"{type(e)} {e} while configuring decompresser.")

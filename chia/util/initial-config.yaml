@@ -210,7 +210,10 @@ harvester:
   decompresser_thread_count: 0
   disable_cpu_affinity: False
   # Ignore compressed plots with compression level greater than this.
-  max_compression_level_allowed: 7
+  max_compression_level_allowed: 9
+  use_gpu_harvesting: False
+  gpu_index: 0
+  enforce_gpu_index: False
 
 pool:
   # Replace this with a real receive address

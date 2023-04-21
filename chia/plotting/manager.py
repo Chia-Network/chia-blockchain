@@ -81,11 +81,25 @@ class PlotManager:
         thread_count: int,
         disable_cpu_affinity: bool,
         max_compression_level_allowed: int,
+        use_gpu_harvesting: bool,
+        gpu_index: int,
+        enforce_gpu_index: bool,
     ) -> None:
         decompresser_context_queue = getattr(chiapos, "decompresser_context_queue")
-        decompresser_context_queue.init(
-            context_count, thread_count, disable_cpu_affinity, max_compression_level_allowed
+        is_using_gpu = decompresser_context_queue.init(
+            context_count,
+            thread_count,
+            disable_cpu_affinity,
+            max_compression_level_allowed,
+            use_gpu_harvesting,
+            gpu_index,
+            enforce_gpu_index,
         )
+        if not is_using_gpu and use_gpu_harvesting:
+            log.error(
+                "GPU harvesting failed initialization. "
+                f"Falling back to CPU harvesting: {context_count} decompressers count, {thread_count} threads."
+            )
         self.max_compression_level_allowed = max_compression_level_allowed
 
     def reset(self) -> None:
