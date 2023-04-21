@@ -412,7 +412,7 @@ class CRCAT:
             conditions = inner_puzzle.run(inner_solution).as_iter()
         assert conditions is not None
         for condition in conditions:
-            if condition.at("f").as_int() == 51:
+            if condition.at("f").as_int() == 51 and condition.at("rrf").as_int() != -113:
                 new_inner_puzzle_hash: bytes32 = bytes32(condition.at("rf").atom)
                 new_amount: uint64 = uint64(condition.at("rrf").as_int())
                 announcement_ids.append(
@@ -508,7 +508,9 @@ class CRCAT:
         for i, inner_spend in enumerate(sorted_inner_spends):
             crcat, inner_puzzle, inner_solution = inner_spend
             conditions: List[Program] = list(inner_puzzle.run(inner_solution).as_iter())
-            output_amount: int = sum(c.at("rrf").as_int() for c in conditions if c.at("f").as_int() == 51)
+            output_amount: int = sum(
+                c.at("rrf").as_int() for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() != -113
+            )
             next_crcat, _, _ = sorted_inner_spends[next_index(i)]
             prev_crcat, _, _ = sorted_inner_spends[prev_index(i)]
             expected_announcements, coin_spend, new_crcats = crcat.do_spend(
