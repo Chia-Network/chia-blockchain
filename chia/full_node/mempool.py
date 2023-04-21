@@ -140,20 +140,20 @@ class Mempool:
             val = cursor.fetchone()[0]
             return CLVMCost(uint64(0) if val is None else uint64(val))
 
-    def all_spends(self) -> Iterator[MempoolItem]:
+    def all_items(self) -> Iterator[MempoolItem]:
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT * FROM tx")
             for row in cursor:
                 yield self._row_to_item(row)
 
-    def all_spend_ids(self) -> List[bytes32]:
+    def all_item_ids(self) -> List[bytes32]:
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name FROM tx")
             return [bytes32(row[0]) for row in cursor]
 
     # TODO: move "process_mempool_items()" into this class in order to do this a
     # bit more efficiently
-    def spends_by_feerate(self) -> Iterator[MempoolItem]:
+    def items_by_feerate(self) -> Iterator[MempoolItem]:
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC, seq ASC")
             for row in cursor:
@@ -165,14 +165,14 @@ class Mempool:
             val = cursor.fetchone()
             return 0 if val is None else int(val[0])
 
-    def get_spend_by_id(self, spend_bundle_id: bytes32) -> Optional[MempoolItem]:
+    def get_item_by_id(self, item_id: bytes32) -> Optional[MempoolItem]:
         with self._db_conn:
-            cursor = self._db_conn.execute("SELECT * FROM tx WHERE name=?", (spend_bundle_id,))
+            cursor = self._db_conn.execute("SELECT * FROM tx WHERE name=?", (item_id,))
             row = cursor.fetchone()
             return None if row is None else self._row_to_item(row)
 
     # TODO: we need a bulk lookup function like this too
-    def get_spends_by_coin_id(self, spent_coin_id: bytes32) -> List[MempoolItem]:
+    def get_items_by_coin_id(self, spent_coin_id: bytes32) -> List[MempoolItem]:
         with self._db_conn:
             cursor = self._db_conn.execute(
                 "SELECT * FROM tx WHERE name in (SELECT tx FROM spends WHERE coin_id=?)",
@@ -382,7 +382,7 @@ class Mempool:
         spend_bundles: List[SpendBundle] = []
         additions: List[Coin] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
-        for item in self.spends_by_feerate():
+        for item in self.items_by_feerate():
             if not item_inclusion_filter(item.name):
                 continue
             log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
