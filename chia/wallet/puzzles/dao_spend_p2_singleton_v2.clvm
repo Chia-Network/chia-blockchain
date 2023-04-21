@@ -7,8 +7,8 @@
   P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
   p2_singleton_parent_amount_list  ; for xch this is just a list of (coin_parent coin_amount)
   p2_singleton_tailhash_parent_amount_list   ; list of ((asset (parent amount) (parent amount)... ) (asset (parent amount)... )... ),
-                                            ;must match order of curryed asset list
-                                            ; the last (parent amount) gets given the puzzlehash, the rest get given 0
+                                             ; must match order of curryed asset list
+                                             ; the last (parent amount) gets given the puzzlehash, the rest get given 0
 )
   ; we need to track CAT_TYPE and DELEGATED_PUZZLE
   ; list of (asset_type (parent amount))
@@ -106,7 +106,7 @@
       (if (> (+ total (f (r (f parent_amount_list)))) (- create_coin_sum ONE))  ; TODO: check logic for >= here
         (add_announcements_to_result
           (sha256 (f (f parent_amount_list)) (wrap_in_cat_layer CAT_MOD_HASH tail_hash P2_SINGLETON_PUZHASH) (f (r (f parent_amount_list))))
-          (calculate_delegated_puzzlehash P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) CONDITIONS)
+          (calculate_delegated_puzzlehash P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) CONDITIONS_FOR_THIS_ASSET_TYPE)
           0
           output
         )
