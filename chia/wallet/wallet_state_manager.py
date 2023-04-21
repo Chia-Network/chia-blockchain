@@ -672,15 +672,14 @@ class WalletStateManager:
 
         return None
 
-    def deserialize_coin_metadata(self, metadata: bytes, coin_type: CoinType, to_dict: bool = False) -> Any:
+    def deserialize_coin_metadata(self, metadata: Optional[VersionedBlob], coin_type: CoinType) -> Any:
+        if metadata is None:
+            return None
+
         if coin_type == CoinType.CLAWBACK:
-            return (
-                ClawbackMetadata.from_bytes(metadata).to_json_dict()
-                if to_dict
-                else ClawbackMetadata.from_bytes(metadata)
-            )
+            return ClawbackMetadata.from_bytes(metadata.blob).to_json_dict()
         else:
-            return metadata
+            return metadata.blob
 
     async def auto_claim_coins(self) -> None:
         # Get unspent clawback coin
@@ -693,7 +692,7 @@ class WalletStateManager:
             if coin.metadata is None:
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
-            metadata = self.deserialize_coin_metadata(coin.metadata.blob, CoinType.CLAWBACK)
+            metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
             if coin.coin.amount >= min_amount and metadata.is_recipient:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata.time_lock:
