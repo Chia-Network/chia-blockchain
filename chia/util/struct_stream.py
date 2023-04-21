@@ -37,11 +37,11 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
         raise ValueError(f"cls.BITS must be a multiple of 8: {cls.BITS}")
 
     if cls.SIGNED:
-        cls.MAXIMUM = 2 ** (cls.BITS - 1) - 1
         cls.MINIMUM = -(2 ** (cls.BITS - 1))
+        cls.MAXIMUM = (2 ** (cls.BITS - 1)) - 1
     else:
-        cls.MAXIMUM = 2**cls.BITS - 1
         cls.MINIMUM = 0
+        cls.MAXIMUM = (2**cls.BITS) - 1
 
     cls.MINIMUM = cls(cls.MINIMUM)
     cls.MAXIMUM = cls(cls.MAXIMUM)

@@ -70,8 +70,8 @@ class int512(StructStream):
     # note that the boundaries for int512 is not what you might expect. We
     # encode these with one extra byte, but only allow a range of
     # [-INT512_MAX, INT512_MAX]
-    MAXIMUM: ClassVar[int512] = 2**BITS - 1
     MINIMUM: ClassVar[int512] = -(2**BITS) + 1
+    MAXIMUM: ClassVar[int512] = (2**BITS) - 1
 
 
 int512.MINIMUM = int512(int512.MINIMUM)
