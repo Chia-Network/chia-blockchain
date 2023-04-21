@@ -1026,11 +1026,7 @@ class WalletRpcApi:
                     "amount": coin.coin.amount,
                     "puzzle_hash": coin.coin.puzzle_hash.hex(),
                     "parent_coin": coin.coin.parent_coin_info.hex(),
-                    "metadata": self.service.wallet_state_manager.deserialize_coin_metadata(
-                        coin.metadata.blob, coin_type, True
-                    )
-                    if coin.metadata is not None
-                    else None,
+                    "metadata": self.service.wallet_state_manager.deserialize_coin_metadata(coin.metadata, coin_type),
                     "confirmed_height": coin.confirmed_block_height,
                     "spent_height": coin.spent_block_height,
                 }
