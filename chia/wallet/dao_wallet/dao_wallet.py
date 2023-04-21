@@ -1453,11 +1453,29 @@ class DAOWallet(WalletProtocol):
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
+    # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
         # TODO: Pull coins from DB once they're being stored
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
         return uint128(sum([record.coin.amount for record in records]))
+
+    # if asset_id == None: then we get normal XCH
+    async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
+        # TODO: Pull coins from DB once they're being stored
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
+        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
+        # TODO: smarter coin selection algorithm
+        total = 0
+        coins = []
+        for record in records:
+            total += record.coin.amount
+            coins.append(record.coin)
+            if total >= amount:
+                break
+        if total < amount:
+            raise ValueError(f"Not enough of that asset_id: {asset_id}")
+        return coins
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
