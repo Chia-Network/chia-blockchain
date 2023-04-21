@@ -665,7 +665,7 @@ class WalletStateManager:
 
         # Check if the coin is clawback
         solution = Program.from_bytes(bytes(coin_spend.solution))
-        clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution, self.constants.MAX_BLOCK_COST_CLVM)
+        clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
         if clawback_metadata is not None:
             return await self.handle_clawback(clawback_metadata, coin_state, peer)
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)

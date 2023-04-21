@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -119,7 +120,7 @@ def create_merkle_solution(
 
 
 def match_clawback_puzzle(
-    uncurried: UncurriedPuzzle, inner_puzzle: Program, inner_solution: Program, max_cost: int
+    uncurried: UncurriedPuzzle, inner_puzzle: Program, inner_solution: Program
 ) -> Optional[ClawbackMetadata]:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
@@ -128,7 +129,7 @@ def match_clawback_puzzle(
     conditions = conditions_for_solution(
         inner_puzzle,
         inner_solution,
-        max_cost,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
     )
     if conditions is not None:
         for condition in conditions:
