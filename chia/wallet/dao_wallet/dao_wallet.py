@@ -897,9 +897,6 @@ class DAOWallet(WalletProtocol):
         amount: uint64,
         asset_type: Optional[bytes32] = None,
     ) -> Program:
-        # TODO: reimplement this when we have an idea what our DAOs funds are
-        # if amount > self.dao_info.current_treasury_coin.amount:
-        #     raise ValueError("The proposed spend amount is greater than the treasury balance")
         if asset_type is not None:
             conditions = []
             asset_conditions_list = [[asset_type, [[51, recipient_puzhash, amount]]]]
