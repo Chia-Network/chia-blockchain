@@ -13,7 +13,7 @@ from chia.util.misc import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.merkle_utils import build_merkle_tree
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
@@ -118,9 +118,11 @@ def create_merkle_solution(
     return solution
 
 
-def match_clawback_puzzle(inner_puzzle: Program, inner_solution: Program, max_cost: int) -> Optional[ClawbackMetadata]:
+def match_clawback_puzzle(
+    uncurried: UncurriedPuzzle, inner_puzzle: Program, inner_solution: Program, max_cost: int
+) -> Optional[ClawbackMetadata]:
     # Check if the inner puzzle is a P2 puzzle
-    if MOD != uncurry_puzzle(inner_puzzle).mod:
+    if MOD != uncurried.mod:
         return None
     # Fetch Remark condition
     conditions = conditions_for_solution(
