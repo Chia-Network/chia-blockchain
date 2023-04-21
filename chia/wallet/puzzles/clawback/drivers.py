@@ -34,16 +34,18 @@ def create_augmented_cond_puzzle_hash(condition: List[Any], puzzle_hash: bytes32
     return curry_and_treehash(hash_of_quoted_mod_hash, *hashed_args)
 
 
-def create_augmented_cond_solution(inner_solution: Program) -> Any:
-    return Program.to([inner_solution])
+def create_augmented_cond_solution(inner_solution: Program) -> Program:
+    solution: Program = Program.to([inner_solution])
+    return solution
 
 
 def create_p2_puzzle_hash_puzzle(puzzle_hash: bytes32) -> Program:
     return P2_CURRIED_PUZZLE_HASH.curry(puzzle_hash)
 
 
-def create_p2_puzzle_hash_solution(inner_puzzle: Program, inner_solution: Program) -> Any:
-    return Program.to([inner_puzzle, inner_solution])
+def create_p2_puzzle_hash_solution(inner_puzzle: Program, inner_solution: Program) -> Program:
+    solution: Program = Program.to([inner_puzzle, inner_solution])
+    return solution
 
 
 def create_clawback_merkle_tree(
@@ -67,19 +69,21 @@ def create_clawback_merkle_tree(
 
 def create_merkle_proof(
     merkle_tree: Tuple[bytes32, Dict[bytes32, Tuple[int, List[bytes32]]]], puzzle_hash: bytes32
-) -> Any:
+) -> Program:
     """
     To spend a p2_1_of_n clawback we recreate the full merkle tree: (root, dict_of_proofs)
     The required proof is then selected from dict_of_proofs based on the puzzle_hash of the puzzle we
     want to execute
     Returns a proof: (int, List[bytes32]) which can be provided to the p2_1_of_n solution
     """
-    return Program.to(merkle_tree[1][puzzle_hash])
+    proof: Program = Program.to(merkle_tree[1][puzzle_hash])
+    return proof
 
 
 def create_merkle_puzzle(timelock: uint64, sender_ph: bytes32, recipient_ph: bytes32) -> Program:
     merkle_tree = create_clawback_merkle_tree(timelock, sender_ph, recipient_ph)
-    return P2_1_OF_N.curry(merkle_tree[0])
+    puzzle: Program = P2_1_OF_N.curry(merkle_tree[0])
+    return puzzle
 
 
 def create_merkle_solution(
@@ -88,7 +92,7 @@ def create_merkle_solution(
     recipient_ph: bytes32,
     inner_puzzle: Program,
     inner_solution: Program,
-) -> Any:
+) -> Program:
     """
     Recreates the full merkle tree of a p2_1_of_n clawback coin. It uses the timelock and each party's
     puzhash to create the tree.
@@ -110,7 +114,8 @@ def create_merkle_solution(
         cb_inner_solution = create_augmented_cond_solution(inner_solution)
     else:
         raise ValueError("Invalid Clawback inner puzzle.")
-    return Program.to([merkle_proof, cb_inner_puz, cb_inner_solution])
+    solution: Program = Program.to([merkle_proof, cb_inner_puz, cb_inner_solution])
+    return solution
 
 
 def match_clawback_puzzle(inner_puzzle: Program, inner_solution: Program, max_cost: int) -> Optional[ClawbackMetadata]:
