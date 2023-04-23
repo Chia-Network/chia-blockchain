@@ -429,12 +429,12 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
     # Create the other user's wallet from the treasury id
-    async with wallet_node_1.wallet_state_manager.lock:
-        dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-            wallet_node_1.wallet_state_manager,
-            wallet_1,
-            treasury_id,
-        )
+    # async with wallet_node_1.wallet_state_manager.lock:
+    dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+        wallet_node_1.wallet_state_manager,
+        wallet_1,
+        treasury_id,
+    )
     assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == treasury_id
 
@@ -534,3 +534,21 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     assert dao_wallet_0.dao_info.proposals_list[0].yes_votes == dao_cat_0_bal + dao_cat_1_bal
     assert dao_wallet_1.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal + dao_cat_1_bal
     assert dao_wallet_1.dao_info.proposals_list[0].yes_votes == dao_cat_0_bal + dao_cat_1_bal
+
+    # Add a third wallet and check they can find proposal with accurate vote counts
+    dao_wallet_2 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+        wallet_node_2.wallet_state_manager,
+        wallet_2,
+        treasury_id,
+    )
+    assert dao_wallet_2 is not None
+    assert dao_wallet_2.dao_info.treasury_id == treasury_id
+
+    # Give the new wallet a second to sync proposals
+    await asyncio.sleep(1)
+    assert dao_wallet_2.dao_info.proposals_list
+    assert dao_wallet_2.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal + dao_cat_1_bal
+
+    # TODO: close the passing proposal
+    # TODO: Close a failed proposal
+    # TODO: Test early close fails

@@ -638,7 +638,6 @@ class WalletStateManager:
             or self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin)
         ):
             return None
-
         response: List[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
         )
@@ -659,6 +658,9 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
+        dao_curried_args = match_treasury_puzzle(uncurried.mod, uncurried.args)
+        if dao_curried_args is not None:
+            return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
         # Check if the coin is a Proposal and that it isn't the timer coin (amount == 0)
         dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
         if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
@@ -684,10 +686,6 @@ class WalletStateManager:
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
-
-        dao_curried_args = match_treasury_puzzle(uncurried.mod, uncurried.args)
-        if dao_curried_args is not None:
-            return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 

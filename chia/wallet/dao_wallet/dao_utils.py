@@ -4,6 +4,7 @@ import logging
 from typing import Iterator, List, Optional, Tuple
 
 from clvm.casts import int_from_bytes
+from clvm.EvalError import EvalError
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -549,7 +550,7 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program) -> Optio
                 maybe_treasury_id = cond.at("rrrff")
                 if cond.at("rf") == get_p2_singleton_puzhash(maybe_treasury_id):
                     return True
-    except ValueError:
+    except (ValueError, EvalError):
         import traceback
 
         print(f"exception: {traceback.format_exc()}")

@@ -55,14 +55,15 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_p2_singleton_puzhash,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
+    get_proposed_puzzle_reveal_from_solution,
     get_spend_p2_singleton_puzzle,
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
-    uncurry_treasury,
     uncurry_proposal,
     get_proposed_puzzle_reveal_from_solution,
     uncurry_spend_p2_singleton,
     get_p2_singleton_puzzle,
+    uncurry_treasury,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -248,7 +249,6 @@ class DAOWallet(WalletProtocol):
         await self.resync_treasury_state()
         await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.dao_info)
-
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
@@ -357,8 +357,8 @@ class DAOWallet(WalletProtocol):
             self.dao_info.filter_below_vote_amount,
         )
         await self.save_info(dao_info)
-
-        # add interested puzzle hash so we can folllow treasury funds
+        # breakpoint()
+        # add interested puzzle hash so we can folllow treasury funds and proposals
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
 
         return self
