@@ -1369,6 +1369,9 @@ async def test_long_sync_untrusted_break(
     def check_sync_canceled() -> bool:
         return sync_canceled
 
+    def synced_to_trusted() -> bool:
+        return trusted_full_node_server.node_id in wallet_node.synced_peers
+
     def only_trusted_peer() -> bool:
         trusted_peers = sum([wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
         untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
@@ -1390,7 +1393,7 @@ async def test_long_sync_untrusted_break(
         # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(trusted_full_node_server._port)), None)
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
-        assert trusted_full_node_server.node_id in wallet_node.synced_peers
+        assert time_out_assert(10, synced_to_trusted)
         assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
         assert "Connected to a a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
 
