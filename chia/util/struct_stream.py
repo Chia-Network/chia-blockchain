@@ -57,7 +57,8 @@ class StructStream(int):
     MINIMUM: ClassVar[int]
 
     """
-    Create a class that can parse and stream itself based on a struct.pack template string.
+    Create a class that can parse and stream itself based on a struct.pack template string. This is only meant to be
+    a base class for further derivation and it's not recommended to instantiate it directly.
     """
 
     # This is just a partial exposure of the underlying int constructor.  Liskov...
