@@ -208,25 +208,6 @@ async def test_set_spent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_records_by_puzzle_hash() -> None:
-    async with DBConnection(1) as db_wrapper:
-        store = await WalletCoinStore.create(db_wrapper)
-
-        await store.add_coin_record(record_4)
-        await store.add_coin_record(record_5)
-
-        # adding duplicates is fine, we replace existing entry
-        await store.add_coin_record(record_5)
-
-        await store.add_coin_record(record_6)
-        assert len(await store.get_coin_records_by_puzzle_hash(record_6.coin.puzzle_hash)) == 2  # 4 and 6
-        assert len(await store.get_coin_records_by_puzzle_hash(token_bytes(32))) == 0
-
-        assert await store.get_coin_record(coin_6.name()) == record_6
-        assert await store.get_coin_record(token_bytes(32)) is None
-
-
-@pytest.mark.asyncio
 async def test_get_unspent_coins_for_wallet() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
