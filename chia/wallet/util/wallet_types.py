@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, List
 from typing_extensions import TypedDict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
+from chia.util.streamable import Streamable, streamable
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
@@ -48,3 +49,11 @@ class WalletIdentifier:
     @classmethod
     def create(cls, wallet: WalletProtocol) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
+
+
+# TODO, Can be replaced with WalletIdentifier if we have streamable enums
+@streamable
+@dataclass(frozen=True)
+class StreamableWalletIdentifier(Streamable):
+    id: uint32
+    type: uint8
