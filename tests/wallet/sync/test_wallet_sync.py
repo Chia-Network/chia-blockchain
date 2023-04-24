@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-from typing import List, Optional, Set
+from typing import List, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,12 +27,13 @@ from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.misc import UInt64Range
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
@@ -747,11 +748,10 @@ class TestWalletSync:
             large_dust_balance = 0
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        log.info(f"all_unspent is {all_unspent}")
-        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(
+            spent_range=unspent_range, amount_range=UInt64Range(stop=uint64(xch_spam_amount - 1))
+        )
+        small_unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
         num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
 
@@ -806,10 +806,10 @@ class TestWalletSync:
             await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=60)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(
+            spent_range=unspent_range, amount_range=UInt64Range(stop=uint64(xch_spam_amount - 1))
+        )
+        small_unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
         # Selecting coins by using the wallet's coin selection algorithm won't work for large
         # numbers of coins, so we'll use the state manager for the rest of the test
@@ -853,10 +853,10 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(
+            spent_range=unspent_range, amount_range=UInt64Range(stop=uint64(xch_spam_amount - 1))
+        )
+        small_unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
         num_coins: Optional[Message] = len(
             list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
@@ -892,10 +892,10 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(
+            spent_range=unspent_range, amount_range=UInt64Range(stop=uint64(xch_spam_amount - 1))
+        )
+        small_unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
         num_coins: Optional[Message] = len(
             list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
@@ -951,10 +951,10 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(
+            spent_range=unspent_range, amount_range=UInt64Range(stop=uint64(xch_spam_amount - 1))
+        )
+        small_unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
         num_coins: Optional[Message] = len(
             list(await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1))
@@ -987,10 +987,8 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        unspent_count = len([r for r in all_unspent])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+        unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
 
         # Make sure the dust wallet is empty
@@ -1041,10 +1039,8 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        unspent_count = len([r for r in all_unspent])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+        unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
 
         # Verify the number of coins and value
@@ -1070,10 +1066,8 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        unspent_count = len([r for r in all_unspent])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+        unspent_count = len(result.records)
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
 
         # Make sure the dust wallet received a change coin worth 1 mojo less than the original coin size
@@ -1121,10 +1115,8 @@ class TestWalletSync:
 
         # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
         # if it were a normal dust coin (and not an NFT)
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        unspent_count = len([r for r in all_unspent])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+        unspent_count = len(result.records)
         assert unspent_count >= spam_filter_after_n_txs
 
         # Make sure the NFT is in the farmer's NFT wallet, and the dust NFT wallet is empty
@@ -1151,10 +1143,8 @@ class TestWalletSync:
 
         # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
         # if it were a normal dust coin (and not an NFT)
-        all_unspent: Set[
-            WalletCoinRecord
-        ] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
-        unspent_count = len([r for r in all_unspent])
+        result = await dust_wallet_node.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+        unspent_count = len(result.records)
         assert unspent_count >= spam_filter_after_n_txs
 
         # The dust wallet should now hold the NFT. It should not be filtered

@@ -46,6 +46,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.payment import Payment
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_node import WalletNode
 
 IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
@@ -1447,9 +1448,12 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)
-        coins = list(await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1))
+        result = await wallet_node.wallet_state_manager.coin_store.get_coin_records(
+            wallet_id=uint32(1), spent_range=unspent_range
+        )
+        coins = result.records
         # Two blocks farmed plus 3 transactions
-        assert len(coins) == 7
+        assert len(result.records) == 7
         return (wallet, coins, ph)
 
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
@@ -1552,8 +1556,10 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     assert get_sb_names_by_coin_id(full_node_api, g_coin_id) == set()
 
     # Make sure coin G remains because E2G was removed as E got spent differently (by DE and EF)
-    coins_set = await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1)
-    assert g_coin in (c.coin for c in coins_set)
+    result = await wallet_node.wallet_state_manager.coin_store.get_coin_records(
+        wallet_id=uint32(1), spent_range=unspent_range
+    )
+    assert g_coin.name() in result.coin_id_to_record
     # Only the newly created eligible coin is left now
     eligible_coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
         False, IDENTITY_PUZZLE_HASH

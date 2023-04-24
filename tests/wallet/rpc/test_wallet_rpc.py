@@ -51,6 +51,7 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -1579,7 +1580,10 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
     # 2 reward coins, 1 DID, 1 NFT
-    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 4
+    assert (
+        len((await wallet_node._wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)).records)
+        == 4
+    )
     assert await wallet_node._wallet_state_manager.nft_store.count() == 1
     # standard wallet, did wallet, nft wallet, did nft wallet
     assert len(await wallet_node.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
@@ -1601,7 +1605,8 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     # transactions should be the same
     assert after_txs == before_txs
     # only coin_store was populated in this case, but now should be empty
-    assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
+    result = await wallet_node_2.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+    assert len(result.records) == 0
     assert await wallet_node_2._wallet_state_manager.nft_store.count() == 0
     # we don't delete wallets
     assert len(await wallet_node_2.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
@@ -1626,7 +1631,10 @@ async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: Wall
     await client.set_wallet_resync_on_startup()
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
-    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+    assert (
+        len((await wallet_node._wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)).records)
+        == 2
+    )
     before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
     await client.set_wallet_resync_on_startup(False)
     wallet_node._close()
@@ -1646,7 +1654,8 @@ async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: Wall
     # transactions should be the same
     assert after_txs == before_txs
     # only coin_store was populated in this case, but now should be empty
-    assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+    result = await wallet_node_2.wallet_state_manager.coin_store.get_coin_records(spent_range=unspent_range)
+    assert len(result.records) == 2
     wallet_node_2._close()
     await wallet_node_2._await_closed()
 
