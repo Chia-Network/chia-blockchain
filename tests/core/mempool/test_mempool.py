@@ -2686,7 +2686,7 @@ coins = make_test_coins()
         ),
     ],
 )
-def test_spends_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
+def test_items_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
@@ -2698,7 +2698,7 @@ def test_spends_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> No
     for i in items:
         mempool.add_to_pool(i)
 
-    ordered_items = list(mempool.spends_by_feerate())
+    ordered_items = list(mempool.items_by_feerate())
 
     assert len(ordered_items) == len(expected)
 
@@ -2756,7 +2756,7 @@ def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
     # now, add the item we're testing
     mempool.add_to_pool(item_cost(add, 3.1))
 
-    ordered_items = list(mempool.spends_by_feerate())
+    ordered_items = list(mempool.items_by_feerate())
 
     assert len(ordered_items) == len(expected)
 
@@ -2818,14 +2818,14 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
 
     ordered_costs = [
         item.cost
-        for item in mempool.spends_by_feerate()
+        for item in mempool.items_by_feerate()
         if item.assert_before_height is not None or item.assert_before_seconds is not None
     ]
 
     assert ordered_costs == expected
 
     print("")
-    for item in mempool.spends_by_feerate():
+    for item in mempool.items_by_feerate():
         if item.assert_before_seconds is not None or item.assert_before_height is not None:
             ttl = "yes"
         else:
