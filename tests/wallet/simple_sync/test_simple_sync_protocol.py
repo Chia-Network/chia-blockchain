@@ -1,4 +1,3 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
@@ -151,7 +150,6 @@ class TestSimpleSyncProtocol:
 
         assert all_coins == notified_all_coins
 
-        wsm: WalletStateManager = wallet_node.wallet_state_manager
         wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await wallet.get_new_puzzlehash()
 
@@ -472,7 +470,6 @@ class TestSimpleSyncProtocol:
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
-        wsm: WalletStateManager = wallet_node.wallet_state_manager
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
@@ -546,8 +543,6 @@ class TestSimpleSyncProtocol:
         fn_server = full_node_api.full_node.server
         fn_server_1 = full_node_api_1.full_node.server
 
-        wsm: WalletStateManager = wallet_node.wallet_state_manager
-
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
         incoming_queue_1, peer_id_1 = await add_dummy_connection(fn_server_1, self_hostname, 12313, NodeType.WALLET)
@@ -570,7 +565,7 @@ class TestSimpleSyncProtocol:
         msg = wallet_protocol.RegisterForPhUpdates([hint], 0)
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, fake_wallet_peer)
         msg_response_1 = await full_node_api_1.register_interest_in_puzzle_hash(msg, fake_wallet_peer_1)
-
+        assert msg_response == msg_response_1
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         data_response: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response.data)
         assert len(data_response.coin_states) == 0

@@ -1,4 +1,3 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
@@ -117,7 +116,6 @@ class TestFullSync:
     async def test_sync_from_fork_point_and_weight_proof(
         self, three_nodes, default_1000_blocks, default_400_blocks, self_hostname
     ):
-        start = time.time()
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks_initial = len(default_1000_blocks) - 50
         blocks_950 = default_1000_blocks[:num_blocks_initial]
