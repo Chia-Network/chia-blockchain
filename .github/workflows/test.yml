@@ -137,16 +137,19 @@ jobs:
 
       - name: Coverage report (chia/)
         run: |
+          set -o pipefail
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='chia/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
       - name: Coverage report (tests/)
         run: |
+          set -o pipefail
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
+          set -o pipefail
           diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report coverage-reports/diff-cover.html --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
