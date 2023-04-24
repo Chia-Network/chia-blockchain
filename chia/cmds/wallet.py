@@ -676,7 +676,7 @@ def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_did))
 
 
-@did_cmd.command("get_details", short_help="Get more details of any DID")
+@did_cmd.command("get_details", help="Get more details of any DID")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -696,7 +696,7 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_did_info))
 
 
-@did_cmd.command("update_metadata", short_help="Update the metadata of a DID")
+@did_cmd.command("update_metadata", help="Update the metadata of a DID")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -719,7 +719,7 @@ def did_update_metadata_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_did_metadata))
 
 
-@did_cmd.command("find_lost", short_help="Find the did you should own and recovery the DID wallet")
+@did_cmd.command("find_lost", help="Find the did you should own and recovery the DID wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -766,7 +766,7 @@ def did_find_lost_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, find_lost_did))
 
 
-@did_cmd.command("message_spend", short_help="Generate a DID spend bundle for announcements")
+@did_cmd.command("message_spend", help="Generate a DID spend bundle for announcements")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -825,7 +825,7 @@ def did_message_spend_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_message_spend))
 
 
-@did_cmd.command("transfer", short_help="Transfer a DID")
+@did_cmd.command("transfer", help="Transfer a DID")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
