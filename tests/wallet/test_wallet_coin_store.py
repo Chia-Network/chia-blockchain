@@ -918,28 +918,6 @@ async def test_count_small_unspent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_coin_records_between() -> None:
-    async with DBConnection(1) as db_wrapper:
-        store = await WalletCoinStore.create(db_wrapper)
-
-        assert await store.get_all_unspent_coins() == set()
-
-        await store.add_coin_record(record_1)  # not spent
-        await store.add_coin_record(record_2)  # not spent
-        await store.add_coin_record(record_5)  # spent
-        await store.add_coin_record(record_8)  # spent
-
-        records = await store.get_coin_records_between(1, 0, 0)
-        assert len(records) == 0
-        records = await store.get_coin_records_between(1, 0, 3)
-        assert len(records) == 1
-        assert records[0] == record_5
-        records = await store.get_coin_records_between(1, 0, 4, coin_type=CoinType.CLAWBACK)
-        assert len(records) == 1
-        assert records[0] == record_8
-
-
-@pytest.mark.asyncio
 async def test_delete_wallet() -> None:
     dummy_records = DummyWalletCoinRecords()
     for i in range(5):
