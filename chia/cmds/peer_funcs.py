@@ -114,8 +114,7 @@ async def peer_async(
     remove_connection: str,
 ) -> None:
     client_type = NODE_TYPES[node_type]
-    async with get_any_service_client(client_type, rpc_port, root_path) as node_config_fp:
-        rpc_client, config, _ = node_config_fp
+    async with get_any_service_client(client_type, rpc_port, root_path) as (rpc_client, config):
         if rpc_client is not None:
             # Check or edit node connections
             if show_connections:

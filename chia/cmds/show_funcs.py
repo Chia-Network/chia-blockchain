@@ -195,8 +195,7 @@ async def show_async(
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as node_config_fp:
-        node_client, config, _ = node_config_fp
+    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (node_client, config):
         if node_client is not None:
             # Check State
             if print_state:
