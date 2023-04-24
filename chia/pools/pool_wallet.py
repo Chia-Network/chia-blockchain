@@ -42,7 +42,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
@@ -53,6 +52,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_info import WalletInfo
 
 
@@ -417,8 +417,10 @@ class PoolWallet:
         if p2_singleton_delay_time is None:
             p2_singleton_delay_time = uint64(604800)
 
-        unspent_records = await wallet_state_manager.coin_store.get_unspent_coins_for_wallet(standard_wallet.wallet_id)
-        balance = await standard_wallet.get_confirmed_balance(unspent_records)
+        result = await wallet_state_manager.coin_store.get_coin_records(
+            wallet_id=standard_wallet.wallet_id, spent_range=unspent_range
+        )
+        balance = await standard_wallet.get_confirmed_balance(result.records)
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool.")
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE + fee:
@@ -806,9 +808,10 @@ class PoolWallet:
             self.log.info(f"Bad max_spends_in_tx value of {max_spends_in_tx}. Set to {self.DEFAULT_MAX_CLAIM_SPENDS}.")
             max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
 
-        unspent_coin_records: List[CoinRecord] = list(
-            await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
+        result = await self.wallet_state_manager.coin_store.get_coin_records(
+            wallet_id=self.wallet_id, spent_range=unspent_range
         )
+        unspent_coin_records = result.records
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
@@ -952,10 +955,10 @@ class PoolWallet:
     async def get_confirmed_balance(self, _: Optional[object] = None) -> uint128:
         amount: uint128 = uint128(0)
         if (await self.get_current_state()).current.state == SELF_POOLING.value:
-            unspent_coin_records: List[WalletCoinRecord] = list(
-                await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
+            result = await self.wallet_state_manager.coin_store.get_coin_records(
+                wallet_id=self.wallet_id, spent_range=unspent_range
             )
-            for record in unspent_coin_records:
+            for record in result.records:
                 if record.coinbase:
                     amount = uint128(amount + record.coin.amount)
         return amount

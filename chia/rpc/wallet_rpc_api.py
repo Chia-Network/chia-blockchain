@@ -79,7 +79,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import HashFilter
+from chia.wallet.wallet_coin_store import HashFilter, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -477,7 +477,10 @@ class WalletRpcApi:
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
                 wallet = self.service.wallet_state_manager.wallets[w.id]
-                unspent = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(w.id)
+                result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                    wallet_id=w.id, spent_range=unspent_range
+                )
+                unspent = set(result.records)
                 balance = await wallet.get_confirmed_balance(unspent)
                 pending_balance = await wallet.get_unconfirmed_balance(unspent)
 
@@ -1062,7 +1065,8 @@ class WalletRpcApi:
         state_mgr = self.service.wallet_state_manager
         wallet = state_mgr.wallets[wallet_id]
         async with state_mgr.lock:
-            all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            result = await state_mgr.coin_store.get_coin_records(wallet_id=wallet_id, spent_range=unspent_range)
+            all_coin_records = set(result.records)
             if wallet.type() == WalletType.CAT:
                 assert isinstance(wallet, CATWallet)
                 spendable_coins: List[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
@@ -1086,7 +1090,7 @@ class WalletRpcApi:
             ]
             valid_spendable_cr: List[CoinRecord] = []
             unconfirmed_removals: List[CoinRecord] = []
-            for coin_record in all_coin_records:
+            for coin_record in result.records:
                 if coin_record.name() in unconfirmed_removal_ids:
                     unconfirmed_removals.append(coin_record.to_coin_record(unconfirmed_removal_ids[coin_record.name()]))
             for coin_record in spendable_coins:  # remove all the unconfirmed coins, exclude coins and dust.

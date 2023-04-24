@@ -47,6 +47,7 @@ from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spen
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_info import WalletInfo
 
 
@@ -286,7 +287,10 @@ class DIDWallet:
 
     async def get_confirmed_balance(self, record_list=None) -> uint128:
         if record_list is None:
-            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+            result = await self.wallet_state_manager.coin_store.get_coin_records(
+                wallet_id=self.id(), spent_range=unspent_range
+            )
+            record_list = result.records
 
         amount: uint128 = uint128(0)
         for record in record_list:

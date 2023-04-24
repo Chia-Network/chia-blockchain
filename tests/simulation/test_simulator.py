@@ -10,6 +10,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_node import WalletNode
 
 
@@ -131,8 +132,10 @@ async def test_simulation_farm_rewards_to_wallet(
     assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
 
     # The expected number of coins were received.
-    all_coin_records = await wallet.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet.id())
-    assert len(all_coin_records) == coin_count
+    result = await wallet.wallet_state_manager.coin_store.get_coin_records(
+        wallet_id=wallet.id(), spent_range=unspent_range
+    )
+    assert len(result.records) == coin_count
 
 
 @pytest.mark.asyncio

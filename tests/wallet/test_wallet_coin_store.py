@@ -208,44 +208,6 @@ async def test_set_spent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_unspent_coins_for_wallet() -> None:
-    async with DBConnection(1) as db_wrapper:
-        store = await WalletCoinStore.create(db_wrapper)
-
-        assert await store.get_unspent_coins_for_wallet(1) == set()
-
-        await store.add_coin_record(record_4)  # this is spent and wallet 0
-        await store.add_coin_record(record_5)  # wallet 1
-        await store.add_coin_record(record_6)  # this is spent and wallet 2
-        await store.add_coin_record(record_7)  # wallet 2
-        await store.add_coin_record(record_8)
-
-        assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
-        assert await store.get_unspent_coins_for_wallet(2) == set([record_7])
-        assert await store.get_unspent_coins_for_wallet(3) == set()
-
-        await store.set_spent(coin_4.name(), uint32(12))
-
-        assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
-        assert await store.get_unspent_coins_for_wallet(2) == set([record_7])
-        assert await store.get_unspent_coins_for_wallet(3) == set()
-
-        await store.set_spent(coin_7.name(), uint32(12))
-
-        assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
-        assert await store.get_unspent_coins_for_wallet(2) == set()
-        assert await store.get_unspent_coins_for_wallet(3) == set()
-
-        await store.set_spent(coin_5.name(), uint32(12))
-
-        assert await store.get_unspent_coins_for_wallet(1) == set()
-        assert await store.get_unspent_coins_for_wallet(2) == set()
-        assert await store.get_unspent_coins_for_wallet(3) == set()
-
-        assert await store.get_unspent_coins_for_wallet(1, coin_type=CoinType.CLAWBACK) == set([record_8])
-
-
-@pytest.mark.asyncio
 async def test_get_all_unspent_coins() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)

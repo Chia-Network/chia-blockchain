@@ -16,6 +16,8 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
+unspent_range = UInt32Range(stop=uint32(0))
+
 
 class FilterMode(IntEnum):
     include = 1
@@ -306,17 +308,6 @@ class WalletCoinStore:
             return uint32(rows[0][0])
 
         return None
-
-    async def get_unspent_coins_for_wallet(
-        self, wallet_id: int, coin_type: CoinType = CoinType.NORMAL
-    ) -> Set[WalletCoinRecord]:
-        """Returns set of CoinRecords that have not been spent yet for a wallet."""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT * FROM coin_record WHERE coin_type=? AND wallet_id=? AND spent_height=0",
-                (coin_type, wallet_id),
-            )
-        return set(self.coin_record_from_row(row) for row in rows)
 
     async def get_all_unspent_coins(self, coin_type: CoinType = CoinType.NORMAL) -> Set[WalletCoinRecord]:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""

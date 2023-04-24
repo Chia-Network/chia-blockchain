@@ -73,6 +73,7 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_coin_updates,
     subscribe_to_phs,
 )
+from chia.wallet.wallet_coin_store import unspent_range
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
@@ -1615,7 +1616,10 @@ class WalletNode:
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"
         wallet = self.wallet_state_manager.wallets[wallet_id]
-        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        result = await self.wallet_state_manager.coin_store.get_coin_records(
+            wallet_id=wallet_id, spent_range=unspent_range
+        )
+        unspent_records = set(result.records)
         balance = await wallet.get_confirmed_balance(unspent_records)
         pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
         spendable_balance = await wallet.get_spendable_balance(unspent_records)
