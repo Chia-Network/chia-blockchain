@@ -302,28 +302,6 @@ async def test_get_all_unspent_coins() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_records_by_parent_id() -> None:
-    async with DBConnection(1) as db_wrapper:
-        store = await WalletCoinStore.create(db_wrapper)
-
-        await store.add_coin_record(record_1)
-        await store.add_coin_record(record_2)
-        await store.add_coin_record(record_3)
-        await store.add_coin_record(record_4)
-        await store.add_coin_record(record_5)
-        await store.add_coin_record(record_6)
-        await store.add_coin_record(record_7)
-
-        assert set(await store.get_coin_records_by_parent_id(coin_1.parent_coin_info)) == set([record_1, record_2])
-        assert set(await store.get_coin_records_by_parent_id(coin_2.parent_coin_info)) == set([record_1, record_2])
-        assert await store.get_coin_records_by_parent_id(coin_3.parent_coin_info) == [record_3]
-        assert await store.get_coin_records_by_parent_id(coin_4.parent_coin_info) == [record_4]
-        assert await store.get_coin_records_by_parent_id(coin_5.parent_coin_info) == [record_5]
-        assert await store.get_coin_records_by_parent_id(coin_6.parent_coin_info) == [record_6]
-        assert await store.get_coin_records_by_parent_id(coin_7.parent_coin_info) == [record_7]
-
-
-@pytest.mark.asyncio
 async def test_delete_coin_record() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)

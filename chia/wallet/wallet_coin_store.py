@@ -351,16 +351,6 @@ class WalletCoinStore:
 
         return [self.coin_record_from_row(row) for row in rows]
 
-    # Checks DB and DiffStores for CoinRecords with parent_coin_info and returns them
-    async def get_coin_records_by_parent_id(self, parent_coin_info: bytes32) -> List[WalletCoinRecord]:
-        """Returns a list of all coin records with the given parent id"""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),)
-            )
-
-        return [self.coin_record_from_row(row) for row in rows]
-
     async def rollback_to_block(self, height: int) -> None:
         """
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
