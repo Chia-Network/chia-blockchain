@@ -136,7 +136,7 @@ def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = 
 def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32] = None) -> bytes32:
     puz = get_p2_singleton_puzzle(treasury_id, asset_id)
     assert puz is not None
-    return puz
+    return puz.get_tree_hash()
 
 
 def get_lockup_puzzle(

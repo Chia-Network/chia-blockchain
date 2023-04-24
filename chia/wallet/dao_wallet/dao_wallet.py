@@ -1365,7 +1365,7 @@ class DAOWallet(WalletProtocol):
         coin_spends = []
         xch_parent_amount_list = []
         tailhash_parent_amount_list = []
-        treasury_inner_puzhash = (self.dao_info.current_treasury_innerpuz.get_tree_hash(),)
+        treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
         p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
         cat_spend_bundle = None
 
