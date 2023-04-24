@@ -2,14 +2,14 @@ from __future__ import annotations
 
 # mypy: ignore-errors
 from typing import List
-
+import asyncio
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -193,8 +193,20 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
     assert tx is not None
 
     await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
-    for i in range(1, 10):
+
+    for i in range(1, 5):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    funding_tx = await dao_wallet.create_add_money_to_treasury_spend(5000)
+    await time_out_assert_not_none(
+        5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_tx.spend_bundle.name()
+    )
+    await full_node_api.process_transaction_records(records=[funding_tx])
+
+    if not trusted:
+        await asyncio.sleep(1)
+    for i in range(1, 5):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    
     proposal_info = dao_wallet.dao_info.proposals_list[0]
     assert proposal_info is not None
     tx = await dao_wallet.create_proposal_close_spend(proposal_info.proposal_id)

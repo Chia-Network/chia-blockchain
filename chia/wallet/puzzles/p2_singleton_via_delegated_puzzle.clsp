@@ -4,9 +4,9 @@
   delegated_puzzle
   delegated_solution
   my_id
-  my_puzhash
-  list_of_parent_amounts
-  my_amount
+  my_puzhash  ; only needed for merging, set to 0 otherwise
+  list_of_parent_amounts  ; only needed for merging
+  my_amount  ; only needed for merging
 )
 
   (include condition_codes.clvm)
@@ -50,6 +50,7 @@
   )
 
   (if my_puzhash
+    ; we are merging coins to make a larger coin
     (c
       (list ASSERT_MY_PUZZLEHASH my_puzhash)
       (if list_of_parent_amounts
@@ -72,7 +73,7 @@
       (c
         (list CREATE_COIN_ANNOUNCEMENT '$')
         (c
-          (list ASSERT_MY_ID my_id)
+          (list ASSERT_MY_COIN_ID my_id)
           (a delegated_puzzle delegated_solution)
         )
       )

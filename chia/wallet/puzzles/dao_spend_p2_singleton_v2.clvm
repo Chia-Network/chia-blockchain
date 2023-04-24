@@ -65,8 +65,8 @@
     )
   )
 
-  (defun-inline calculate_delegated_puzzlehash (P2_SINGLETON_PUZHASH change_amount CONDITIONS)
-    (c (list CREATE_COIN P2_SINGLETON_PUZHASH change_amount) CONDITIONS)
+  (defun-inline calculate_delegated_puzzlehash (CONDITIONS)
+    (sha256tree (c ONE CONDITIONS))  ; this makes (q . CONDITIONS)
   )
 
   (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
@@ -90,7 +90,7 @@
     (if (r parent_amount_list)
       (add_announcements_to_result
         (sha256 (f (f parent_amount_list)) (wrap_in_cat_layer CAT_MOD_HASH tail_hash P2_SINGLETON_PUZHASH) (f (r (f parent_amount_list))))
-        0
+        (sha256tree 0)  ; this is the delegated_puzhash
         (for_each_asset
           CAT_MOD_HASH
           CONDITIONS_FOR_THIS_ASSET_TYPE
@@ -103,10 +103,15 @@
           output
         )
       )
-      (if (> (+ total (f (r (f parent_amount_list)))) (- create_coin_sum ONE))  ; TODO: check logic for >= here
+      (if (> (+ total (f (r (f parent_amount_list)))) (- create_coin_sum ONE))
         (add_announcements_to_result
           (sha256 (f (f parent_amount_list)) (wrap_in_cat_layer CAT_MOD_HASH tail_hash P2_SINGLETON_PUZHASH) (f (r (f parent_amount_list))))
-          (calculate_delegated_puzzlehash P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) CONDITIONS_FOR_THIS_ASSET_TYPE)
+          (calculate_delegated_puzzlehash
+            (c
+              (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum))
+              CONDITIONS_FOR_THIS_ASSET_TYPE
+            )
+          )
           0
           output
         )
