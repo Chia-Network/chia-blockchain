@@ -1,11 +1,10 @@
-# flake8: noqa E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
 import datetime
-import multiprocessing
 import os
 import sysconfig
 import tempfile
+from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
@@ -19,12 +18,14 @@ from _pytest.fixtures import SubRequest
 from chia.clvm.spend_sim import CostLogger
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
+from chia.simulator.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
+    setup_farmer_multi_harvester,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
@@ -38,22 +39,13 @@ from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint64
 from chia.util.keychain import Keychain
+from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-
-multiprocessing.set_start_method("spawn")
-
-from pathlib import Path
-
-from chia.simulator.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
-from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import setup_farmer_multi_harvester
-from chia.util.keyring_wrapper import KeyringWrapper
 
 
 @pytest.fixture(name="node_name_for_file")
