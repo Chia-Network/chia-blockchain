@@ -1822,13 +1822,17 @@ class WalletRpcApi:
                 hints.append(memo.hex())
         return {
             "success": True,
+            "did_id": encode_puzzle_hash(
+                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
+                AddressType.DID.hrp(self.service.config),
+            ),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.as_python().hex(),
-            "recovery_list_hash": recovery_list_hash.as_python().hex(),
+            "public_key": public_key.atom.hex(),
+            "recovery_list_hash": recovery_list_hash.atom.hex(),
             "num_verification": num_verification.as_int(),
             "metadata": program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().as_python().hex(),
+            "launcher_id": singleton_struct.rest().first().atom.hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
