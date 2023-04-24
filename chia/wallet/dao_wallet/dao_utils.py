@@ -121,7 +121,7 @@ def get_spend_p2_singleton_puzzle(
     return puzzle
 
 
-def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = None) -> bytes32:
+def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = None) -> Program:
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     inner_puzzle = P2_SINGLETON_MOD.curry(singleton_struct)
     if asset_id:
@@ -134,7 +134,9 @@ def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = 
 
 
 def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32] = None) -> bytes32:
-    return get_p2_singleton_puzzle(treasury_id, asset_id).get_tree_hash()
+    puz = get_p2_singleton_puzzle(treasury_id, asset_id)
+    assert puz is not None
+    return puz
 
 
 def get_lockup_puzzle(

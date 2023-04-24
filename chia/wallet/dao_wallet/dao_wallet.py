@@ -29,6 +29,7 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     unsigned_spend_bundle_for_spendable_cats,
@@ -1364,7 +1365,7 @@ class DAOWallet(WalletProtocol):
         coin_spends = []
         xch_parent_amount_list = []
         tailhash_parent_amount_list = []
-        treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash(),
+        treasury_inner_puzhash = (self.dao_info.current_treasury_innerpuz.get_tree_hash(),)
         p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
         cat_spend_bundle = None
 
@@ -1372,18 +1373,20 @@ class DAOWallet(WalletProtocol):
             if condition_statement.first().as_int() == 51:
                 sum += condition_statement.rest().rest().first().as_int()
         if sum > 0:
-            xch_coins = await self.select_coins_for_asset_type(sum)
+            xch_coins = await self.select_coins_for_asset_type(uint64(sum))
             for xch_coin in xch_coins:
                 xch_parent_amount_list.append([xch_coin.parent_coin_info, xch_coin.amount])
-                solution = Program.to([
-                    treasury_inner_puzhash,
-                    0,
-                    0,
-                    xch_coin.name(),
-                    p2_singleton_puzzle.get_tree_hash(),
-                    0,
-                    xch_coin.amount,
-                ])
+                solution = Program.to(
+                    [
+                        treasury_inner_puzhash,
+                        0,
+                        0,
+                        xch_coin.name(),
+                        p2_singleton_puzzle.get_tree_hash(),
+                        0,
+                        xch_coin.amount,
+                    ]
+                )
                 coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
 
         for tail_hash_conditions_pair in LIST_OF_TAILHASH_CONDITIONS.as_iter():
@@ -1395,7 +1398,7 @@ class DAOWallet(WalletProtocol):
             for condition in conditions.as_iter():
                 if condition.first().as_int() == 51:
                     sum_of_conditions += condition.rest().rest().first().as_int()
-            cat_coins = await self.select_coins_for_asset_type(sum, tail_hash)
+            cat_coins = await self.select_coins_for_asset_type(uint64(sum), tail_hash)
             parent_amount_list = []
             for cat_coin in cat_coins:
                 sum_of_coins += cat_coin.amount
@@ -1407,23 +1410,29 @@ class DAOWallet(WalletProtocol):
                 # my_id
                 # my_puzhash  ; only needed for merging, set to 0 otherwise
                 if cat_coin == cat_coins[-1]:  # the last coin is the one that makes the conditions
-                    change_condition = Program.to([51, p2_singleton_puzzle.get_tree_hash(), sum_of_coins - sum_of_conditions])
+                    change_condition = Program.to(
+                        [51, p2_singleton_puzzle.get_tree_hash(), sum_of_coins - sum_of_conditions]
+                    )
                     delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
-                    solution = Program.to([
-                        treasury_inner_puzhash,
-                        delegated_puzzle,
-                        0,
-                        cat_coin.name(),
-                        0,
-                    ])
+                    solution = Program.to(
+                        [
+                            treasury_inner_puzhash,
+                            delegated_puzzle,
+                            0,
+                            cat_coin.name(),
+                            0,
+                        ]
+                    )
                 else:
-                    solution = Program.to([
-                        treasury_inner_puzhash,
-                        0,
-                        0,
-                        cat_coin.name(),
-                        0,
-                    ])
+                    solution = Program.to(
+                        [
+                            treasury_inner_puzhash,
+                            0,
+                            0,
+                            cat_coin.name(),
+                            0,
+                        ]
+                    )
                 new_spendable_cat = SpendableCAT(
                     cat_coin,
                     tail_hash,
@@ -1433,15 +1442,19 @@ class DAOWallet(WalletProtocol):
                 )
                 spendable_cat_list.append(new_spendable_cat)
             if cat_spend_bundle is None:
-                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)
+                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
             else:
-                cat_spend_bundle = cat_spend_bundle.aggregate([cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)])
+                cat_spend_bundle = cat_spend_bundle.aggregate(
+                    [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)]
+                )
             tailhash_parent_amount_list.append([tail_hash, parent_amount_list])
 
-        delegated_solution = Program.to([
-            xch_parent_amount_list,
-            tailhash_parent_amount_list,
-        ])
+        delegated_solution = Program.to(
+            [
+                xch_parent_amount_list,
+                tailhash_parent_amount_list,
+            ]
+        )
         treasury_solution = Program.to(
             [
                 1,
@@ -1471,8 +1484,10 @@ class DAOWallet(WalletProtocol):
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee)
             assert chia_tx.spend_bundle is not None
-            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle, cat_spend_bundle])
-        full_spend = SpendBundle.aggregate([spend_bundle, cat_spend_bundle])
+            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+        full_spend = SpendBundle.aggregate([spend_bundle])
+        if cat_spend_bundle is not None:
+            full_spend.aggregate([full_spend, cat_spend_bundle])
         # breakpoint()
         if push:
             record = TransactionRecord(
