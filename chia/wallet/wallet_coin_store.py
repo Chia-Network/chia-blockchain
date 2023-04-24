@@ -139,16 +139,6 @@ class WalletCoinStore:
                 pass
         return self
 
-    async def count_small_unspent(self, cutoff: int, coin_type: CoinType = CoinType.NORMAL) -> int:
-        amount_bytes = bytes(uint64(cutoff))
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
-                "SELECT COUNT(*) FROM coin_record WHERE coin_type=? AND amount < ? AND spent=0",
-                (coin_type, amount_bytes),
-            )
-            return int(0 if row is None else row[0])
-
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
         if name is None:

@@ -50,6 +50,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.misc import UInt64Range
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
@@ -701,7 +702,16 @@ class WalletStateManager:
             return new_coin_state
 
         spam_filter_after_n_txs = self.config.get("spam_filter_after_n_txs", 200)
-        small_unspent_count = await self.coin_store.count_small_unspent(xch_spam_amount)
+        # Request the total count here with limit=0 to avoid deserialization of all entries since we are only
+        # interested in the count.
+        result = await self.coin_store.get_coin_records(
+            limit=uint32(0),
+            amount_range=UInt64Range(stop=uint64(xch_spam_amount - 1)),
+            spent_range=unspent_range,
+            include_total_count=True,
+        )
+        assert result.total_count is not None, "include_total_count was requested"
+        small_unspent_count = int(result.total_count)
 
         # if small_unspent_count > spam_filter_after_n_txs:
         filtered_cs: List[CoinState] = []

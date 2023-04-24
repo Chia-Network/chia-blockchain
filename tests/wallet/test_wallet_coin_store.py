@@ -807,42 +807,6 @@ async def test_rollback_to_block() -> None:
 
 
 @pytest.mark.asyncio
-async def test_count_small_unspent() -> None:
-    async with DBConnection(1) as db_wrapper:
-        store = await WalletCoinStore.create(db_wrapper)
-
-        coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(1))
-        coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(2))
-        coin_3 = Coin(token_bytes(32), token_bytes(32), uint64(4))
-
-        r1 = record(coin_1, confirmed=1, spent=0)
-        r2 = record(coin_2, confirmed=2, spent=0)
-        r3 = record(coin_3, confirmed=3, spent=0)
-
-        await store.add_coin_record(r1)
-        await store.add_coin_record(r2)
-        await store.add_coin_record(r3)
-        await store.add_coin_record(record_8)
-
-        assert await store.count_small_unspent(5) == 3
-        assert await store.count_small_unspent(4) == 2
-        assert await store.count_small_unspent(3) == 2
-        assert await store.count_small_unspent(2) == 1
-        assert await store.count_small_unspent(1) == 0
-        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 1
-
-        await store.set_spent(coin_2.name(), uint32(12))
-        await store.set_spent(coin_8.name(), uint32(12))
-
-        assert await store.count_small_unspent(5) == 2
-        assert await store.count_small_unspent(4) == 1
-        assert await store.count_small_unspent(3) == 1
-        assert await store.count_small_unspent(2) == 1
-        assert await store.count_small_unspent(3, coin_type=CoinType.CLAWBACK) == 0
-        assert await store.count_small_unspent(1) == 0
-
-
-@pytest.mark.asyncio
 async def test_delete_wallet() -> None:
     dummy_records = DummyWalletCoinRecords()
     for i in range(5):
