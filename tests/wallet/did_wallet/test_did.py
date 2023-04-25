@@ -498,8 +498,7 @@ class TestDIDWallet:
         coin = coins.pop()
         await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
-        await wallet_node.wallet_state_manager.user_store.delete_wallet(did_wallet.wallet_info.id)
-        wallet_node.wallet_state_manager.wallets.pop(did_wallet.wallet_info.id)
+        await wallet_node.wallet_state_manager.remove_wallet(did_wallet.wallet_id)
         assert len(wallet_node.wallet_state_manager.wallets) == 1
         # Find lost DID
         resp = await api_0.did_find_lost_did({"coin_id": did_wallet.did_info.origin_coin.name().hex()})

@@ -303,8 +303,7 @@ class NFTWallet:
                     if did_wallet_info.origin_coin.name() == self.did_id:
                         return
                 self.log.info(f"No NFT, deleting wallet {self.wallet_info.name} ...")
-                await self.wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
-                self.wallet_state_manager.wallets.pop(self.wallet_info.id)
+                await self.wallet_state_manager.remove_wallet(self.wallet_info.id)
         else:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
