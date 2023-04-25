@@ -196,17 +196,16 @@ async def test_fund_dao_cat(self_hostname: str, two_wallet_nodes: SimulatorsAndW
 
     for i in range(1, 5):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await asyncio.sleep(1)
     funding_tx = await dao_wallet.create_add_money_to_treasury_spend(5000)
-    await time_out_assert_not_none(
-        5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_tx.spend_bundle.name()
-    )
+    await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, funding_tx.spend_bundle.name())
     await full_node_api.process_transaction_records(records=[funding_tx])
 
     if not trusted:
         await asyncio.sleep(1)
     for i in range(1, 5):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    
+
     proposal_info = dao_wallet.dao_info.proposals_list[0]
     assert proposal_info is not None
     tx = await dao_wallet.create_proposal_close_spend(proposal_info.proposal_id)

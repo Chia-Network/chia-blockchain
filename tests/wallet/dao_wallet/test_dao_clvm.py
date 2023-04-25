@@ -318,6 +318,7 @@ def test_proposal_timer() -> None:
     proposal_timer_full: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
         CAT_MOD_HASH,
         CAT_TAIL,
         singleton_struct,

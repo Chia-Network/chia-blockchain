@@ -260,6 +260,7 @@ def get_proposal_timer_puzzle(
     puzzle: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
         CAT_MOD_HASH,
         cat_tail_hash,
         parent_singleton_struct,

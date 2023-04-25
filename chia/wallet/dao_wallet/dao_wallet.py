@@ -38,6 +38,7 @@ from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL; get_cat_tail_hash_from_treasury_puzzle,
     DAO_FINISHED_STATE,
+    DAO_TREASURY_MOD_HASH,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
     SINGLETON_LAUNCHER,
@@ -1320,12 +1321,22 @@ class DAOWallet(WalletProtocol):
             PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
         ) = curried_args.as_iter()
 
+        # treasury_mod_hash
+        # proposal_yes_votes
+        # proposal_total_votes
+        # proposal_innerpuzhash
+        # proposal_timelock
+        # spend_or_update_flag
+        # parent_parent
         timer_solution = Program.to(
             [
+                DAO_TREASURY_MOD_HASH,
                 YES_VOTES,
                 TOTAL_VOTES,
                 PROPOSED_PUZ_HASH,
+                self.dao_info.current_treasury_innerpuz.get_tree_hash(),
                 proposal_timelock,
+                SPEND_OR_UPDATE_FLAG,
                 proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
             ]
         )

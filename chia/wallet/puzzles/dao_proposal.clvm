@@ -39,6 +39,7 @@
   (defun calculate_timer_puzhash (
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
+    LOCKUP_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL_HASH
     MY_SINGLETON_STRUCT
@@ -49,6 +50,7 @@
                                      (sha256tree MY_SINGLETON_STRUCT)
                                      (sha256 ONE CAT_TAIL_HASH)
                         				     (sha256 ONE CAT_MOD_HASH)
+                                     (sha256 ONE LOCKUP_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
     )
@@ -151,7 +153,6 @@
     SINGLETON_STRUCT
     CAT_MOD_HASH
     CAT_TAIL_HASH
-    LOCKUP_MOD_HASH
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
     TREASURY_MOD_HASH
@@ -197,7 +198,6 @@
             SINGLETON_STRUCT
             CAT_MOD_HASH
             CAT_TAIL_HASH
-            LOCKUP_MOD_HASH
             PROPOSAL_MOD_HASH
             PROPOSAL_TIMER_MOD_HASH
             TREASURY_MOD_HASH
@@ -288,6 +288,7 @@
         	      (calculate_timer_puzhash
         	        PROPOSAL_MOD_HASH
               		PROPOSAL_TIMER_MOD_HASH
+                  LOCKUP_MOD_HASH
               		CAT_MOD_HASH
               		CAT_TAIL_HASH
               		SINGLETON_STRUCT
@@ -353,7 +354,6 @@
       	SINGLETON_STRUCT
       	CAT_MOD_HASH
       	CAT_TAIL_HASH
-      	LOCKUP_MOD_HASH
       	PROPOSAL_MOD_HASH
       	PROPOSAL_TIMER_MOD_HASH
       	TREASURY_MOD_HASH
@@ -377,6 +377,7 @@
       	      (calculate_timer_puzhash
       	        PROPOSAL_MOD_HASH
             		PROPOSAL_TIMER_MOD_HASH
+                LOCKUP_MOD_HASH
             		CAT_MOD_HASH
             		CAT_TAIL_HASH
             		SINGLETON_STRUCT
