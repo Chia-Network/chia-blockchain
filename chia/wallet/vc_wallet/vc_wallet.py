@@ -143,7 +143,7 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")
         # Mint VC
-        coins = await self.standard_wallet.select_coins(uint64(2 + fee), min_coin_amount=uint64(2 + fee))
+        coins = await self.standard_wallet.select_coins(uint64(1 + fee), min_coin_amount=uint64(1 + fee))
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")
         if inner_puzzle_hash is None:
