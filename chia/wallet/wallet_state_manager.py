@@ -1811,22 +1811,31 @@ class WalletStateManager:
             self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(self, puzzle_hashes: List[bytes32], wallet_ids: List[int]) -> None:
+        # TODO: It's unclear if the intended use for this is that each puzzle hash should store all
+        # the elements of wallet_ids. It only stores one wallet_id per puzzle hash in the interested_store
+        # but the coin_cache keeps all wallet_ids for each puzzle hash
         for puzzle_hash in puzzle_hashes:
             if puzzle_hash in self.interested_coin_cache:
-                self.interested_coin_cache[puzzle_hash].extend(wallet_ids)
+                wallet_ids_to_add = list(
+                    set([w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]])
+                )
+                self.interested_coin_cache[puzzle_hash].extend(wallet_ids_to_add)
             else:
-                self.interested_coin_cache[puzzle_hash] = wallet_ids
+                self.interested_coin_cache[puzzle_hash] = list(set(wallet_ids))
         for puzzle_hash, wallet_id in zip(puzzle_hashes, wallet_ids):
             await self.interested_store.add_interested_puzzle_hash(puzzle_hash, wallet_id)
         if len(puzzle_hashes) > 0:
             await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(puzzle_hashes)
 
     async def add_interested_coin_ids(self, coin_ids: List[bytes32], wallet_ids: List[int] = []) -> None:
+        # TODO: FIX: wallet_ids is sometimes populated unexpectedly when called from add_pending_transaction
         for coin_id in coin_ids:
             if coin_id in self.interested_coin_cache:
-                self.interested_coin_cache[coin_id].extend(wallet_ids)
+                # prevent repeated wallet_ids from appearing in the coin cache
+                wallet_ids_to_add = list(set([w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]]))
+                self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
             else:
-                self.interested_coin_cache[coin_id] = wallet_ids
+                self.interested_coin_cache[coin_id] = list(set(wallet_ids))
         for coin_id in coin_ids:
             await self.interested_store.add_interested_coin_id(coin_id)
         if len(coin_ids) > 0:
