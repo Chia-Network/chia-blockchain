@@ -1700,10 +1700,8 @@ class WalletStateManager:
                 name,
             )
 
-    async def add_new_wallet(self, wallet: WalletProtocol, create_puzhash: bool = True) -> None:
+    async def add_new_wallet(self, wallet: WalletProtocol) -> None:
         self.wallets[wallet.id()] = wallet
-        if create_puzhash:
-            await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(

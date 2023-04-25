@@ -56,7 +56,7 @@ class VCWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.store = wallet_state_manager.vc_store
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), "")
-        await self.wallet_state_manager.add_new_wallet(self, False)
+        await self.wallet_state_manager.add_new_wallet(self)
         return self
 
     @classmethod
