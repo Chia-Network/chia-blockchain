@@ -1139,7 +1139,7 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
 
 async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    vc_record, txs = await wallet_client.vc_mint_vc(
+    vc_record, txs = await wallet_client.vc_mint(
         decode_puzzle_hash(ensure_valid_address(args["did"], allowed_types={AddressType.DID}, config=config)),
         None
         if args["target_address"] is None
@@ -1164,7 +1164,7 @@ async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
 
 async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    vc_records, proofs = await wallet_client.vc_get_vc_list(args["start"], args["count"])
+    vc_records, proofs = await wallet_client.vc_get_list(args["start"], args["count"])
     print("Proofs:")
     for hash, proof_dict in proofs.items():
         print(f"- {hash}")
@@ -1185,7 +1185,7 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
 
 async def spend_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    txs = await wallet_client.vc_spend_vc(
+    txs = await wallet_client.vc_spend(
         bytes32.from_hexstr(args["vc_id"]),
         new_puzhash=None if args["new_puzhash"] is None else bytes32.from_hexstr(args["new_puzhash"]),
         new_proof_hash=bytes32.from_hexstr(args["new_proof_hash"]),
@@ -1216,13 +1216,13 @@ async def add_proof_reveal(args: Dict, wallet_client: WalletRpcClient, fingerpri
         print(f"Proof Hash: {VCProofs(proof_dict).root()}")
         return
     else:
-        await wallet_client.add_vc_proofs(proof_dict)
+        await wallet_client.vc_add_proofs(proof_dict)
         print("Proofs added to DB successfully!")
         return
 
 
 async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    proof_dict: Dict[str, str] = await wallet_client.get_proofs_for_root(bytes32.from_hexstr(args["proof_hash"]))
+    proof_dict: Dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(args["proof_hash"]))
     print("Proofs:")
     for proof in proof_dict:
         print(f" - {proof}")
@@ -1230,7 +1230,7 @@ async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, finger
 
 async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    txs = await wallet_client.vc_revoke_vc(
+    txs = await wallet_client.vc_revoke(
         bytes32.from_hexstr(args["parent_coin_id"]),
         fee=uint64(0) if args["fee"] is None else uint64(int(Decimal(args["fee"]) * units["chia"])),
         reuse_puzhash=args["reuse_puzhash"],

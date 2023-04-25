@@ -63,20 +63,20 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
 
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
-    vc_record, txs = await client_0.vc_mint_vc(did_id)
+    vc_record, txs = await client_0.vc_mint(did_id)
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
     assert len(vc_wallet) == 1
-    new_vc_record: Optional[VCRecord] = await client_0.vc_get_vc(vc_record.vc.launcher_id)
+    new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert new_vc_record is not None
 
     assert did_wallet.did_info.current_inner is not None
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "bar", "baz": "qux", "corge": "grault"})
     proof_root: bytes32 = proofs.root()
-    txs = await client_0.vc_spend_vc(
+    txs = await client_0.vc_spend(
         vc_record.vc.launcher_id,
         new_proof_hash=proof_root,
         fee=uint64(100),
@@ -84,21 +84,21 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    vc_record_updated: Optional[VCRecord] = await client_0.vc_get_vc(vc_record.vc.launcher_id)
+    vc_record_updated: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Add proofs to DB
-    await client_0.add_vc_proofs(proofs.key_value_pairs)
-    assert await client_0.get_proofs_for_root(proof_root) == proofs.key_value_pairs
-    vc_records, fetched_proofs = await client_0.vc_get_vc_list()
+    await client_0.vc_add_proofs(proofs.key_value_pairs)
+    assert await client_0.vc_get_proofs_for_root(proof_root) == proofs.key_value_pairs
+    vc_records, fetched_proofs = await client_0.vc_get_list()
     assert len(vc_records) == 1
     assert fetched_proofs[proof_root.hex()] == proofs.key_value_pairs
 
     # Revoke VC
-    txs = await client_0.vc_revoke_vc(vc_record_updated.vc.coin.parent_coin_info, uint64(1))
+    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, uint64(1))
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    vc_record_revoked: Optional[VCRecord] = await client_0.vc_get_vc(vc_record.vc.launcher_id)
+    vc_record_revoked: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_revoked is None

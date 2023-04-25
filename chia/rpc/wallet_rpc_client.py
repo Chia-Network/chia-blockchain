@@ -1128,11 +1128,11 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("sign_message_by_id", {"id": id, "message": message})
         return response["pubkey"], response["signature"], response["signing_mode"]
 
-    async def vc_mint_vc(
+    async def vc_mint(
         self, did_id: bytes32, target_address: Optional[bytes32] = None, fee: uint64 = uint64(0)
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
         response = await self.fetch(
-            "vc_mint_vc",
+            "vc_mint",
             {
                 "did_id": encode_puzzle_hash(did_id, "rpc"),
                 "target_address": encode_puzzle_hash(target_address, "rpc") if target_address is not None else None,
@@ -1143,15 +1143,15 @@ class WalletRpcClient(RpcClient):
             TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
         ]
 
-    async def vc_get_vc(self, vc_id: bytes32) -> Optional[VCRecord]:
-        response = await self.fetch("vc_get_vc", {"vc_id": vc_id.hex()})
+    async def vc_get(self, vc_id: bytes32) -> Optional[VCRecord]:
+        response = await self.fetch("vc_get", {"vc_id": vc_id.hex()})
         return None if response["vc_record"] is None else VCRecord.from_json_dict(response["vc_record"])
 
-    async def vc_get_vc_list(self, start: int = 0, count: int = 50) -> Tuple[List[VCRecord], Dict[str, Any]]:
-        response = await self.fetch("vc_get_vc_list", {"start": start, "count": count})
+    async def vc_get_list(self, start: int = 0, count: int = 50) -> Tuple[List[VCRecord], Dict[str, Any]]:
+        response = await self.fetch("vc_get_list", {"start": start, "count": count})
         return [VCRecord.from_json_dict(rec) for rec in response["vc_records"]], response["proofs"]
 
-    async def vc_spend_vc(
+    async def vc_spend(
         self,
         vc_id: bytes32,
         new_puzhash: Optional[bytes32] = None,
@@ -1161,7 +1161,7 @@ class WalletRpcClient(RpcClient):
         reuse_puzhash: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         response = await self.fetch(
-            "vc_spend_vc",
+            "vc_spend",
             {
                 "vc_id": vc_id.hex(),
                 "new_puzhash": new_puzhash.hex() if new_puzhash is not None else new_puzhash,
@@ -1175,20 +1175,20 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def add_vc_proofs(self, proofs: Dict[str, Any]) -> None:
-        await self.fetch("add_vc_proofs", {"proofs": proofs})
+    async def vc_add_proofs(self, proofs: Dict[str, Any]) -> None:
+        await self.fetch("vc_add_proofs", {"proofs": proofs})
 
-    async def get_proofs_for_root(self, root: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("get_proofs_for_root", {"root": root.hex()})
+    async def vc_get_proofs_for_root(self, root: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("vc_get_proofs_for_root", {"root": root.hex()})
         return response["proofs"]
 
-    async def vc_revoke_vc(
+    async def vc_revoke(
         self,
         vc_parent_id: bytes32,
         fee: uint64 = uint64(0),
         reuse_puzhash: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         response = await self.fetch(
-            "vc_revoke_vc", {"vc_parent_id": vc_parent_id.hex(), "fee": fee, "reuse_puzhash": reuse_puzhash}
+            "vc_revoke", {"vc_parent_id": vc_parent_id.hex(), "fee": fee, "reuse_puzhash": reuse_puzhash}
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]

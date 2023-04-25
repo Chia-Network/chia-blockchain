@@ -214,13 +214,13 @@ class WalletRpcApi:
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
             # Verified Credential
-            "/vc_mint_vc": self.vc_mint_vc,
-            "/vc_get_vc": self.vc_get_vc,
-            "/vc_get_vc_list": self.vc_get_vc_list,
-            "/vc_spend_vc": self.vc_spend_vc,
-            "/add_vc_proofs": self.add_vc_proofs,
-            "/get_proofs_for_root": self.get_proofs_for_root,
-            "/vc_revoke_vc": self.vc_revoke_vc,
+            "/vc_mint": self.vc_mint,
+            "/vc_get": self.vc_get,
+            "/vc_get_list": self.vc_get_list,
+            "/vc_spend": self.vc_spend,
+            "/vc_add_proofs": self.vc_add_proofs,
+            "/vc_get_proofs_for_root": self.vc_get_proofs_for_root,
+            "/vc_revoke": self.vc_revoke,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -3268,7 +3268,7 @@ class WalletRpcApi:
     ##########################################################################################
     # Verified Credential
     ##########################################################################################
-    async def vc_mint_vc(self, request) -> Dict:
+    async def vc_mint(self, request) -> Dict:
         """
         Mint a verified credential using the assigned DID
         :param request: We require 'did_id' that will be minting the VC and options for a new 'target_address' as well
@@ -3300,7 +3300,7 @@ class WalletRpcApi:
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_list],
         }
 
-    async def vc_get_vc(self, request) -> Dict:
+    async def vc_get(self, request) -> Dict:
         """
         Given a launcher ID get the verified credential
         :param request: the 'vc_id' launcher id of a verifiable credential
@@ -3311,7 +3311,7 @@ class WalletRpcApi:
         )
         return {"vc_record": vc_record}
 
-    async def vc_get_vc_list(self, request) -> Dict:
+    async def vc_get_list(self, request) -> Dict:
         """
         Get a list of verified credentials
         :param request: optional parameters for pagination 'start' and 'count'
@@ -3332,7 +3332,7 @@ class WalletRpcApi:
             },
         }
 
-    async def vc_spend_vc(self, request) -> Dict:
+    async def vc_spend(self, request) -> Dict:
         """
         Spend a verified credential
         :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional paramaters for a 'new_puzhash'
@@ -3379,7 +3379,7 @@ class WalletRpcApi:
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
 
-    async def add_vc_proofs(self, request) -> Dict:
+    async def vc_add_proofs(self, request) -> Dict:
         """
         Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
         been added.
@@ -3402,7 +3402,7 @@ class WalletRpcApi:
 
         return {}
 
-    async def get_proofs_for_root(self, request) -> Dict:
+    async def vc_get_proofs_for_root(self, request) -> Dict:
         """
         Given a specified vc root, get any proofs associated with that root.
         :param request: must specify 'root' representing the tree hash of some set of proofs
@@ -3425,7 +3425,7 @@ class WalletRpcApi:
             raise ValueError("no proofs found for specified root")
         return {"proofs": vc_proofs.key_value_pairs}
 
-    async def vc_revoke_vc(self, request) -> Dict:
+    async def vc_revoke(self, request) -> Dict:
         """
         Revoke an on chain VC provided the correct DID is available
         :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
