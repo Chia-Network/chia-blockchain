@@ -27,13 +27,10 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
+from chia.wallet.cat_wallet.cat_utils import SpendableCAT
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.puzzles.cat_loader import CAT_MOD
-from chia.wallet.cat_wallet.cat_utils import (
-    SpendableCAT,
-    unsigned_spend_bundle_for_spendable_cats,
-)
 
 # from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
@@ -53,6 +50,7 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_new_puzzle_from_proposal_solution,
     get_new_puzzle_from_treasury_solution,
     get_p2_singleton_puzhash,
+    get_p2_singleton_puzzle,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
     get_proposed_puzzle_reveal_from_solution,
@@ -60,20 +58,19 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
     uncurry_proposal,
-    get_proposed_puzzle_reveal_from_solution,
     uncurry_spend_p2_singleton,
-    get_p2_singleton_puzzle,
     uncurry_treasury,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_innerpuzzle_from_puzzle,
     get_most_recent_singleton_coin_from_coin_spend,
+    get_singleton_id_from_puzzle,
 )
-
-# from chia.wallet.singleton_record import SingletonRecord
+from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -452,9 +449,21 @@ class DAOWallet(WalletProtocol):
         assert sum(c.amount for c in coins) >= amount
         return coins
 
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
+        wallet_node: Any = self.wallet_state_manager.wallet_node
+        peer = wallet_node.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
+        # Get the parent coin spend
+        cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
+        parent_spend = await wallet_node.fetch_puzzle_solution(cs.spent_height, cs.coin, peer)
+
+        # check if it's a singleton and add to singleton_store
+        singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
+        if singleton_id:
+            await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
         # self.log.info(f"DAOWallet.coin_added() is unused.")
         return
 
@@ -1665,10 +1674,10 @@ class DAOWallet(WalletProtocol):
         # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
         return get_most_recent_singleton_coin_from_coin_spend(spend)
 
-    async def get_tip(self) -> Tuple[uint32, CoinSpend]:
-        ret: List[Tuple[uint32, CoinSpend]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
-            self.wallet_id
-        )
+    async def get_tip(self, singleton_id: bytes32) -> Tuple[uint32, SingletonRecord]:
+        ret: List[
+            Tuple[uint32, SingletonRecord]
+        ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
         if len(ret) == 0:
             raise ValueError("Could not get latest Singleton from wallet data store")
         return ret[-1]
@@ -1848,8 +1857,13 @@ class DAOWallet(WalletProtocol):
         await self.add_parent(new_state.coin.name(), future_parent)
         return
 
-    async def get_spend_history(self) -> List[Tuple[uint32, CoinSpend]]:
-        return []
+    async def get_spend_history(self, singleton_id: bytes32) -> List[Tuple[uint32, CoinSpend]]:
+        ret: List[
+            Tuple[uint32, CoinSpend]
+        ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
+        if len(ret) == 0:
+            raise ValueError(f"No records found in singleton store for singleton id {singleton_id}")
+        return ret
 
     # TODO: Find a nice way to express interest in more than one singleton.
     #     e.g. def register_singleton_for_wallet()
@@ -1858,27 +1872,32 @@ class DAOWallet(WalletProtocol):
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
-        tip: Tuple[uint32, CoinSpend] = await self.get_tip()
+        singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
+        if not singleton_id:
+            raise ValueError("Received a non singleton coin for dao wallet")
+        tip: Tuple[uint32, SingletonRecord] = await self.get_tip(singleton_id)
         if tip is None:
             # this is our first time, just store it
             # await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
             await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
         else:
-            tip_spend = tip[1]
+            assert isinstance(tip, SingletonRecord)
+            tip_spend = tip.parent_coinspend
 
             tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
             assert tip_coin is not None
-            spent_coin_name: bytes32 = tip_coin.name()
+            # spent_coin_name: bytes32 = tip_coin.name()
 
-            if spent_coin_name != new_state.coin.name():
-                history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
-                if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
-                    self.log.info(f"Already have state transition: {new_state.coin.name().hex()}")
-                else:
-                    self.log.warning(
-                        f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
-                    )
-                return False
+            # TODO: Work out what is needed here
+            # if spent_coin_name != new_state.coin.name():
+            #     history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
+            #     if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
+            #         self.log.info(f"Already have state transition: {new_state.coin.name().hex()}")
+            #     else:
+            #         self.log.warning(
+            #             f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+            #         )
+            #     return False
             # await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
             await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
 

@@ -172,8 +172,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    cat_wallet_1_bal = await cat_wallet_1.get_confirmed_balance()
-    assert cat_wallet_1_bal == cat_amt
+    await time_out_assert(10, cat_wallet_1.get_confirmed_balance, cat_amt)
 
 
 @pytest.mark.parametrize(
@@ -267,8 +266,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
-    cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
-    assert cat_wallet_0_bal == cat_amt
+    await time_out_assert(10, cat_wallet_0.get_confirmed_balance, cat_amt)
 
     # Create funding spends for xch and cat
     xch_funds = uint64(500000)
@@ -284,8 +282,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # Check that the funding spend is recognized by both dao wallets
-    xch_bal = await dao_wallet_0.get_balance_by_asset_type()
-    assert xch_bal == xch_funds
+    await time_out_assert(10, dao_wallet_0.get_balance_by_asset_type, xch_funds)
 
     cat_funding_tx = await dao_wallet_0.create_add_money_to_treasury_spend(
         cat_funds, funding_wallet_id=cat_wallet_0.id()
@@ -299,13 +296,11 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    cat_bal = await cat_wallet_0.get_confirmed_balance()
-    assert cat_bal == cat_amt - cat_funds
+    await time_out_assert(10, cat_wallet_0.get_confirmed_balance, cat_amt - cat_funds)
 
     # Check that the funding spend is found
     cat_id = bytes32.from_hexstr(cat_wallet_0.get_asset_id())
-    cat_bal = await dao_wallet_0.get_balance_by_asset_type(cat_id)
-    assert cat_bal == cat_funds
+    await time_out_assert(10, dao_wallet_0.get_balance_by_asset_type, cat_funds, cat_id)
 
     # Create the other user's wallet from the treasury id
     async with wallet_node_0.wallet_state_manager.lock:
@@ -322,12 +317,8 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert cat_wallet_1
     assert cat_wallet_1.cat_info.limitations_program_hash == cat_id
 
-    xch_bal_1 = await dao_wallet_1.get_balance_by_asset_type()
-    assert xch_bal_1 == xch_funds
-
-    # Check that the funding spend is found
-    cat_bal = await dao_wallet_1.get_balance_by_asset_type(cat_id)
-    assert cat_bal == cat_funds
+    await time_out_assert(10, dao_wallet_1.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(10, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
 
 
 @pytest.mark.parametrize(
@@ -420,8 +411,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
-    cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
-    assert cat_wallet_0_bal == cat_amt
+    await time_out_assert(10, cat_wallet_0.get_confirmed_balance, cat_amt)
 
     # get the dao_cat wallet
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
@@ -429,7 +419,6 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
     # Create the other user's wallet from the treasury id
-    # async with wallet_node_1.wallet_state_manager.lock:
     dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
         wallet_node_1.wallet_state_manager,
         wallet_1,
@@ -451,8 +440,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # Check that the funding spend is recognized by both dao wallets
-    xch_bal = await dao_wallet_0.get_balance_by_asset_type()
-    assert xch_bal == xch_funds
+    await time_out_assert(10, dao_wallet_0.get_balance_by_asset_type, xch_funds)
 
     # Send some dao_cats to wallet_1
     # Get the cat wallets for wallet_1
@@ -530,10 +518,12 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal + dao_cat_1_bal
-    assert dao_wallet_0.dao_info.proposals_list[0].yes_votes == dao_cat_0_bal + dao_cat_1_bal
-    assert dao_wallet_1.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal + dao_cat_1_bal
-    assert dao_wallet_1.dao_info.proposals_list[0].yes_votes == dao_cat_0_bal + dao_cat_1_bal
+    total_votes = dao_cat_0_bal + dao_cat_1_bal
+
+    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == total_votes
+    assert dao_wallet_0.dao_info.proposals_list[0].yes_votes == total_votes
+    assert dao_wallet_1.dao_info.proposals_list[0].amount_voted == total_votes
+    assert dao_wallet_1.dao_info.proposals_list[0].yes_votes == total_votes
 
     # Add a third wallet and check they can find proposal with accurate vote counts
     dao_wallet_2 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
@@ -544,11 +534,5 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     assert dao_wallet_2 is not None
     assert dao_wallet_2.dao_info.treasury_id == treasury_id
 
-    # Give the new wallet a second to sync proposals
-    await asyncio.sleep(1)
-    assert dao_wallet_2.dao_info.proposals_list
-    assert dao_wallet_2.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal + dao_cat_1_bal
-
-    # TODO: close the passing proposal
-    # TODO: Close a failed proposal
-    # TODO: Test early close fails
+    await time_out_assert(10, len, 1, dao_wallet_2.dao_info.proposals_list)
+    await time_out_assert(10, int, total_votes, dao_wallet_2.dao_info.proposals_list[0].amount_voted)

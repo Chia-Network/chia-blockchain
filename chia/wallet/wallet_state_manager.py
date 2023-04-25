@@ -1577,6 +1577,7 @@ class WalletStateManager:
         await self.coin_store.add_coin_record(coin_record, coin_name)
 
         if wallet_type == WalletType.DAO:
+            await self.wallets[wallet_id].coin_added(coin, height, peer)
             return
         await self.wallets[wallet_id].coin_added(coin, height, peer)
 

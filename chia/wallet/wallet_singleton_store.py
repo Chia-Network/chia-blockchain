@@ -108,8 +108,12 @@ class WalletSingletonStore:
         inner_puz = get_innerpuzzle_from_puzzle(coin_state.puzzle_reveal)
         if inner_puz is None:
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
-        lineage_bytes = coin_state.solution.to_program().first().as_atom_list()
-        lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
+
+        lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
+        if len(lineage_bytes) == 2:
+            lineage_proof = LineageProof(lineage_bytes[0], None, int_from_bytes(lineage_bytes[1]))
+        else:
+            lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
         # Create and save the new singleton record
         new_record = SingletonRecord(
             coin, singleton_id, wallet_id, coin_state, inner_puz.get_tree_hash(), True, 0, lineage_proof, None

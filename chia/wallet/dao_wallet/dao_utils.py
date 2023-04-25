@@ -14,6 +14,7 @@ from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.singleton import create_fullpuz, get_innerpuzzle_from_puzzle
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
@@ -543,8 +544,10 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program) -> Optio
     try:
         if match_cat_puzzle(uncurried):
             conditions = solution.at("frfr").as_iter()
-        else:
+        elif uncurried.mod == MOD:
             conditions = solution.at("rfr").as_iter()
+        else:
+            return None
         for cond in conditions:
             if (cond.list_len() == 4) and (cond.first().as_int() == 51):
                 maybe_treasury_id = cond.at("rrrff")
