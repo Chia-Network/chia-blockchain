@@ -364,6 +364,7 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
             False,
         ),
         ([(1337, ["LEET"]), (81000, ["pingwei"])], 817, False, True),
+        ([(120000000000, None), (120000000000, None)], 10000000000, True, False),
     ],
 )
 @pytest.mark.asyncio
