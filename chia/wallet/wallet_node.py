@@ -56,10 +56,10 @@ from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_header_blocks_in_range,
     fetch_last_tx_from_peer,
-    last_change_height_cs,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
+    sort_coin_states,
     subscribe_to_coin_updates,
     subscribe_to_phs,
 )
@@ -832,7 +832,7 @@ class WalletNode:
         # Ensure the list is sorted
 
         before = len(items_input)
-        items = await self.wallet_state_manager.filter_spam(list(sorted(items_input, key=last_change_height_cs)))
+        items = await self.wallet_state_manager.filter_spam(sort_coin_states(items_input))
         num_filtered = before - len(items)
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
