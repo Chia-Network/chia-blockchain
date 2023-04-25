@@ -423,7 +423,7 @@ class VCWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
-        raise RuntimeError("NFTWallet does not support select_coins()")
+        raise RuntimeError("VCWallet does not support select_coins()")
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         """The VC wallet doesn't really have a balance."""
