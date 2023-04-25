@@ -234,7 +234,7 @@ class VCWallet:
 
         if fee > 0:
             announcement_to_make = vc_record.vc.coin.name()
-            chia_tx = await self.create_tandem_xch_tx(
+            chia_tx = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                 fee, Announcement(vc_record.vc.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
             if coin_announcements is None:
@@ -380,7 +380,9 @@ class VCWallet:
             memos=list(compute_memos(final_bundle).items()),
         )
         if fee > 0:
-            chia_tx: TransactionRecord = await self.create_tandem_xch_tx(fee, vc_announcement, reuse_puzhash)
+            chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                fee, vc_announcement, reuse_puzhash
+            )
             assert tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
             tx = dataclasses.replace(tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, tx.spend_bundle]))
@@ -388,32 +390,6 @@ class VCWallet:
             return [tx, chia_tx]
         else:
             return [tx]
-
-    async def create_tandem_xch_tx(
-        self,
-        fee: uint64,
-        announcement_to_assert: Optional[Announcement] = None,
-        reuse_puzhash: Optional[bool] = None,
-    ) -> TransactionRecord:
-        chia_coins = await self.standard_wallet.select_coins(fee)
-        if reuse_puzhash is None:
-            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
-                reuse_puzhash = False
-            else:
-                reuse_puzhash = reuse_puzhash_config.get(
-                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
-                )
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
-            fee=fee,
-            coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-            reuse_puzhash=reuse_puzhash,
-        )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
 
     async def select_coins(
         self,
