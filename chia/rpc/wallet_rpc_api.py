@@ -3271,8 +3271,10 @@ class WalletRpcApi:
     async def vc_mint_vc(self, request) -> Dict:
         """
         Mint a verified credential using the assigned DID
-        :param request:
-        :return:
+        :param request: We require 'did_id' that will be minting the VC and options for a new 'target_address' as well
+        as a 'fee' for the mint tx
+        :return: a 'vc_record' containing all the information of the soon-to-be-confirmed vc as well as any relevant
+        'transactions'
         """
         did_id = decode_puzzle_hash(request["did_id"])
         target_address = request.get("target_address", None)
@@ -3301,8 +3303,8 @@ class WalletRpcApi:
     async def vc_get_vc(self, request) -> Dict:
         """
         Given a launcher ID get the verified credential
-        :param request:
-        :return:
+        :param request: the 'vc_id' launcher id of a verifiable credential
+        :return: the 'vc_record' representing the specified verifiable credential
         """
         vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(
             bytes32.from_hexstr(request["vc_id"])
@@ -3312,8 +3314,8 @@ class WalletRpcApi:
     async def vc_get_vc_list(self, request) -> Dict:
         """
         Get a list of verified credentials
-        :param request:
-        :return:
+        :param request: optional parameters for pagination 'start' and 'count'
+        :return: all 'vc_records' in the specified range and any 'proofs' associated with the roots contained within
         """
         vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(
             request.get("start", 0), request.get("count", 50)
@@ -3333,8 +3335,10 @@ class WalletRpcApi:
     async def vc_spend_vc(self, request) -> Dict:
         """
         Spend a verified credential
-        :param request:
-        :return:
+        :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional paramaters for a 'new_puzhash'
+        for the vc to end up at and 'new_proof_hash' & 'provider_inner_puzhash' which can be used to update the vc's
+        proofs. Also standard 'fee' & 'reuse_puzhash' parameters for the transaction.
+        :return: a list of all relevant 'transactions' to perform this spend
         """
         vc_id: bytes32 = bytes32.from_hexstr(request["vc_id"])
         new_puzhash: Optional[bytes32] = None
@@ -3376,6 +3380,12 @@ class WalletRpcApi:
         }
 
     async def add_vc_proofs(self, request) -> Dict:
+        """
+        Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
+        been added.
+        :param request: 'proofs' is a dictionary of key/value pairs
+        :return:
+        """
         # get VC wallet
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.VC:
@@ -3393,6 +3403,11 @@ class WalletRpcApi:
         return {}
 
     async def get_proofs_for_root(self, request) -> Dict:
+        """
+        Given a specified vc root, get any proofs associated with that root.
+        :param request: must specify 'root' representing the tree hash of some set of proofs
+        :return: a dictionary of root hashes mapped to dictionaries of key value pairs of 'proofs'
+        """
         # get VC wallet
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.VC:
@@ -3411,6 +3426,11 @@ class WalletRpcApi:
         return {"proofs": vc_proofs.key_value_pairs}
 
     async def vc_revoke_vc(self, request) -> Dict:
+        """
+        Revoke an on chain VC provided the correct DID is available
+        :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
+        :return: all relevant 'transactions'
+        """
         # get VC wallet
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.VC:
