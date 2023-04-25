@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
 
@@ -30,13 +30,14 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 _T_VCWallet = TypeVar("_T_VCWallet", bound="VCWallet")
 
 
 class VCWallet:
-    # WalletStateManager is only imported for type hinting thus leaving pylint
-    # unable to process this
-    wallet_state_manager: Any  # pylint: disable=used-before-assignment
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     standard_wallet: Wallet
     wallet_info: WalletInfo
@@ -45,7 +46,7 @@ class VCWallet:
     @classmethod
     async def create_new_vc_wallet(
         cls: Type[_T_VCWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         name: Optional[str] = None,
     ) -> _T_VCWallet:
@@ -62,7 +63,7 @@ class VCWallet:
     @classmethod
     async def create(
         cls: Type[_T_VCWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
@@ -331,17 +332,20 @@ class VCWallet:
         vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(cs)
 
         # Check if we own the DID
-        found_did = False
-        for _, did_wallet in self.wallet_state_manager.wallets.items():
-            if did_wallet.type() == WalletType.DECENTRALIZED_ID:
-                assert isinstance(did_wallet, DIDWallet)
-                if bytes32.fromhex(did_wallet.get_my_DID()) == vc.proof_provider:
-                    found_did = True
+        did_wallet: DIDWallet
+        for _, wallet in self.wallet_state_manager.wallets.items():
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
+                assert isinstance(wallet, DIDWallet)
+                if bytes32.fromhex(wallet.get_my_DID()) == vc.proof_provider:
+                    did_wallet = wallet
                     break
-        if not found_did:
+        else:
             raise ValueError(f"You don't own the DID {vc.proof_provider.hex()}")
 
-        _, provider_inner_puzhash, _ = await did_wallet.get_info_for_recovery()
+        recovery_info: Optional[Tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
+        if recovery_info is None:
+            raise RuntimeError("DID could not currently be accessed while trying to revoke VC")
+        _, provider_inner_puzhash, _ = recovery_info
 
         # Generate spend specific nonce
         coins = await did_wallet.select_coins(uint64(1))
