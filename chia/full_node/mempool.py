@@ -180,6 +180,17 @@ class Mempool:
             )
             return [self._row_to_item(row) for row in cursor]
 
+    def get_items_by_coin_ids(self, spent_coin_ids: List[bytes32]) -> List[MempoolItem]:
+        items: List[MempoolItem] = []
+        for coin_ids in chunks(spent_coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
+            args = ",".join(["?"] * len(coin_ids))
+            with self._db_conn:
+                cursor = self._db_conn.execute(
+                    f"SELECT * FROM tx WHERE name IN (SELECT tx FROM spends WHERE coin_id IN ({args}))", tuple(coin_ids)
+                )
+                items.extend(self._row_to_item(row) for row in cursor)
+        return items
+
     def get_min_fee_rate(self, cost: int) -> float:
         """
         Gets the minimum fpc rate that a transaction with specified cost will need in order to get included.
