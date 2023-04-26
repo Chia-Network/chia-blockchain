@@ -1,7 +1,7 @@
 (mod
   (
     TREASURY_MOD_HASH
-    PROPOSAL_VALIDATOR
+    PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
     PROPOSAL_LENGTH
     PROPOSAL_SOFTCLOSE_LENGTH
     ATTENDANCE_REQUIRED

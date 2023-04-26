@@ -762,7 +762,7 @@ class DAOWallet(WalletProtocol):
 
         await self.save_info(dao_info)
 
-        dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules)
+        dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules, origin.name(), cat_tail_hash)
         full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
 

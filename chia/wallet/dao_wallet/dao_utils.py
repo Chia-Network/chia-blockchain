@@ -75,10 +75,35 @@ def create_new_proposal_puzzle(
     return puzzle
 
 
-def get_treasury_puzzle(dao_rules: DAORules) -> Program:
+def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash: bytes32) -> Program:
+    # SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # CAT_MOD_HASH
+    # LOCKUP_MOD_HASH
+    # TREASURY_MOD_HASH
+    # CAT_TAIL_HASH
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
+    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD_HASH,
+        DAO_PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        DAO_TREASURY_MOD_HASH,
+        cat_tail_hash,
+    )
+    # TREASURY_MOD_HASH
+    # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
+    # PROPOSAL_LENGTH
+    # PROPOSAL_SOFTCLOSE_LENGTH
+    # ATTENDANCE_REQUIRED
+    # PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
+    # PROPOSAL_SELF_DESTRUCT_TIME ; time in seconds after which proposals can be automatically closed
+    # ORACLE_SPEND_DELAY  ; timelock delay for oracle spend
     puzzle = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD_HASH,
-        DAO_PROPOSAL_VALIDATOR_MOD,
+        proposal_validator,
         dao_rules.proposal_timelock,
         dao_rules.soft_close_length,
         dao_rules.attendance_required,
