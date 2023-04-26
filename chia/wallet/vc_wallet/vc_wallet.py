@@ -149,7 +149,7 @@ class VCWallet:
             raise ValueError("Cannot find a coin to mint the verified credential.")
         if inner_puzzle_hash is None:
             inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=False)
-        original_coin = coins.copy().pop()
+        original_coin = coins.pop()
         dpuz, coin_spends, vc = VerifiedCredential.launch(
             original_coin,
             provider_did,
