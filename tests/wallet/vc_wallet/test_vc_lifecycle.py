@@ -615,7 +615,13 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 malicious_cr_1 = cr_1
                 malicious_cr_2 = cr_2
 
-        for error in ("forget_vc", "make_banned_announcement", "use_malicious_cats", None):
+        for error in (
+            "forget_vc",
+            "make_banned_announcement",
+            "use_malicious_cats",
+            "attempt_honest_cat_piggyback",
+            None,
+        ):
             # The CR-CAT coin spends
             expected_announcements, cr_cat_spends, new_crcats = CRCAT.spend_many(
                 [
@@ -663,13 +669,13 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         [
                             62,
                             cr_1.expected_announcement()
-                            if error != "use_malicious_cats"
+                            if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
                             else malicious_cr_1.expected_announcement(),
                         ],
                         [
                             62,
                             cr_2.expected_announcement()
-                            if error != "use_malicious_cats"
+                            if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
                             else malicious_cr_2.expected_announcement(),
                         ],
                         *([61, a] for a in expected_announcements),
@@ -698,7 +704,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 else:
                     vc = new_vc
                 await sim.farm_block()
-            elif error == "forget_vc" or error == "use_malicious_cats":
+            elif error in ["forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"]:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
