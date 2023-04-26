@@ -706,10 +706,7 @@ class WalletStateManager:
     async def claim_clawback_coins(self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64) -> List[bytes32]:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
-        message_list: List[bytes32] = []
-        for coin in clawback_coins.keys():
-            message_list.append(coin.name())
-        message: bytes32 = std_hash(b"".join(message_list))
+        message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
         spent_coins = []
         for coin, metadata in clawback_coins.items():
             recipient_puzhash = metadata.recipient_puzzle_hash
