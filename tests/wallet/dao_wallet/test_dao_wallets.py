@@ -536,3 +536,16 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     await time_out_assert(10, len, 1, dao_wallet_2.dao_info.proposals_list)
     await time_out_assert(10, int, total_votes, dao_wallet_2.dao_info.proposals_list[0].amount_voted)
+
+    # Get the proposal from singleton store and check the singleton block height updates correctly
+    proposal_state = await dao_wallet_0.get_proposal_state(prop.proposal_id)
+    assert proposal_state["passed"]
+    assert not proposal_state["closable"]
+    assert proposal_state["blocks_needed"] == 2
+
+    for i in range(1, 5):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    proposal_state = await dao_wallet_0.get_proposal_state(prop.proposal_id)
+    assert proposal_state["passed"]
+    assert proposal_state["closable"]

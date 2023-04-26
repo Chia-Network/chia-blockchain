@@ -7,7 +7,7 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
@@ -38,9 +38,9 @@ from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
 from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL; get_cat_tail_hash_from_treasury_puzzle,
     DAO_FINISHED_STATE,
-    DAO_TREASURY_MOD_HASH,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
+    DAO_TREASURY_MOD_HASH,
     SINGLETON_LAUNCHER,
     curry_singleton,
     generate_cat_tail,
@@ -1841,6 +1841,48 @@ class DAOWallet(WalletProtocol):
         )
         await self.add_parent(new_state.coin.name(), future_parent)
         return
+
+    async def get_proposal_state(self, proposal_id: bytes32) -> Dict[str, Union[int, bool]]:
+        """
+        Use this to figure out whether a proposal has passed or failed and whether it can be closed
+        Given a proposal_id:
+        - if required yes votes are recorded then proposal passed.
+        - if timelock and attendance are met then proposal can close
+        Returns a dict of passed and closable bools, and the remaining votes/blocks needed
+
+        Note that a proposal can be in a passed and closable state now, but become failed if a large number of
+        'no' votes are recieved before the soft close is reached.
+        """
+        for prop in self.dao_info.proposals_list:
+            if prop.proposal_id == proposal_id:
+                break
+        else:
+            raise ValueError(f"Proposal not found for id {proposal_id}")
+
+        wallet_node = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
+        assert isinstance(prop.timer_coin, Coin)
+        timer_cs = (await wallet_node.get_coin_state([prop.timer_coin.name()], peer))[0]
+        peak = await self.wallet_state_manager.blockchain.get_peak_block()
+        blocks_elapsed = peak.height - timer_cs.created_height
+
+        required_yes_votes = (self.dao_rules.attendance_required * self.dao_rules.pass_percentage) // 10000
+        total_votes_needed = max(0, self.dao_rules.attendance_required - prop.amount_voted)
+        yes_votes_needed = max(0, required_yes_votes - prop.yes_votes)
+        blocks_needed = max(0, self.dao_rules.proposal_timelock - blocks_elapsed)
+
+        passed = True if yes_votes_needed == 0 else False
+        closable = True if total_votes_needed == blocks_needed == 0 else False
+        proposal_state = {
+            "total_votes_needed": total_votes_needed,
+            "yes_votes_needed": yes_votes_needed,
+            "blocks_needed": blocks_needed,
+            "passed": passed,
+            "closable": closable,
+        }
+        return proposal_state
 
     async def update_treasury_info(
         self,
