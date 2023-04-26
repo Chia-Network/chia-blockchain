@@ -57,7 +57,7 @@ class WalletCoinStore:
 
             try:
                 await conn.execute("ALTER TABLE coin_record ADD COLUMN coin_type int DEFAULT 0")
-                await conn.execute("ALTER TABLE coin_record ADD COLUMN metadata blob")
+                await conn.execute("ALTER TABLE coin_record ADD COLUMN metadata blob DEFAULT null")
                 await conn.execute("CREATE INDEX IF NOT EXISTS coin_record_coin_type on coin_record(coin_type)")
             except sqlite3.OperationalError:
                 pass
