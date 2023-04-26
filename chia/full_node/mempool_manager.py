@@ -36,7 +36,6 @@ from chia.util.cached_bls import LOCAL_CACHE
 from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
-from chia.util.generator_tools import additions_for_npc
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
@@ -389,18 +388,20 @@ class MempoolManager:
         log.debug(f"Cost: {cost}")
 
         assert npc_result.conds is not None
-        # build set of removals
-        removal_names: Set[bytes32] = set(bytes32(spend.coin_id) for spend in npc_result.conds.spends)
-        if removal_names != set(s.name() for s in new_spend.removals()):
-            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
-            return Err.INVALID_SPEND_BUNDLE, None, []
-
-        additions: List[Coin] = additions_for_npc(npc_result)
+        removal_names: Set[bytes32] = set()
         additions_dict: Dict[bytes32, Coin] = {}
         addition_amount: int = 0
-        for add in additions:
-            additions_dict[add.name()] = add
-            addition_amount = addition_amount + add.amount
+        for spend in npc_result.conds.spends:
+            coin_id = bytes32(spend.coin_id)
+            removal_names.add(coin_id)
+            for puzzle_hash, amount, _ in spend.create_coin:
+                child_coin = Coin(coin_id, puzzle_hash, amount)
+                additions_dict[child_coin.name()] = child_coin
+                addition_amount = addition_amount + child_coin.amount
+
+        if removal_names != set(coin_spend.coin.name() for coin_spend in new_spend.coin_spends):
+            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
+            return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_amount: int = 0
