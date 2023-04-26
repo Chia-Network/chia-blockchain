@@ -421,6 +421,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_get_did", request)
         return response
 
+    async def get_did_info(self, coin_id: str, latest: bool) -> Dict:
+        request: Dict[str, Any] = {
+            "coin_id": coin_id,
+            "latest": latest,
+        }
+        response = await self.fetch("did_get_info", request)
+        return response
+
     async def create_did_backup_file(self, wallet_id: int, filename: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -452,6 +460,17 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_get_recovery_list", request)
         return response
 
+    async def did_message_spend(
+        self, wallet_id: int, puzzle_announcements: List[str], coin_announcements: List[str]
+    ) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "coin_announcements": coin_announcements,
+            "puzzle_announcements": puzzle_announcements,
+        }
+        response = await self.fetch("did_message_spend", request)
+        return response
+
     async def update_did_metadata(
         self,
         wallet_id: int,
@@ -471,6 +490,21 @@ class WalletRpcClient(RpcClient):
             "wallet_id": wallet_id,
         }
         response = await self.fetch("did_get_metadata", request)
+        return response
+
+    async def find_lost_did(
+        self, coin_id: str, recovery_list_hash: Optional[str], metadata: Optional[Dict], num_verification: Optional[int]
+    ) -> Dict:
+        request: Dict[str, Any] = {
+            "coin_id": coin_id,
+        }
+        if recovery_list_hash is not None:
+            request["recovery_list_hash"] = recovery_list_hash
+        if metadata is not None:
+            request["metadata"] = (metadata,)
+        if num_verification is not None:
+            request["num_verification"] = num_verification
+        response = await self.fetch("did_find_lost_did", request)
         return response
 
     async def create_new_did_wallet_from_recovery(self, filename: str) -> Dict:

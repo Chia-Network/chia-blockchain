@@ -202,6 +202,7 @@ for server in SERVERS:
 add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
 add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
 add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
+add_binary("start_data_layer_s3_plugin", f"{ROOT}/chia/data_layer/s3_plugin_service.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,

@@ -94,8 +94,6 @@ class Timelord:
         self.allows_iters: List[Chain] = []
         # Last peak received, None if it's already processed.
         self.new_peak: Optional[timelord_protocol.NewPeakTimelord] = None
-        # Last end of subslot bundle, None if we built a peak on top of it.
-        self.new_subslot_end: Optional[EndOfSubSlotBundle] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
         # Unfinished block info, iters adjusted to the last peak.
         self.unfinished_blocks: List[timelord_protocol.NewUnfinishedBlockTimelord] = []
@@ -374,14 +372,6 @@ class Timelord:
             )
 
         self.new_peak = None
-        await self._reset_chains()
-
-    async def _handle_subslot_end(self):
-        self.last_state.set_state(self.new_subslot_end)
-        for block in self.unfinished_blocks:
-            if self._can_infuse_unfinished_block(block) is not None:
-                self.total_unfinished += 1
-        self.new_subslot_end = None
         await self._reset_chains()
 
     async def _map_chains_with_vdf_clients(self):
@@ -826,9 +816,12 @@ class Timelord:
                 # No overflow blocks in a new epoch
                 self.unfinished_blocks = []
             self.overflow_blocks = []
-            self.new_subslot_end = eos_bundle
 
-            await self._handle_subslot_end()
+            self.last_state.set_state(eos_bundle)
+            for block in self.unfinished_blocks:
+                if self._can_infuse_unfinished_block(block) is not None:
+                    self.total_unfinished += 1
+            await self._reset_chains()
 
     async def _handle_failures(self):
         if len(self.vdf_failures) > 0:

@@ -9,6 +9,12 @@ from chia.util.network import IPAddress
 from chia.util.streamable import Streamable, streamable
 
 
+@dataclass(frozen=True)
+class UnresolvedPeerInfo:
+    host: str
+    port: uint16
+
+
 # TODO, Replace unsafe_hash with frozen and drop the __init__ as soon as all PeerInfo call sites pass in an IPAddress.
 @dataclass(unsafe_hash=True)
 class PeerInfo:

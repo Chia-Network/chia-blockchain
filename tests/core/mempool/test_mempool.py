@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import random
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
@@ -27,7 +28,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.clvm_cost import CLVMCost
@@ -41,18 +42,14 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.api_decorators import api_request
-from chia.util.condition_tools import (
-    conditions_for_solution,
-    parse_sexp_to_conditions,
-    pkm_pairs,
-    pkm_pairs_for_conditions_dict,
-)
+from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
+from tests.core.mempool.test_mempool_manager import make_test_coins, mk_item
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import assert_runtime
 
@@ -1690,14 +1687,11 @@ class TestMempoolManager:
         unsigned: List[CoinSpend] = spend_bundle_0.coin_spends
 
         assert len(unsigned) == 1
-        coin_spend: CoinSpend = unsigned[0]
-
-        err, con, cost = conditions_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
-        assert con is not None
+        # coin_spend: CoinSpend = unsigned[0]
 
         # TODO(straya): fix this test
         # puzzle, solution = list(coin_spend.solution.as_iter())
-        # conditions_dict = conditions_by_opcode(con)
+        # conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
 
         # pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin.name())
         # assert len(pkm_pairs) == 1
@@ -2626,36 +2620,216 @@ class TestPkmPairsForConditionDict:
 
 class TestParseSexpCondition:
     def test_basic(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"foo", b"bar"]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"foo", b"bar"]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"foo", b"bar"])]
 
     def test_oversized_op(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49, 49]), b"foo", b"bar"]]))
-        assert err is Err.INVALID_CONDITION
-        assert conds is None
+        with pytest.raises(ConsensusError):
+            parse_sexp_to_conditions(Program.to([[bytes([49, 49]), b"foo", b"bar"]]))
 
     def test_empty_op(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[b"", b"foo", b"bar"]]))
-        assert err is Err.INVALID_CONDITION
-        assert conds is None
+        with pytest.raises(ConsensusError):
+            parse_sexp_to_conditions(Program.to([[b"", b"foo", b"bar"]]))
 
     def test_list_op(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[[bytes([49])], b"foo", b"bar"]]))
-        assert err is Err.INVALID_CONDITION
-        assert conds is None
+        with pytest.raises(ConsensusError):
+            parse_sexp_to_conditions(Program.to([[[bytes([49])], b"foo", b"bar"]]))
 
     def test_list_arg(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), [b"foo", b"bar"]]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), [b"foo", b"bar"]]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [])]
 
     def test_list_arg_truncate(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"baz", [b"foo", b"bar"]]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"baz", [b"foo", b"bar"]]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"baz"])]
 
     def test_arg_limit(self) -> None:
-        err, conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"1", b"2", b"3", b"4", b"5", b"6"]]))
-        assert err is None
+        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"1", b"2", b"3", b"4", b"5", b"6"]]))
         assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"1", b"2", b"3", b"4"])]
+
+
+coins = make_test_coins()
+
+
+# This test makes sure we're properly sorting items by fee rate
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        # make sure fractions of fee-rate are ordered correctly (i.e. that
+        # we don't use integer division)
+        (
+            [
+                mk_item(coins[0:1], fee=110, cost=50),
+                mk_item(coins[1:2], fee=100, cost=50),
+                mk_item(coins[2:3], fee=105, cost=50),
+            ],
+            [coins[0], coins[2], coins[1]],
+        ),
+        # make sure insertion order is a tie-breaker for items with the same
+        # fee-rate
+        (
+            [
+                mk_item(coins[0:1], fee=100, cost=50),
+                mk_item(coins[1:2], fee=100, cost=50),
+                mk_item(coins[2:3], fee=100, cost=50),
+            ],
+            [coins[0], coins[1], coins[2]],
+        ),
+        # also for items that don't pay fees
+        (
+            [
+                mk_item(coins[2:3], fee=0, cost=50),
+                mk_item(coins[1:2], fee=0, cost=50),
+                mk_item(coins[0:1], fee=0, cost=50),
+            ],
+            [coins[2], coins[1], coins[0]],
+        ),
+    ],
+)
+def test_items_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    for i in items:
+        mempool.add_to_pool(i)
+
+    ordered_items = list(mempool.items_by_feerate())
+
+    assert len(ordered_items) == len(expected)
+
+    last_fpc: Optional[float] = None
+    for mi, expected_coin in zip(ordered_items, expected):
+        assert len(mi.spend_bundle.coin_spends) == 1
+        assert mi.spend_bundle.coin_spends[0].coin == expected_coin
+        assert last_fpc is None or last_fpc >= mi.fee_per_cost
+        last_fpc = mi.fee_per_cost
+
+
+def rand_hash() -> bytes32:
+    rng = random.Random()
+    ret = bytearray(32)
+    for i in range(32):
+        ret[i] = rng.getrandbits(8)
+    return bytes32(ret)
+
+
+def item_cost(cost: int, fee_rate: float) -> MempoolItem:
+    fee = cost * fee_rate
+    amount = int(fee + 100)
+    coin = Coin(rand_hash(), rand_hash(), amount)
+    return mk_item([coin], cost=cost, fee=int(cost * fee_rate))
+
+
+@pytest.mark.parametrize(
+    "items,add,expected",
+    [
+        # the max size is 100
+        # we need to evict two items
+        ([50, 25, 13, 12, 5], 10, [10, 50, 25, 13]),
+        # we don't need to evict anything
+        ([50, 25, 13], 10, [10, 50, 25, 13]),
+        # we need to evict everything
+        ([95, 5], 10, [10]),
+        # we evict a single item
+        ([75, 15, 9], 10, [10, 75, 15]),
+    ],
+)
+def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(100)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(100)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    fee_rate: float = 3.0
+    for i in items:
+        mempool.add_to_pool(item_cost(i, fee_rate))
+        fee_rate -= 0.1
+
+    # now, add the item we're testing
+    mempool.add_to_pool(item_cost(add, 3.1))
+
+    ordered_items = list(mempool.items_by_feerate())
+
+    assert len(ordered_items) == len(expected)
+
+    for mi, expected_cost in zip(ordered_items, expected):
+        assert mi.cost == expected_cost
+
+
+@pytest.mark.parametrize("height", [True, False])
+@pytest.mark.parametrize(
+    "items,expected,increase_fee",
+    [
+        # the max size is 100
+        # the max block size is 50
+        # which is also the max size for expiring transactions
+        # the increasing fee will order the transactions in the reverse
+        # insertion order
+        ([10, 11, 12, 13, 14], [14, 13, 12, 11], True),
+        # decreasing fee rate will make the last one fail to be inserted
+        ([10, 11, 12, 13, 14], [10, 11, 12, 13], False),
+        # the last is big enough to evict all previous ones
+        ([10, 11, 12, 13, 50], [50], True),
+        # the last one will not evict any earlier ones, because the fee rate is
+        # lower
+        ([10, 11, 12, 13, 50], [10, 11, 12, 13], False),
+    ],
+)
+def test_limit_expiring_transactions(height: bool, items: List[int], expected: List[int], increase_fee: bool) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(100)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(50)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    mempool.new_tx_block(uint32(10), uint64(100000))
+
+    # fill the mempool with regular transactions (without expiration)
+    fee_rate: float = 3.0
+    for i in range(1, 20):
+        mempool.add_to_pool(item_cost(i, fee_rate))
+        fee_rate -= 0.1
+
+    # now add the expiring transactions from the test case
+    fee_rate = 2.7
+    for cost in items:
+        fee = cost * fee_rate
+        amount = int(fee + 100)
+        coin = Coin(rand_hash(), rand_hash(), amount)
+        if height:
+            ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_height=15))
+        else:
+            ret = mempool.add_to_pool(mk_item([coin], cost=cost, fee=int(cost * fee_rate), assert_before_seconds=10400))
+        if increase_fee:
+            fee_rate += 0.1
+            assert ret is None
+        else:
+            fee_rate -= 0.1
+
+    ordered_costs = [
+        item.cost
+        for item in mempool.items_by_feerate()
+        if item.assert_before_height is not None or item.assert_before_seconds is not None
+    ]
+
+    assert ordered_costs == expected
+
+    print("")
+    for item in mempool.items_by_feerate():
+        if item.assert_before_seconds is not None or item.assert_before_height is not None:
+            ttl = "yes"
+        else:
+            ttl = "No"
+        print(f"- cost: {item.cost} TTL: {ttl}")
+
+    assert mempool.total_mempool_cost() > 90
