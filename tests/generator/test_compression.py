@@ -209,7 +209,10 @@ class TestDecompression:
     # An empty CSE is invalid. (An empty CSE list may be okay)
     # def test_decompress_empty_cse(self):
     #    cse0 = binutils.assemble("()")
-    #    cost, out = DECOMPRESS_CSE.run_with_cost(INFINITE_COST, [DESERIALIZE_MOD, DECOMPRESS_PUZZLE, b"\xff", b"\x80", cse0])  # noqa: E501
+    #    cost, out = DECOMPRESS_CSE.run_with_cost(
+    #        INFINITE_COST,
+    #        [DESERIALIZE_MOD, DECOMPRESS_PUZZLE, b"\xff", b"\x80", cse0],
+    #    )
     #    print()
     #    print(out)
 
@@ -267,7 +270,18 @@ class TestDecompression:
         end = start + 238
 
         # (mod (decompress_puzzle decompress_coin_spend_entry start end compressed_cses deserialize generator_list reserved_arg)  # noqa: E501
-        # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])  # noqa: E501
+        # cost, out = DECOMPRESS_BLOCK.run_with_cost(
+        #     INFINITE_COST,
+        #     [
+        #         DECOMPRESS_PUZZLE,
+        #         DECOMPRESS_CSE,
+        #         start,
+        #         Program.to(end),
+        #         cse0,
+        #         DESERIALIZE_MOD,
+        #         bytes(original_generator),
+        #     ],
+        # )
         cost, out = DECOMPRESS_BLOCK.run_with_cost(
             INFINITE_COST,
             [
@@ -309,7 +323,17 @@ class TestDecompression:
         end = start + 238
 
         # (mod (decompress_puzzle decompress_coin_spend_entry start end compressed_cses deserialize generator_list reserved_arg)  # noqa: E501
-        # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])  # noqa: E501
+        # cost, out = DECOMPRESS_BLOCK.run_with_cost(
+        #     INFINITE_COST,
+        #     [
+        #         DECOMPRESS_PUZZLE, DECOMPRESS_CSE,
+        #         start,
+        #         Program.to(end),
+        #         cse0,
+        #         DESERIALIZE_MOD,
+        #         bytes(original_generator),
+        #     ],
+        # )
         p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
         cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, [bytes(original_generator)]])
 
