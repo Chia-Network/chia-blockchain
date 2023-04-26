@@ -114,8 +114,8 @@
 
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
-    (> total_votes attendance_required)  ; TODO: we might want to change this to storing total cats and calculating like with yes votes
-    (> yes_votes (calculate_win_percentage total_votes pass_margin))
+    (> total_votes Attendance_Required)  ; TODO: we might want to change this to storing total cats and calculating like with yes votes
+    (> yes_votes (calculate_win_percentage total_votes Pass_Margin))
     (=
       announcement_source
       (calculate_full_puzzle_hash

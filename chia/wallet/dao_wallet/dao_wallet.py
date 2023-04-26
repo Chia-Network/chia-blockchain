@@ -1342,7 +1342,7 @@ class DAOWallet(WalletProtocol):
         )
         timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
 
-        full_treasury_puz = curry_singleton(proposal_id, self.dao_info.current_treasury_innerpuz)
+        full_treasury_puz = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         # proposal_flag
         # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
         # proposal_validator_solution
@@ -1475,6 +1475,11 @@ class DAOWallet(WalletProtocol):
                 tailhash_parent_amount_list,
             ]
         )
+        # proposal_flag  ; if this is set then we are closing a proposal
+        # (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag)
+        # proposal_validator_solution
+        # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+        # delegated_solution  ; this is not secure unless the delegated puzzle secures it
         treasury_solution = Program.to(
             [
                 1,

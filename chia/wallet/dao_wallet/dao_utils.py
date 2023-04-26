@@ -118,7 +118,7 @@ def get_spend_p2_singleton_puzzle(
         CAT_MOD_HASH,
         xch_conditions,
         asset_conditions,
-        P2_SINGLETON_MOD.curry(treasury_struct),
+        P2_SINGLETON_MOD.curry(treasury_struct).get_tree_hash(),
     )
     return puzzle
 
