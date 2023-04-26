@@ -116,6 +116,10 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
           url: "docker://ubuntu:jammy"
+        - name: ubuntu:lunar (23.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/lunar/python3 (23.04, 3.11)
+          url: "docker://ubuntu:lunar"
 
     steps:
     - name: Prepare Amazon Linux
