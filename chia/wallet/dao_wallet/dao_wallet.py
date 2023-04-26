@@ -762,7 +762,7 @@ class DAOWallet(WalletProtocol):
 
         await self.save_info(dao_info)
 
-        dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules, origin.name(), cat_tail_hash)
+        dao_treasury_puzzle = get_treasury_puzzle(self.dao_rules, launcher_coin.name(), cat_tail_hash)
         full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
         full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
 
@@ -1483,7 +1483,7 @@ class DAOWallet(WalletProtocol):
         treasury_solution = Program.to(
             [
                 1,
-                [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH, 0, SPEND_OR_UPDATE_FLAG],
+                [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0, SPEND_OR_UPDATE_FLAG.as_atom()],
                 validator_solution,
                 puzzle_reveal,
                 delegated_solution,
@@ -1510,10 +1510,10 @@ class DAOWallet(WalletProtocol):
             chia_tx = await self.create_tandem_xch_tx(fee)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-        full_spend = SpendBundle.aggregate([spend_bundle])
+        else:
+            full_spend = SpendBundle.aggregate([spend_bundle])
         if cat_spend_bundle is not None:
-            full_spend.aggregate([full_spend, cat_spend_bundle])
-        # breakpoint()
+            full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),

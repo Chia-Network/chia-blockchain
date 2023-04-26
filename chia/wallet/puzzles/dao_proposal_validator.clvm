@@ -47,10 +47,10 @@
     proposal_yes_votes
     proposal_total_votes
     spend_or_update_flag
-    proposal_innerpuz
+    proposal_innerpuz_hash
     )
     (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
-                                     (sha256tree proposal_innerpuz)
+                                     (sha256 ONE proposal_innerpuz_hash)
                                      (sha256 ONE spend_or_update_flag)
                                      (sha256 ONE proposal_total_votes)
                                      (sha256 ONE proposal_yes_votes)
