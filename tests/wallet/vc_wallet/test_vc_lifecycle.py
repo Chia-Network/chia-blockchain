@@ -489,6 +489,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         # Update the proofs with a proper announcement
         NEW_PROOFS: Program = Program.to((("test", True), ("test2", True)))
+        MALICIOUS_PROOFS: Program = Program.to(("malicious", True))
         NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
@@ -544,80 +545,109 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         # Now lets farm a funds for some CR-CATs
         await sim.farm_block(RUN_PUZ_PUZ_PH)
-        cr_coin_1: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
-            0
-        ].coin
-        cr_coin_2: Coin = (await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False))[
-            1
-        ].coin
+        await sim.farm_block(RUN_PUZ_PUZ_PH)
+        cr_fund_coin_1: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[0].coin
+        cr_fund_coin_2: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[1].coin
+        cr_fund_coin_3: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[2].coin
+        cr_fund_coin_4: Coin = (
+            await client.get_coin_records_by_puzzle_hashes([RUN_PUZ_PUZ_PH], include_spent_coins=False)
+        )[3].coin
 
         # Launch the CR-CATs
-        proofs_checker: ProofsChecker = ProofsChecker(["test", "test2"])
-        AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
-        dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
-            cr_coin_1,
-            Payment(ACS_PH, uint64(cr_coin_1.amount), []),
-            Program.to(None),
-            Program.to(None),
-            AUTHORIZED_PROVIDERS,
-            proofs_checker.as_program(),
-        )
-        dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
-            cr_coin_2,
-            Payment(ACS_PH, uint64(cr_coin_2.amount), []),
-            Program.to(None),
-            Program.to(None),
-            AUTHORIZED_PROVIDERS,
-            proofs_checker.as_program(),
-        )
-        result = await client.push_tx(
-            SpendBundle(
-                [
-                    CoinSpend(
-                        cr_coin_1,
-                        RUN_PUZ_PUZ,
-                        dpuz_1,
-                    ),
-                    CoinSpend(
-                        cr_coin_2,
-                        RUN_PUZ_PUZ,
-                        dpuz_2,
-                    ),
-                    launch_crcat_spend_1,
-                    launch_crcat_spend_2,
-                ],
-                G2Element(),
+        malicious_cr_1: CRCAT
+        malicious_cr_2: CRCAT
+        for cr_coin_1, cr_coin_2 in ((cr_fund_coin_1, cr_fund_coin_2), (cr_fund_coin_3, cr_fund_coin_4)):
+            if cr_coin_1 == cr_fund_coin_1:
+                proofs = ["malicious"]
+            else:
+                proofs = ["test", "test2"]
+            proofs_checker: ProofsChecker = ProofsChecker(proofs)
+            AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
+            dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
+                cr_coin_1,
+                Payment(ACS_PH, uint64(cr_coin_1.amount), []),
+                Program.to(None),
+                Program.to(None),
+                AUTHORIZED_PROVIDERS,
+                proofs_checker.as_program(),
             )
-        )
-        assert result == (MempoolInclusionStatus.SUCCESS, None)
-        await sim.farm_block()
-        if test_syncing:
-            cr_1 = CRCAT.get_next_from_coin_spend(launch_crcat_spend_1)[0]
-            cr_2 = CRCAT.get_next_from_coin_spend(launch_crcat_spend_2)[0]
-        assert len(await client.get_coin_records_by_names([cr_1.coin.name()], include_spent_coins=False)) > 0
-        assert len(await client.get_coin_records_by_names([cr_2.coin.name()], include_spent_coins=False)) > 0
+            dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
+                cr_coin_2,
+                Payment(ACS_PH, uint64(cr_coin_2.amount), []),
+                Program.to(None),
+                Program.to(None),
+                AUTHORIZED_PROVIDERS,
+                proofs_checker.as_program(),
+            )
+            result = await client.push_tx(
+                SpendBundle(
+                    [
+                        CoinSpend(
+                            cr_coin_1,
+                            RUN_PUZ_PUZ,
+                            dpuz_1,
+                        ),
+                        CoinSpend(
+                            cr_coin_2,
+                            RUN_PUZ_PUZ,
+                            dpuz_2,
+                        ),
+                        launch_crcat_spend_1,
+                        launch_crcat_spend_2,
+                    ],
+                    G2Element(),
+                )
+            )
+            assert result == (MempoolInclusionStatus.SUCCESS, None)
+            await sim.farm_block()
+            if test_syncing:
+                cr_1 = CRCAT.get_next_from_coin_spend(launch_crcat_spend_1)[0]
+                cr_2 = CRCAT.get_next_from_coin_spend(launch_crcat_spend_2)[0]
+            assert len(await client.get_coin_records_by_names([cr_1.coin.name()], include_spent_coins=False)) > 0
+            assert len(await client.get_coin_records_by_names([cr_2.coin.name()], include_spent_coins=False)) > 0
+            if cr_coin_1 == cr_fund_coin_1:
+                malicious_cr_1 = cr_1
+                malicious_cr_2 = cr_2
 
-        for error in ("forget_vc", "make_banned_announcement", None):
+        for error in ("forget_vc", "make_banned_announcement", "use_malicious_cats", None):
             # The CR-CAT coin spends
             expected_announcements, cr_cat_spends, new_crcats = CRCAT.spend_many(
                 [
                     (
-                        cr_1,
+                        cr_1 if error != "use_malicious_cats" else malicious_cr_1,
                         ACS,
                         Program.to(
                             [
-                                [51, ACS_PH, cr_1.coin.amount],
+                                [
+                                    51,
+                                    ACS_PH,
+                                    cr_1.coin.amount if error != "use_malicious_cats" else malicious_cr_1.coin.amount,
+                                ],
                                 *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
                             ]
                         ),
                     ),
                     (
-                        cr_2,
+                        cr_2 if error != "use_malicious_cats" else malicious_cr_2,
                         ACS,
-                        Program.to([[51, ACS_PH, cr_2.coin.amount]]),
+                        Program.to(
+                            [
+                                [
+                                    51,
+                                    ACS_PH,
+                                    cr_2.coin.amount if error != "use_malicious_cats" else malicious_cr_2.coin.amount,
+                                ]
+                            ]
+                        ),
                     ),
                 ],
-                NEW_PROOFS,
+                NEW_PROOFS if error != "use_malicious_cats" else MALICIOUS_PROOFS,
                 Program.to(None),
                 launcher_id,
                 vc.launcher_id,
@@ -630,8 +660,18 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 Program.to(
                     [
                         [51, ACS_PH, vc.coin.amount],
-                        [62, cr_1.expected_announcement()],
-                        [62, cr_2.expected_announcement()],
+                        [
+                            62,
+                            cr_1.expected_announcement()
+                            if error != "use_malicious_cats"
+                            else malicious_cr_1.expected_announcement(),
+                        ],
+                        [
+                            62,
+                            cr_2.expected_announcement()
+                            if error != "use_malicious_cats"
+                            else malicious_cr_2.expected_announcement(),
+                        ],
                         *([61, a] for a in expected_announcements),
                         vc.standard_magic_condition(),
                     ]
@@ -658,7 +698,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 else:
                     vc = new_vc
                 await sim.farm_block()
-            elif error == "forget_vc":
+            elif error == "forget_vc" or error == "use_malicious_cats":
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
