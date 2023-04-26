@@ -70,6 +70,7 @@ UBUNTU_PRE_20=0
 UBUNTU_20=0
 UBUNTU_21=0
 UBUNTU_22=0
+UBUNTU_23=0
 
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
@@ -84,8 +85,10 @@ if $UBUNTU; then
     UBUNTU_20=1
   elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
     UBUNTU_21=1
-  else
+  elif [ "$(echo "$LSB_RELEASE<23" | bc)" = "1" ]; then
     UBUNTU_22=1
+  else
+    UBUNTU_23=1
   fi
 fi
 
@@ -207,9 +210,13 @@ elif [ "$(uname)" = "Linux" ]; then
     sudo apt-get update
     sudo apt-get install -y python3.9-venv openssl
   elif [ "$UBUNTU_22" = "1" ]; then
-    echo "Installing on Ubuntu 22.* or newer."
+    echo "Installing on Ubuntu 22.*"
     sudo apt-get update
     sudo apt-get install -y python3.10-venv openssl
+  elif [ "$UBUNTU_23" = "1" ]; then
+    echo "Installing on Ubuntu 23.* or newer."
+    sudo apt-get update
+    sudo apt-get install -y python3.11-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
