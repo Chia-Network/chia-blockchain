@@ -39,7 +39,6 @@ def create_introducer_service(
         peer_api=node__api,
         node_type=NodeType.INTRODUCER,
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         network_id=network_id,
         advertised_port=advertised_port,
         connect_to_daemon=connect_to_daemon,

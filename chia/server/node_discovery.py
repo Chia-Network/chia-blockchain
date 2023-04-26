@@ -22,7 +22,7 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
+from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
 from chia.util.network import IPAddress, get_host_addr
@@ -61,15 +61,9 @@ class FullNodeDiscovery:
         self.peers_file_path = peer_store_resolver.peers_file_path
         self.dns_servers = dns_servers
         random.shuffle(dns_servers)  # Don't always start with the same DNS server
+        self.introducer_info: Optional[UnresolvedPeerInfo] = None
         if introducer_info is not None:
-            # get_host_addr is blocking but this only gets called on startup or in the wallet after disconnecting from
-            # all trusted peers.
-            self.introducer_info: Optional[PeerInfo] = PeerInfo(
-                str(get_host_addr(introducer_info["host"], prefer_ipv6=False)),
-                introducer_info["port"],
-            )
-        else:
-            self.introducer_info = None
+            self.introducer_info = UnresolvedPeerInfo(introducer_info["host"], introducer_info["port"])
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue: Optional[asyncio.Queue[Tuple[TimestampedPeerInfo, int]]] = None
@@ -152,7 +146,7 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             timestamped_peer_info = TimestampedPeerInfo(
-                peer.peer_host,
+                peer.peer_info.host,
                 peer.peer_server_port,
                 uint64(int(time.time())),
             )
@@ -212,7 +206,9 @@ class FullNodeDiscovery:
             msg = make_msg(ProtocolMessageTypes.request_peers_introducer, RequestPeersIntroducer())
             await peer.send_message(msg)
 
-        await self.server.start_client(self.introducer_info, on_connect)
+        await self.server.start_client(
+            PeerInfo(get_host_addr(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
+        )
 
     async def _query_dns(self, dns_address: str) -> None:
         try:

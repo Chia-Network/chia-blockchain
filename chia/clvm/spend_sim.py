@@ -223,7 +223,7 @@ class SpendSim:
     ) -> Tuple[List[Coin], List[Coin]]:
         # Fees get calculated
         fees = uint64(0)
-        for item in self.mempool_manager.mempool.all_spends():
+        for item in self.mempool_manager.mempool.all_items():
             fees = uint64(fees + item.fee)
 
         # Rewards get created
@@ -254,13 +254,13 @@ class SpendSim:
                 result = self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
 
                 if result is not None:
-                    bundle, additions, removals = result
+                    bundle, additions = result
                     generator_bundle = bundle
                     return_additions = additions
-                    return_removals = removals
+                    return_removals = bundle.removals()
 
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
-                    await self.coin_store._set_spent([r.name() for r in removals], uint32(self.block_height + 1))
+                    await self.coin_store._set_spent([r.name() for r in return_removals], uint32(self.block_height + 1))
 
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
@@ -427,11 +427,11 @@ class SimClient:
             return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
-        return self.service.mempool_manager.mempool.all_spend_ids()
+        return self.service.mempool_manager.mempool.all_item_ids()
 
     async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
         spends = {}
-        for item in self.service.mempool_manager.mempool.all_spends():
+        for item in self.service.mempool_manager.mempool.all_items():
             spends[item.name] = item
         return spends
 

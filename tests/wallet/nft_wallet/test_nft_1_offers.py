@@ -196,7 +196,6 @@ async def test_nft_offer_sell_nft(
     taker_fee = 1
     assert not mempool_not_empty(full_node_api)
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
@@ -373,7 +372,6 @@ async def test_nft_offer_request_nft(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -561,7 +559,6 @@ async def test_nft_offer_sell_did_to_did(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -774,7 +771,6 @@ async def test_nft_offer_sell_nft_for_cat(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -994,7 +990,6 @@ async def test_nft_offer_request_nft_for_cat(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )

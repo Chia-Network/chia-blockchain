@@ -4,10 +4,11 @@ import dataclasses
 import logging
 import time
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
+from typing_extensions import final
 
 from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import OfferIntegrityError
@@ -49,6 +50,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -100,9 +102,7 @@ class Mirror:
         )
 
 
-_T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
-
-
+@final
 class DataLayerWallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -115,16 +115,14 @@ class DataLayerWallet:
 
     @classmethod
     async def create(
-        cls: Type[_T_DataLayerWallet],
+        cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
         wallet_info: WalletInfo,
-        name: Optional[str] = None,
-    ) -> _T_DataLayerWallet:
+    ) -> DataLayerWallet:
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
         self.wallet_info = wallet_info
         self.wallet_id = uint8(self.wallet_info.id)
 
@@ -138,28 +136,22 @@ class DataLayerWallet:
         return self.wallet_info.id
 
     @classmethod
-    async def create_new_dl_wallet(
-        cls: Type[_T_DataLayerWallet],
-        wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
-        name: Optional[str] = "DataLayer Wallet",
-    ) -> _T_DataLayerWallet:
+    async def create_new_dl_wallet(cls, wallet_state_manager: WalletStateManager) -> DataLayerWallet:
         """
         This must be called under the wallet state manager lock
         """
 
         self = cls()
         self.wallet_state_manager = wallet_state_manager
-        self.log = logging.getLogger(name if name else __name__)
-        self.standard_wallet = wallet
+        self.log = logging.getLogger(__name__)
+        self.standard_wallet = wallet_state_manager.main_wallet
 
         for _, w in self.wallet_state_manager.wallets.items():
             if w.type() == WalletType.DATA_LAYER:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        assert name is not None
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name,
+            "DataLayer Wallet",
             WalletType.DATA_LAYER.value,
             "",
         )
@@ -226,9 +218,7 @@ class DataLayerWallet:
             await self.new_launcher_spend(spend, peer, height)
         else:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id, peer)
-            launcher_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                launcher_state.spent_height, launcher_state.coin, peer
-            )
+            launcher_spend = await fetch_coin_spend_for_coin_state(launcher_state, peer)
             await self.new_launcher_spend(launcher_spend, peer)
 
     async def new_launcher_spend(
@@ -288,9 +278,7 @@ class DataLayerWallet:
         ] = await self.wallet_state_manager.coin_store.get_coin_record(new_singleton.name())
         while new_singleton_coin_record is not None and new_singleton_coin_record.spent_block_height > 0:
             # We've already synced this before, so we need to sort of force a resync
-            parent_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                new_singleton_coin_record.spent_block_height, new_singleton, peer
-            )
+            parent_spend = await fetch_coin_spend(new_singleton_coin_record.spent_block_height, new_singleton, peer)
             await self.singleton_removed(parent_spend, new_singleton_coin_record.spent_block_height)
             try:
                 additions = compute_additions(parent_spend)
@@ -838,9 +826,7 @@ class DataLayerWallet:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                height, parent_state.coin, peer
-            )
+            parent_spend = await fetch_coin_spend(height, parent_state.coin, peer)
             assert parent_spend is not None
             launcher_id, urls = get_mirror_info(
                 parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program()
