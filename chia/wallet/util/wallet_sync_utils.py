@@ -315,6 +315,17 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
+def sort_coin_states(coin_states: List[CoinState]) -> List[CoinState]:
+    return sorted(
+        coin_states,
+        key=lambda coin_state: (
+            last_change_height_cs(coin_state),
+            0 if coin_state.created_height is None else coin_state.created_height,
+            0 if coin_state.spent_height is None else coin_state.spent_height,
+        ),
+    )
+
+
 def get_block_header(block: FullBlock) -> HeaderBlock:
     return HeaderBlock(
         block.finished_sub_slots,

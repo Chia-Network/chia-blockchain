@@ -79,7 +79,7 @@ from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import WalletCoinStore
+from chia.wallet.wallet_coin_store import HashFilter, WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -771,8 +771,7 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
-            removed_wallet_ids = []
-            for wallet in self.wallets.values():
+            for wallet in self.wallets.copy().values():
                 if not isinstance(wallet, DIDWallet):
                     continue
                 if (
@@ -780,12 +779,8 @@ class WalletStateManager:
                     and launch_id == wallet.did_info.origin_coin.name()
                     and not wallet.did_info.sent_recovery_transaction
                 ):
-                    await self.user_store.delete_wallet(wallet.id())
-                    removed_wallet_ids.append(wallet.id())
-            for remove_id in removed_wallet_ids:
-                self.wallets.pop(remove_id)
-                self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
-                self.state_changed("wallet_removed", remove_id)
+                    await self.remove_wallet(wallet.id())
+                    self.log.info(f"Removed DID wallet {wallet.id()}, Launch_ID: {launch_id.hex()}")
             return None
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
@@ -916,7 +911,7 @@ class WalletStateManager:
                 uncurried_nft.singleton_launcher_id.hex(),
             )
             return wallet_identifier
-        for nft_wallet in self.wallets.values():
+        for nft_wallet in self.wallets.copy().values():
             if not isinstance(nft_wallet, NFTWallet):
                 continue
             if nft_wallet.nft_wallet_info.did_id == old_did_id and old_derivation_record is not None:
@@ -929,7 +924,7 @@ class WalletStateManager:
                     await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
                     is_empty = await nft_wallet.is_empty()
                     has_did = False
-                    for did_wallet in self.wallets.values():
+                    for did_wallet in self.wallets.copy().values():
                         if not isinstance(did_wallet, DIDWallet):
                             continue
                         assert did_wallet.did_info.origin_coin is not None
@@ -938,8 +933,7 @@ class WalletStateManager:
                             break
                     if is_empty and nft_wallet.did_id is not None and not has_did:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
-                        await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
-                        self.wallets.pop(nft_wallet.wallet_info.id)
+                        await self.remove_wallet(nft_wallet.wallet_info.id)
             if nft_wallet.nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
@@ -982,13 +976,13 @@ class WalletStateManager:
         ph_to_index_cache: LRUCache = LRUCache(100)
 
         coin_names = [coin_state.coin.name() for coin_state in coin_states]
-        local_records = await self.coin_store.get_coin_records(coin_names)
+        local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
 
         for coin_name, coin_state in zip(coin_names, coin_states):
             if peer.closed:
                 raise ConnectionError("Connection closed")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
-            local_record = local_records.get(coin_name)
+            local_record = local_records.coin_id_to_record.get(coin_name)
             rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
@@ -1570,8 +1564,8 @@ class WalletStateManager:
         return wr.to_coin_record(timestamp)
 
     async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:
-        records = await self.coin_store.get_coin_records(**kwargs)
-        return [await self.get_coin_record_by_wallet_record(record) for record in records.values()]
+        result = await self.coin_store.get_coin_records(**kwargs)
+        return [await self.get_coin_record_by_wallet_record(record) for record in result.records]
 
     async def get_wallet_for_coin(self, coin_id: bytes32) -> Optional[WalletProtocol]:
         coin_record = await self.coin_store.get_coin_record(coin_id)
@@ -1607,8 +1601,7 @@ class WalletStateManager:
                 if remove:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
-            await self.user_store.delete_wallet(wallet_id)
-            self.state_changed("wallet_removed", wallet_id)
+            await self.remove_wallet(wallet_id, remove_cache=False)
 
         return remove_ids
 
@@ -1659,6 +1652,27 @@ class WalletStateManager:
         self.wallets[wallet.id()] = wallet
         await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
+
+    async def remove_wallet(
+        self, wallet_id: uint32, *, remove_cache: bool = True, trigger_state_changed: bool = False
+    ) -> None:
+        """
+        Deletes all DB entries related to `wallet_id` but don't delete from transaction_store to preserve tx history.
+        Allows to trigger cache removal and state changed notifications via the two extra parameter.
+        """
+        await self.user_store.delete_wallet(wallet_id)
+        await self.puzzle_store.delete_wallet(wallet_id)
+        await self.pool_store.delete_wallet(wallet_id)
+        await self.coin_store.delete_wallet(wallet_id)
+        await self.nft_store.delete_wallet(wallet_id)
+        if remove_cache:
+            try:
+                self.wallets.pop(wallet_id)
+            except KeyError:
+                self.log.warning(f"Tried to remove non-existing wallet_id: {wallet_id}")
+                return
+        if trigger_state_changed:
+            self.state_changed("wallet_removed", wallet_id)
 
     async def get_spendable_coins_for_wallet(
         self, wallet_id: int, records: Optional[Set[WalletCoinRecord]] = None

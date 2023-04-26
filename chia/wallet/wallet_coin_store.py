@@ -1,15 +1,87 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import dataclass
+from enum import IntEnum
 from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32, uint64
-from chia.util.misc import VersionedBlob
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint32, uint64
+from chia.util.lru_cache import LRUCache
+from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+
+
+class FilterMode(IntEnum):
+    include = 1
+    exclude = 2
+
+
+@streamable
+@dataclass(frozen=True)
+class AmountFilter(Streamable):
+    values: List[uint64]
+    mode: uint8  # FilterMode
+
+    @classmethod
+    def include(cls, values: List[uint64]):
+        return cls(values, mode=uint8(FilterMode.include))
+
+    @classmethod
+    def exclude(cls, values: List[uint64]):
+        return cls(values, mode=uint8(FilterMode.exclude))
+
+
+@streamable
+@dataclass(frozen=True)
+class HashFilter(Streamable):
+    values: List[bytes32]
+    mode: uint8  # FilterMode
+
+    @classmethod
+    def include(cls, values: List[bytes32]):
+        return cls(values, mode=uint8(FilterMode.include))
+
+    @classmethod
+    def exclude(cls, values: List[bytes32]):
+        return cls(values, mode=uint8(FilterMode.exclude))
+
+
+class CoinRecordOrder(IntEnum):
+    confirmed_height = 1
+    spent_height = 2
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCoinRecords(Streamable):
+    offset: uint32 = uint32(0)
+    limit: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1)
+    wallet_id: Optional[uint32] = None
+    wallet_type: Optional[uint8] = None  # WalletType
+    coin_type: Optional[uint8] = None  # CoinType
+    coin_id_filter: Optional[HashFilter] = None
+    puzzle_hash_filter: Optional[HashFilter] = None
+    parent_coin_id_filter: Optional[HashFilter] = None
+    amount_filter: Optional[AmountFilter] = None
+    amount_range: Optional[UInt64Range] = None
+    confirmed_range: Optional[UInt32Range] = None
+    spent_range: Optional[UInt32Range] = None
+    order: uint8 = uint8(CoinRecordOrder.confirmed_height)
+    reverse: bool = False
+    include_total_count: bool = False  # Include the total number of entries for the query without applying offset/limit
+
+
+@dataclass(frozen=True)
+class GetCoinRecordsResult:
+    records: List[WalletCoinRecord]
+    coin_id_to_record: Dict[bytes32, WalletCoinRecord]
+    total_count: Optional[uint32]
 
 
 class WalletCoinStore:
@@ -18,12 +90,14 @@ class WalletCoinStore:
     """
 
     db_wrapper: DBWrapper2
+    total_count_cache: LRUCache[bytes32, uint32]
 
     @classmethod
     async def create(cls, wrapper: DBWrapper2):
         self = cls()
 
         self.db_wrapper = wrapper
+        self.total_count_cache = LRUCache(100)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -96,11 +170,13 @@ class WalletCoinStore:
                     None if record.metadata is None else bytes(record.metadata),
                 ),
             )
+        self.total_count_cache.cache.clear()
 
     # Sometimes we realize that a coin is actually not interesting to us so we need to delete it
     async def delete_coin_record(self, coin_name: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM coin_record WHERE coin_name=?", (coin_name.hex(),))).close()
+        self.total_count_cache.cache.clear()
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
@@ -113,6 +189,7 @@ class WalletCoinStore:
                     coin_name.hex(),
                 ),
             )
+        self.total_count_cache.cache.clear()
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
         coin = Coin(bytes32.fromhex(row[6]), bytes32.fromhex(row[5]), uint64.from_bytes(row[7]))
@@ -139,29 +216,84 @@ class WalletCoinStore:
 
     async def get_coin_records(
         self,
-        coin_names: List[bytes32],
-        include_spent_coins: bool = True,
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
-    ) -> Dict[bytes32, WalletCoinRecord]:
-        """Returns CoinRecord with specified coin id."""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = list(
-                await conn.execute_fetchall(
-                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))}) "
-                    f"AND confirmed_height>=? AND confirmed_height<? "
-                    f"{'' if include_spent_coins else 'AND spent=0'}",
-                    tuple([c.hex() for c in coin_names]) + (start_height, end_height),
-                )
+        *,
+        offset: uint32 = uint32(0),
+        limit: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1),
+        wallet_id: Optional[uint32] = None,
+        wallet_type: Optional[WalletType] = None,
+        coin_type: Optional[CoinType] = None,
+        coin_id_filter: Optional[HashFilter] = None,
+        puzzle_hash_filter: Optional[HashFilter] = None,
+        parent_coin_id_filter: Optional[HashFilter] = None,
+        amount_filter: Optional[AmountFilter] = None,
+        amount_range: Optional[UInt64Range] = None,
+        confirmed_range: Optional[UInt32Range] = None,
+        spent_range: Optional[UInt32Range] = None,
+        order: CoinRecordOrder = CoinRecordOrder.confirmed_height,
+        reverse: bool = False,
+        include_total_count: bool = False,
+    ) -> GetCoinRecordsResult:
+        conditions = []
+        if wallet_id is not None:
+            conditions.append(f"wallet_id={wallet_id}")
+        if wallet_type is not None:
+            conditions.append(f"wallet_type={wallet_type.value}")
+        if coin_type is not None:
+            conditions.append(f"coin_type={coin_type.value}")
+        for field, hash_filter in {
+            "coin_name": coin_id_filter,
+            "coin_parent": parent_coin_id_filter,
+            "puzzle_hash": puzzle_hash_filter,
+        }.items():
+            if hash_filter is None:
+                continue
+            entries = ",".join(f"{value.hex()!r}" for value in hash_filter.values)
+            conditions.append(
+                f"{field} {'not' if FilterMode(hash_filter.mode) == FilterMode.exclude else ''} in ({entries})"
+            )
+        if confirmed_range is not None and confirmed_range != UInt32Range():
+            conditions.append(f"confirmed_height BETWEEN {confirmed_range.start} AND {confirmed_range.stop}")
+        if spent_range is not None and spent_range != UInt32Range():
+            conditions.append(f"spent_height BETWEEN {spent_range.start} AND {spent_range.stop}")
+        if amount_filter is not None:
+            entries = ",".join(f"X'{bytes(value).hex()}'" for value in amount_filter.values)
+            conditions.append(
+                f"amount {'not' if FilterMode(amount_filter.mode) == FilterMode.exclude else ''} in ({entries})"
+            )
+        if amount_range is not None and amount_range != UInt64Range():
+            conditions.append(
+                f"amount BETWEEN X'{bytes(amount_range.start).hex()}' AND X'{bytes(amount_range.stop).hex()}'"
             )
 
-        ret: Dict[bytes32, WalletCoinRecord] = {}
-        for row in rows:
-            record = self.coin_record_from_row(row)
-            coin_name = bytes32.fromhex(row[0])
-            ret[coin_name] = record
+        where_sql = "WHERE " + " AND ".join(conditions) if len(conditions) > 0 else ""
+        order_sql = f"ORDER BY {order.name} {'DESC' if reverse else 'ASC'}, rowid"
+        limit_sql = f"LIMIT {offset}, {limit}" if offset > 0 or limit < uint32.MAXIMUM_EXCLUSIVE - 1 else ""
+        query_sql = f"{where_sql} {order_sql} {limit_sql}"
 
-        return ret
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(f"SELECT * FROM coin_record {query_sql}")
+
+            total_count = None
+            if include_total_count:
+                cache_hash = std_hash(bytes(where_sql, encoding="utf8"))  # Only use the conditions here
+                total_count = self.total_count_cache.get(cache_hash)
+                if total_count is None:
+                    row = await execute_fetchone(conn, f"SELECT COUNT(coin_name) FROM coin_record {where_sql}")
+                    assert row is not None and len(row) == 1, "COUNT should always return one value"
+                    total_count = uint32(row[0])
+                    self.total_count_cache.put(cache_hash, total_count)
+
+        records: List[WalletCoinRecord] = []
+        coin_id_to_record: Dict[bytes32, WalletCoinRecord] = {}
+        for row in rows:
+            records.append(self.coin_record_from_row(row))
+            coin_id_to_record[bytes32.fromhex(row[0])] = records[-1]
+
+        return GetCoinRecordsResult(
+            records,
+            coin_id_to_record,
+            total_count,
+        )
 
     async def get_coin_records_between(
         self, wallet_id: int, start: int, end: int, reverse: bool = False, coin_type: CoinType = CoinType.NORMAL
@@ -241,3 +373,10 @@ class WalletCoinStore:
                     (height,),
                 )
             ).close()
+        self.total_count_cache.cache.clear()
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM coin_record WHERE wallet_id=?", (wallet_id,))
+            await cursor.close()
+        self.total_count_cache.cache.clear()
