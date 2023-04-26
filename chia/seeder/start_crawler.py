@@ -54,7 +54,6 @@ def create_full_node_crawler_service(
         advertised_port=service_config["port"],
         service_name="full_node",
         upnp_ports=[],
-        server_listen_ports=[service_config["port"]],
         on_connect_callback=crawler.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,

@@ -21,7 +21,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
@@ -1017,9 +1017,9 @@ class TestDIDWallet:
         assert await did_wallet_1.get_confirmed_balance() == did_amount
         assert await did_wallet_1.get_unconfirmed_balance() == did_amount
         response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
-
+        assert response["did_id"] == encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
         assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
-        assert response["full_puzzle"] == create_fullpuz(
+        assert response["full_puzzle"] == create_singleton_puzzle(
             did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
         )
         assert response["metadata"]["twitter"] == "twitter"
@@ -1117,7 +1117,7 @@ class TestDIDWallet:
         )
         assert "spend_bundle" in response
         spend = response["spend_bundle"].coin_spends[0]
-        error, conditions, cost = conditions_dict_for_solution(
+        conditions = conditions_dict_for_solution(
             spend.puzzle_reveal.to_program(),
             spend.solution.to_program(),
             wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,

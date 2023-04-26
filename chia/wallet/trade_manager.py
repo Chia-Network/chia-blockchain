@@ -33,12 +33,12 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
 
 class TradeManager:
     """
-    This class is a driver for creating and accepting settlement_payments.clvm style offers.
+    This class is a driver for creating and accepting settlement_payments.clsp style offers.
 
     By default, standard XCH is supported but to support other types of assets you must implement certain functions on
     the asset's wallet as well as create a driver for its puzzle(s).  Here is a guide to integrating a new types of
@@ -507,8 +507,12 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+                    # For the XCH wallet also include the fee amount to the coins we use to pay this offer
+                    amount_to_select = abs(amount)
+                    if wallet.type() == WalletType.STANDARD_WALLET:
+                        amount_to_select += fee
                     coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
+                        asset_id, uint64(amount_to_select), min_coin_amount, max_coin_amount
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -547,7 +551,10 @@ class TradeManager:
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
-            for id, selected_coins in coins_to_offer.items():
+            # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
+            # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
+            for id in sorted(coins_to_offer.keys()):
+                selected_coins = coins_to_offer[id]
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
                 else:
@@ -640,11 +647,12 @@ class TradeManager:
 
         addition_dict: Dict[uint32, List[Coin]] = {}
         for addition in additions:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                addition.puzzle_hash
+            )
+            if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
-                    wallet = self.wallet_state_manager.wallets[wallet_id]
+                    wallet = self.wallet_state_manager.wallets[wallet_identifier.id]
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(
@@ -658,7 +666,7 @@ class TradeManager:
                             spend_bundle=None,
                             additions=[addition],
                             removals=[],
-                            wallet_id=wallet_id,
+                            wallet_id=wallet_identifier.id,
                             sent_to=[],
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
@@ -667,17 +675,18 @@ class TradeManager:
                         )
                     )
                 else:  # This is change
-                    addition_dict.setdefault(wallet_id, [])
-                    addition_dict[wallet_id].append(addition)
+                    addition_dict.setdefault(wallet_identifier.id, [])
+                    addition_dict[wallet_identifier.id].append(addition)
 
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
-                removal_dict.setdefault(wallet_id, [])
-                removal_dict[wallet_id].append(removal)
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                removal.puzzle_hash
+            )
+            if wallet_identifier is not None:
+                removal_dict.setdefault(wallet_identifier.id, [])
+                removal_dict[wallet_identifier.id].append(removal)
 
         all_removals: List[bytes32] = [r.name() for removals in removal_dict.values() for r in removals]
 
