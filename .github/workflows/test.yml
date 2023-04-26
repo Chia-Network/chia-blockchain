@@ -136,16 +136,19 @@ jobs:
           coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
 
       - name: Coverage report (chia/)
+        if: always()
         run: |
           set -o pipefail
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='chia/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
       - name: Coverage report (tests/)
+        if: always()
         run: |
           set -o pipefail
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
+        if: always()
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
