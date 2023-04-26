@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -52,6 +52,11 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 class DIDWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("DIDWallet", None)
+
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -1482,9 +1487,3 @@ class DIDWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = DIDWallet()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -55,6 +55,11 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("Wallet", None)
+
     wallet_info: WalletInfo
     wallet_state_manager: Any
     log: logging.Logger
@@ -626,9 +631,3 @@ class Wallet:
 
     def get_name(self) -> str:
         return "Standard Wallet"
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = Wallet()
