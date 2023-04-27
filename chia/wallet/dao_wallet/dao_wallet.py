@@ -1389,7 +1389,7 @@ class DAOWallet(WalletProtocol):
         treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
         p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
         cat_spend_bundle = None
-
+        p2_singleton_sb = None
         for condition_statement in CONDITIONS.as_iter():
             if condition_statement.first().as_int() == 51:
                 sum += condition_statement.rest().rest().first().as_int()
@@ -1403,13 +1403,13 @@ class DAOWallet(WalletProtocol):
                         0,
                         0,
                         xch_coin.name(),
-                        p2_singleton_puzzle.get_tree_hash(),
+                        0,
                         0,
                         xch_coin.amount,
                     ]
                 )
                 coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
-
+            p2_singleton_sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
         for tail_hash_conditions_pair in LIST_OF_TAILHASH_CONDITIONS.as_iter():
             tail_hash: bytes32 = tail_hash_conditions_pair.first().as_atom()
             conditions: Program = tail_hash_conditions_pair.rest().first()
@@ -1462,6 +1462,7 @@ class DAOWallet(WalletProtocol):
                     lineage_proof=lineage_proof,
                 )
                 spendable_cat_list.append(new_spendable_cat)
+            # create or merge with other CAT spends
             if cat_spend_bundle is None:
                 cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
             else:
@@ -1506,7 +1507,7 @@ class DAOWallet(WalletProtocol):
             ]
         )
         treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
-        # breakpoint()
+
         spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee)
@@ -1516,6 +1517,9 @@ class DAOWallet(WalletProtocol):
             full_spend = SpendBundle.aggregate([spend_bundle])
         if cat_spend_bundle is not None:
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
+        if p2_singleton_sb is not None:
+            full_spend = full_spend.aggregate([full_spend, p2_singleton_sb])
+        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
