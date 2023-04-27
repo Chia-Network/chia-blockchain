@@ -42,6 +42,7 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -51,7 +52,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -531,16 +532,16 @@ class DataLayerWallet:
             )
 
         # Create the solution
-        primaries: List[AmountWithPuzzlehash] = [
-            {
-                "puzzlehash": announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
-                "amount": singleton_record.lineage_proof.amount if new_amount is None else new_amount,
-                "memos": [
+        primaries = [
+            Payment(
+                announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
+                singleton_record.lineage_proof.amount if new_amount is None else new_amount,
+                [
                     launcher_id,
                     root_hash,
                     announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
                 ],
-            }
+            )
         ]
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
@@ -760,9 +761,7 @@ class DataLayerWallet:
         new_puzhash: bytes32 = await self.get_new_puzzlehash()
         excess_fee: int = fee - mirror_coin.amount
         inner_sol: Program = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_puzhash, "amount": uint64(mirror_coin.amount - fee), "memos": []}]
-            if excess_fee < 0
-            else [],
+            primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee), [])] if excess_fee < 0 else [],
             coin_announcements={b"$"} if excess_fee > 0 else None,
         )
         mirror_spend = CoinSpend(

@@ -52,7 +52,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -685,9 +685,7 @@ class CATWallet:
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries: List[AmountWithPuzzlehash] = []
-        for payment in payments:
-            primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
+        primaries = payments.copy()
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -702,7 +700,7 @@ class CATWallet:
                         break
             else:
                 change_puzhash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": change_puzhash, "amount": uint64(change), "memos": []})
+            primaries.append(Payment(change_puzhash, uint64(change), []))
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
