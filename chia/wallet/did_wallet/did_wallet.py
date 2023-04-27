@@ -50,9 +50,10 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
 
 
-class DIDWallet:
+class DIDWallet(WalletProtocol):
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo

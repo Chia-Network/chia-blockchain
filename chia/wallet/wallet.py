@@ -47,6 +47,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
@@ -55,7 +56,7 @@ if TYPE_CHECKING:
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
-class Wallet:
+class Wallet(WalletProtocol):
     wallet_info: WalletInfo
     wallet_state_manager: Any
     log: logging.Logger
