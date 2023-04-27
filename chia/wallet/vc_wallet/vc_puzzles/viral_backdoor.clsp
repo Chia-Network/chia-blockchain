@@ -7,7 +7,7 @@
     THIS_MOD_HASH
     HIDDEN_PUZZLE_HASH
     INNER_PUZZLE_HASH  ; must be a hash so that the backdoor has enough info to create a puzzle reveal to spend the coin
-    hidden
+    hidden  ; bool for whether or not to run the hidden puzzle
     inner_or_hidden_puzzle_reveal
     inner_or_hidden_solution
   )

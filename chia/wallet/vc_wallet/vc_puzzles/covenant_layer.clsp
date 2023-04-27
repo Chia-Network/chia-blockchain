@@ -1,12 +1,11 @@
-; This is a utility layer to give a coin that allows it to prove that it came from some INITIAL_PUZZLE_HASH
+; This is a utility layer for a coin that allows it to prove that it came from some INITIAL_PUZZLE_HASH
 (mod
   (
-    ; curried first
-    INITIAL_PUZZLE_HASH
-    PARENT_MORPHER  ; Defines how to wrap a parent inner puzzle hash to prove that it had this layer running in of it
+    INITIAL_PUZZLE_HASH  ; The ancestor's puzzle hash this layer is evidence of
+    PARENT_MORPHER  ; Defines how to wrap a parent inner puzzle hash to prove that it had this layer running inside it
     INNER_PUZZLE
-    lineage_proof
-    morpher_solution
+    lineage_proof  ; parent id, parent inner puzzle hash (wrapped with PARENT_MORPHER), parent amount
+    morpher_solution  ; solution to PARENT_MORPHER
     inner_solution
   )
 

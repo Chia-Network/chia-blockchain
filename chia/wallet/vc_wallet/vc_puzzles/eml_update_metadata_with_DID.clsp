@@ -1,4 +1,4 @@
-; This is a TRANSFER_PROGRAM for use with nft_ownership_layer.clsp
+; This is a TRANSFER_PROGRAM for use with exigent_metadata_layer.clsp
 
 ; Given a DID's singleton struct, assert its announcement of any changes. If no DID's innerpuz is provided, then just
 ; return the same metadata and transfer program with no conditions
@@ -10,12 +10,16 @@
     SINGLETON_LAUNCHER_HASH
     (provider_id . metadata)  ; Truth
     conditions  ; Truth
+    ; tp_solution looks like this in the case of a DID update
     (
       provider_innerpuzhash
       my_coin_id
       new_metadata
       new_transfer_program_hash
     )
+    ; tp_solution could also be () or new_transfer_program_hash for two other cases:
+    ;  - () == continue with the same metadata we currently have
+    ;  - new_transfer_program_hash == update the transfer program to whatever, but clear the metadata
   )
 
   (include condition_codes.clib)
@@ -34,6 +38,7 @@
     )
 
     (curry_hashes_inline SINGLETON_MOD_HASH
+      ; calculate the singleton struct
       (sha256 TWO
         (sha256 ONE SINGLETON_MOD_HASH)
         (sha256 TWO
@@ -52,6 +57,7 @@
         new_transfer_program_hash
         (list
           (list ASSERT_MY_COIN_ID my_coin_id)
+          ; get an announcement from the DID in the EML's metadata to update to a new metadata and transfer program
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               (create_did_puzhash SINGLETON_MOD_HASH SINGLETON_LAUNCHER_HASH provider_id provider_innerpuzhash)
