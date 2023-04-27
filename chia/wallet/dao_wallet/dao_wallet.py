@@ -1367,6 +1367,7 @@ class DAOWallet(WalletProtocol):
         curried_args = uncurry_spend_p2_singleton(puzzle_reveal)
         (
             _,
+            _,
             CONDITIONS,
             LIST_OF_TAILHASH_CONDITIONS,
             P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
@@ -1473,6 +1474,7 @@ class DAOWallet(WalletProtocol):
             [
                 xch_parent_amount_list,
                 tailhash_parent_amount_list,
+                treasury_inner_puzhash,
             ]
         )
         # proposal_flag  ; if this is set then we are closing a proposal

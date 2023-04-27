@@ -140,6 +140,7 @@ def get_spend_p2_singleton_puzzle(
     # P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
     treasury_struct = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     puzzle: Program = SPEND_P2_SINGLETON_MOD.curry(
+        treasury_struct,
         CAT_MOD_HASH,
         xch_conditions,
         asset_conditions,

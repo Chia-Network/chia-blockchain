@@ -77,7 +77,7 @@
     	    )
     	  )
     	)
-      (x "bong")
+      (x)
     )
     ; no proposal_flag so create the oracle announcement
     (list
