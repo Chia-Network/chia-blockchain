@@ -78,7 +78,7 @@
             all_conditions
             (r conditions)
             (if (= (f (f conditions)) CREATE_COIN)
-                (if (logand (f (r (r (f conditions)))))
+                (if (logand (f (r (r (f conditions)))) 1)
                     (assert (not odd_args)
                       ; then
                       (list (r (f conditions)) tp_output ())
