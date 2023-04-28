@@ -22,10 +22,10 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -566,10 +566,7 @@ class TestWalletSimulator:
 
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
 
-        primaries: List[AmountWithPuzzlehash] = []
-        for i in range(0, 60):
-            primaries.append({"puzzlehash": ph, "amount": uint64(1000000000 + i), "memos": []})
-
+        primaries = [Payment(ph, uint64(1000000000 + i), []) for i in range(60)]
         tx_split_coins = await wallet.generate_signed_transaction(uint64(1), ph, uint64(0), primaries=primaries)
         assert tx_split_coins.spend_bundle is not None
 

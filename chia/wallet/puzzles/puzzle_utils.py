@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 
 
-def make_create_coin_condition(puzzle_hash, amount, memos: Optional[List[bytes]]) -> Program:
-    if memos is not None:
-        condition: Program = Program.to([ConditionOpcode.CREATE_COIN, puzzle_hash, amount, memos])
-    else:
-        condition = Program.to([ConditionOpcode.CREATE_COIN, puzzle_hash, amount])
-    return condition
+def make_create_coin_condition(puzzle_hash, amount, memos: List[bytes]) -> Program:
+    condition = [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
+    if len(memos) > 0:
+        condition.append(memos)
+    condition_after_memos: Program = Program.to(condition)
+    return condition_after_memos
 
 
 def make_assert_aggsig_condition(pubkey) -> Program:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from secrets import token_bytes
 
 import pytest
@@ -79,6 +80,50 @@ record_8 = WalletCoinRecord(
     CoinType.CLAWBACK,
     VersionedBlob(uint16(1), b"TEST"),
 )
+
+
+@pytest.mark.parametrize(
+    "invalid_record, error",
+    [
+        (replace(record_8, metadata=None), "Can't parse None metadata"),
+        (replace(record_8, coin_type=CoinType.NORMAL), "Unknown metadata"),
+    ],
+)
+def test_wallet_coin_record_parsed_metadata_failures(invalid_record: WalletCoinRecord, error: str) -> None:
+    with pytest.raises(ValueError, match=error):
+        invalid_record.parsed_metadata()
+
+
+@pytest.mark.parametrize(
+    "coin_record, expected_metadata_type",
+    [
+        (record_8, VersionedBlob),  # TODO: Replace proper clawback metadata here when its introduced
+    ],
+)
+def test_wallet_coin_record_parsed_metadata(coin_record: WalletCoinRecord, expected_metadata_type: type) -> None:
+    assert type(coin_record.parsed_metadata()) == expected_metadata_type
+
+
+@pytest.mark.parametrize("coin_record", [record_1, record_2, record_8])
+def test_wallet_coin_record_json_parsed(coin_record: WalletCoinRecord) -> None:
+    expected_metadata = None
+    if coin_record.coin_type == CoinType.CLAWBACK:
+        assert coin_record.metadata is not None
+        #  TODO: Parse proper clawback metadata here when its introduced
+        expected_metadata = coin_record.metadata.to_json_dict()
+
+    assert coin_record.to_json_dict_parsed_metadata() == {
+        "id": "0x" + coin_record.name().hex(),
+        "amount": coin_record.coin.amount,
+        "puzzle_hash": "0x" + coin_record.coin.puzzle_hash.hex(),
+        "parent_coin_info": "0x" + coin_record.coin.parent_coin_info.hex(),
+        "type": coin_record.coin_type,
+        "wallet_identifier": coin_record.wallet_identifier().to_json_dict(),
+        "confirmed_height": coin_record.confirmed_block_height,
+        "metadata": expected_metadata,
+        "spent_height": coin_record.spent_block_height,
+        "coinbase": coin_record.coinbase,
+    }
 
 
 @pytest.mark.asyncio
