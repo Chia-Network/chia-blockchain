@@ -173,8 +173,7 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    async with get_any_service_client(FarmerRpcClient) as node_config_fp:
-        farmer_client, config, _ = node_config_fp
+    async with get_any_service_client(FarmerRpcClient) as (farmer_client, config):
         if farmer_client is not None:
             address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
             summaries_response = await wallet_client.get_wallets()
@@ -222,8 +221,7 @@ async def show(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint
 
 async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
-    async with get_any_service_client(FarmerRpcClient) as node_config_fp:
-        farmer_client, _, _ = node_config_fp
+    async with get_any_service_client(FarmerRpcClient) as (farmer_client, _):
         if farmer_client is not None:
             login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
             if login_link is None:

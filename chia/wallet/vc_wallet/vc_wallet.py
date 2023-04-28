@@ -17,13 +17,14 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
 from chia.wallet.wallet import Wallet
@@ -229,9 +230,7 @@ class VCWallet:
         else:
             puzzle_announcements_bytes = None
 
-        primaries: List[AmountWithPuzzlehash] = [
-            {"puzzlehash": new_inner_puzhash, "amount": uint64(vc_record.vc.coin.amount), "memos": [new_inner_puzhash]}
-        ]
+        primaries: List[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
 
         if fee > 0:
             announcement_to_make = vc_record.vc.coin.name()

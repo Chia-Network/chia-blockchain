@@ -2686,7 +2686,7 @@ coins = make_test_coins()
         ),
     ],
 )
-def test_spends_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
+def test_items_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> None:
     fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
 
     mempool_info = MempoolInfo(
@@ -2698,7 +2698,7 @@ def test_spends_by_feerate(items: List[MempoolItem], expected: List[Coin]) -> No
     for i in items:
         mempool.add_to_pool(i)
 
-    ordered_items = list(mempool.spends_by_feerate())
+    ordered_items = list(mempool.items_by_feerate())
 
     assert len(ordered_items) == len(expected)
 
@@ -2756,7 +2756,7 @@ def test_full_mempool(items: List[int], add: int, expected: List[int]) -> None:
     # now, add the item we're testing
     mempool.add_to_pool(item_cost(add, 3.1))
 
-    ordered_items = list(mempool.spends_by_feerate())
+    ordered_items = list(mempool.items_by_feerate())
 
     assert len(ordered_items) == len(expected)
 
@@ -2818,14 +2818,14 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
 
     ordered_costs = [
         item.cost
-        for item in mempool.spends_by_feerate()
+        for item in mempool.items_by_feerate()
         if item.assert_before_height is not None or item.assert_before_seconds is not None
     ]
 
     assert ordered_costs == expected
 
     print("")
-    for item in mempool.spends_by_feerate():
+    for item in mempool.items_by_feerate():
         if item.assert_before_seconds is not None or item.assert_before_height is not None:
             ttl = "yes"
         else:
@@ -2833,3 +2833,40 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         print(f"- cost: {item.cost} TTL: {ttl}")
 
     assert mempool.total_mempool_cost() > 90
+
+
+@pytest.mark.parametrize(
+    "items,coin_ids,expected",
+    [
+        # None of these spend those coins
+        (
+            [mk_item(coins[0:1]), mk_item(coins[1:2]), mk_item(coins[2:3])],
+            [coins[3].name(), coins[4].name()],
+            [],
+        ),
+        # One of these spends one of the coins
+        (
+            [mk_item(coins[0:1]), mk_item(coins[1:2]), mk_item(coins[2:3])],
+            [coins[1].name(), coins[3].name()],
+            [mk_item(coins[1:2])],
+        ),
+        # One of these spends one another spends two
+        (
+            [mk_item(coins[0:1]), mk_item(coins[1:3]), mk_item(coins[2:4]), mk_item(coins[3:4])],
+            [coins[2].name(), coins[3].name()],
+            [mk_item(coins[1:3]), mk_item(coins[2:4]), mk_item(coins[3:4])],
+        ),
+    ],
+)
+def test_get_items_by_coin_ids(items: List[MempoolItem], coin_ids: List[bytes32], expected: List[MempoolItem]) -> None:
+    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+    mempool = Mempool(mempool_info, fee_estimator)
+    for i in items:
+        mempool.add_to_pool(i)
+    result = mempool.get_items_by_coin_ids(coin_ids)
+    assert set(result) == set(expected)

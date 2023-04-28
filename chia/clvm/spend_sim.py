@@ -223,7 +223,7 @@ class SpendSim:
     ) -> Tuple[List[Coin], List[Coin]]:
         # Fees get calculated
         fees = uint64(0)
-        for item in self.mempool_manager.mempool.all_spends():
+        for item in self.mempool_manager.mempool.all_items():
             fees = uint64(fees + item.fee)
 
         # Rewards get created
@@ -427,11 +427,11 @@ class SimClient:
             return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
-        return self.service.mempool_manager.mempool.all_spend_ids()
+        return self.service.mempool_manager.mempool.all_item_ids()
 
     async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
         spends = {}
-        for item in self.service.mempool_manager.mempool.all_spends():
+        for item in self.service.mempool_manager.mempool.all_items():
             spends[item.name] = item
         return spends
 

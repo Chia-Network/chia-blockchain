@@ -11,7 +11,7 @@ import ssl
 import sys
 import tempfile
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -355,26 +355,34 @@ class BlockTools:
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
-    ):
+    ) -> bool:
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
+        existing_plots: bool = True
         # OG Plots
         for i in range(num_og_plots):
-            await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+            plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+            if plot.new_plot:
+                existing_plots = False
         # Pool Plots
         for i in range(num_pool_plots):
-            await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+            plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+            if plot.new_plot:
+                existing_plots = False
         # Some plots with keys that are not in the keychain
         for i in range(num_non_keychain_plots):
-            await self.new_plot(
+            plot = await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
                 plot_size=plot_size,
                 bitfield=bitfield,
             )
+            if plot.new_plot:
+                existing_plots = False
         await self.refresh_plots()
         assert len(self.plot_manager.plots) == len(self.expected_plots)
+        return existing_plots
 
     async def new_plot(
         self,
@@ -385,7 +393,7 @@ class BlockTools:
         exclude_plots: bool = False,
         plot_size: int = 20,
         bitfield: bool = True,
-    ) -> Optional[bytes32]:
+    ) -> BlockToolsNewPlotResult:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
@@ -429,6 +437,7 @@ class BlockTools:
 
             plot_id_new: Optional[bytes32] = None
             path_new: Optional[Path] = None
+            new_plot: bool = True
 
             if len(created):
                 assert len(existed) == 0
@@ -437,13 +446,14 @@ class BlockTools:
             if len(existed):
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
+                new_plot = False
             assert plot_id_new is not None
             assert path_new is not None
 
             if not exclude_plots:
                 self.expected_plots[plot_id_new] = path_new
 
-            return plot_id_new
+            return BlockToolsNewPlotResult(plot_id_new, new_plot)
 
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -2116,6 +2126,12 @@ def create_test_unfinished_block(
         block_generator.program if block_generator else None,
         block_generator.block_height_list if block_generator else [],
     )
+
+
+@dataclass
+class BlockToolsNewPlotResult:
+    plot_id: bytes32
+    new_plot: bool
 
 
 # Remove these counters when `create_block_tools` and `create_block_tools_async` are removed
