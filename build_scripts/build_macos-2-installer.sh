@@ -34,6 +34,10 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
+# Creates a directory of licenses
+echo "Building pip and NPM license direcory"
+bash ./build_license_directory.sh
+
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 

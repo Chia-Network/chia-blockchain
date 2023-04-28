@@ -42,6 +42,10 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
+# Creates a directory of licenses
+echo "Building pip and NPM license direcory"
+bash ./build_license_directory.sh
+
 # Builds CLI only rpm
 CLI_RPM_BASE="chia-blockchain-cli-$CHIA_INSTALLER_VERSION-1.$REDHAT_PLATFORM"
 mkdir -p "dist/$CLI_RPM_BASE/opt/chia"

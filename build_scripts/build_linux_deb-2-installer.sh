@@ -44,6 +44,10 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
+# Creates a directory of licenses
+echo "Building pip and NPM license direcory"
+bash ./build_license_directory.sh
+
 # Builds CLI only .deb
 # need j2 for templating the control file
 pip install j2cli
