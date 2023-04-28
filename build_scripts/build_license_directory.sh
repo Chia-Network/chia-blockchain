@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
-
+npm install -g license-checker
 cd ../chia-blockchain-gui
 
 license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
