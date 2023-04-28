@@ -78,26 +78,26 @@
   (list
     (list ASSERT_HEIGHT_RELATIVE proposal_timelock)
     (list CREATE_PUZZLE_ANNOUNCEMENT (f (r MY_PARENT_SINGLETON_STRUCT)))
-    ; (list
-    ;       ASSERT_PUZZLE_ANNOUNCEMENT
-    ;       (sha256
-    ;         (calculate_proposal_puzzlehash
-    ;           PROPOSAL_MOD_HASH
-    ;           CAT_MOD_HASH
-    ;           LOCKUP_MOD_HASH
-    ;           CAT_TAIL_HASH
-    ;           MY_PARENT_SINGLETON_STRUCT
-    ;           treasury_mod_hash
-    ;           PROPOSAL_TIMER_MOD_HASH
-    ;           TREASURY_ID
-    ;           proposal_yes_votes
-    ;           proposal_total_votes
-    ;           spend_or_update_flag
-    ;           proposal_innerpuzhash
-    ;         )
-    ;         proposal_timelock
-    ;       )
-    ; )
+    (list
+          ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (calculate_proposal_puzzlehash
+              PROPOSAL_MOD_HASH
+              CAT_MOD_HASH
+              LOCKUP_MOD_HASH
+              CAT_TAIL_HASH
+              MY_PARENT_SINGLETON_STRUCT
+              treasury_mod_hash
+              PROPOSAL_TIMER_MOD_HASH
+              TREASURY_ID
+              proposal_yes_votes
+              proposal_total_votes
+              spend_or_update_flag
+              proposal_innerpuzhash
+            )
+            proposal_timelock
+          )
+    )
     (list
         ASSERT_MY_PARENT_ID
         (sha256

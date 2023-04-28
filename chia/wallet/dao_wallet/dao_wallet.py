@@ -1334,7 +1334,6 @@ class DAOWallet(WalletProtocol):
                 YES_VOTES,
                 TOTAL_VOTES,
                 PROPOSED_PUZ_HASH,
-                self.dao_info.current_treasury_innerpuz.get_tree_hash(),
                 proposal_timelock,
                 SPEND_OR_UPDATE_FLAG,
                 proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
