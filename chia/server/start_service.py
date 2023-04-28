@@ -23,7 +23,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
-from chia.util.network import get_host_addr
+from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
@@ -142,7 +142,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
                 resolved = resolved_peers.get(unresolved)
                 if resolved is None:
                     try:
-                        resolved = PeerInfo(get_host_addr(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
+                        resolved = PeerInfo(await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
                     except Exception as e:
                         self._log.warning(f"Failed to resolve {unresolved.host}: {e}")
                         continue
@@ -158,7 +158,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
                     # up to date.
                     try:
                         resolved_new = PeerInfo(
-                            get_host_addr(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
+                            await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
                         )
                     except Exception as e:
                         self._log.warning(f"Failed to resolve after connection failure {unresolved.host}: {e}")
