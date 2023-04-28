@@ -1,20 +1,36 @@
-(mod (P2_CONDS NEW_TREASURY_PH NEW_AMOUNT_CHANGE)
-;; This puzzle is a generic inner puzzle for a DAO proposal and works with either XCH or CAT minting.
-;; It curries in a list of conditions which are produced if the proposal runs its "pass" spend.
-
-;; P2_CONDS: Curried list of conditions that will be issued if the puzzle is run
-;; NEW_TREASURY_PH: The new puzzlehash of the treasury coin
-;; NEW_AMOUNT_CHANGE: the change in amount held by the treasury (old_amount - new_amount)
+(mod
+  (
+    TREASURY_MOD_HASH
+    PROPOSAL_VALIDATOR
+    PROPOSAL_LENGTH
+    PROPOSAL_SOFTCLOSE_LENGTH
+    ATTENDANCE_REQUIRED
+    PASS_MARGIN
+    PROPOSAL_SELF_DESTRUCT_TIME
+    ORACLE_SPEND_DELAY
+  )
+;; This is a proposal to update treasury conditions for a DAO
 
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
   (include *standard-cl-21*)
+  (include utility_macros.clib)
 
 
-  (c
-    (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list 'n' NEW_TREASURY_PH NEW_AMOUNT_CHANGE))) ;; asserted by dao_treasury
-    P2_CONDS
+  (list
+    (list CREATE_COIN
+      (puzzle-hash-of-curried-function TREASURY_MOD_HASH
+          (sha256 ONE ORACLE_SPEND_DELAY)
+          (sha256 ONE PROPOSAL_SELF_DESTRUCT_TIME)
+          (sha256 ONE PASS_MARGIN)
+          (sha256 ONE ATTENDANCE_REQUIRED)
+          (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
+          (sha256 ONE PROPOSAL_LENGTH)
+          (sha256tree PROPOSAL_VALIDATOR)
+	  (sha256 ONE TREASURY_MOD_HASH)
+      )
+      ONE
+    )
   )
-
 )

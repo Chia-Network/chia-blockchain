@@ -36,7 +36,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
-from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # TODO: create_dao_spend_proposal has gone AWOL; get_cat_tail_hash_from_treasury_puzzle,
+from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
@@ -54,10 +54,13 @@ from chia.wallet.dao_wallet.dao_utils import (  # create_dao_spend_proposal,  # 
     get_p2_singleton_puzzle,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
+    get_proposal_type,
+    get_proposal_validator,
     get_proposed_puzzle_reveal_from_solution,
     get_spend_p2_singleton_puzzle,
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
+    get_update_proposal_puzzle,
     uncurry_proposal,
     uncurry_spend_p2_singleton,
     uncurry_treasury,
@@ -923,6 +926,18 @@ class DAOWallet(WalletProtocol):
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)  # type: ignore[arg-type]
         return puzzle
 
+    async def generate_update_proposal_innerpuz(
+        self,
+        new_dao_rules: DAORules,
+        new_proposal_validator: Optional[Program] = None,
+    ) -> Program:
+        if not new_proposal_validator:
+            assert isinstance(self.dao_info.current_treasury_innerpuz, Program)
+            new_proposal_validator = get_proposal_validator(self.dao_info.current_treasury_innerpuz)
+            # assert isinstance(new_proposal_validator, Program)
+        puzzle = get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
+        return puzzle
+
     async def generate_new_proposal(
         self,
         proposed_puzzle: Program,
@@ -944,13 +959,14 @@ class DAOWallet(WalletProtocol):
 
         assert cat_wallet.cat_info.my_tail
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
+        proposal_type = get_proposal_type(proposed_puzzle)
         dao_proposal_puzzle = get_proposal_puzzle(
             proposal_id=launcher_coin.name(),
             cat_tail_hash=cat_tail_hash,
             treasury_id=self.dao_info.treasury_id,
             votes_sum=uint64(0),
             total_votes=uint64(0),
-            spend_or_update_flag="s",  # TODO: decide spend or update
+            spend_or_update_flag=proposal_type,
             proposed_puzzle_hash=proposed_puzzle.get_tree_hash(),
         )
 
@@ -997,6 +1013,7 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),

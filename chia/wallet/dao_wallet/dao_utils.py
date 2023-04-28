@@ -47,6 +47,8 @@ DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clvm")
 DAO_SAFE_PAYMENT_MOD_HASH: bytes32 = DAO_SAFE_PAYMENT_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
+DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clvm")
+DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
 
 log = logging.Logger(__name__)
 
@@ -114,6 +116,23 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
     return puzzle
 
 
+def get_proposal_validator(treasury_puz: Program) -> Program:
+    _, uncurried_args = treasury_puz.uncurry()
+    validator: Program = uncurried_args.rest().first()
+    return validator
+
+
+def get_proposal_type(proposal: Program) -> str:
+    uncurried = proposal.uncurry()
+    if uncurried[0] == SPEND_P2_SINGLETON_MOD:
+        p_type = "s"
+    elif uncurried[0] == DAO_UPDATE_PROPOSAL_MOD:
+        p_type = "u"
+    else:
+        p_type = "d"
+    return p_type
+
+
 def create_announcement_condition_for_nft_spend(
     # treasury_id: bytes32, TODO: is treasury_id needed here?
     nft_id: bytes32,
@@ -123,6 +142,20 @@ def create_announcement_condition_for_nft_spend(
     delegated_puzzle = Program.to([(1, [[51, target_address, 1]])])
     announcement_condition = Program.to([62, Program.to([nft_id, delegated_puzzle.get_tree_hash()]).get_tree_hash()])
     return announcement_condition, delegated_puzzle
+
+
+def get_update_proposal_puzzle(dao_rules: DAORules, proposal_validator: Program) -> Program:
+    update_proposal = DAO_UPDATE_PROPOSAL_MOD.curry(
+        DAO_TREASURY_MOD_HASH,
+        proposal_validator,
+        dao_rules.proposal_timelock,
+        dao_rules.soft_close_length,
+        dao_rules.attendance_required,
+        dao_rules.pass_percentage,
+        dao_rules.self_destruct_length,
+        dao_rules.oracle_spend_delay,
+    )
+    return update_proposal
 
 
 def get_spend_p2_singleton_puzzle(

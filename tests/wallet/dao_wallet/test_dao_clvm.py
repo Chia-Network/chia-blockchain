@@ -42,6 +42,8 @@ DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clvm")
 DAO_SAFE_PAYMENT_MOD_HASH: bytes32 = DAO_SAFE_PAYMENT_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
+DAO_UPDATE_MOD: Program = load_clvm("dao_update_proposal.clvm")
+DAO_UPDATE_MOD_HASH: bytes32 = DAO_UPDATE_MOD.get_tree_hash()
 
 
 def test_proposal() -> None:
@@ -856,6 +858,88 @@ def test_proposal_innerpuz() -> None:
     # Announcements
     # Proposal CPA (proposal_timelock) <-> Treasury APA
     # Proposal APA (proposal_id, proposal_timelock, soft_close_length) <-> Treasury CPA
+    treasury_apa = treasury_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0]
+    proposal_cpa = proposal_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT][0].vars[0]
+    assert std_hash(full_proposal_puzhash + proposal_cpa) == treasury_apa
+
+    treasury_cpas = [
+        std_hash(full_treasury_puzhash + cond.vars[0])
+        for cond in treasury_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
+    ]
+    proposal_apas = [cond.vars[0] for cond in proposal_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT]]
+    assert treasury_cpas[0] == proposal_apas[1]
+
+    # Test Proposal to update treasury
+    # Set up new treasury params
+    new_proposal_pass_percentage: uint64 = uint64(2500)
+    new_attendance_required: uint64 = uint64(500)
+    new_proposal_timelock = 900
+    new_soft_close_length = 10
+    new_self_destruct_time = 1000
+    new_oracle_spend_delay = 20
+
+    update_proposal = DAO_UPDATE_MOD.curry(
+        DAO_TREASURY_MOD_HASH,
+        proposal_validator,
+        new_proposal_timelock,
+        new_soft_close_length,
+        new_attendance_required,
+        new_proposal_pass_percentage,
+        new_self_destruct_time,
+        new_oracle_spend_delay,
+    )
+    update_proposal_puzhash = update_proposal.get_tree_hash()
+    update_proposal_sol = Program.to([])
+
+    proposal: Program = DAO_PROPOSAL_MOD.curry(
+        proposal_singleton_struct,
+        DAO_PROPOSAL_MOD_HASH,
+        DAO_PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        DAO_TREASURY_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        CAT_TAIL_HASH,
+        treasury_id,
+        yes_votes,
+        current_votes,
+        "u",
+        update_proposal_puzhash,
+    )
+    full_proposal: Program = SINGLETON_MOD.curry(proposal_singleton_struct, proposal)
+    full_proposal_puzhash: bytes32 = full_proposal.get_tree_hash()
+
+    treasury_solution: Program = Program.to(
+        [
+            "p",
+            [full_proposal_puzhash, update_proposal_puzhash, 0, "u"],
+            [proposal_id, current_votes, yes_votes, spend_amount],
+            update_proposal,
+            update_proposal_sol,
+        ]
+    )
+
+    proposal_solution = Program.to(
+        [
+            proposal_validator.get_tree_hash(),
+            0,
+            proposal_timelock,
+            proposal_pass_percentage,
+            attendance_required,
+            0,
+            soft_close_length,
+            self_destruct_time,
+            oracle_spend_delay,
+            0,
+        ]
+    )
+
+    lineage_proof = [treasury_id, treasury_inner_puzhash, treasury_amount]
+    full_treasury_solution = Program.to([lineage_proof, treasury_amount, treasury_solution])
+    full_proposal_solution = Program.to([lineage_proof, 1, proposal_solution])
+
+    treasury_conds: Program = conditions_dict_for_solution(full_treasury_puz, full_treasury_solution, INFINITE_COST)[1]
+    proposal_conds: Program = conditions_dict_for_solution(full_proposal, full_proposal_solution, INFINITE_COST)[1]
+
     treasury_apa = treasury_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0]
     proposal_cpa = proposal_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT][0].vars[0]
     assert std_hash(full_proposal_puzhash + proposal_cpa) == treasury_apa
