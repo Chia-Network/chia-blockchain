@@ -205,7 +205,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # Define parameters for next few spend attempts
         provider_innerpuzhash: bytes32 = ACS_PH
         my_coin_id: bytes32 = eml_coin.name()
-        new_metadata: Program = Program.to((MOCK_LAUNCHER_ID, "SUCCESS"))
+        new_metadata: Program = Program.to("SUCCESS")
         new_tp_hash: Program = Program.to("NEW TP").get_tree_hash()
         bad_data: bytes32 = bytes32([0] * 32)
 
@@ -304,7 +304,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
             .as_iter()
             if condition.first() == Program.to(1)
         )
-        assert remark_condition == Program.to([1, new_metadata, new_tp_hash])
+        assert remark_condition == Program.to([1, (MOCK_LAUNCHER_ID, new_metadata), new_tp_hash])
 
 
 @pytest.mark.asyncio

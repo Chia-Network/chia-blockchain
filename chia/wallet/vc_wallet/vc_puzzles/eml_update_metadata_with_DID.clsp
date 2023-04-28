@@ -53,7 +53,7 @@
   ; Returning (new_metadata new_transfer_program_hash conditions)
   (if (l (f (r (r (r (r (r @)))))))  ; If a tp solution was provided
       (list
-        new_metadata
+        (i new_metadata (c provider_id new_metadata) ())
         new_transfer_program_hash
         (list
           (list ASSERT_MY_COIN_ID my_coin_id)

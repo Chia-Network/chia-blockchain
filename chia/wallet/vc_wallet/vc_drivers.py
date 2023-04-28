@@ -603,11 +603,7 @@ class VerifiedCredential(Streamable):
             elif magic_condition.at("rrrf").atom is not None:
                 raise ValueError("Specified VC was cleared")
             else:
-                new_metadata_param = magic_condition.at("rrrfrrf")
-                if new_metadata_param.atom is None:
-                    proof_hash_as_prog = new_metadata_param.rest()
-                else:
-                    proof_hash_as_prog = new_metadata_param
+                proof_hash_as_prog = magic_condition.at("rrrfrrf")
 
             proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.atom)
 
@@ -662,7 +658,7 @@ class VerifiedCredential(Streamable):
                 [
                     provider_innerpuzhash,
                     self.coin.name(),
-                    Program.to((self.proof_provider, new_proof_hash)),
+                    Program.to(new_proof_hash),
                     None,  # TP update is not allowed because then the singleton will leave the VC protocol
                 ],
             ]
@@ -717,7 +713,7 @@ class VerifiedCredential(Streamable):
         if new_proof_hash is not None:
             expected_announcement: Optional[bytes32] = std_hash(
                 self.coin.name()
-                + Program.to((self.proof_provider, new_proof_hash)).get_tree_hash()
+                + Program.to(new_proof_hash).get_tree_hash()
                 + b""  # TP update is banned because singleton will leave the VC protocol
             )
         else:
