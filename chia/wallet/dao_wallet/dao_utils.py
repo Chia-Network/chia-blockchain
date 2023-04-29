@@ -618,3 +618,20 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program) -> Optio
 
         print(f"exception: {traceback.format_exc()}")
     return None
+
+
+def match_dao_cat_puzzle(uncurried: UncurriedPuzzle) -> Optional[Iterator[Program]]:
+    try:
+        if uncurried.mod == CAT_MOD:
+            arg_list = list(uncurried.args.as_iter())
+            maybe_dao_lockup = uncurried.args.at("rrf").uncurry()
+            if maybe_dao_lockup[0] == DAO_LOCKUP_MOD:
+                innerpuz = maybe_dao_lockup[1].at("rrrrrrrf").uncurry()[0]
+                arg_list[2] = innerpuz
+                dao_cat_args: Iterator[Program] = Program.to(arg_list).as_iter()
+                return dao_cat_args
+    except ValueError:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+    return None

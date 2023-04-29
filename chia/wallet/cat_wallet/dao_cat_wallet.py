@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     construct_cat_puzzle,
@@ -29,7 +29,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
     get_innerpuz_from_lockup_puzzle,
-    get_latest_lockup_puzzle_for_coin_spend,
     get_lockup_puzzle,
 )
 from chia.wallet.derivation_record import DerivationRecord
@@ -62,8 +61,8 @@ class DAOCATWallet:
     lineage_store: CATLineageStore
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.DAO_CAT)
+    def type(cls) -> WalletType:
+        return WalletType.DAO_CAT
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
@@ -128,35 +127,47 @@ class DAOCATWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"CAT wallet has been notified that {coin} was added")
-        inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
-        # This is the bottom layer inner_puzzle, now you must find the lockup puzzle
-        # Check if it is empty (attempt shortcut)
-        active_votes_list: List[Optional[bytes32]] = []
+        self.log.info(f"DAO CAT wallet has been notified that {coin} was added")
+        # We can't get the inner puzzle for this coin's puzhash because it has the lockup layer.
+        # So look for it's parent coin, and get the inner puzzle for it, which should be the same as
+        # the one contained in the lockup.
+        wallet_node: Any = self.wallet_state_manager.wallet_node
+        parent_coin = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
+        parent_spend = await wallet_node.fetch_puzzle_solution(height, parent_coin.coin, peer)
+        uncurried = parent_spend.puzzle_reveal.uncurry()
+        cat_inner = uncurried[1].at("rrf")
+        lockup_puz, lockup_args = cat_inner.uncurry()
+
+        record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+        if record:
+            inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
+            active_votes_list = []
+        else:
+            inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrf")
+            active_votes_list = list(lockup_args.at("rrrrrrf").as_iter())
+
+        # TODO: Move this section to dao_utils once we've got the close spend sorted
+        solution = parent_spend.solution.to_program().first()
+        if solution.first() == Program.to(0):
+            # No vote is being added so inner puz stays the same
+            # TODO: If the proposal is closed/coins are freed then what do we do here?
+            pass
+        else:
+            new_vote = solution.at("rrrf")
+            active_votes_list.append(bytes32(new_vote.as_atom()))
+
         lockup_puz = get_lockup_puzzle(
             self.dao_cat_info.limitations_program_hash,
             active_votes_list,
             inner_puzzle,
         )
 
-        # Check if this is actually correct
-        if (
-            construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash()
-            != coin.puzzle_hash
-        ):
-            # It's got restrictions, go look at the parent
-            wallet_node: Any = self.wallet_state_manager.wallet_node
-            # peer: WSChiaConnection = wallet_node.get_full_node_peer()
-            if peer is None:
-                # TODO: how should we handle this? We should try again later? Resync?
-                raise ValueError("Could not find any peers to request puzzle and solution from")
-            parent_spend = await wallet_node.fetch_puzzle_solution(height, coin.parent_coin_info, peer)
-            lockup_puz = get_latest_lockup_puzzle_for_coin_spend(parent_spend, inner_puzzle)
+        new_cat_puzhash = construct_cat_puzzle(
+            CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz
+        ).get_tree_hash()
 
-        assert (
-            construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz).get_tree_hash()
-            == coin.puzzle_hash
-        )
+        assert new_cat_puzhash == coin.puzzle_hash
+
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
 
         await self.add_lineage(coin.name(), lineage_proof)
@@ -178,11 +189,8 @@ class DAOCATWallet:
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
-        # add the new coin to the list of locked coins.
-        # GW: I'm not sure if we want to update the dao cat info here here?
-        #     Should the incoming coins to this wallet already have a proposal ID?
-        # Matt - I changed the dao_cat_info to use previous_votes instead of active_proposal_votes
-        locked_coins = self.dao_cat_info.locked_coins
+        # add the new coin to the list of locked coins and remove the spent coin
+        locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin != parent_spend.coin]
         locked_coins.append(LockedCoinInfo(coin, lockup_puz, active_votes_list))
         dao_cat_info: DAOCATInfo = DAOCATInfo(
             self.dao_cat_info.dao_wallet_id,
@@ -275,6 +283,7 @@ class DAOCATWallet:
 
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
+            standard_inner_puz = get_innerpuz_from_lockup_puzzle(new_innerpuzzle)
             # add_proposal_to_active_list also verifies that the lci.inner_puzzle is accurate
             # We must create either: one coin with the new puzzle and all our value
             # OR
@@ -307,7 +316,7 @@ class DAOCATWallet:
                         {
                             "amount": uint64(vote_amount),
                             "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                            "memos": [new_innerpuzzle.get_tree_hash()],
+                            "memos": [standard_inner_puz.get_tree_hash()],
                         }
                     )
                 ]

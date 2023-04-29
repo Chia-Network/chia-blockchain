@@ -44,7 +44,12 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
-from chia.wallet.dao_wallet.dao_utils import match_funding_puzzle, match_proposal_puzzle, match_treasury_puzzle
+from chia.wallet.dao_wallet.dao_utils import (
+    match_dao_cat_puzzle,
+    match_funding_puzzle,
+    match_proposal_puzzle,
+    match_treasury_puzzle,
+)
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
@@ -666,6 +671,11 @@ class WalletStateManager:
         if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
 
+        dao_cat_args = match_dao_cat_puzzle(uncurried)
+        if dao_cat_args:
+            return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend)
+            # return await self.handle_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend)
+
         funding_puzzle_check = match_funding_puzzle(uncurried, solution)
         if funding_puzzle_check:
             return await self.handle_dao_funding(coin_spend)
@@ -725,6 +735,25 @@ class WalletStateManager:
         wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
         return wallet_identifier is not None and wallet_identifier.type == WalletType.STANDARD_WALLET
 
+    async def handle_dao_cat(
+        self,
+        curried_args: Iterator[Program],
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+    ) -> Optional[WalletIdentifier]:
+        """
+        Handle the new coin when it is a DAO CAT
+        """
+        mod_hash, tail_hash, inner_puzzle = curried_args
+        asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.DAO_CAT:
+                assert isinstance(wallet, DAOCATWallet)
+                if wallet.dao_cat_info.limitations_program_hash == asset_id:
+                    return WalletIdentifier.create(wallet)
+        return None
+
     async def handle_cat(
         self,
         curried_args: Iterator[Program],
@@ -748,7 +777,6 @@ class WalletStateManager:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
             if derivation_record is not None:
                 break
-
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             return None
@@ -1579,6 +1607,7 @@ class WalletStateManager:
         if wallet_type == WalletType.DAO:
             await self.wallets[wallet_id].coin_added(coin, height, peer)
             return
+
         await self.wallets[wallet_id].coin_added(coin, height, peer)
 
         await self.create_more_puzzle_hashes()
