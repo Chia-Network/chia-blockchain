@@ -10,6 +10,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
+from chia.wallet.payment import Payment
 from chia.wallet.wallet_node import WalletNode
 
 
@@ -158,8 +159,7 @@ async def test_wait_transaction_records_entered_mempool(
     # repeating just to try to expose any flakiness
     for coin in coins:
         tx = await wallet.generate_signed_transaction(
-            amount=uint64(tx_amount),
-            puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            [Payment(await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(), uint64(tx_amount))],
             coins={coin},
         )
         await wallet.push_transaction(tx)
@@ -192,8 +192,7 @@ async def test_process_transaction_records(
     # repeating just to try to expose any flakiness
     for coin in coins:
         tx = await wallet.generate_signed_transaction(
-            amount=uint64(tx_amount),
-            puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            [Payment(await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(), uint64(tx_amount))],
             coins={coin},
         )
         await wallet.push_transaction(tx)

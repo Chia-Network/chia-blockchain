@@ -47,6 +47,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.payment import Payment
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -500,12 +501,10 @@ class PoolWallet:
         coin_announcements: Optional[Set[Announcement]] = None,
     ) -> TransactionRecord:
         fee_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_new_puzzlehash()),
+            [],
             fee=fee,
             origin_id=None,
             coins=None,
-            primaries=None,
             ignore_max_send_amount=False,
             coin_announcements_to_consume=coin_announcements,
         )
@@ -684,12 +683,10 @@ class PoolWallet:
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
-            amount,
-            genesis_launcher_puz.get_tree_hash(),
+            [Payment(genesis_launcher_puz.get_tree_hash(), amount)],
             fee,
             launcher_parent.name(),
             coins,
-            None,
             False,
             announcement_set,
         )

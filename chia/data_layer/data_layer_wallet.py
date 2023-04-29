@@ -324,12 +324,10 @@ class DataLayerWallet:
         announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
         announcement = Announcement(launcher_coin.name(), announcement_message)
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(1),
-            puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
+            [Payment(SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))],
             fee=fee,
             origin_id=launcher_parent.name(),
             coins=coins,
-            primaries=None,
             ignore_max_send_amount=False,
             coin_announcements_to_consume={announcement},
         )
@@ -391,8 +389,7 @@ class DataLayerWallet:
         coin_announcement: bool = True,
     ) -> TransactionRecord:
         chia_tx = await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(),
+            [],
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
@@ -734,11 +731,8 @@ class DataLayerWallet:
         self, launcher_id: bytes32, amount: uint64, urls: List[bytes], fee: uint64 = uint64(0)
     ) -> List[TransactionRecord]:
         create_mirror_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount=amount,
-            puzzle_hash=create_mirror_puzzle().get_tree_hash(),
+            [Payment(create_mirror_puzzle().get_tree_hash(), amount, [launcher_id, *(url for url in urls)])],
             fee=fee,
-            primaries=[],
-            memos=[launcher_id, *(url for url in urls)],
             ignore_max_send_amount=False,
         )
         assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
@@ -805,8 +799,7 @@ class DataLayerWallet:
 
         if excess_fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
-                uint64(1),
-                new_puzhash,
+                [Payment(new_puzhash, uint64(1))],
                 fee=uint64(excess_fee),
                 coin_announcements_to_consume={Announcement(mirror_coin.name(), b"$")},
             )

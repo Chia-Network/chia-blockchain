@@ -586,8 +586,7 @@ class CATWallet:
             )
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
-                uint64(0),
-                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
+                [],
                 fee=uint64(fee - amount_to_claim),
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
@@ -616,8 +615,12 @@ class CATWallet:
             )
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
-                uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
+                [
+                    Payment(
+                        await self.standard_wallet.get_puzzle_hash(not reuse_puzhash),
+                        uint64(selected_amount + amount_to_claim - fee),
+                    )
+                ],
                 coins=chia_coins,
                 negative_change_allowed=True,
                 coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,

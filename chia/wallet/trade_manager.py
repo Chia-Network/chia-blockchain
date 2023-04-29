@@ -245,8 +245,7 @@ class TradeManager:
                 else:
                     selected_coins = {coin}
                 tx = await wallet.generate_signed_transaction(
-                    uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
-                    new_ph,
+                    [Payment(new_ph, uint64(sum(coin.amount for coin in selected_coins) - fee_to_pay))],
                     fee=fee_to_pay,
                     coins=selected_coins,
                     ignore_max_send_amount=True,
@@ -324,8 +323,7 @@ class TradeManager:
                     else:
                         selected_coins = {coin}
                     tx: TransactionRecord = await wallet.generate_signed_transaction(
-                        uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
-                        new_ph,
+                        [Payment(new_ph, uint64(sum([c.amount for c in selected_coins]) - fee_to_pay))],
                         fee=fee_to_pay,
                         coins=selected_coins,
                         ignore_max_send_amount=True,
@@ -568,8 +566,7 @@ class TradeManager:
                 puzzle_hash = OFFER_MOD_OLD_HASH if old else Offer.ph()
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     tx = await wallet.generate_signed_transaction(
-                        abs(offer_dict[id]),
-                        puzzle_hash,
+                        [Payment(puzzle_hash, uint64(abs(offer_dict[id])))],
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,

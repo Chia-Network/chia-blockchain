@@ -398,12 +398,10 @@ class NFTWallet:
         )
         # store the launcher transaction in the wallet state
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            uint64(amount),
-            nft_puzzles.LAUNCHER_PUZZLE_HASH,
+            [Payment(nft_puzzles.LAUNCHER_PUZZLE_HASH, uint64(amount))],
             fee,
             origin.name(),
             coins,
-            None,
             False,
             announcement_set,
         )
@@ -946,12 +944,11 @@ class NFTWallet:
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
                     payment_sum = sum(p.amount for _, p in payments)
+                    additional = (
+                        [Payment(DESIRED_OFFER_MOD_HASH, uint64(payment_sum))] if payment_sum > 0 or old else []
+                    )
                     tx = await wallet.generate_signed_transaction(
-                        abs(amount),
-                        DESIRED_OFFER_MOD_HASH,
-                        primaries=[Payment(DESIRED_OFFER_MOD_HASH, uint64(payment_sum))]
-                        if payment_sum > 0 or old
-                        else [],
+                        [Payment(DESIRED_OFFER_MOD_HASH, uint64(abs(amount)))] + additional,
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,

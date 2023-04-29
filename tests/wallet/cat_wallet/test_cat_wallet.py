@@ -16,6 +16,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -474,7 +475,9 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
-        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(10, cc2_ph, 0)
+        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+            [Payment(cc2_ph, uint64(10))], 0
+        )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         await full_node_api.process_transaction_records(records=[tx_record])
 

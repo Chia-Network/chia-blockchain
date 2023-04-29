@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -55,6 +56,12 @@ if TYPE_CHECKING:
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
+@dataclass
+class UnsignedTransactionResult:
+    coin_spends: List[CoinSpend]
+    payments: List[Payment]
+
+
 class Wallet:
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
@@ -92,7 +99,7 @@ class Wallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             tx = await self.generate_signed_transaction(
-                uint64(coin.amount), coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
+                [Payment(coin.puzzle_hash, uint64(coin.amount))], coins={coin}, ignore_max_send_amount=True
             )
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
@@ -310,34 +317,27 @@ class Wallet:
 
     async def _generate_unsigned_transaction(
         self,
-        amount: uint64,
-        newpuzzlehash: bytes32,
+        payments_input: List[Payment],
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries_input: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[Announcement] = None,
         puzzle_announcements_to_consume: Set[Announcement] = None,
-        memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
-    ) -> List[CoinSpend]:
+    ) -> UnsignedTransactionResult:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
         """
-        primaries = []
-        if (primaries_input is None and amount > 0) or primaries_input is not None:
-            primaries.append(Payment(newpuzzlehash, amount, [] if memos is None else memos))
-        if primaries_input is not None:
-            primaries.extend(primaries_input)
-
-        total_amount = sum(primary.amount for primary in primaries) + fee
+        # Copy here to avoid modifying the passed in list since we add the fee/change outputs in here
+        payments = payments_input.copy()
+        total_amount = sum(payment.amount for payment in payments) + fee
         if reuse_puzhash is None:
             reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
             if reuse_puzhash_config is None:
@@ -393,7 +393,7 @@ class Wallet:
         primary_announcement_hash: Optional[bytes32] = None
 
         # Check for duplicates
-        all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
+        all_primaries_list = [(p.puzzle_hash, p.amount) for p in payments]
         if len(set(all_primaries_list)) != len(all_primaries_list):
             raise ValueError("Cannot create two identical coins")
         for coin in coins:
@@ -403,21 +403,21 @@ class Wallet:
                 if change > 0:
                     if reuse_puzhash:
                         change_puzzle_hash: bytes32 = coin.puzzle_hash
-                        for primary in primaries:
-                            if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
+                        for payment in payments:
+                            if change_puzzle_hash == payment.puzzle_hash and change == payment.amount:
                                 # We cannot create two coins has same id, create a new puzhash for the change:
                                 change_puzzle_hash = await self.get_new_puzzlehash()
                                 break
                     else:
                         change_puzzle_hash = await self.get_new_puzzlehash()
-                    primaries.append(Payment(change_puzzle_hash, uint64(change)))
+                    payments.append(Payment(change_puzzle_hash, uint64(change)))
                 message_list: List[bytes32] = [c.name() for c in coins]
-                for primary in primaries:
+                for primary in payments:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = self.make_solution(
-                    primaries=primaries,
+                    primaries=payments,
                     fee=fee,
                     coin_announcements={message},
                     coin_announcements_to_assert=coin_announcements_bytes,
@@ -448,7 +448,7 @@ class Wallet:
             )
 
         self.log.debug(f"Spends is {spends}")
-        return spends
+        return UnsignedTransactionResult(spends, payments)
 
     async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
         return await sign_coin_spends(
@@ -474,16 +474,13 @@ class Wallet:
 
     async def generate_signed_transaction(
         self,
-        amount: uint64,
-        puzzle_hash: bytes32,
+        payments: List[Payment],
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Set[Announcement] = None,
         puzzle_announcements_to_consume: Set[Announcement] = None,
-        memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
@@ -494,25 +491,16 @@ class Wallet:
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
-        The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
-        if primaries is None:
-            non_change_amount = amount
-        else:
-            non_change_amount = uint64(amount + sum(p.amount for p in primaries))
-
-        self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
-        transaction = await self._generate_unsigned_transaction(
-            amount,
-            puzzle_hash,
+        self.log.debug("Generating transaction with payment: %s from coins: %s", payments, repr(coins))
+        result = await self._generate_unsigned_transaction(
+            payments,
             fee,
             origin_id,
             coins,
-            primaries,
             ignore_max_send_amount,
             coin_announcements_to_consume,
             puzzle_announcements_to_consume,
-            memos,
             negative_change_allowed,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
@@ -520,11 +508,13 @@ class Wallet:
             exclude_coins=exclude_coins,
             reuse_puzhash=reuse_puzhash,
         )
-        assert len(transaction) > 0
-        self.log.info("About to sign a transaction: %s", transaction)
-        await self.hack_populate_secret_keys_for_coin_spends(transaction)
+        if len(result.payments) == 0:
+            raise ValueError("Minimum one payment required to generate a transaction")
+        assert len(result.coin_spends) > 0
+        self.log.info("About to sign a transaction: %s", result.coin_spends)
+        await self.hack_populate_secret_keys_for_coin_spends(result.coin_spends)
         spend_bundle: SpendBundle = await sign_coin_spends(
-            transaction,
+            result.coin_spends,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
@@ -544,8 +534,8 @@ class Wallet:
         return TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=now,
-            to_puzzle_hash=puzzle_hash,
-            amount=uint64(non_change_amount),
+            to_puzzle_hash=result.payments[0].puzzle_hash,
+            amount=uint64(sum(payment.amount for payment in payments)),
             fee_amount=uint64(fee),
             confirmed=False,
             sent=uint32(0),
@@ -576,8 +566,7 @@ class Wallet:
                     str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
                 )
         chia_tx = await self.generate_signed_transaction(
-            uint64(0),
-            (await self.get_puzzle_hash(not reuse_puzhash)),
+            [],
             fee=fee,
             coins=chia_coins,
             coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,

@@ -21,6 +21,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.payment import Payment
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
@@ -1039,8 +1040,7 @@ class TestDIDWallet:
         coin_1 = (await wallet.select_coins(odd_amount, exclude=[coin])).pop()
         assert coin_1.amount % 2 == 0
         tx = await wallet.generate_signed_transaction(
-            odd_amount,
-            ph1,
+            [Payment(ph1, odd_amount)],
             fee,
             exclude_coins=set([coin]),
         )

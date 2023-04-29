@@ -22,6 +22,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.payment import Payment
 from chia.wallet.wallet_node import WalletNode
 
 test_constants_modified = test_constants.replace(
@@ -170,8 +171,7 @@ class TestSimulation:
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
         tx = await wallet.generate_signed_transaction(
-            uint64(10),
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            [Payment(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), uint64(10))],
             uint64(0),
         )
         await wallet.push_transaction(tx)
@@ -343,8 +343,7 @@ class TestSimulation:
         # repeating just to try to expose any flakiness
         for coin in coins:
             tx = await wallet.generate_signed_transaction(
-                amount=uint64(tx_amount),
-                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                [Payment(await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(), uint64(tx_amount))],
                 coins={coin},
             )
             await wallet.push_transaction(tx)
@@ -388,8 +387,11 @@ class TestSimulation:
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
             transactions = [
                 await wallet.generate_signed_transaction(
-                    amount=uint64(tx_amount),
-                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    [
+                        Payment(
+                            await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(), uint64(tx_amount)
+                        )
+                    ],
                     coins={coin},
                 )
                 for coin in coins
