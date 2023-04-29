@@ -27,11 +27,8 @@ def test_every_simulator_command() -> None:
     try:
         # run all tests
         run_all_tests(runner, address)
-    except AssertionError:
+    finally:
         stop_simulator(runner)
-        raise
-
-    stop_simulator(runner)
 
 
 def test_custom_farming_address() -> None:
@@ -48,11 +45,8 @@ def test_custom_farming_address() -> None:
     try:
         # just run status test
         _test_sim_status(runner, address)
-    except AssertionError:
+    finally:
         stop_simulator(runner)
-        raise
-
-    stop_simulator(runner)
 
 
 def stop_simulator(runner: CliRunner) -> None:
