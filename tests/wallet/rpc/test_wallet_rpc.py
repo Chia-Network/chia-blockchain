@@ -201,7 +201,7 @@ def assert_tx_amounts(
 ) -> None:
     assert tx.fee_amount == amount_fee
     assert tx.amount == sum(output["amount"] for output in outputs)
-    expected_additions = len(outputs) if change_expected is None else len(outputs) + 1
+    expected_additions = len(outputs) + 1 if change_expected else len(outputs)
     if is_cat and amount_fee:
         expected_additions += 1
     assert len(tx.additions) == expected_additions
@@ -364,6 +364,7 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
             False,
         ),
         ([(1337, ["LEET"]), (81000, ["pingwei"])], 817, False, True),
+        ([(120000000000, None), (120000000000, None)], 10000000000, True, False),
     ],
 )
 @pytest.mark.asyncio
@@ -418,7 +419,8 @@ async def test_create_signed_transaction(
         fee=amount_fee,
         wallet_id=wallet_id,
     )
-    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=not select_coin, is_cat=is_cat)
+    change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
+    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
@@ -473,7 +475,7 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
     tx_res: TransactionRecord = await client.create_signed_transaction(
         outputs, coin_announcements=tx_coin_announcements
     )
-    assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=False)
+    assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
 
 
