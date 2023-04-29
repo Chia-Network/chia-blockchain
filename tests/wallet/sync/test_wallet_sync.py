@@ -1137,6 +1137,7 @@ class TestWalletSync:
             [uint64(nft_coins[0].coin.amount)],
             [dust_ph],
             coins={nft_coins[0].coin},
+            memos=[[dust_ph]],
         )
         assert len(txs) == 1
         assert txs[0].spend_bundle is not None

@@ -192,7 +192,9 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-        tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
+        tx_records = await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], fee=uint64(1), memos=[[cat_2_hash]]
+        )
         tx_id = None
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
@@ -225,7 +227,7 @@ class TestCATWallet:
         assert len(memos[tx_id]) == 1
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
-        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], memos=[[cat_hash]])
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
@@ -300,7 +302,7 @@ class TestCATWallet:
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
         tx_records = await cat_wallet.generate_signed_transaction(
-            [uint64(60)], [cat_2_hash], fee=uint64(1), reuse_puzhash=True
+            [uint64(60)], [cat_2_hash], fee=uint64(1), memos=[[cat_2_hash]], reuse_puzhash=True
         )
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
@@ -329,7 +331,7 @@ class TestCATWallet:
         await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 60)
 
         cat_hash = await cat_wallet.get_new_inner_hash()
-        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], memos=[[cat_hash]])
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
@@ -455,7 +457,9 @@ class TestCATWallet:
         assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-        tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
+        tx_records = await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], fee=uint64(1), memos=[[cat_2_hash]]
+        )
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         await full_node_api.process_transaction_records(records=tx_records)
@@ -552,7 +556,9 @@ class TestCATWallet:
         cat_1_hash = await cat_wallet_1.get_new_inner_hash()
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
 
-        tx_records = await cat_wallet_0.generate_signed_transaction([uint64(60), uint64(20)], [cat_1_hash, cat_2_hash])
+        tx_records = await cat_wallet_0.generate_signed_transaction(
+            [uint64(60), uint64(20)], [cat_1_hash, cat_2_hash], memos=[[cat_1_hash], [cat_2_hash]]
+        )
         for tx_record in tx_records:
             await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
         await full_node_api.process_transaction_records(records=tx_records)
@@ -568,11 +574,11 @@ class TestCATWallet:
 
         cat_hash = await cat_wallet_0.get_new_inner_hash()
 
-        tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash])
+        tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash], memos=[[cat_hash]])
         for tx_record in tx_records:
             await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
 
-        tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash])
+        tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash], memos=[[cat_hash]])
         for tx_record in tx_records_2:
             await wallet_2.wallet_state_manager.add_pending_transaction(tx_record)
 
@@ -591,7 +597,7 @@ class TestCATWallet:
         print(len(txs))
         # Test with Memo
         tx_records_3: TransactionRecord = await cat_wallet_1.generate_signed_transaction(
-            [uint64(30)], [cat_hash], memos=[[b"Markus Walburg"]]
+            [uint64(30)], [cat_hash], memos=[[cat_hash, b"Markus Walburg"]]
         )
         with pytest.raises(ValueError):
             await cat_wallet_1.generate_signed_transaction(
@@ -662,11 +668,15 @@ class TestCATWallet:
         cat_2_hash = cat_2.get_tree_hash()
         amounts = []
         puzzle_hashes = []
+        memos = []
         for i in range(1, 50):
             amounts.append(uint64(i))
             puzzle_hashes.append(cat_2_hash)
+            memos.append([cat_2_hash])
         spent_coint = (await cat_wallet.get_cat_spendable_coins())[0].coin
-        tx_records = await cat_wallet.generate_signed_transaction(amounts, puzzle_hashes, coins={spent_coint})
+        tx_records = await cat_wallet.generate_signed_transaction(
+            amounts, puzzle_hashes, coins={spent_coint}, memos=memos
+        )
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         await full_node_api.process_transaction_records(records=tx_records)
@@ -692,27 +702,18 @@ class TestCATWallet:
         max_sent_amount = await cat_wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
-        [transaction_record] = await cat_wallet.generate_signed_transaction(
-            [max_sent_amount - 1],
-            [ph],
-        )
+        [transaction_record] = await cat_wallet.generate_signed_transaction([max_sent_amount - 1], [ph], memos=[[ph]])
 
         assert transaction_record.amount == uint64(max_sent_amount - 1)
 
         # 2) Generate transaction that is equal to limit
-        [transaction_record] = await cat_wallet.generate_signed_transaction(
-            [max_sent_amount],
-            [ph],
-        )
+        [transaction_record] = await cat_wallet.generate_signed_transaction([max_sent_amount], [ph], memos=[[ph]])
 
         assert transaction_record.amount == uint64(max_sent_amount)
 
         # 3) Generate transaction that is greater than limit
         with pytest.raises(ValueError):
-            await cat_wallet.generate_signed_transaction(
-                [max_sent_amount + 1],
-                [ph],
-            )
+            await cat_wallet.generate_signed_transaction([max_sent_amount + 1], [ph], memos=[[ph]])
 
     @pytest.mark.parametrize(
         "trusted",
@@ -819,7 +820,7 @@ class TestCATWallet:
         await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 70)
 
         cat_hash = await cat_wallet.get_new_inner_hash()
-        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash])
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], memos=[[cat_hash]])
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
