@@ -1454,7 +1454,7 @@ class WalletRpcApi:
                     fee,
                     cat_discrepancy=cat_discrepancy,
                     coins=coins,
-                    memos=memos if memos else None,
+                    memos=memos if memos else [[puzzle_hash] for puzzle_hash in puzzle_hashes],
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     exclude_coin_amounts=exclude_coin_amounts,
@@ -1469,7 +1469,7 @@ class WalletRpcApi:
                 puzzle_hashes,
                 fee,
                 coins=coins,
-                memos=memos if memos else None,
+                memos=memos if memos else [[puzzle_hash] for puzzle_hash in puzzle_hashes],
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 exclude_coin_amounts=exclude_coin_amounts,
@@ -2586,6 +2586,7 @@ class WalletRpcApi:
                 [uint64(nft_coin_info.coin.amount)],
                 [puzzle_hash],
                 coins={nft_coin_info.coin},
+                memos=[[puzzle_hash]],
                 fee=fee,
                 new_owner=b"",
                 new_did_inner_hash=b"",
@@ -2870,7 +2871,11 @@ class WalletRpcApi:
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
-        memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
+        memos_0 = (
+            [bytes(puzzle_hash_0)]
+            if "memos" not in additions[0]
+            else [mem.encode("utf-8") for mem in additions[0]["memos"]]
+        )
 
         additional_outputs: List[Payment] = []
         for addition in additions[1:]:
@@ -2880,7 +2885,9 @@ class WalletRpcApi:
             amount = uint64(addition["amount"])
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
+            memos = (
+                [bytes(receiver_ph)] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
+            )
             additional_outputs.append(Payment(receiver_ph, amount, memos))
 
         fee: uint64 = uint64(request.get("fee", 0))

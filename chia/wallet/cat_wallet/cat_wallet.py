@@ -289,7 +289,11 @@ class CATWallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             txs = await self.generate_signed_transaction(
-                [uint64(coin.amount)], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
+                [uint64(coin.amount)],
+                [coin.puzzle_hash],
+                coins={coin},
+                memos=[[coin.puzzle_hash]],
+                ignore_max_send_amount=True,
             )
             assert txs[0].spend_bundle
             program: BlockGenerator = simple_solution_generator(txs[0].spend_bundle)
@@ -819,9 +823,7 @@ class CATWallet:
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            memos_with_hint: List[bytes] = [puzhash]
-            memos_with_hint.extend(memo_list)
-            payments.append(Payment(puzhash, amount, memos_with_hint))
+            payments.append(Payment(puzhash, amount, memo_list))
 
         payment_sum = sum([p.amount for p in payments])
         if not ignore_max_send_amount:

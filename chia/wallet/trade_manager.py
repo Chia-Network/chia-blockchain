@@ -255,7 +255,7 @@ class TradeManager:
             else:
                 # ATTENTION: new_wallets
                 txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, memos=[[new_ph]], ignore_max_send_amount=True
                 )
                 all_txs.extend(txs)
             fee_to_pay = uint64(0)
@@ -336,7 +336,12 @@ class TradeManager:
                 else:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
-                        [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                        [coin.amount],
+                        [new_ph],
+                        fee=fee_to_pay,
+                        coins={coin},
+                        memos=[[new_ph]],
+                        ignore_max_send_amount=True,
                     )
                     for tx in txs:
                         if tx is not None and tx.spend_bundle is not None:
@@ -560,10 +565,11 @@ class TradeManager:
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 # This should probably not switch on whether or not we're spending XCH but it has to for now
+                puzzle_hash = OFFER_MOD_OLD_HASH if old else Offer.ph()
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
-                        OFFER_MOD_OLD_HASH if old else Offer.ph(),
+                        puzzle_hash,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
@@ -577,9 +583,10 @@ class TradeManager:
                     txs = await wallet.generate_signed_transaction(
                         # [abs(offer_dict[id])],
                         amounts,
-                        [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        [puzzle_hash],
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
+                        memos=[[puzzle_hash]],
                         puzzle_announcements_to_consume=announcements_to_assert,
                         reuse_puzhash=reuse_puzhash,
                     )
@@ -588,9 +595,10 @@ class TradeManager:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[id])],
-                        [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        [puzzle_hash],
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
+                        memos=[[puzzle_hash]],
                         puzzle_announcements_to_consume=announcements_to_assert,
                         reuse_puzhash=reuse_puzhash,
                     )
