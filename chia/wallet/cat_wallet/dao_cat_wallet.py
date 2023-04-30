@@ -137,14 +137,14 @@ class DAOCATWallet:
         uncurried = parent_spend.puzzle_reveal.uncurry()
         cat_inner = uncurried[1].at("rrf")
         lockup_puz, lockup_args = cat_inner.uncurry()
+        active_votes_list: List[Optional[bytes32]] = []
 
         record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if record:
             inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
-            active_votes_list = []
         else:
             inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrf")
-            active_votes_list = list(lockup_args.at("rrrrrrf").as_iter())
+            active_votes_list = [bytes32(prop.as_atom()) for prop in lockup_args.at("rrrrrrf").as_iter()]
 
         # TODO: Move this section to dao_utils once we've got the close spend sorted
         solution = parent_spend.solution.to_program().first()
@@ -154,7 +154,7 @@ class DAOCATWallet:
             pass
         else:
             new_vote = solution.at("rrrf")
-            active_votes_list.append(bytes32(new_vote.as_atom()))
+            active_votes_list.insert(0, bytes32(new_vote.as_atom()))
 
         lockup_puz = get_lockup_puzzle(
             self.dao_cat_info.limitations_program_hash,
@@ -166,7 +166,8 @@ class DAOCATWallet:
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz
         ).get_tree_hash()
 
-        assert new_cat_puzhash == coin.puzzle_hash
+        if new_cat_puzhash != coin.puzzle_hash:
+            raise ValueError(f"Cannot add coin - incorrect lockup puzzle: {coin}")
 
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
 
