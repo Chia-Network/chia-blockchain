@@ -298,7 +298,6 @@ async def pre_validate_blocks_multiprocessing(
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
-        final_pickled = recent_sb_compressed_pickled
         b_pickled: Optional[List[bytes]] = None
         hb_pickled: Optional[List[bytes]] = None
         previous_generators: List[Optional[bytes]] = []
@@ -340,7 +339,7 @@ async def pre_validate_blocks_multiprocessing(
                 pool,
                 batch_pre_validate_blocks,
                 constants,
-                final_pickled,
+                recent_sb_compressed_pickled,
                 b_pickled,
                 hb_pickled,
                 previous_generators,
