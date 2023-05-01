@@ -35,7 +35,8 @@ fi
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Creates a directory of licenses
-echo "Building pip and NPM license direcory"
+echo "Building pip and NPM license directory"
+pwd
 bash ./build_license_directory.sh
 
 # Change to the gui package

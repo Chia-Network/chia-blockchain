@@ -43,7 +43,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 # Creates a directory of licenses
-echo "Building pip and NPM license direcory"
+echo "Building pip and NPM license directory"
+pwd
 bash ./build_license_directory.sh
 
 # Builds CLI only rpm
