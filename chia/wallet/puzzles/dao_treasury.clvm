@@ -18,13 +18,6 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
-  ; (defun merge_list (list_a list_b)
-  ;   (if list_a
-  ;     (c (f list_a) (merge_list (r list_a) list_b))
-  ;     list_b
-  ;   )
-  ; )
-
   (defun-inline recreate_self (
     TREASURY_MOD_HASH
     PROPOSAL_VALIDATOR
@@ -63,7 +56,7 @@
     	    ; also announce the oracle info so proposals can close if treasury is being spammed
     	    (list CREATE_PUZZLE_ANNOUNCEMENT 0) ; the arguments are secured implicitly in the puzzle of the treasury
     	    (c
-    	      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list spend_or_update_flag delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
+    	      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
     	      (a
           	  PROPOSAL_VALIDATOR
           	  (list

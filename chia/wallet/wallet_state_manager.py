@@ -971,7 +971,6 @@ class WalletStateManager:
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            SPEND_OR_UPDATE_FLAG,
             INNERPUZHASH,
         ) = uncurried_args
         for wallet in self.wallets.values():

@@ -54,7 +54,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_p2_singleton_puzzle,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
-    get_proposal_type,
     get_proposal_validator,
     get_proposed_puzzle_reveal_from_solution,
     get_spend_p2_singleton_puzzle,
@@ -959,14 +958,12 @@ class DAOWallet(WalletProtocol):
 
         assert cat_wallet.cat_info.my_tail
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
-        proposal_type = get_proposal_type(proposed_puzzle)
         dao_proposal_puzzle = get_proposal_puzzle(
             proposal_id=launcher_coin.name(),
             cat_tail_hash=cat_tail_hash,
             treasury_id=self.dao_info.treasury_id,
             votes_sum=uint64(0),
             total_votes=uint64(0),
-            spend_or_update_flag=proposal_type,
             proposed_puzzle_hash=proposed_puzzle.get_tree_hash(),
         )
 
@@ -1334,7 +1331,6 @@ class DAOWallet(WalletProtocol):
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            SPEND_OR_UPDATE_FLAG,  # this is one of 's', 'u', 'd' - other types may be added in the future
             PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
         ) = curried_args.as_iter()
 
@@ -1343,7 +1339,6 @@ class DAOWallet(WalletProtocol):
         # proposal_total_votes
         # proposal_innerpuzhash
         # proposal_timelock
-        # spend_or_update_flag
         # parent_parent
         timer_solution = Program.to(
             [
@@ -1352,7 +1347,6 @@ class DAOWallet(WalletProtocol):
                 TOTAL_VOTES,
                 PROPOSED_PUZ_HASH,
                 proposal_timelock,
-                SPEND_OR_UPDATE_FLAG,
                 proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
             ]
         )
@@ -1360,7 +1354,7 @@ class DAOWallet(WalletProtocol):
 
         full_treasury_puz = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         # proposal_flag
-        # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
+        # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args))
         # proposal_validator_solution
         # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
         # delegated_solution  ; this is not secure unless the delegated puzzle secures it
@@ -1495,14 +1489,14 @@ class DAOWallet(WalletProtocol):
             ]
         )
         # proposal_flag  ; if this is set then we are closing a proposal
-        # (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag)
+        # (announcement_source delegated_puzzle_hash announcement_args)
         # proposal_validator_solution
         # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
         # delegated_solution  ; this is not secure unless the delegated puzzle secures it
         treasury_solution = Program.to(
             [
                 1,
-                [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0, SPEND_OR_UPDATE_FLAG.as_atom()],
+                [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0],
                 validator_solution,
                 puzzle_reveal,
                 delegated_solution,
@@ -1747,7 +1741,6 @@ class DAOWallet(WalletProtocol):
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            SPEND_OR_UPDATE_FLAG,
             INNERPUZ,
         ) = curried_args
 

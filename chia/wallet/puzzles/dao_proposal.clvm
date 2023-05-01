@@ -9,7 +9,6 @@
   TREASURY_ID
   YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
   TOTAL_VOTES  ; how many people responded
-  SPEND_OR_UPDATE_FLAG  ; this is one of 's', 'u', 'd' - other types may be added in the future
   PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
   vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
   vote_info ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -89,12 +88,10 @@
     TREASURY_ID
     YES_VOTES
     TOTAL_VOTES
-    SPEND_OR_UPDATE_FLAG
     PROPOSED_PUZ_HASH
   )
     (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
                                      (sha256 ONE PROPOSED_PUZ_HASH)
-                                     (sha256 ONE SPEND_OR_UPDATE_FLAG)
                                      (sha256 ONE TOTAL_VOTES)
                                      (sha256 ONE YES_VOTES)
                                      (sha256 ONE TREASURY_ID)
@@ -160,7 +157,6 @@
     TREASURY_ID
     YES_VOTES
     TOTAL_VOTES
-    SPEND_OR_UPDATE_FLAG
     PROPOSED_PUZ_HASH
     coin_id_list
     vote_amount_list
@@ -205,7 +201,6 @@
             TREASURY_ID
             YES_VOTES
             TOTAL_VOTES
-            SPEND_OR_UPDATE_FLAG
             PROPOSED_PUZ_HASH
             (r coin_id_list)
             (r vote_amount_list)
@@ -231,7 +226,6 @@
             TREASURY_ID
             (if vote_info (+ YES_VOTES sum) YES_VOTES)
             (+ TOTAL_VOTES sum)
-            SPEND_OR_UPDATE_FLAG
             PROPOSED_PUZ_HASH
           )
           ONE  ; why would a proposal hold any value
@@ -305,7 +299,7 @@
               )
               ; Passed
             	(list
-            	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list SPEND_OR_UPDATE_FLAG PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
+            	  (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
             	  (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
             	    (sha256
             	      (calculate_treasury_puzzlehash
@@ -361,7 +355,6 @@
       	TREASURY_ID
       	YES_VOTES
       	TOTAL_VOTES
-      	SPEND_OR_UPDATE_FLAG
       	PROPOSED_PUZ_HASH
       	vote_coin_ids_or_proposal_timelock_length
       	vote_amounts_or_proposal_validator_hash

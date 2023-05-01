@@ -264,11 +264,11 @@ class DAOCATWallet:
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
         treasury_id = dao_wallet.dao_info.treasury_id
         if curry_vals is None:
-            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = dao_wallet.get_proposal_curry_values(
+            YES_VOTES, TOTAL_VOTES, INNERPUZHASH = dao_wallet.get_proposal_curry_values(
                 proposal_id
             )
         else:
-            YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, INNERPUZHASH = curry_vals
+            YES_VOTES, TOTAL_VOTES, INNERPUZHASH = curry_vals
         # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
@@ -376,7 +376,6 @@ class DAOCATWallet:
             #   TREASURY_ID
             #   YES_VOTES
             #   TOTAL_VOTES
-            #   SPEND_OR_UPDATE_FLAG
             #   INNERPUZHASH
             # )
             solution = Program.to(
@@ -391,7 +390,6 @@ class DAOCATWallet:
                         treasury_id,
                         YES_VOTES,
                         TOTAL_VOTES,
-                        SPEND_OR_UPDATE_FLAG,
                         INNERPUZHASH,
                     ],
                     vote_info,

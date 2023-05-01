@@ -122,17 +122,6 @@ def get_proposal_validator(treasury_puz: Program) -> Program:
     return validator
 
 
-def get_proposal_type(proposal: Program) -> str:
-    uncurried = proposal.uncurry()
-    if uncurried[0] == SPEND_P2_SINGLETON_MOD:
-        p_type = "s"
-    elif uncurried[0] == DAO_UPDATE_PROPOSAL_MOD:
-        p_type = "u"
-    else:
-        p_type = "d"
-    return p_type
-
-
 def create_announcement_condition_for_nft_spend(
     # treasury_id: bytes32, TODO: is treasury_id needed here?
     nft_id: bytes32,
@@ -283,7 +272,6 @@ def get_proposal_puzzle(
     treasury_id: bytes32,
     votes_sum: uint64,
     total_votes: uint64,
-    spend_or_update_flag: str,
     proposed_puzzle_hash: bytes32,
 ) -> Program:
     """
@@ -304,7 +292,6 @@ def get_proposal_puzzle(
         treasury_id,
         votes_sum,
         total_votes,
-        spend_or_update_flag,
         proposed_puzzle_hash,
     )
     return puzzle
@@ -366,16 +353,7 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     # ) = curried_args
     if solution.first() != Program.to(0):
         # Proposal Spend
-        # first check if we are running a spend or update proposal
-        # if it's a spend proposal then the treasury puzzle is unchanged
-        if solution.at("rrrf").as_atom() == b"s":
-            return puzzle_reveal
-        elif solution.at("rrrf").as_atom() == b"u":
-            # it's an update proposal get the new treasury values from delegated_puzzle_reveal in sol
-            # TODO handle update proposals - need an example proposal to work from
-            raise ValueError("Update proposal not supported yet")
-        else:
-            raise ValueError("Invalid spend_or_update_flag in treasury solution")
+        return puzzle_reveal
     else:
         # Oracle Spend - treasury is unchanged
         return puzzle_reveal
@@ -398,7 +376,6 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             TREASURY_ID,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            SPEND_OR_UPDATE_FLAG,
             INNERPUZ_HASH,
         ) = curried_args.as_iter()
 
@@ -422,7 +399,6 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             TREASURY_ID,
             new_yes_votes,
             new_total_votes,
-            SPEND_OR_UPDATE_FLAG,
             INNERPUZ_HASH,
         )
     else:
@@ -552,10 +528,9 @@ def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Progr
         TREASURY_ID,
         YES_VOTES,
         TOTAL_VOTES,
-        SPEND_OR_UPDATE_FLAG,
         PROPOSED_PUZ_HASH,
     ) = curried_args.as_iter()
-    return YES_VOTES, TOTAL_VOTES, SPEND_OR_UPDATE_FLAG, PROPOSED_PUZ_HASH
+    return YES_VOTES, TOTAL_VOTES, PROPOSED_PUZ_HASH
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
