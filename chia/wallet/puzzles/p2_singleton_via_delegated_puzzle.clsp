@@ -67,8 +67,10 @@
     (c
       (list
         ASSERT_PUZZLE_ANNOUNCEMENT
-        (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzhash)
-        (sha256tree (list my_id (sha256tree delegated_puzzle)))
+        (sha256
+          (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_inner_puzhash)
+          (sha256tree (list my_id (sha256tree delegated_puzzle)))
+        )
       )
       (c
         (list CREATE_COIN_ANNOUNCEMENT '$')

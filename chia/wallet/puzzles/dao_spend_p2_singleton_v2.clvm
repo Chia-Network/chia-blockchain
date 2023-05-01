@@ -37,7 +37,7 @@
     output
   )
     (c
-      (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list p2_calculated 0)))
+      (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list p2_calculated (sha256tree 0))))
       (c
         (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
         (if p2_singleton_list
