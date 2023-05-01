@@ -3,7 +3,7 @@
 pwd
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
-cd chia-blockchain-gui
+cd ../chia-blockchain-gui
 
 license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
 
@@ -52,5 +52,8 @@ for i in "${license_path_array[@]}"; do
     mkdir -p "$dirname"
   fi
   cp "$i" "$dirname"
-deactivate
 done
+
+pwd
+
+deactivate
