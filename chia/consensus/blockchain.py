@@ -304,6 +304,8 @@ class Blockchain(BlockchainInterface):
         else:
             return AddBlockResult.ADDED_AS_ORPHAN, None, None
 
+    # only to be called under short fork points
+    # under deep reorgs this can cause OOM
     async def _reconsider_peak(
         self,
         block_record: BlockRecord,
