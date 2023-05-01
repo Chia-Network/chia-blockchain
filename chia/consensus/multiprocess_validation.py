@@ -197,7 +197,6 @@ async def pre_validate_blocks_multiprocessing(
     """
     prev_b: Optional[BlockRecord] = None
     # Collects all the recent blocks (up to the previous sub-epoch)
-    recent_blocks: Dict[bytes32, BlockRecord] = {}
     recent_blocks_compressed: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
@@ -211,17 +210,14 @@ async def pre_validate_blocks_multiprocessing(
             or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
             or num_sub_slots_found < num_sub_slots_to_look_for
         ) and curr.height > 0:
-            if num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS or num_sub_slots_found < num_sub_slots_to_look_for:
-                recent_blocks_compressed[curr.header_hash] = curr
 
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
-            recent_blocks[curr.header_hash] = curr
+            recent_blocks_compressed[curr.header_hash] = curr
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             curr = block_records.block_record(curr.prev_hash)
-        recent_blocks[curr.header_hash] = curr
         recent_blocks_compressed[curr.header_hash] = curr
     block_record_was_present = []
     for block in blocks:
@@ -239,7 +235,7 @@ async def pre_validate_blocks_multiprocessing(
         )
 
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
+        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks_compressed), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:
@@ -281,10 +277,8 @@ async def pre_validate_blocks_multiprocessing(
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict
-            recent_blocks[block_rec.header_hash] = block_rec
             recent_blocks_compressed[block_rec.header_hash] = block_rec
         else:
-            recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
             recent_blocks_compressed[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
@@ -304,10 +298,7 @@ async def pre_validate_blocks_multiprocessing(
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
-        if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
-            final_pickled = {bytes(k): bytes(v) for k, v in recent_blocks.items()}
-        else:
-            final_pickled = recent_sb_compressed_pickled
+        final_pickled = recent_sb_compressed_pickled
         b_pickled: Optional[List[bytes]] = None
         hb_pickled: Optional[List[bytes]] = None
         previous_generators: List[Optional[bytes]] = []
