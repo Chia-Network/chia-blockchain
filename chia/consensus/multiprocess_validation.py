@@ -210,7 +210,6 @@ async def pre_validate_blocks_multiprocessing(
             or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
             or num_sub_slots_found < num_sub_slots_to_look_for
         ) and curr.height > 0:
-
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
@@ -235,7 +234,9 @@ async def pre_validate_blocks_multiprocessing(
         )
 
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks_compressed), prev_b is None, overflow, False)
+        challenge = get_block_challenge(
+            constants, block, BlockCache(recent_blocks_compressed), prev_b is None, overflow, False
+        )
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:
