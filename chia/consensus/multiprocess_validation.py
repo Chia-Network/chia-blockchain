@@ -290,7 +290,6 @@ async def pre_validate_blocks_multiprocessing(
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
 
-    recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
     npc_results_pickled = {}
     for k, v in npc_results.items():
         npc_results_pickled[k] = bytes(v)
@@ -340,7 +339,7 @@ async def pre_validate_blocks_multiprocessing(
                 pool,
                 batch_pre_validate_blocks,
                 constants,
-                recent_sb_compressed_pickled,
+                {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()},  # convert to bytes
                 b_pickled,
                 hb_pickled,
                 previous_generators,
