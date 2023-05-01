@@ -121,7 +121,7 @@
             )
           )
           ; else - we have no more conditions
-          ; odd_args and tp_args are guaranteed to not be nil or else we'll have a path into atom error
+          ; odd_args and tp_solution are guaranteed to not be nil or else we'll have a path into atom error
           (construct_end_conditions
             THIS_MOD_HASH
             TRANSFER_PROGRAM
