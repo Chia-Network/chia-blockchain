@@ -20,7 +20,7 @@ for i in "${licenses[@]}"; do
 done
 
 # PULL IN THE LICENSES FROM PIP-LICENSE
-
+pip install pip-license || pip3 install pip-license
 # capture the output of the command in a variable
 output=$(pip-licenses -l -f json | jq -r '.[].LicenseFile' | grep -v UNKNOWN)
 
