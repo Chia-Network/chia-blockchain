@@ -86,7 +86,7 @@ class Harvester:
         if thread_count == 0:
             thread_count = multiprocessing.cpu_count() // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", False)
-        max_compression_level_allowed = config.get("max_compression_level_allowed", 9)
+        max_compression_level_allowed = config.get("max_compression_level_allowed", 7)
         use_gpu_harvesting = config.get("use_gpu_harvesting", False)
         gpu_index = config.get("gpu_index", 0)
         enforce_gpu_index = config.get("enforce_gpu_index", False)

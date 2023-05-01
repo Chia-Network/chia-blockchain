@@ -86,6 +86,13 @@ class PlotManager:
         enforce_gpu_index: bool,
     ) -> None:
         decompresser_context_queue = getattr(chiapos, "decompresser_context_queue")
+        if max_compression_level_allowed > 7:
+            log.error(
+                "Currently only compression levels up to 7 are allowed, "
+                f"while {max_compression_level_allowed} was specified."
+                "Setting max_compression_level_allowed to 7."
+            )
+            max_compression_level_allowed = 7
         is_using_gpu = decompresser_context_queue.init(
             context_count,
             thread_count,
