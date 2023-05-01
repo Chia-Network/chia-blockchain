@@ -131,23 +131,29 @@ jobs:
 
       - name: Coverage Processing
         run: |
-          coverage combine --rcfile=.coveragerc --data-file coverage-reports/.coverage coverage-data/
-          coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
-          coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
+          coverage combine --rcfile=.coveragerc --data-file=coverage-reports/.coverage coverage-data/
+          coverage xml --rcfile=.coveragerc --data-file=coverage-reports/.coverage -o coverage-reports/coverage.xml
+          coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
       - name: Coverage report (chia/)
+        if: always()
         run: |
-          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='chia/*' --show-missing | tee coverage-reports/coverage-chia-stdout
+          set -o pipefail
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
       - name: Coverage report (tests/)
+        if: always()
         run: |
-          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+          set -o pipefail
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
+        if: always()
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
-          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report coverage-reports/diff-cover.html --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          set -o pipefail
+          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports
