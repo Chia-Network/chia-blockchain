@@ -394,7 +394,7 @@ class VerifiedCredential(Streamable):
             transfer_program,
             wrapped_inner_puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(wrapped_inner_puzzle_hash)
-        curried_singleton_hash: Program = puzzle_for_singleton(
+        curried_singleton_hash: bytes32 = puzzle_for_singleton(
             launcher_coin.name(),
             metadata_layer_hash,  # type: ignore
         ).get_tree_hash_precalc(metadata_layer_hash)
