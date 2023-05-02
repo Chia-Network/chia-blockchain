@@ -405,9 +405,9 @@ class SpendDescription:
         # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
         outer_solution_match: Optional[
             Tuple[SolutionDescription, Program]
-        ] = self.outer_puzzle_description.driver.match_solution(
+        ] = self.outer_puzzle_description.driver.match_solution(  # type: ignore
             outer_solution
-        )  # type: ignore
+        )
         if outer_solution_match is None:
             raise ValueError("Outer Wallet generated a solution it couldn't match itself")
         new_outer_solution_description, _ = outer_solution_match
@@ -415,9 +415,9 @@ class SpendDescription:
         # In python 3.8+ we can use `@runtime_checkable` on the driver protocols
         new_inner_solution_description: Optional[
             SolutionDescription
-        ] = self.inner_puzzle_description.driver.match_solution(
+        ] = self.inner_puzzle_description.driver.match_solution(  # type: ignore
             inner_solution
-        )  # type: ignore
+        )
         if new_inner_solution_description is None:
             raise ValueError("Inner Wallet generated a solution it couldn't match itself")
 
