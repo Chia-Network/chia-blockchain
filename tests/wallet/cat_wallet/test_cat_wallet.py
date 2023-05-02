@@ -204,7 +204,7 @@ class TestCATWallet:
 
         await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
+        assert len(memos[tx_id]) == 2  # One for tx, one for change
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
         for i in range(1, num_blocks):
