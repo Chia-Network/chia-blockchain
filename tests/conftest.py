@@ -37,6 +37,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint64
+from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
@@ -123,17 +124,17 @@ async def empty_blockchain(request):
 
 
 @pytest.fixture(scope="function")
-def latest_db_version():
+def latest_db_version() -> int:
     return 2
 
 
 @pytest.fixture(scope="function", params=[1, 2])
-def db_version(request):
+def db_version(request) -> int:
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3630000, 3830000])
-def softfork_height(request):
+@pytest.fixture(scope="function", params=[1000000, 3630000, 4000000])
+def softfork_height(request) -> int:
     return request.param
 
 
@@ -456,6 +457,48 @@ async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulato
         yield _
 
 
+@pytest.fixture(scope="function", params=[True, False])
+def enable_softfork2(request):
+    return request.param
+
+
+@pytest_asyncio.fixture(scope="function")
+async def one_node_one_block_with_softfork2(
+    enable_softfork2,
+) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
+    if enable_softfork2:
+        constant_replacements = {"SOFT_FORK2_HEIGHT": 0}
+    else:
+        constant_replacements = {}
+
+    async_gen = setup_simulators_and_wallets(1, 0, constant_replacements)
+    nodes, _, bt = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    server_1 = full_node_1.full_node.server
+    wallet_a = bt.get_pool_wallet_tool()
+
+    reward_ph = wallet_a.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        1,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=reward_ph,
+        pool_reward_puzzle_hash=reward_ph,
+        genesis_timestamp=uint64(10000),
+        time_per_block=10,
+    )
+    assert blocks[0].height == 0
+
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+
+    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
+
+    yield full_node_1, server_1, bt
+
+    async for _ in async_gen:
+        yield _
+
+
 @pytest_asyncio.fixture(scope="function")
 async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
     async_gen = setup_simulators_and_wallets(1, 0, {})
@@ -597,7 +640,9 @@ async def get_b_tools(get_temp_keyring):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def daemon_connection_and_temp_keychain(get_b_tools):
+async def daemon_connection_and_temp_keychain(
+    get_b_tools: BlockTools,
+) -> AsyncIterator[Tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
     async for daemon in setup_daemon(btools=get_b_tools):
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:
@@ -648,6 +693,58 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
 
     return (wallet_node_0, wallet_0_rewards), (wallet_node_1, wallet_1_rewards), full_node_api
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
+    """
+    Sets up the node with 10 blocks, and returns a payer and payee wallet.
+    """
+    farm_blocks = 3
+    buffer = 1
+    full_nodes, wallets, _ = three_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, wallet_server_0 = wallets[0]
+    wallet_node_1, wallet_server_1 = wallets[1]
+    wallet_node_2, wallet_server_2 = wallets[2]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+    wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
+
+    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+    wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
+    wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
+    wallet_2_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_2)
+    await full_node_api.farm_blocks_to_puzzlehash(count=buffer, guarantee_transaction_blocks=True)
+
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
+
+    assert await wallet_0.get_confirmed_balance() == wallet_0_rewards
+    assert await wallet_0.get_unconfirmed_balance() == wallet_0_rewards
+    assert await wallet_1.get_confirmed_balance() == wallet_1_rewards
+    assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
+    assert await wallet_2.get_confirmed_balance() == wallet_2_rewards
+    assert await wallet_2.get_unconfirmed_balance() == wallet_2_rewards
+
+    return (
+        (wallet_node_0, wallet_0_rewards),
+        (wallet_node_1, wallet_1_rewards),
+        (wallet_node_2, wallet_2_rewards),
+        full_node_api,
+    )
 
 
 @pytest_asyncio.fixture(scope="function")

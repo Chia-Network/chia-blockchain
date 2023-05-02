@@ -279,9 +279,7 @@ class BlockStore:
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached: Optional[FullBlock] = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
-        log.debug(f"cache miss for block {header_hash.hex()}")
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
@@ -296,9 +294,7 @@ class BlockStore:
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return bytes(cached)
-        log.debug(f"cache miss for block {header_hash.hex()}")
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
@@ -328,7 +324,6 @@ class BlockStore:
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return GeneratorBlockInfo(
                 cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
             )
@@ -358,7 +353,6 @@ class BlockStore:
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            log.debug(f"cache hit for block {header_hash.hex()}")
             return cached.transactions_generator
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"

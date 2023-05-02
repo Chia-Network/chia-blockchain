@@ -7,7 +7,7 @@ import time
 from dataclasses import replace
 from decimal import Decimal
 from pprint import pprint
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 
@@ -31,12 +31,12 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
 
-async def create_pool_args(pool_url: str) -> Dict:
+async def create_pool_args(pool_url: str) -> Dict[str, Any]:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())) as response:
                 if response.ok:
-                    json_dict = json.loads(await response.text())
+                    json_dict: Dict[str, Any] = json.loads(await response.text())
                 else:
                     raise ValueError(f"Response from {pool_url} not OK: {response.status}")
     except Exception as e:
@@ -54,7 +54,7 @@ async def create_pool_args(pool_url: str) -> Dict:
     return json_dict
 
 
-async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def create(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     state = args["state"]
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
@@ -116,8 +116,8 @@ async def pprint_pool_wallet_state(
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
     pool_state_dict: Optional[Dict[str, Any]],
-):
-    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
+) -> None:
+    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         print(f"Current state: INVALID_STATE. Please leave/join again after block height {expected_leave_height}")
     else:
@@ -139,12 +139,12 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances: Dict = await wallet_client.get_wallet_balance(wallet_id)
+        balances: Dict[str, Any] = await wallet_client.get_wallet_balance(wallet_id)
         balance = balances["confirmed_wallet_balance"]
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
-    if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
+    if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value:
         print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
         if pool_state_dict is not None:
             print(f"Current difficulty: {pool_state_dict['current_difficulty']}")
@@ -166,21 +166,20 @@ async def pprint_pool_wallet_state(
             except Exception:
                 print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
-    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL:
+    if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         if pool_wallet_info.target is not None:
             print(f"Expected to leave after block height: {expected_leave_height}")
 
 
-async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    async with get_any_service_client(FarmerRpcClient) as node_config_fp:
-        farmer_client, config, _ = node_config_fp
+async def show(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    async with get_any_service_client(FarmerRpcClient) as (farmer_client, config):
         if farmer_client is not None:
             address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
             summaries_response = await wallet_client.get_wallets()
             wallet_id_passed_in = args.get("id", None)
             pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
-            pool_state_dict: Dict[bytes32, Dict] = {
+            pool_state_dict: Dict[bytes32, Dict[str, Any]] = {
                 bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
                 for pool_state_item in pool_state_list
             }
@@ -222,8 +221,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
-    async with get_any_service_client(FarmerRpcClient) as node_config_fp:
-        farmer_client, _, _ = node_config_fp
+    async with get_any_service_client(FarmerRpcClient) as (farmer_client, _):
         if farmer_client is not None:
             login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
             if login_link is None:
@@ -233,8 +231,13 @@ async def get_login_link(launcher_id_str: str) -> None:
 
 
 async def submit_tx_with_confirmation(
-    message: str, prompt: bool, func: Callable, wallet_client: WalletRpcClient, fingerprint: int, wallet_id: int
-):
+    message: str,
+    prompt: bool,
+    func: Callable[[], Awaitable[Dict[str, Any]]],
+    wallet_client: WalletRpcClient,
+    fingerprint: int,
+    wallet_id: int,
+) -> None:
     print(message)
     if prompt:
         user_input: str = input("Confirm [n]/y: ")
@@ -243,7 +246,7 @@ async def submit_tx_with_confirmation(
 
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
-            result: Dict = await func()
+            result = await func()
             tx_record: TransactionRecord = result["transaction"]
             start = time.time()
             while time.time() - start < 10:
@@ -259,7 +262,7 @@ async def submit_tx_with_confirmation(
     print("Aborting.")
 
 
-async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def join_pool(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     enforce_https = config["full_node"]["selected_network"] == "mainnet"
     pool_url: str = args["pool_url"]
@@ -304,7 +307,7 @@ async def join_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
-async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def self_pool(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
     prompt = not args.get("yes", False)
     fee = Decimal(args.get("fee", 0))
@@ -315,7 +318,7 @@ async def self_pool(args: dict, wallet_client: WalletRpcClient, fingerprint: int
     await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
-async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def inspect_cmd(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
     pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
     print(
@@ -328,7 +331,7 @@ async def inspect_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     )
 
 
-async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def claim_cmd(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args.get("id", None)
     fee = Decimal(args.get("fee", 0))
     fee_mojos = uint64(int(fee * units["chia"]))

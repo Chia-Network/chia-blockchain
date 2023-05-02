@@ -38,12 +38,12 @@ def make_mempoolitem() -> MempoolItem:
     ph = wallet_tool.get_new_puzzlehash()
     coin = Coin(ph, ph, uint64(10000))
     spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
-    cost = uint64(5000000)
+    cost = uint64(1000000)
     block_height = 1
 
     fee = uint64(10000000)
     spends: List[Spend] = []
-    conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost)
+    conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost, 0, 0)
     mempool_item = MempoolItem(
         spend_bundle,
         fee,
@@ -120,7 +120,8 @@ def test_item_not_removed_if_not_added() -> None:
         fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
         mempool = Mempool(test_mempool_info, fee_estimator)
         item = make_mempoolitem()
-        mempool.remove_from_pool([item.name], reason)
+        with pytest.raises(KeyError):
+            mempool.remove_from_pool([item.name], reason)
         assert mempool.fee_estimator.remove_mempool_item_called_count == 0  # type: ignore[attr-defined]
 
 
@@ -232,7 +233,7 @@ async def test_mm_calls_new_block_height() -> None:
         new_block_height_called = True
 
     # Replace new_block_height with test function
-    mempool_manager.fee_estimator.new_block_height = types.MethodType(  # type: ignore[assignment]
+    mempool_manager.fee_estimator.new_block_height = types.MethodType(  # type: ignore[method-assign]
         test_new_block_height_called, mempool_manager.fee_estimator
     )
     block2 = create_test_block_record(height=uint32(2))

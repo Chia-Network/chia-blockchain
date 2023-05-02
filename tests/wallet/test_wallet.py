@@ -22,10 +22,10 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -113,6 +113,58 @@ class TestWalletSimulator:
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             uint64(0),
         )
+        await wallet.push_transaction(tx)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance - tx_amount
+
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        expected_confirmed_balance -= tx_amount
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_wallet_reuse_address(
+        self,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+        self_hostname: str,
+    ) -> None:
+        num_blocks = 5
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        tx_amount = 10
+
+        tx = await wallet.generate_signed_transaction(
+            uint64(tx_amount),
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            uint64(0),
+            reuse_puzhash=True,
+        )
+        assert tx.spend_bundle is not None
+        assert len(tx.spend_bundle.coin_spends) == 1
+        new_puzhash = [c.puzzle_hash.hex() for c in tx.additions]
+        assert tx.spend_bundle.coin_spends[0].coin.puzzle_hash.hex() in new_puzhash
         await wallet.push_transaction(tx)
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
 
@@ -514,10 +566,7 @@ class TestWalletSimulator:
 
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
 
-        primaries: List[AmountWithPuzzlehash] = []
-        for i in range(0, 60):
-            primaries.append({"puzzlehash": ph, "amount": uint64(1000000000 + i), "memos": []})
-
+        primaries = [Payment(ph, uint64(1000000000 + i), []) for i in range(60)]
         tx_split_coins = await wallet.generate_signed_transaction(uint64(1), ph, uint64(0), primaries=primaries)
         assert tx_split_coins.spend_bundle is not None
 

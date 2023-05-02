@@ -7,6 +7,7 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint16, uint32, uint64
@@ -169,6 +170,7 @@ class WalletRpcClient(RpcClient):
         max_coin_amount: uint64 = uint64(0),
         exclude_amounts: Optional[List[uint64]] = None,
         exclude_coin_ids: Optional[List[str]] = None,
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         if memos is None:
             send_dict: Dict = {
@@ -180,6 +182,7 @@ class WalletRpcClient(RpcClient):
                 "max_coin_amount": max_coin_amount,
                 "exclude_coin_amounts": exclude_amounts,
                 "exclude_coin_ids": exclude_coin_ids,
+                "reuse_puzhash": reuse_puzhash,
             }
         else:
             send_dict = {
@@ -192,6 +195,7 @@ class WalletRpcClient(RpcClient):
                 "max_coin_amount": max_coin_amount,
                 "exclude_coin_amounts": exclude_amounts,
                 "exclude_coin_ids": exclude_coin_ids,
+                "reuse_puzhash": reuse_puzhash,
             }
         res = await self.fetch("send_transaction", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
@@ -417,6 +421,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_get_did", request)
         return response
 
+    async def get_did_info(self, coin_id: str, latest: bool) -> Dict:
+        request: Dict[str, Any] = {
+            "coin_id": coin_id,
+            "latest": latest,
+        }
+        response = await self.fetch("did_get_info", request)
+        return response
+
     async def create_did_backup_file(self, wallet_id: int, filename: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -425,11 +437,18 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_create_backup_file", request)
         return response
 
-    async def update_did_recovery_list(self, wallet_id: int, recovery_list: List[str], num_verification: int) -> Dict:
+    async def update_did_recovery_list(
+        self,
+        wallet_id: int,
+        recovery_list: List[str],
+        num_verification: int,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "new_list": recovery_list,
             "num_verifications_required": num_verification,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("did_update_recovery_ids", request)
         return response
@@ -441,10 +460,27 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_get_recovery_list", request)
         return response
 
-    async def update_did_metadata(self, wallet_id: int, metadata: Dict) -> Dict:
+    async def did_message_spend(
+        self, wallet_id: int, puzzle_announcements: List[str], coin_announcements: List[str]
+    ) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "coin_announcements": coin_announcements,
+            "puzzle_announcements": puzzle_announcements,
+        }
+        response = await self.fetch("did_message_spend", request)
+        return response
+
+    async def update_did_metadata(
+        self,
+        wallet_id: int,
+        metadata: Dict,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "metadata": metadata,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("did_update_metadata", request)
         return response
@@ -454,6 +490,21 @@ class WalletRpcClient(RpcClient):
             "wallet_id": wallet_id,
         }
         response = await self.fetch("did_get_metadata", request)
+        return response
+
+    async def find_lost_did(
+        self, coin_id: str, recovery_list_hash: Optional[str], metadata: Optional[Dict], num_verification: Optional[int]
+    ) -> Dict:
+        request: Dict[str, Any] = {
+            "coin_id": coin_id,
+        }
+        if recovery_list_hash is not None:
+            request["recovery_list_hash"] = recovery_list_hash
+        if metadata is not None:
+            request["metadata"] = (metadata,)
+        if num_verification is not None:
+            request["num_verification"] = num_verification
+        response = await self.fetch("did_find_lost_did", request)
         return response
 
     async def create_new_did_wallet_from_recovery(self, filename: str) -> Dict:
@@ -486,12 +537,20 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_recovery_spend", request)
         return response
 
-    async def did_transfer_did(self, wallet_id: int, address: str, fee: int, with_recovery: bool) -> Dict:
+    async def did_transfer_did(
+        self,
+        wallet_id: int,
+        address: str,
+        fee: int,
+        with_recovery: bool,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "inner_address": address,
             "fee": fee,
             "with_recovery_info": with_recovery,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("did_transfer_did", request)
         return response
@@ -639,6 +698,8 @@ class WalletRpcClient(RpcClient):
         exclude_coin_ids: Optional[List[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
         removals: Optional[List[Coin]] = None,
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -648,6 +709,7 @@ class WalletRpcClient(RpcClient):
             "max_coin_amount": max_coin_amount,
             "exclude_coin_amounts": exclude_amounts,
             "exclude_coin_ids": exclude_coin_ids,
+            "reuse_puzhash": reuse_puzhash,
         }
         if amount is not None and inner_address is not None:
             send_dict["amount"] = amount
@@ -663,6 +725,10 @@ class WalletRpcClient(RpcClient):
             raise ValueError("Must specify either amount and inner_address or additions")
         if removals is not None and len(removals) > 0:
             send_dict["coins"] = [c.to_json_dict() for c in removals]
+        if cat_discrepancy is not None:
+            send_dict["extra_delta"] = cat_discrepancy[0]
+            send_dict["tail_reveal"] = bytes(cat_discrepancy[1]).hex()
+            send_dict["tail_solution"] = bytes(cat_discrepancy[2]).hex()
         res = await self.fetch("cat_spend", send_dict)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
@@ -676,6 +742,7 @@ class WalletRpcClient(RpcClient):
         validate_only: bool = False,
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {str(key): value for key, value in offer_dict.items()}
 
@@ -685,6 +752,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "min_coin_amount": min_coin_amount,
             "max_coin_amount": max_coin_amount,
+            "reuse_puzhash": reuse_puzhash,
         }
         if driver_dict is not None:
             req["driver_dict"] = driver_dict
@@ -706,9 +774,19 @@ class WalletRpcClient(RpcClient):
         return bytes32.from_hexstr(res["id"]), res["valid"]
 
     async def take_offer(
-        self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint64 = uint64(0)
+        self,
+        offer: Offer,
+        solver: Dict[str, Any] = None,
+        fee=uint64(0),
+        min_coin_amount: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
     ) -> TradeRecord:
-        req = {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
+        req = {
+            "offer": offer.to_bech32(),
+            "fee": fee,
+            "min_coin_amount": min_coin_amount,
+            "reuse_puzhash": reuse_puzhash,
+        }
         if solver is not None:
             req["solver"] = solver
         res = await self.fetch("take_offer", req)
@@ -783,6 +861,7 @@ class WalletRpcClient(RpcClient):
         fee=0,
         royalty_percentage=0,
         did_id=None,
+        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -799,17 +878,27 @@ class WalletRpcClient(RpcClient):
             "royalty_percentage": royalty_percentage,
             "did_id": did_id,
             "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("nft_mint_nft", request)
         return response
 
-    async def add_uri_to_nft(self, wallet_id, nft_coin_id, key, uri, fee):
+    async def add_uri_to_nft(
+        self,
+        wallet_id,
+        nft_coin_id,
+        key,
+        uri,
+        fee,
+        reuse_puzhash: Optional[bool] = None,
+    ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "uri": uri,
             "key": key,
             "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("nft_add_uri", request)
         return response
@@ -835,12 +924,20 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_info", request)
         return response
 
-    async def transfer_nft(self, wallet_id, nft_coin_id, target_address, fee):
+    async def transfer_nft(
+        self,
+        wallet_id,
+        nft_coin_id,
+        target_address,
+        fee,
+        reuse_puzhash: Optional[bool] = None,
+    ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "target_address": target_address,
             "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("nft_transfer_nft", request)
         return response
@@ -855,8 +952,21 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_nfts", request)
         return response
 
-    async def set_nft_did(self, wallet_id, did_id, nft_coin_id, fee):
-        request: Dict[str, Any] = {"wallet_id": wallet_id, "did_id": did_id, "nft_coin_id": nft_coin_id, "fee": fee}
+    async def set_nft_did(
+        self,
+        wallet_id,
+        did_id,
+        nft_coin_id,
+        fee,
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "did_id": did_id,
+            "nft_coin_id": nft_coin_id,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
         response = await self.fetch("nft_set_nft_did", request)
         return response
 
@@ -881,6 +991,7 @@ class WalletRpcClient(RpcClient):
         did_lineage_parent: Optional[str] = None,
         mint_from_did: Optional[bool] = False,
         fee: Optional[int] = 0,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Dict:
         request = {
             "wallet_id": wallet_id,
@@ -897,6 +1008,7 @@ class WalletRpcClient(RpcClient):
             "did_lineage_parent": did_lineage_parent,
             "mint_from_did": mint_from_did,
             "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("nft_mint_bulk", request)
         return response

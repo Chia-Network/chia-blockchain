@@ -222,7 +222,7 @@ class TestRpc:
             block_spends = await client.get_block_spends(block.header_hash)
 
             assert len(block_spends) == 3
-            assert block_spends == coin_spends
+            assert sorted(block_spends, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
 
             memo = 32 * b"\f"
 

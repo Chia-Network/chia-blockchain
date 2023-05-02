@@ -1,0 +1,30 @@
+(mod (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
+
+  ; SINGLETON_MOD_HASH is the mod-hash for the singleton_top_layer puzzle
+  ; LAUNCHER_ID is the ID of the singleton we are committed to paying to
+  ; LAUNCHER_PUZZLE_HASH is the puzzle hash of the launcher
+  ; singleton_inner_puzzle_hash is the innerpuzzlehash for our singleton at the current time
+  ; my_id is the coin_id of the coin that this puzzle is locked into
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH inner_puzzle_hash)
+     (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
+                                      inner_puzzle_hash
+                                      (sha256tree (c SINGLETON_MOD_HASH (c LAUNCHER_ID LAUNCHER_PUZZLE_HASH)))
+     )
+  )
+
+  (defun-inline claim_rewards (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
+    (list
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash) my_id))
+        (list CREATE_COIN_ANNOUNCEMENT '$')
+        (list ASSERT_MY_COIN_ID my_id))
+  )
+
+  ; main
+  (claim_rewards SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
+)

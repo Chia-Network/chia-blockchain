@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, Dict, Iterator, Optional, Union, cast
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
@@ -385,9 +385,10 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
         # When writing for the first time, we should have a cached passphrase which hasn't been
         # validated (because it can't be validated yet...)
-        # TODO Fix hinting in `KeyringWrapper` to get rid of the ignores below
-        if not self.has_content() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():  # noqa: E501
-            passphrase = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0]  # noqa: E501
+        if not self.has_content() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():
+            # TODO: The above checks, at the time of writing, make sure we get a str here.  A reconsideration of this
+            #       interface would be good.
+            passphrase = cast(str, KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0])
         else:
             # TODO, this prompts for the passphrase interactively, move this out
             passphrase = obtain_current_passphrase(use_passphrase_cache=True)

@@ -11,8 +11,7 @@ import ssl
 import sys
 import tempfile
 import time
-from argparse import Namespace
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -46,8 +45,8 @@ from chia.full_node.bundle_tools import (
     detect_potential_template_generator,
     simple_solution_generator,
 )
-from chia.full_node.generator import setup_generator_args
 from chia.full_node.signage_point import SignagePoint
+from chia.plotters.chiapos import Params
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
@@ -121,9 +120,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_MOD = get_generator()
+from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -358,26 +355,34 @@ class BlockTools:
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
-    ):
+    ) -> bool:
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
+        existing_plots: bool = True
         # OG Plots
         for i in range(num_og_plots):
-            await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+            plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+            if plot.new_plot:
+                existing_plots = False
         # Pool Plots
         for i in range(num_pool_plots):
-            await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+            plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+            if plot.new_plot:
+                existing_plots = False
         # Some plots with keys that are not in the keychain
         for i in range(num_non_keychain_plots):
-            await self.new_plot(
+            plot = await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
                 plot_size=plot_size,
                 bitfield=bitfield,
             )
+            if plot.new_plot:
+                existing_plots = False
         await self.refresh_plots()
         assert len(self.plot_manager.plots) == len(self.expected_plots)
+        return existing_plots
 
     async def new_plot(
         self,
@@ -388,30 +393,29 @@ class BlockTools:
         exclude_plots: bool = False,
         plot_size: int = 20,
         bitfield: bool = True,
-    ) -> Optional[bytes32]:
+    ) -> BlockToolsNewPlotResult:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
             final_dir.mkdir(parents=True, exist_ok=True)
         if tmp_dir is None:
             tmp_dir = self.temp_dir
-        args = Namespace()
-        # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = plot_size
-        # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = 1
-        args.buffer = 100
-        args.tmp_dir = tmp_dir
-        args.tmp2_dir = tmp_dir
-        args.final_dir = final_dir
-        args.plotid = None
-        args.memo = None
-        args.buckets = 0
-        args.stripe_size = 2000
-        args.num_threads = 0
-        args.nobitfield = not bitfield
-        args.exclude_final_dir = False
-        args.list_duplicates = False
+        params = Params(
+            # Can't go much lower than 20, since plots start having no solutions and more buggy
+            size=plot_size,
+            # Uses many plots for testing, in order to guarantee proofs of space at every height
+            num=1,
+            buffer=100,
+            tmp_dir=Path(tmp_dir),
+            tmp2_dir=Path(tmp_dir),
+            final_dir=Path(final_dir),
+            plotid=None,
+            memo=None,
+            buckets=0,
+            stripe_size=2000,
+            num_threads=0,
+            nobitfield=not bitfield,
+        )
         try:
             if plot_keys is None:
                 pool_pk: Optional[G1Element] = None
@@ -424,7 +428,7 @@ class BlockTools:
                 plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
             created, existed = await create_plots(
-                args,
+                params,
                 plot_keys,
                 use_datetime=False,
                 test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
@@ -433,6 +437,7 @@ class BlockTools:
 
             plot_id_new: Optional[bytes32] = None
             path_new: Optional[Path] = None
+            new_plot: bool = True
 
             if len(created):
                 assert len(existed) == 0
@@ -441,13 +446,14 @@ class BlockTools:
             if len(existed):
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
+                new_plot = False
             assert plot_id_new is not None
             assert path_new is not None
 
             if not exclude_plots:
                 self.expected_plots[plot_id_new] = path_new
 
-            return plot_id_new
+            return BlockToolsNewPlotResult(plot_id_new, new_plot)
 
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -1409,7 +1415,7 @@ def finish_block(
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
-        new_ip_iters = unfinished_block.total_iters - latest_block.total_iters
+        new_ip_iters = uint64(unfinished_block.total_iters - latest_block.total_iters)
         cc_vdf_input = latest_block.challenge_vdf_output
         rc_vdf_challenge = latest_block.reward_infusion_new_challenge
     else:
@@ -1719,8 +1725,8 @@ def get_full_block_and_block_record(
 
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
-        block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
+        block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
+        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 
@@ -2120,6 +2126,12 @@ def create_test_unfinished_block(
         block_generator.program if block_generator else None,
         block_generator.block_height_list if block_generator else [],
     )
+
+
+@dataclass
+class BlockToolsNewPlotResult:
+    plot_id: bytes32
+    new_plot: bool
 
 
 # Remove these counters when `create_block_tools` and `create_block_tools_async` are removed

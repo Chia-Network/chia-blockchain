@@ -2,6 +2,8 @@ name: 🧪 test
 
 on:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
     - long_lived/**
     - main
@@ -9,6 +11,8 @@ on:
     tags:
     - '**'
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
     - '**'
   workflow_dispatch: null
@@ -37,7 +41,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
-          echo matrix_mode=${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }} >> $GITHUB_OUTPUT
+          echo matrix_mode=${{ ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || 'main' }} >> $GITHUB_OUTPUT
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
@@ -143,7 +147,7 @@ jobs:
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
-          diff-cover --compare-branch=${{ env.compare-branch }} --html-report coverage-reports/diff-cover.html --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report coverage-reports/diff-cover.html --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports

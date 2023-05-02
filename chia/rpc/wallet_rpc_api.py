@@ -30,7 +30,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -59,9 +59,10 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -70,7 +71,8 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -90,7 +92,6 @@ class WalletRpcApi:
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
-        self.balance_cache: Dict[int, Any] = {}
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -242,6 +243,7 @@ class WalletRpcApi:
             "added_stray_cat",
             "pending_transaction",
             "tx_update",
+            "wallet_removed",
             "new_on_chain_notification",
         }:
             payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
@@ -266,10 +268,8 @@ class WalletRpcApi:
         )
 
     async def get_latest_singleton_coin_spend(
-        self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
+        self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
     ) -> Tuple[CoinSpend, CoinState]:
-        if peer is None:
-            raise ValueError("No peers to get info from")
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
         )
@@ -298,9 +298,7 @@ class WalletRpcApi:
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
     ##########################################################################################
@@ -317,7 +315,6 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
 
         await self._stop_wallet()
-        self.balance_cache = {}
         started = await self.service._start_with_fingerprint(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
@@ -539,9 +536,6 @@ class WalletRpcApi:
         return {}
 
     async def push_transactions(self, request: Dict) -> EndpointResult:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
-
         wallet = self.service.wallet_state_manager.main_wallet
 
         txs: List[TransactionRecord] = []
@@ -791,61 +785,15 @@ class WalletRpcApi:
     async def get_wallet_balance(self, request: Dict) -> EndpointResult:
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        # If syncing return the last available info or 0s
-        syncing = self.service.wallet_state_manager.sync_mode
-        if syncing:
-            if wallet_id in self.balance_cache:
-                wallet_balance = self.balance_cache[wallet_id]
-            else:
-                wallet_balance = {
-                    "wallet_id": wallet_id,
-                    "confirmed_wallet_balance": 0,
-                    "unconfirmed_wallet_balance": 0,
-                    "spendable_balance": 0,
-                    "pending_change": 0,
-                    "max_send_amount": 0,
-                    "unspent_coin_count": 0,
-                    "pending_coin_removal_count": 0,
-                    "wallet_type": wallet.type(),
-                }
-                if self.service.logged_in_fingerprint is not None:
-                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-                if wallet.type() == WalletType.CAT:
-                    assert isinstance(wallet, CATWallet)
-                    wallet_balance["asset_id"] = wallet.get_asset_id()
-        else:
-            async with self.service.wallet_state_manager.lock:
-                unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
-                    wallet_id
-                )
-                balance = await wallet.get_confirmed_balance(unspent_records)
-                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-                spendable_balance = await wallet.get_spendable_balance(unspent_records)
-                pending_change = await wallet.get_pending_change_balance()
-                max_send_amount = await wallet.get_max_send_amount(unspent_records)
-
-                unconfirmed_removals: Dict[
-                    bytes32, Coin
-                ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
-                wallet_balance = {
-                    "wallet_id": wallet_id,
-                    "confirmed_wallet_balance": balance,
-                    "unconfirmed_wallet_balance": pending_balance,
-                    "spendable_balance": spendable_balance,
-                    "pending_change": pending_change,
-                    "max_send_amount": max_send_amount,
-                    "unspent_coin_count": len(unspent_records),
-                    "pending_coin_removal_count": len(unconfirmed_removals),
-                    "wallet_type": wallet.type(),
-                }
-                if self.service.logged_in_fingerprint is not None:
-                    wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
-                if wallet.type() == WalletType.CAT:
-                    assert isinstance(wallet, CATWallet)
-                    wallet_balance["asset_id"] = wallet.get_asset_id()
-                self.balance_cache[wallet_id] = wallet_balance
-
+        balance = await self.service.get_balance(wallet_id)
+        wallet_balance = balance.to_json_dict()
+        wallet_balance["wallet_id"] = wallet_id
+        wallet_balance["wallet_type"] = wallet.type()
+        if self.service.logged_in_fingerprint is not None:
+            wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
+        if wallet.type() == WalletType.CAT:
+            assert isinstance(wallet, CATWallet)
+            wallet_balance["asset_id"] = wallet.get_asset_id()
         return {"wallet_balance": wallet_balance}
 
     async def get_transaction(self, request: Dict) -> EndpointResult:
@@ -867,16 +815,13 @@ class WalletRpcApi:
         if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
             if tr.type == uint32(TransactionType.INCOMING_TX.value):
                 # Fetch incoming tx coin spend
-                peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-                assert peer is not None
+                peer = self.service.get_full_node_peer()
                 assert len(tr.additions) == 1
                 coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
                     [tr.additions[0].parent_coin_info], peer=peer
                 )
                 assert len(coin_state_list) == 1
-                coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state_list[0].spent_height, coin_state_list[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
                 tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
@@ -985,15 +930,13 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Set[Coin] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
+            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            )
+            exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = set()
+
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
                 amount,
@@ -1004,6 +947,7 @@ class WalletRpcApi:
                 max_coin_amount=max_coin_amount,
                 exclude_coin_amounts=exclude_coin_amounts,
                 exclude_coins=exclude_coins,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
             await wallet.push_transaction(tx)
 
@@ -1478,27 +1422,44 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            exclude_coins: Optional[Set[Coin]] = {
-                wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
-                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
-                )
-                if wr is not None
-            }
+            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            )
+            exclude_coins = {wr.coin for wr in coin_records.values()}
         else:
             exclude_coins = None
+        cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
+            request.get("extra_delta", None),
+            request.get("tail_reveal", None),
+            request.get("tail_solution", None),
+        )
+        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None
+        if cat_discrepancy_params != (None, None, None):
+            if None in cat_discrepancy_params:
+                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
+            else:
+                assert cat_discrepancy_params[0] is not None
+                assert cat_discrepancy_params[1] is not None
+                assert cat_discrepancy_params[2] is not None
+                cat_discrepancy = (
+                    cat_discrepancy_params[0],  # mypy sanitization
+                    Program.fromhex(cat_discrepancy_params[1]),
+                    Program.fromhex(cat_discrepancy_params[2]),
+                )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     fee,
+                    cat_discrepancy=cat_discrepancy,
                     coins=coins,
                     memos=memos if memos else None,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     exclude_coin_amounts=exclude_coin_amounts,
                     exclude_cat_coins=exclude_coins,
+                    reuse_puzhash=request.get("reuse_puzhash", None),
                 )
                 for tx in txs:
                     await wallet.standard_wallet.push_transaction(tx)
@@ -1513,6 +1474,7 @@ class WalletRpcApi:
                 max_coin_amount=max_coin_amount,
                 exclude_coin_amounts=exclude_coin_amounts,
                 exclude_cat_coins=exclude_coins,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
@@ -1587,6 +1549,7 @@ class WalletRpcApi:
                 validate_only=validate_only,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
         if result[0]:
             success, trade_record, error = result
@@ -1639,9 +1602,7 @@ class WalletRpcApi:
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
+        peer = self.service.get_full_node_peer()
         return {
             "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
             "id": offer.name(),
@@ -1663,11 +1624,15 @@ class WalletRpcApi:
             solver = Solver(info=maybe_marshalled_solver)
 
         async with self.service.wallet_state_manager.lock:
-            peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-            if peer is None:
-                raise ValueError("No peer connected")
+            peer = self.service.get_full_node_peer()
             trade_record, tx_records = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, peer, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount, solver=solver
+                offer,
+                peer,
+                fee=fee,
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                solver=solver,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
@@ -1813,7 +1778,9 @@ class WalletRpcApi:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
             if update_success:
-                spend_bundle = await wallet.create_update_spend()
+                spend_bundle = await wallet.create_update_spend(
+                    fee=uint64(request.get("fee", 0)), reuse_puzhash=request.get("reuse_puzhash", None)
+                )
                 if spend_bundle is not None:
                     success = True
         return {"success": success}
@@ -1839,7 +1806,7 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
@@ -1856,13 +1823,17 @@ class WalletRpcApi:
                 hints.append(memo.hex())
         return {
             "success": True,
+            "did_id": encode_puzzle_hash(
+                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
+                AddressType.DID.hrp(self.service.config),
+            ),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.as_python().hex(),
-            "recovery_list_hash": recovery_list_hash.as_python().hex(),
+            "public_key": public_key.atom.hex(),
+            "recovery_list_hash": recovery_list_hash.atom.hex(),
             "num_verification": num_verification.as_int(),
             "metadata": program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().as_python().hex(),
+            "launcher_id": singleton_struct.rest().first().atom.hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
@@ -1884,8 +1855,7 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        assert peer is not None
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
@@ -1925,7 +1895,7 @@ class WalletRpcApi:
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
             )
-            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
@@ -1938,14 +1908,14 @@ class WalletRpcApi:
                         did_wallet = wallet
                         break
 
-            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
+            full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
                     did_wallet is not None
                     and did_wallet.did_info.current_inner is not None
-                    and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    and create_singleton_puzzle(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
                     == coin_state.coin.puzzle_hash
                 ):
                     # Check if the old wallet has the inner puzzle
@@ -1960,7 +1930,7 @@ class WalletRpcApi:
                     did_puzzle = DID_INNERPUZ_MOD.curry(
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
-                    full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                    full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                     matched = True
                     if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                         matched = False
@@ -1976,7 +1946,7 @@ class WalletRpcApi:
                             did_puzzle = DID_INNERPUZ_MOD.curry(
                                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                             )
-                            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                             if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
                                 matched = True
                                 break
@@ -2048,7 +2018,7 @@ class WalletRpcApi:
                 pass
 
             wallet_id = did_wallet.id()
-            wallet_type = WalletType(did_wallet.type())
+            wallet_type = did_wallet.type()
             assert coin_state.created_height is not None
             coin_record: WalletCoinRecord = WalletCoinRecord(
                 coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
@@ -2067,7 +2037,9 @@ class WalletRpcApi:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
-                spend_bundle = await wallet.create_update_spend(uint64(request.get("fee", 0)))
+                spend_bundle = await wallet.create_update_spend(
+                    uint64(request.get("fee", 0)), reuse_puzhash=request.get("reuse_puzhash", None)
+                )
                 if spend_bundle is not None:
                     return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
                 else:
@@ -2225,7 +2197,10 @@ class WalletRpcApi:
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
         async with self.service.wallet_state_manager.lock:
             txs: TransactionRecord = await did_wallet.transfer_did(
-                puzzle_hash, uint64(request.get("fee", 0)), request.get("with_recovery_info", True)
+                puzzle_hash,
+                uint64(request.get("fee", 0)),
+                request.get("with_recovery_info", True),
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
 
         return {
@@ -2295,6 +2270,7 @@ class WalletRpcApi:
             royalty_amount,
             did_id,
             fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
         )
         nft_id = None
         assert spend_bundle is not None
@@ -2358,7 +2334,9 @@ class WalletRpcApi:
         ).supports_did:
             return {"success": False, "error": "The NFT doesn't support setting a DID."}
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+        spend_bundle = await nft_wallet.set_nft_did(
+            nft_coin_info, did_id, fee=fee, reuse_puzhash=request.get("reuse_puzhash", None)
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_set_did_bulk(self, request):
@@ -2414,7 +2392,11 @@ class WalletRpcApi:
             if not first:
                 tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id))
             else:
-                tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id, fee, nft_ids))
+                tx_list.extend(
+                    await nft_wallet.set_bulk_nft_did(
+                        nft_list, did_id, fee, nft_ids, reuse_puzhash=request.get("reuse_puzhash", None)
+                    )
+                )
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
             first = False
@@ -2493,7 +2475,11 @@ class WalletRpcApi:
             if not first:
                 tx_list.extend(await nft_wallet.bulk_transfer_nft(nft_list, puzzle_hash))
             else:
-                tx_list.extend(await nft_wallet.bulk_transfer_nft(nft_list, puzzle_hash, fee))
+                tx_list.extend(
+                    await nft_wallet.bulk_transfer_nft(
+                        nft_list, puzzle_hash, fee, reuse_puzhash=request.get("reuse_puzhash", None)
+                    )
+                )
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
             first = False
@@ -2546,7 +2532,7 @@ class WalletRpcApi:
         did_wallets_by_did_id: Dict[bytes32, uint32] = {}
 
         for wallet in all_wallets:
-            if wallet.type() == uint8(WalletType.DECENTRALIZED_ID):
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 assert isinstance(wallet, DIDWallet)
                 if wallet.did_info.origin_coin is not None:
                     did_wallets_by_did_id[wallet.did_info.origin_coin.name()] = wallet.id()
@@ -2603,6 +2589,7 @@ class WalletRpcApi:
                 fee=fee,
                 new_owner=b"",
                 new_did_inner_hash=b"",
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
             spend_bundle: Optional[SpendBundle] = None
             for tx in txs:
@@ -2627,8 +2614,7 @@ class WalletRpcApi:
             except ValueError:
                 return {"success": False, "error": f"Invalid Coin ID format for 'coin_id': {request['coin_id']!r}"}
         # Get coin state
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        assert peer is not None
+        peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
@@ -2697,7 +2683,9 @@ class WalletRpcApi:
             nft_coin_id = bytes32.from_hexstr(nft_coin_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
+        spend_bundle = await nft_wallet.update_metadata(
+            nft_coin_info, key, uri, fee=fee, reuse_puzhash=request.get("reuse_puzhash", None)
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_calculate_royalties(self, request) -> EndpointResult:
@@ -2801,6 +2789,7 @@ class WalletRpcApi:
                 did_coin=did_coin,
                 did_lineage_parent=did_lineage_parent,
                 fee=fee,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
         else:
             sb = await nft_wallet.mint_from_xch(
@@ -2811,6 +2800,7 @@ class WalletRpcApi:
                 xch_coins=xch_coins,
                 xch_change_ph=xch_change_ph,
                 fee=fee,
+                reuse_puzhash=request.get("reuse_puzhash", None),
             )
         nft_id_list = []
         for cs in sb.coin_spends:
@@ -2882,7 +2872,7 @@ class WalletRpcApi:
 
         memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
-        additional_outputs: List[AmountWithPuzzlehash] = []
+        additional_outputs: List[Payment] = []
         for addition in additions[1:]:
             receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
@@ -2891,7 +2881,7 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
+            additional_outputs.append(Payment(receiver_ph, amount, memos))
 
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
@@ -2969,13 +2959,13 @@ class WalletRpcApi:
                 assert isinstance(wallet, CATWallet)
 
                 txs = await wallet.generate_signed_transaction(
-                    [amount_0] + [output["amount"] for output in additional_outputs],
-                    [bytes32(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
+                    [amount_0] + [output.amount for output in additional_outputs],
+                    [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
                     fee,
                     coins=coins,
                     exclude_cat_coins=exclude_coins,
                     ignore_max_send_amount=True,
-                    memos=[memos_0] + [output["memos"] for output in additional_outputs],
+                    memos=[memos_0] + [output.memos for output in additional_outputs],
                     coin_announcements_to_consume=coin_announcements,
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
@@ -3072,18 +3062,11 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet: DataLayerWallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                dl_wallet = wallet
-                break
-        else:
+        try:
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
             async with self.service.wallet_state_manager.lock:
-                dl_wallet = await DataLayerWallet.create_new_dl_wallet(
-                    self.service.wallet_state_manager,
-                    self.service.wallet_state_manager.main_wallet,
-                )
+                dl_wallet = await DataLayerWallet.create_new_dl_wallet(self.service.wallet_state_manager)
 
         try:
             async with self.service.wallet_state_manager.lock:
@@ -3106,24 +3089,17 @@ class WalletRpcApi:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
-
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-
-        dl_wallet: DataLayerWallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                dl_wallet = wallet
-                break
-        else:
+        try:
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
-                    self.service.wallet_state_manager.main_wallet,
                 )
-        await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]), peer)
+        await dl_wallet.track_new_launcher_id(
+            bytes32.from_hexstr(request["launcher_id"]),
+            self.service.get_full_node_peer(),
+        )
         return {}
 
     async def dl_stop_tracking(self, request) -> Dict:
@@ -3132,9 +3108,6 @@ class WalletRpcApi:
             raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        if dl_wallet is None:
-            raise ValueError("The DataLayer wallet has not been initialized")
-
         await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
         return {}
 
@@ -3143,119 +3116,93 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                only_confirmed = request.get("only_confirmed")
-                if only_confirmed is None:
-                    only_confirmed = False
-                record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
-                return {"singleton": None if record is None else record.to_json_dict()}
-
-        raise ValueError("No DataLayer wallet has been initialized")
+        only_confirmed = request.get("only_confirmed")
+        if only_confirmed is None:
+            only_confirmed = False
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
+        return {"singleton": None if record is None else record.to_json_dict()}
 
     async def dl_singletons_by_root(self, request) -> Dict:
         """Get the singleton records that contain the specified root"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for wallet in self.service.wallet_state_manager.wallets.values():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                records = await wallet.get_singletons_by_root(
-                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
-                )
-                records_json = [rec.to_json_dict() for rec in records]
-                return {"singletons": records_json}
-
-        raise ValueError("No DataLayer wallet has been initialized")
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        records = await wallet.get_singletons_by_root(
+            bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
+        )
+        records_json = [rec.to_json_dict() for rec in records]
+        return {"singletons": records_json}
 
     async def dl_update_root(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                async with self.service.wallet_state_manager.lock:
-                    records = await wallet.create_update_state_spend(
-                        bytes32.from_hexstr(request["launcher_id"]),
-                        bytes32.from_hexstr(request["new_root"]),
-                        fee=uint64(request.get("fee", 0)),
-                    )
-                    for record in records:
-                        await self.service.wallet_state_manager.add_pending_transaction(record)
-                    return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
-
-        raise ValueError("No DataLayer wallet has been initialized")
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        async with self.service.wallet_state_manager.lock:
+            records = await wallet.create_update_state_spend(
+                bytes32.from_hexstr(request["launcher_id"]),
+                bytes32.from_hexstr(request["new_root"]),
+                fee=uint64(request.get("fee", 0)),
+            )
+            for record in records:
+                await self.service.wallet_state_manager.add_pending_transaction(record)
+            return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
 
     async def dl_update_multiple(self, request) -> Dict:
         """Update multiple singletons with new merkle roots"""
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                async with self.service.wallet_state_manager.lock:
-                    # TODO: This method should optionally link the singletons with announcements.
-                    #       Otherwise spends are vulnerable to signature subtraction.
-                    tx_records: List[TransactionRecord] = []
-                    for launcher, root in request["updates"].items():
-                        records = await wallet.create_update_state_spend(
-                            bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
-                        )
-                        tx_records.extend(records)
-                    # Now that we have all the txs, we need to aggregate them all into just one spend
-                    modified_txs: List[TransactionRecord] = []
-                    aggregate_spend = SpendBundle([], G2Element())
-                    for tx in tx_records:
-                        if tx.spend_bundle is not None:
-                            aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
-                            modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
-                    modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
-                    for tx in modified_txs:
-                        await self.service.wallet_state_manager.add_pending_transaction(tx)
-                    return {"tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs]}
-
-        raise ValueError("No DataLayer wallet has been initialized")
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        async with self.service.wallet_state_manager.lock:
+            # TODO: This method should optionally link the singletons with announcements.
+            #       Otherwise spends are vulnerable to signature subtraction.
+            tx_records: List[TransactionRecord] = []
+            for launcher, root in request["updates"].items():
+                records = await wallet.create_update_state_spend(
+                    bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
+                )
+                tx_records.extend(records)
+            # Now that we have all the txs, we need to aggregate them all into just one spend
+            modified_txs: List[TransactionRecord] = []
+            aggregate_spend = SpendBundle([], G2Element())
+            for tx in tx_records:
+                if tx.spend_bundle is not None:
+                    aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
+                    modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
+            modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
+            for tx in modified_txs:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            return {"tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs]}
 
     async def dl_history(self, request) -> Dict:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                additional_kwargs = {}
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        additional_kwargs = {}
 
-                if "min_generation" in request:
-                    additional_kwargs["min_generation"] = uint32(request["min_generation"])
-                if "max_generation" in request:
-                    additional_kwargs["max_generation"] = uint32(request["max_generation"])
-                if "num_results" in request:
-                    additional_kwargs["num_results"] = uint32(request["num_results"])
+        if "min_generation" in request:
+            additional_kwargs["min_generation"] = uint32(request["min_generation"])
+        if "max_generation" in request:
+            additional_kwargs["max_generation"] = uint32(request["max_generation"])
+        if "num_results" in request:
+            additional_kwargs["num_results"] = uint32(request["num_results"])
 
-                history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
-                history_json = [rec.to_json_dict() for rec in history]
-                return {"history": history_json, "count": len(history_json)}
-
-        raise ValueError("No DataLayer wallet has been initialized")
+        history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
+        history_json = [rec.to_json_dict() for rec in history]
+        return {"history": history_json, "count": len(history_json)}
 
     async def dl_owned_singletons(self, request) -> Dict:
         """Get all owned singleton records"""
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
-
-        assert isinstance(wallet, DataLayerWallet)
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
         singletons = await wallet.get_owned_singletons()
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 
@@ -3266,13 +3213,7 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
-
-        assert isinstance(wallet, DataLayerWallet)
+        wallet = self.service.wallet_state_manager.get_dl_wallet()
         mirrors_json = []
         for mirror in await wallet.get_mirrors_for_launcher(bytes32.from_hexstr(request["launcher_id"])):
             mirrors_json.append(mirror.to_json_dict())
@@ -3284,14 +3225,7 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                dl_wallet = wallet
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
-
-        assert isinstance(dl_wallet, DataLayerWallet)
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             txs = await dl_wallet.create_new_mirror(
                 bytes32.from_hexstr(request["launcher_id"]),
@@ -3311,22 +3245,12 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peer connected")
-
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
-                assert isinstance(wallet, DataLayerWallet)
-                dl_wallet: DataLayerWallet = wallet
-                break
-        else:
-            raise ValueError("No DataLayer wallet has been initialized")
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
 
         async with self.service.wallet_state_manager.lock:
             txs = await dl_wallet.delete_mirror(
                 bytes32.from_hexstr(request["coin_id"]),
-                peer,
+                self.service.get_full_node_peer(),
                 fee=request.get("fee", uint64(0)),
             )
             for tx in txs:

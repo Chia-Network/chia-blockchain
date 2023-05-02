@@ -9,12 +9,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
-from chia.util.streamable import Streamable, recurse_jsonify, streamable
+from chia.util.streamable import recurse_jsonify
 
 
-@streamable
 @dataclass(frozen=True)
-class MempoolItem(Streamable):
+class MempoolItem:
     spend_bundle: SpendBundle
     fee: uint64
     npc_result: NPCResult
@@ -24,8 +23,16 @@ class MempoolItem(Streamable):
     # If present, this SpendBundle is not valid at or before this height
     assert_height: Optional[uint32] = None
 
+    # If presemt, this SpendBundle is not valid once the block height reaches
+    # the specified height
+    assert_before_height: Optional[uint32] = None
+    assert_before_seconds: Optional[uint64] = None
+
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost
+
+    def __hash__(self) -> int:
+        return hash(self.spend_bundle_name)
 
     @property
     def fee_per_cost(self) -> float:
@@ -37,8 +44,7 @@ class MempoolItem(Streamable):
 
     @property
     def cost(self) -> uint64:
-        assert self.npc_result.conds is not None
-        return uint64(self.npc_result.conds.cost)
+        return self.npc_result.cost
 
     @property
     def additions(self) -> List[Coin]:

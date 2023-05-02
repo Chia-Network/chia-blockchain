@@ -7,9 +7,11 @@ import click
 
 from chia import __version__
 from chia.cmds.beta import beta_cmd
+from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
+from chia.cmds.dev import dev_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
@@ -125,6 +127,8 @@ cli.add_command(peer_cmd)
 cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
+cli.add_command(completion)
+cli.add_command(dev_cmd)
 
 
 def main() -> None:

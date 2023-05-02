@@ -1,0 +1,25 @@
+; This is a "limitations_program" for use with cat.clsp.
+(mod (
+      PUBKEY
+      Truths
+      parent_is_cat
+      lineage_proof
+      delta
+      inner_conditions
+      (
+        delegated_puzzle
+        delegated_solution
+      )
+    )
+
+    (include condition_codes.clib)
+
+    (defun sha256tree1 (TREE)
+          (if (l TREE)
+              (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+              (sha256 1 TREE)))
+
+    (c (list AGG_SIG_UNSAFE PUBKEY (sha256tree1 delegated_puzzle))
+      (a delegated_puzzle (c Truths (c parent_is_cat (c lineage_proof (c delta (c inner_conditions delegated_solution))))))
+    )
+)
