@@ -60,6 +60,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackAutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import create_singleton_puzzle
@@ -874,11 +875,23 @@ class WalletRpcApi:
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
             wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
         )
+        txs = [
+            (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            for tr in transactions
+        ]
+        # Format for clawback transactions
+        for tx in txs:
+            if tx["type"] == TransactionType.INCOMING_CLAWBACK.value and tx["spend_bundle"] is not None:
+                spend_bundle: SpendBundle = SpendBundle.from_json_dict(tx["spend_bundle"])
+                puzzle = Program.from_bytes(bytes(spend_bundle.coin_spends[0].puzzle_reveal))
+                solution = Program.from_bytes(bytes(spend_bundle.coin_spends[0].solution))
+                uncurried = uncurry_puzzle(puzzle)
+                clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                if clawback_metadata is not None:
+                    tx["clawback_metadata"] = clawback_metadata.to_json_dict()
+
         return {
-            "transactions": [
-                (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
-                for tr in transactions
-            ],
+            "transactions": txs,
             "wallet_id": wallet_id,
         }
 
@@ -1056,7 +1069,7 @@ class WalletRpcApi:
         batch_size = request.get(
             "batch_size", self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
         )
-        clawback_coins: List[bytes32] = []
+        tx_id_list: List[bytes] = []
         for coin_id, coin_record in coin_records.items():
             if coin_record.metadata is None:
                 log.warning(f"Skip merkle coin f{coin_id.hex()}, metadata cannot be None.")
@@ -1070,13 +1083,13 @@ class WalletRpcApi:
             metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
             coins[coin_record.coin] = metadata
             if len(coins) >= batch_size:
-                clawback_coins.extend(await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee))
+                tx_id_list.extend((await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee)))
                 coins = {}
         if len(coins) > 0:
-            clawback_coins.extend((await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee)))
+            tx_id_list.extend((await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee)))
         return {
             "success": True,
-            "spent_coins": [c.hex() for c in clawback_coins],
+            "transaction_ids": [tx.hex() for tx in tx_id_list],
         }
 
     async def delete_unconfirmed_transactions(self, request) -> EndpointResult:

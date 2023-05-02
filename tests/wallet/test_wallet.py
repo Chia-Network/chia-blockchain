@@ -296,6 +296,13 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
+        txs = await api_0.get_transactions(dict(types=[TransactionType.INCOMING_CLAWBACK.value], wallet_id=1))
+        clawback_tx_count = 0
+        for transactions in txs["transactions"]:
+            if "metadata" in transactions:
+                assert transactions["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
+                clawback_tx_count += 1
+        assert clawback_tx_count == 1
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
@@ -303,8 +310,8 @@ class TestWalletSimulator:
             dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 1000})
         )
         json.dumps(resp)
-        assert len(resp["spent_coins"]) == 1
-        assert resp["spent_coins"][0] == merkle_coin.name().hex()
+        assert resp["success"]
+        assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -313,6 +320,19 @@ class TestWalletSimulator:
         )
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
+        )
+        assert (
+            len(
+                (
+                    await api_0.get_transactions(
+                        dict(
+                            types=[TransactionType.INCOMING_CLAWBACK.value, TransactionType.OUTGOING_CLAWBACK.value],
+                            wallet_id=1,
+                        )
+                    )
+                )["transactions"]
+            )
+            == 8
         )
         await time_out_assert(10, wallet.get_confirmed_balance, 3999999999000)
         await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000001000)
@@ -379,8 +399,8 @@ class TestWalletSimulator:
             dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
         )
         json.dumps(resp)
-        assert len(resp["spent_coins"]) == 1
-        assert resp["spent_coins"][0] == merkle_coin.name().hex()
+        assert resp["success"]
+        assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -473,8 +493,8 @@ class TestWalletSimulator:
             dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
         )
         json.dumps(resp)
-        assert len(resp["spent_coins"]) == 1
-        assert resp["spent_coins"][0] == merkle_coin.name().hex()
+        assert resp["success"]
+        assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
