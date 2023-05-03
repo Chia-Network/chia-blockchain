@@ -663,6 +663,7 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
+        # Check if the coin is a DAO Treasury
         dao_curried_args = match_treasury_puzzle(uncurried.mod, uncurried.args)
         if dao_curried_args is not None:
             return await self.handle_dao_treasury(dao_curried_args, parent_coin_state, coin_state, coin_spend)
@@ -670,15 +671,14 @@ class WalletStateManager:
         dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
         if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
-
+        # Check if the coin is a DAO CAT
         dao_cat_args = match_dao_cat_puzzle(uncurried)
         if dao_cat_args:
             return await self.handle_dao_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend)
-            # return await self.handle_cat(dao_cat_args, parent_coin_state, coin_state, coin_spend)
 
         funding_puzzle_check = match_funding_puzzle(uncurried, solution)
         if funding_puzzle_check:
-            return await self.handle_dao_funding(coin_spend)
+            return await self.get_dao_wallet_from_coinspend_hint(coin_spend)
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -982,7 +982,7 @@ class WalletStateManager:
                     return WalletIdentifier.create(wallet)
         return None
 
-    async def handle_dao_funding(self, coin_spend: CoinSpend):
+    async def get_dao_wallet_from_coinspend_hint(self, coin_spend: CoinSpend) -> Optional[WalletIdentifier]:
         hint_list = compute_coin_hints(coin_spend)
         if hint_list:
             for wallet in self.wallets.values():
@@ -1603,11 +1603,10 @@ class WalletStateManager:
 
         await self.coin_store.add_coin_record(coin_record, coin_name)
 
-        if wallet_type == WalletType.DAO:
-            await self.wallets[wallet_id].coin_added(coin, height, peer)
-            return
-
         await self.wallets[wallet_id].coin_added(coin, height, peer)
+
+        if wallet_type == WalletType.DAO:
+            return
 
         await self.create_more_puzzle_hashes()
 
