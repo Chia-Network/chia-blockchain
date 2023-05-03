@@ -887,7 +887,7 @@ class TestCATWallet:
         puzzlehash_unhardened = construct_cat_puzzle(
             CAT_MOD,
             Program.to(None).get_tree_hash(),
-            inner_puzhash,  # type: ignore
+            inner_puzhash,  # type: ignore[arg-type]
         ).get_tree_hash_precalc(inner_puzhash)
         change_derivation = DerivationRecord(
             uint32(0),
