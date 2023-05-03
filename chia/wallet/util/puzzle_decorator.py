@@ -6,6 +6,7 @@ from typing_extensions import Protocol
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.puzzle_decorator import ClawbackPuzzleDecorator
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 
@@ -26,9 +27,7 @@ class PuzzleDecoratorProtocol(Protocol):
     ) -> Tuple[Program, List[bytes]]:
         ...
 
-    def solve(
-        self, puzzle: Program, primaries: List[Dict[str, Any]], inner_solution: Program
-    ) -> Tuple[Program, Program]:
+    def solve(self, puzzle: Program, primaries: List[Payment], inner_solution: Program) -> Tuple[Program, Program]:
         ...
 
 
@@ -75,7 +74,7 @@ class PuzzleDecoratorManager:
             inner_puzzle, target_puzhash = decorator.decorate_target_puzhash(inner_puzzle, target_puzhash)
         return target_puzhash
 
-    def solve(self, inner_puzzle: Program, primaries: List[Dict[str, Any]], inner_solution: Program) -> Program:
+    def solve(self, inner_puzzle: Program, primaries: List[Payment], inner_solution: Program) -> Program:
         """
         Generate the solution of the puzzle
         :param inner_puzzle: Inner puzzle
