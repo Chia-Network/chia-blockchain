@@ -890,6 +890,8 @@ class WalletRpcApi:
                 clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
                 if clawback_metadata is not None:
                     tx["metadata"] = clawback_metadata.to_json_dict()
+                    tx["metadata"]["coin_id"] = Coin.from_json_dict(tx["additions"][0]).name().hex()
+                    del tx["metadata"]["is_recipient"]
 
         return {
             "transactions": txs,

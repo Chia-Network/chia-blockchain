@@ -298,15 +298,16 @@ class TestWalletSimulator:
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
         txs = await api_0.get_transactions(dict(types=[TransactionType.INCOMING_CLAWBACK.value], wallet_id=1))
+        assert await wallet.get_confirmed_balance() == 3999999999500
+        # clawback merkle coin
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         clawback_tx_count = 0
         for transactions in txs["transactions"]:
             if "metadata" in transactions:
                 assert transactions["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
+                assert transactions["metadata"]["coin_id"] == merkle_coin.name().hex()
                 clawback_tx_count += 1
         assert clawback_tx_count == 1
-        assert await wallet.get_confirmed_balance() == 3999999999500
-        # clawback merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         resp = await api_0.spend_clawback_coins(
             dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 1000})
         )
