@@ -28,10 +28,11 @@ from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
+from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -75,6 +76,7 @@ from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import HashFilter
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -930,10 +932,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
-                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids])
             )
-            exclude_coins = {wr.coin for wr in coin_records.values()}
+            exclude_coins = {wr.coin for wr in result.records}
         else:
             exclude_coins = set()
 
@@ -1103,24 +1105,28 @@ class WalletRpcApi:
 
         if "names" not in request:
             raise ValueError("Names not in request")
+        coin_ids = [bytes32.from_hexstr(name) for name in request["names"]]
         kwargs: Dict[str, Any] = {
-            "include_spent_coins": False,
-            "coin_names": [hexstr_to_bytes(name) for name in request["names"]],
+            "coin_id_filter": HashFilter.include(coin_ids),
         }
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
 
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
+        confirmed_range = UInt32Range()
+        if "start_height" in request:
+            confirmed_range = dataclasses.replace(confirmed_range, start=uint32(request["start_height"]))
+        if "end_height" in request:
+            confirmed_range = dataclasses.replace(confirmed_range, stop=uint32(request["end_height"]))
+        if confirmed_range != UInt32Range():
+            kwargs["confirmed_range"] = confirmed_range
+
+        if "include_spent_coins" in request and not str2bool(request["include_spent_coins"]):
+            kwargs["spent_range"] = UInt32Range(start=uint32(uint32.MAXIMUM_EXCLUSIVE - 1))
 
         async with self.service.wallet_state_manager.lock:
             coin_records: List[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
             missed_coins: List[str] = [
-                "0x" + c_id.hex() for c_id in kwargs["coin_names"] if c_id not in [cr.name for cr in coin_records]
+                "0x" + c_id.hex() for c_id in coin_ids if c_id not in [cr.name for cr in coin_records]
             ]
             if missed_coins:
                 raise ValueError(f"Coin ID's: {missed_coins} not found.")
@@ -1422,10 +1428,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
-                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids])
             )
-            exclude_coins = {wr.coin for wr in coin_records.values()}
+            exclude_coins = {wr.coin for wr in result.records}
         else:
             exclude_coins = None
         cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
