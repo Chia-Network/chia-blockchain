@@ -19,10 +19,20 @@ from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinState, RespondBlockHeader, RespondToCoinUpdates
+from chia.protocols.wallet_protocol import (
+    CoinState,
+    CoinStateUpdate,
+    NewPeakWallet,
+    RegisterForCoinUpdates,
+    RequestBlockHeader,
+    RequestChildren,
+    RespondBlockHeader,
+    RespondChildren,
+    RespondToCoinUpdates,
+    SendTransaction,
+)
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -467,10 +477,7 @@ class WalletNode:
         for record in records:
             if record.spend_bundle is None:
                 continue
-            msg = make_msg(
-                ProtocolMessageTypes.send_transaction,
-                wallet_protocol.SendTransaction(record.spend_bundle),
-            )
+            msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(record.spend_bundle))
             already_sent = set()
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
@@ -931,7 +938,7 @@ class WalletNode:
             self.race_cache[header_hash] = set()
         self.race_cache[header_hash].add(coin_state)
 
-    async def state_update_received(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection) -> None:
+    async def state_update_received(self, request: CoinStateUpdate, peer: WSChiaConnection) -> None:
         # This gets called every time there is a new coin or puzzle hash change in the DB
         # that is of interest to this wallet. It is not guaranteed to come for every height. This message is guaranteed
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
@@ -1005,7 +1012,7 @@ class WalletNode:
 
         raise PeerRequestException("Error fetching timestamp from all peers")
 
-    async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection) -> None:
+    async def new_peak_wallet(self, new_peak: NewPeakWallet, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:
             # When logging out of wallet
             self.log.debug("state manager is None (shutdown)")
@@ -1017,7 +1024,7 @@ class WalletNode:
             self.log.debug("skip block with lower weight.")
             return
 
-        request = wallet_protocol.RequestBlockHeader(new_peak.height)
+        request = RequestBlockHeader(new_peak.height)
         response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
         if response is None:
             self.log.warning(f"Peer {peer.get_peer_info()} did not respond in time.")
@@ -1181,7 +1188,7 @@ class WalletNode:
             fork_height = header_block.height - 1
 
         while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
-            request_prev = wallet_protocol.RequestBlockHeader(uint32(top.height - 1))
+            request_prev = RequestBlockHeader(uint32(top.height - 1))
             response_prev: Optional[RespondBlockHeader] = await peer.call_api(
                 FullNodeAPI.request_block_header, request_prev
             )
@@ -1558,9 +1565,9 @@ class WalletNode:
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
-        msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
+        msg = RegisterForCoinUpdates(coin_names, uint32(0))
         coin_state: Optional[RespondToCoinUpdates] = await peer.call_api(FullNodeAPI.register_interest_in_coin, msg)
-        if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
+        if coin_state is None or not isinstance(coin_state, RespondToCoinUpdates):
             raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
         if not self.is_trusted(peer):
@@ -1578,10 +1585,10 @@ class WalletNode:
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
-        response: Optional[wallet_protocol.RespondChildren] = await peer.call_api(
-            FullNodeAPI.request_children, wallet_protocol.RequestChildren(coin_name)
+        response: Optional[RespondChildren] = await peer.call_api(
+            FullNodeAPI.request_children, RequestChildren(coin_name)
         )
-        if response is None or not isinstance(response, wallet_protocol.RespondChildren):
+        if response is None or not isinstance(response, RespondChildren):
             raise PeerRequestException(f"Was not able to obtain children {response}")
 
         if not self.is_trusted(peer):
@@ -1596,10 +1603,7 @@ class WalletNode:
 
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
     async def push_tx(self, spend_bundle: SpendBundle) -> None:
-        msg = make_msg(
-            ProtocolMessageTypes.send_transaction,
-            wallet_protocol.SendTransaction(spend_bundle),
-        )
+        msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
             await peer.send_message(msg)

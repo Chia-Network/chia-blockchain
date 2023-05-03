@@ -33,8 +33,7 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
-from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import CoinState
+from chia.protocols.wallet_protocol import CoinState, NewPeakWallet
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -1710,7 +1709,7 @@ class WalletStateManager:
 
         return filtered
 
-    async def new_peak(self, peak: wallet_protocol.NewPeakWallet) -> None:
+    async def new_peak(self, peak: NewPeakWallet) -> None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.POOLING_WALLET:
                 assert isinstance(wallet, PoolWallet)
