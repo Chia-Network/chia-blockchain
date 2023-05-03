@@ -459,7 +459,7 @@ class Offer:
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
                 assert arbitrage_ph is not None
-                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
+                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             # Some assets need to know about siblings so we need to collect all spends first to be able to use them
             coin_to_spend_dict: Dict[Coin, CoinSpend] = {}
