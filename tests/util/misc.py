@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import enum
+import functools
 import gc
 import math
 import os
@@ -230,6 +231,7 @@ class _AssertRuntime:
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
+    enable_assertion: bool = True
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
@@ -272,7 +274,7 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
-        if exc_type is None:
+        if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
             assert runtime.duration < self.seconds, results.message()
 
@@ -280,7 +282,21 @@ class _AssertRuntime:
 # Related to the comment above about needing a class vs. using the context manager
 # decorator, this is just here to retain the function-style naming as the public
 # interface.  Hopefully we can switch away from the class at some point.
-assert_runtime = _AssertRuntime
+# assert_runtime = _AssertRuntime
+
+
+@final
+@dataclasses.dataclass
+class BenchmarkRunner:
+    enable_assertion: bool = True
+    label: Optional[str] = None
+
+    @functools.wraps(_AssertRuntime)
+    def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", self.enable_assertion)
+        if self.label is not None:
+            kwargs.setdefault("label", self.label)
+        return _AssertRuntime(*args, **kwargs)
 
 
 @contextlib.contextmanager

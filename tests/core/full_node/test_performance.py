@@ -22,7 +22,6 @@ from chia.util.ints import uint64
 from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.util.misc import assert_runtime
 
 log = logging.getLogger(__name__)
 
@@ -39,8 +38,9 @@ async def get_block_path(full_node: FullNodeAPI):
 
 class TestPerformance:
     @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_full_block_performance(self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname):
+    async def test_full_block_performance(
+        self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname, benchmark_runner
+    ):
         full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
@@ -118,7 +118,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with assert_runtime(seconds=0.001, label=f"{request.node.name} - mempool"):
+        with benchmark_runner.assert_runtime(seconds=0.001, label=f"{request.node.name} - mempool"):
             num_tx: int = 0
             for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
                 num_tx += 1
@@ -175,7 +175,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with assert_runtime(seconds=0.1, label=f"{request.node.name} - unfinished"):
+        with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - unfinished"):
             res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
 
         log.warning(f"Res: {res}")
@@ -186,7 +186,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
+        with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
             res = await full_node_1.full_node.add_block(block_small)

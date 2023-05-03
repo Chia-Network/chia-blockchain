@@ -45,15 +45,24 @@ from chia.wallet.wallet_node import WalletNode
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
+from tests.util.misc import BenchmarkRunner
 
 multiprocessing.set_start_method("spawn")
 
 from pathlib import Path
 
+from chia._pytest_plugin import benchmark_runner_fixture_name
 from chia.simulator.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
+
+
+@pytest.fixture(name=benchmark_runner_fixture_name)
+def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
+    enable_assertion = request.config.getoption("--benchmark")
+    label = request.node.name
+    return BenchmarkRunner(enable_assertion=enable_assertion, label=label)
 
 
 @pytest.fixture(name="node_name_for_file")

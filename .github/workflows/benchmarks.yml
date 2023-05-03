@@ -81,4 +81,4 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark tests
+          pytest -n 0 --capture no -m benchmark --enable-benchmark-assertions tests
