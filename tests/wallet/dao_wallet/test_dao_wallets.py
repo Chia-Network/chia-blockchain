@@ -82,7 +82,6 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
             dao_rules,
         )
         assert dao_wallet_0 is not None
-        assert dao_wallet_0.new_peak_call_count == 0
 
     # Get the full node sim to process the wallet creation spend
     tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()

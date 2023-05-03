@@ -116,8 +116,6 @@ class DAOWallet(WalletProtocol):
     dao_rules: DAORules
     standard_wallet: Wallet
     wallet_id: uint32
-    apply_state_transition_call_count: int = 0
-    new_peak_call_count: int = 0
 
     @staticmethod
     async def create_new_dao_and_wallet(
@@ -1954,6 +1952,7 @@ class DAOWallet(WalletProtocol):
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
+        self.log.info(f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}.")
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if not singleton_id:
             raise ValueError("Received a non singleton coin for dao wallet")
@@ -1979,7 +1978,10 @@ class DAOWallet(WalletProtocol):
             #             f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
             #         )
             #     return False
-            # await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+
+            # TODO: Add check for pending transaction on our behalf in here
+            # if we have pending transaction that is now invalidated, then:
+            # check if we should auto re-create spend or flash error to use (should we have a failed tx db?)
             await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
 
         # Consume new DAOBlockchainInfo
@@ -1997,7 +1999,6 @@ class DAOWallet(WalletProtocol):
             await self.add_or_update_proposal_info(new_state, block_height)
         else:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
-        self.apply_state_transition_call_count += 1
 
         return True
 
@@ -2006,7 +2007,6 @@ class DAOWallet(WalletProtocol):
         new_peak is called from the WalletStateManager whenever there is a new peak
         # This is where we can attempt to push spends, check on time locks, etc.
         """
-        self.new_peak_call_count += 1
 
         # Check to see if a proposal timer has expired
 
