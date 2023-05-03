@@ -63,6 +63,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_spend_p2_singleton,
     uncurry_treasury,
+    uncurry_proposal_validator,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -273,6 +274,107 @@ class DAOWallet(WalletProtocol):
 
         # add interested puzzle hash so we can folllow treasury funds
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
+        return self
+
+    @staticmethod
+    async def create_new_did_wallet_from_coin_spend(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        launch_coin: Coin,
+        inner_puzzle: Program,
+        coin_spend: CoinSpend,
+        block_height: uint32,  # this is included in CoinState, pass it in from WSM
+        name: Optional[str] = None,
+    ):
+        """
+        Create a DID wallet from a transfer
+        :param wallet_state_manager: Wallet state manager
+        :param wallet: Main wallet
+        :param launch_coin: The launch coin of the DID
+        :param inner_puzzle: DID inner puzzle
+        :param coin_spend: DID transfer spend
+        :param name: Wallet name
+        :return: DID wallet
+        """
+
+        self = DAOWallet()
+        self.wallet_state_manager = wallet_state_manager
+        if name is None:
+            name = self.generate_wallet_name()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.standard_wallet = wallet
+        self.log = logging.getLogger(name if name else __name__)
+
+        self.log.info(f"Creating DAO wallet from a coin spend {launch_coin}  ...")
+        # Create did info from the coin spend
+        curried_args = uncurry_treasury(inner_puzzle)
+        if curried_args is None:
+            raise ValueError("Cannot uncurry the DAO puzzle.")
+        (
+            _DAO_TREASURY_MOD_HASH,
+            proposal_validator,
+            proposal_timelock,
+            soft_close_length,
+            attendance_required,
+            pass_percentage,
+            self_destruct_length,
+            oracle_spend_delay,
+        ) = curried_args
+        # full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
+        # inner_solution: Program = full_solution.rest().rest().first()
+        # recovery_list: List[bytes32] = []
+        curried_args = uncurry_proposal_validator(proposal_validator)
+        (
+            SINGLETON_STRUCT,
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            TREASURY_MOD_HASH,
+            CAT_TAIL_HASH,
+        ) = curried_args.as_iter()
+
+        # TODO: how is this working with our system about receiving CATs you haven't subscribed to?
+        cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
+            wallet_state_manager,
+            wallet,
+            CAT_TAIL_HASH.as_atom().hex(),
+        )
+
+        dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
+            wallet_state_manager,
+            wallet,
+            CAT_TAIL_HASH.as_atom().hex(),
+        )
+
+        current_coin = get_most_recent_singleton_coin_from_coin_spend(coin_spend)
+
+        dao_info = DAOInfo(
+            launch_coin.name(),
+            cat_wallet.id(),
+            dao_cat_wallet.id(),
+            [],
+            [],
+            current_coin,
+            inner_puzzle,
+            block_height,
+            1,  # TODO: how should we deal with filter integer? Just update it later?
+        )
+
+        info_as_string = json.dumps(dao_info.to_json_dict())
+
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            name, WalletType.DAO.value, info_as_string
+        )
+
+        await self.wallet_state_manager.add_new_wallet(self)
+        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
+
+        self.log.info(f"New DAO wallet created {info_as_string}.")
+        if self.wallet_info is None:
+            raise ValueError("Internal Error")
+        self.wallet_id = self.wallet_info.id
         return self
 
     @staticmethod

@@ -52,6 +52,8 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     match_did_puzzle,
     metadata_to_program,
 )
+from chia.wallet.dao_wallet.dao_info import DAORules
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
@@ -689,6 +691,28 @@ class WalletRpcApi:
                 }
             else:  # undefined did_type
                 pass
+        elif request["wallet_type"] == "dao_wallet":
+            if request["mode"] == "new":
+                dao_rules = DAORules()
+                async with self.service.wallet_state_manager.lock:
+                    dao_wallet = await DAOWallet.create_new_dao_and_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        uint64(request["amount_of_cats"]),
+                        dao_rules,
+                        uint64(request["filter_amount"]),
+                        None,
+                        uint64(request.get("fee", 0)),
+                    )
+            elif request["mode"] == "existing":
+                async with self.service.wallet_state_manager.lock:
+                    dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+                        wallet_state_manager,
+                        main_wallet,
+                        bytes.from_hex(request["treasury_id"]),
+                        uint64(request["filter_amount"]),
+                        None,
+                    )
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
                 did_id: Optional[bytes32] = None
