@@ -575,3 +575,20 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # Check the proposal is saved
     assert len(dao_wallet_0.dao_info.proposals_list) == 2
+    assert len(dao_wallet_1.dao_info.proposals_list) == 2
+    assert len(dao_wallet_2.dao_info.proposals_list) == 2
+
+    wallet_2_start_bal = await wallet_2.get_confirmed_balance()
+
+    # Close the first proposal
+    close_sb = await dao_wallet_0.create_proposal_close_spend(prop.proposal_id, fee=uint64(100))
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, close_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[close_sb])
+
+    # Give the wallet nodes a second
+    await asyncio.sleep(1)
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    time_out_assert(20, wallet_2.get_confirmed_balance, wallet_2_start_bal + proposal_amount)
+    time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, xch_funds - proposal_amount)

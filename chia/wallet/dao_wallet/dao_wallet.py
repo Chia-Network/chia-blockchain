@@ -467,7 +467,6 @@ class DAOWallet(WalletProtocol):
         singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
         if singleton_id:
             await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
-        # self.log.info(f"DAOWallet.coin_added() is unused.")
         return
 
     async def is_spend_retrievable(self, coin_id: bytes32) -> bool:
@@ -750,6 +749,8 @@ class DAOWallet(WalletProtocol):
         assert new_cat_wallet is not None
         cat_wallet_id = new_cat_wallet.wallet_info.id
 
+        assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
+
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
@@ -895,16 +896,16 @@ class DAOWallet(WalletProtocol):
             uint64(eve_coin.amount),
         )
         next_coin = Coin(eve_coin.name(), eve_coin.puzzle_hash, eve_coin.amount)
-        await self.add_parent(next_coin.name(), next_proof)
+        await self.add_parent(eve_coin.name(), next_proof)
         await self.wallet_state_manager.add_interested_coin_ids([next_coin.name()], [self.wallet_id])
 
         dao_info = dataclasses.replace(self.dao_info, current_treasury_coin=next_coin)
         await self.save_info(dao_info)
-
+        await self.wallet_state_manager.singleton_store.add_spend(self.id(), eve_coin_spend)
         return eve_record
 
     # This has to be in the wallet because we are taking an ID and then searching our stored proposals for that ID
-    def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program, Program]:
+    def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
         for prop in self.dao_info.proposals_list:
             if prop.proposal_id == proposal_id:
                 return get_curry_vals_from_proposal_puzzle(prop.inner_puzzle)
@@ -1263,6 +1264,7 @@ class DAOWallet(WalletProtocol):
             raise ValueError("This proposal is not ready to be closed")
         assert proposal_info.current_innerpuz is not None
         full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
+
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -1502,6 +1504,7 @@ class DAOWallet(WalletProtocol):
                 delegated_solution,
             ]
         )
+
         assert self.dao_info.current_treasury_coin is not None
         parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)
         assert parent_info is not None
@@ -1630,7 +1633,7 @@ class DAOWallet(WalletProtocol):
         # TODO: Pull coins from DB once they're being stored
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        return uint128(sum([record.coin.amount for record in records]))
+        return uint128(sum([record.coin.amount for record in records if not record.spent]))
 
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
@@ -1706,12 +1709,12 @@ class DAOWallet(WalletProtocol):
         # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
         return get_most_recent_singleton_coin_from_coin_spend(spend)
 
-    async def get_tip(self, singleton_id: bytes32) -> Tuple[uint32, SingletonRecord]:
+    async def get_tip(self, singleton_id: bytes32) -> Optional[Tuple[uint32, SingletonRecord]]:
         ret: List[
             Tuple[uint32, SingletonRecord]
         ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
         if len(ret) == 0:
-            raise ValueError("Could not get latest Singleton from wallet data store")
+            return None
         return ret[-1]
 
     async def add_or_update_proposal_info(
@@ -1792,6 +1795,12 @@ class DAOWallet(WalletProtocol):
                 )
                 new_dao_info.proposals_list[index] = new_proposal_info
                 await self.save_info(new_dao_info)
+                future_parent = LineageProof(
+                    new_state.coin.parent_coin_info,
+                    puzzle.get_tree_hash(),
+                    uint64(new_state.coin.amount),
+                )
+                await self.add_parent(new_state.coin.name(), future_parent)
                 return
             index = index + 1
 
@@ -1948,10 +1957,9 @@ class DAOWallet(WalletProtocol):
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if not singleton_id:
             raise ValueError("Received a non singleton coin for dao wallet")
-        tip: Tuple[uint32, SingletonRecord] = await self.get_tip(singleton_id)
+        tip: Optional[Tuple[uint32, SingletonRecord]] = await self.get_tip(singleton_id)
         if tip is None:
             # this is our first time, just store it
-            # await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
             await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
         else:
             assert isinstance(tip, SingletonRecord)

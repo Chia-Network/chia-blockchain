@@ -253,7 +253,7 @@ class DAOCATWallet:
         amount: uint64,
         proposal_id: bytes32,
         is_yes_vote: bool,
-        curry_vals: Optional[Tuple[Program, Program, Program, Program]] = None,
+        curry_vals: Optional[Tuple[Program, Program, Program]] = None,
     ) -> SpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
@@ -264,9 +264,7 @@ class DAOCATWallet:
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
         treasury_id = dao_wallet.dao_info.treasury_id
         if curry_vals is None:
-            YES_VOTES, TOTAL_VOTES, INNERPUZHASH = dao_wallet.get_proposal_curry_values(
-                proposal_id
-            )
+            YES_VOTES, TOTAL_VOTES, INNERPUZHASH = dao_wallet.get_proposal_curry_values(proposal_id)
         else:
             YES_VOTES, TOTAL_VOTES, INNERPUZHASH = curry_vals
         # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]

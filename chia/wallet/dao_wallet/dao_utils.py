@@ -501,9 +501,8 @@ def uncurry_spend_p2_singleton(spend_puzzle: Program) -> Program:
 
 
 def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program:
-    puzzle = DAO_CAT_TAIL.curry(
-        genesis_coin_id, treasury_id, SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH, DAO_PROPOSAL_MOD_HASH
-    )
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
+    puzzle = DAO_CAT_TAIL.curry(genesis_coin_id, singleton_struct)
     return puzzle
 
 
@@ -515,7 +514,7 @@ def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
 
 
-def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Program, Program, Program, Program]:
+def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Program, Program, Program]:
     curried_args = uncurry_proposal(proposal_puzzle)
     (
         SINGLETON_STRUCT,

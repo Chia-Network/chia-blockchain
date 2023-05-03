@@ -239,9 +239,8 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         tail: Program = cls.construct(
             [
                 Program.to(origin_id),
-                (  # type: ignore[list-item]  # TODO: fix type
-                    tail_info["treasury_id"],
-                    (Program.to(SINGLETON_MOD.get_tree_hash()), Program.to(SINGLETON_LAUNCHER.get_tree_hash())),
+                Program.to(
+                    (SINGLETON_MOD.get_tree_hash(), (tail_info["treasury_id"], SINGLETON_LAUNCHER.get_tree_hash()))
                 ),
             ]
         )

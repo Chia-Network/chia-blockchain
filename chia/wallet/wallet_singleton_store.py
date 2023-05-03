@@ -83,7 +83,13 @@ class WalletSingletonStore:
                 ),
             )
 
-    async def add_spend(self, wallet_id: uint32, coin_state: CoinSpend, block_height: uint32) -> None:
+    async def add_spend(
+        self,
+        wallet_id: uint32,
+        coin_state: CoinSpend,
+        block_height: uint32 = uint32(0),
+        pending: bool = True,
+    ) -> None:
         """Given a coin spend of a singleton, attempt to calculate the child coin and details
         for the new singleton record. Add the new record to the store and remove the old record
         if it exists
@@ -116,7 +122,7 @@ class WalletSingletonStore:
             lineage_proof = LineageProof(lineage_bytes[0], lineage_bytes[1], int_from_bytes(lineage_bytes[2]))
         # Create and save the new singleton record
         new_record = SingletonRecord(
-            coin, singleton_id, wallet_id, coin_state, inner_puz.get_tree_hash(), True, 0, lineage_proof, None
+            coin, singleton_id, wallet_id, coin_state, inner_puz.get_tree_hash(), pending, 0, lineage_proof, None
         )
         await self.save_singleton(new_record)
         # check if coin is in DB and mark deleted if found
