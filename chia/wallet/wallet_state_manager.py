@@ -92,7 +92,7 @@ from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import WalletCoinStore
+from chia.wallet.wallet_coin_store import HashFilter, WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -1019,13 +1019,13 @@ class WalletStateManager:
         ph_to_index_cache: LRUCache[bytes32, uint32] = LRUCache(100)
 
         coin_names = [coin_state.coin.name() for coin_state in coin_states]
-        local_records = await self.coin_store.get_coin_records(coin_names)
+        local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
 
         for coin_name, coin_state in zip(coin_names, coin_states):
             if peer.closed:
                 raise ConnectionError("Connection closed")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
-            local_record = local_records.get(coin_name)
+            local_record = local_records.coin_id_to_record.get(coin_name)
             rollback_wallets = None
             try:
                 async with self.db_wrapper.writer():
@@ -1610,8 +1610,8 @@ class WalletStateManager:
         return wr.to_coin_record(timestamp)
 
     async def get_coin_records_by_coin_ids(self, **kwargs: Any) -> List[CoinRecord]:
-        records = await self.coin_store.get_coin_records(**kwargs)
-        return [await self.get_coin_record_by_wallet_record(record) for record in records.values()]
+        result = await self.coin_store.get_coin_records(**kwargs)
+        return [await self.get_coin_record_by_wallet_record(record) for record in result.records]
 
     async def get_wallet_for_coin(self, coin_id: bytes32) -> Optional[WalletProtocol]:
         coin_record = await self.coin_store.get_coin_record(coin_id)

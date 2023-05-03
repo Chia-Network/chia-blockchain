@@ -15,7 +15,7 @@ dependencies = [
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.6",
+    "chia_rs==0.2.7",
     "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
@@ -45,7 +45,8 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage",
+    # >=7.2.4 for https://github.com/nedbat/coveragepy/issues/1604
+    "coverage>=7.2.4",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",

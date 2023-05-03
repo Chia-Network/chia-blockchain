@@ -36,6 +36,7 @@ class ConsensusConstants:
     SUB_SLOT_TIME_TARGET: int  # The target number of seconds per sub-slot
     NUM_SP_INTERVALS_EXTRA: int  # The difference between signage point and infusion point (plus required_iters)
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
+    MAX_FUTURE_TIME2: int  # After soft-fork2, this is the new MAX_FUTURE_TIME
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)

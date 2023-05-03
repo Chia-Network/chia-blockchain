@@ -32,6 +32,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import HashFilter
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
@@ -138,8 +139,10 @@ class TradeManager:
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
         # TODO: Add `WalletCoinStore.get_coins`.
-        our_coin_records = await self.wallet_state_manager.coin_store.get_coin_records(primary_coin_ids)
-        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records.values()]
+        result = await self.wallet_state_manager.coin_store.get_coin_records(
+            coin_id_filter=HashFilter.include(primary_coin_ids)
+        )
+        our_primary_coins: List[Coin] = [cr.coin for cr in result.records]
         our_additions: List[Coin] = list(
             filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
         )
@@ -194,7 +197,11 @@ class TradeManager:
         #  - The cast here is required for now because TradeManager.wallet_state_manager is hinted as Any.
         return cast(
             Dict[bytes32, WalletCoinRecord],
-            await self.wallet_state_manager.coin_store.get_coin_records(coins_of_interest),
+            (
+                await self.wallet_state_manager.coin_store.get_coin_records(
+                    coin_id_filter=HashFilter.include(coins_of_interest)
+                )
+            ).coin_id_to_record,
         )
 
     async def get_all_trades(self) -> List[TradeRecord]:
