@@ -9,56 +9,55 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.8.0 Chia blockchain 2023-05-03
 
 ### Added
-- Update the README to link to the Chia website by @TheLastCicada in https://github.com/Chia-Network/chia-blockchain/pull/14801
-- Added `chia completion` command by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/14782
-- added wallet_removed to `state_changes` messages to support wallet removal in GUI by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14855
-- Add support to `cat_spend` RPC for running TAIL by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14730
-- expose NFT coin info's latest_height to RPCs requesting NFT info by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14954
-- make `python -m chia` work by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14785
-- DataLayer plugin support and infrastructure by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14883
+- Added `chia completion` command
+- Added wallet_removed to `state_changes` messages to support wallet removal in GUI
+- Add support to `cat_spend` RPC for running TAIL
+- Expose NFT coin info's latest_height to RPCs requesting NFT info
+- Make `python -m chia` work
+- DataLayer plugin support and infrastructure
 
 ### Changed
-- wallet: Don't subscribe to all coin ids in the DB by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14813
-- wallet: Handle trade coins in the `try` block of `new_coin_state` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14833
-- add benchmark that tests the mempool over a long time by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14728
-- enable soft-fork2 conditions (incl. ASSERT_BEFORE) by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14733
-- update condition codes constants in clvm include file by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14723
-- wallet: Improve coin state retry wait logic and retry store test by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14911
-- wallet: Improve balance caching by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14631
-- Update Wallet command line help for key fingerprints by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14982
-- optimize Mempool.add_to_pool() by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14988
-- change self peer connection error to info, remove traceback by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14884
-- wallet: Reduce DB lookups in `handle_did` and `handle_nft` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14969
-- limit expiring transactions by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14993
-- Return fee estimates as integer mojos by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/15020
-- activate the soft-fork and soft-fork2 earlier on testnet10 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14921
-- bump chia_rs to 0.2.7 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15110
-- lower MAX_FUTURE_TIME to 2 minutes with the 1.8.0 soft-fork activation by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15035
-- wallet: List the columns for `INSERT` into `coin_record` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15159
+- Don't subscribe to all coin ids in the DB
+- Handle trade coins in the `try` block of `new_coin_state`
+- Add benchmark that tests the mempool over a long time
+- Enable soft-fork2 conditions (incl. ASSERT_BEFORE)
+- Update condition codes constants in clvm include file
+- Improve coin state retry wait logic and retry store test
+- Improve balance caching
+- Update Wallet command line help for key fingerprints
+- Optimize Mempool.add_to_pool()
+- Change self peer connection error to info, remove traceback
+- Reduce DB lookups in `handle_did` and `handle_nft`
+- Limit expiring transactions
+- Return fee estimates as integer mojos
+- Activate the soft-fork and soft-fork2 earlier on testnet10
+- Bump chia_rs to 0.2.7
+- Lower MAX_FUTURE_TIME to 2 minutes with the 1.8.0 soft-fork activation
+- List the columns for `INSERT` into `coin_record`
 
 ### Fixed
-- wallet: Disconnect untrusted peers if we find a trusted synced one by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14640
-- Only compile CLVM if source newer than hex by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14840
-- Fixed windows issues with passphrase prompt on CLI by flushing prompt (Fixes #14889) by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14904
-- daemon: Fix removal while iterating over connections set by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14887
-- Fix the mempool fee rate calculation by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14926
-- assert_before_height, assert_before_seconds fields in MempoolItem by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14931
-- Correct SQLite logging when using db_wrapper.manage_connection() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14866
-- seeder: case-insensitive DNS label matching to support bit 0x20 use by @ctrlaltdel in https://github.com/Chia-Network/chia-blockchain/pull/14933
-- Check hint length in notification manager to avoid raise by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14972
-- Mempool insertion order by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14971
-- wallet: Drop leaking weight proof validation cache by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14574
-- windows fix of memory profiler by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14987
-- Small improvements to trusted peer check to include IPv6 addresses and add tests by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14626
-- close daemon client even for a BaseException in acquire_connection_to_daemon() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14867
-- server: Rework config peer resolving and connection handling by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14997
-- wallet: Fix, simplify and test `TransactionRecord.is_valid` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15048
-- Check for directory existence before creating offer by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14990
-- Fix manage_clvm.py hash building and std libraries by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15075
-- server: Resolve introducer right before the connection attempt (Fixed #14888) by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14998
-- util: Async DNS lookups by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14999
-- wallet: Move assignments of `WalletStateManager._sync_target` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15148
-- wallet: Lock `WalletStateManager.lock` while populating balances initially by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15149
+- Disconnect untrusted peers if we find a trusted synced one
+- Only compile CLVM if source newer than hex
+- Fixed windows issues with passphrase prompt on CLI by flushing prompt (Fixes #14889)
+- Fix removal while iterating over connections set
+- Fix the mempool fee rate calculation
+- Assert_before_height, assert_before_seconds fields in MempoolItem
+- Correct SQLite logging when using db_wrapper.manage_connection()
+- Case-insensitive DNS label matching to support bit 0x20 use
+- Check hint length in notification manager to avoid raise
+- Mempool insertion order
+- Drop leaking weight proof validation cache
+- Windows fix of memory profiler
+- Small improvements to trusted peer check to include IPv6 addresses and add tests
+- Close daemon client even for a BaseException in acquire_connection_to_daemon()
+- Rework config peer resolving and connection handling
+- Fix, simplify, and test `TransactionRecord.is_valid`
+- Check for directory existence before creating offer
+- Fix manage_clvm.py hash building and std libraries
+- Resolve introducer right before the connection attempt (Fixed #14888)
+- Async DNS lookups
+- Move assignments of `WalletStateManager._sync_target`
+- Lock `WalletStateManager.lock` while populating balances initially
 
 ## 1.7.1 Chia blockchain 2023-03-22
 
