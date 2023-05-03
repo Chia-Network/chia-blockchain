@@ -180,7 +180,6 @@ def get_transactions_cmd(
     help="Exclude this coin from being spent.",
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -418,7 +417,6 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the offer.",
     is_flag=True,
@@ -509,7 +507,6 @@ def get_offers_cmd(
     "-m", "--fee", help="The fee to use when pushing the completed offer, in XCH", default="0", show_default=True
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the offer.",
     is_flag=True,
@@ -707,7 +704,12 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
 @click.option("-m", "--metadata", help="The new whole metadata in json format", type=str, required=True)
-@click.option("-r", "--reuse", help="Reuse existing address for the change.", is_flag=True, default=False)
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def did_update_metadata_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool
 ) -> None:
@@ -849,7 +851,6 @@ def did_message_spend_cmd(
     callback=validate_fee,
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -964,7 +965,6 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     show_default=True,
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1047,7 +1047,6 @@ def nft_mint_cmd(
     callback=validate_fee,
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1102,7 +1101,6 @@ def nft_add_uri_cmd(
     callback=validate_fee,
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1172,7 +1170,6 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
     callback=validate_fee,
 )
 @click.option(
-    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
