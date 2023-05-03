@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List
+from typing import List
 
 import pytest
 
@@ -9,6 +9,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -844,16 +845,18 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_change_detection(self, self_hostname: str, two_wallet_nodes_services: Any, trusted: Any) -> None:
+    async def test_cat_change_detection(
+        self, self_hostname: str, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool
+    ) -> None:
         num_blocks = 1
         full_nodes, wallets, bt = two_wallet_nodes_services
         full_node_api: FullNodeSimulator = full_nodes[0]._api
         full_node_server = full_node_api.full_node.server
         wallet_service_0 = wallets[0]
         wallet_node_0 = wallet_service_0._node
-        wallet_node_1 = wallet_service_0._node
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+        assert wallet_service_0.rpc_server is not None
 
         client_0 = await WalletRpcClient.create(
             bt.config["self_hostname"],
@@ -869,7 +872,6 @@ class TestCATWallet:
             }
         else:
             wallet_node_0.config["trusted_peers"] = {}
-        wallet_node_0.config["automatically_add_unknown_cats"] = True
 
         await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
@@ -988,12 +990,13 @@ class TestCATWallet:
         )
         await client_0.push_tx(eve_spend)
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
-        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
+        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
         async def check_wallets(node):
             return len(node.wallet_state_manager.wallets.keys())
 
         await time_out_assert(20, check_wallets, 2, wallet_node_0)
-        cat_wallet = wallet_node_0.wallet_state_manager.wallets[2]
+        cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
         await time_out_assert(20, cat_wallet.get_confirmed_balance, CAT_AMOUNT_1)
+        assert not full_node_api.full_node.subscriptions.has_ph_subscription(puzzlehash_unhardened)
