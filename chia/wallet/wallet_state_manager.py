@@ -658,7 +658,7 @@ class WalletStateManager:
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
-            return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend, peer)
+            return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend)
 
         # Check if the coin is a NFT
         #                                                        hint
@@ -716,7 +716,6 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
-        peer: WSChiaConnection,
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a CAT
@@ -1163,10 +1162,9 @@ class WalletStateManager:
                                     if derivation_record is None:  # not change
                                         to_puzzle_hash = coin.puzzle_hash
                                         amount += coin.amount
-                                    else:
+                                    elif wallet_identifier.type == WalletType.CAT:
                                         # We subscribe to change for CATs since they didn't hint previously
-                                        if wallet_identifier.type == WalletType.CAT:
-                                            await self.add_interested_coin_ids([coin.name()])
+                                        await self.add_interested_coin_ids([coin.name()])
 
                                 if to_puzzle_hash is None:
                                     to_puzzle_hash = additions[0].puzzle_hash
