@@ -13,7 +13,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord, minimum_send_attempts
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
+from chia.wallet.wallet_transaction_store import TypeFilter, WalletTransactionStore, filter_ok_mempool_status
 from tests.util.db_connection import DBConnection
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
@@ -446,6 +446,9 @@ async def test_get_transactions_between_confirmed() -> None:
         tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(2))
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(3))
         tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(4))
+        tr6 = dataclasses.replace(
+            tr1, name=token_bytes(32), confirmed_at_height=uint32(5), type=uint32(TransactionType.COINBASE_REWARD.value)
+        )
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
@@ -479,6 +482,15 @@ async def test_get_transactions_between_confirmed() -> None:
         assert await store.get_transactions_between(1, 1, 100, reverse=True) == [tr4, tr3, tr2, tr1]
         assert await store.get_transactions_between(1, 2, 100, reverse=True) == [tr3, tr2, tr1]
         assert await store.get_transactions_between(1, 3, 100, reverse=True) == [tr2, tr1]
+
+        # test type filter (coinbase reward)
+        await store.add_transaction_record(tr6)
+        assert await store.get_transactions_between(
+            1, 0, 1, reverse=True, type_filter=TypeFilter.includes([uint8(TransactionType.COINBASE_REWARD.value)])
+        ) == [tr6]
+        assert await store.get_transactions_between(
+            1, 0, 1, reverse=True, type_filter=TypeFilter.excludes([uint8(TransactionType.COINBASE_REWARD.value)])
+        ) == [tr5]
 
 
 @pytest.mark.asyncio

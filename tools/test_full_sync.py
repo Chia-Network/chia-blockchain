@@ -246,7 +246,7 @@ def main() -> None:
     pass
 
 
-@main.command("run", short_help="run simulated full sync from an existing blockchain db")
+@main.command("run", help="run simulated full sync from an existing blockchain db")
 @click.argument("file", type=click.Path(), required=True)
 @click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
@@ -310,7 +310,7 @@ def run(
     )
 
 
-@main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")
+@main.command("analyze", help="generate call stacks for all profiles dumped to current directory")
 def analyze() -> None:
     from glob import glob
     from shlex import quote
@@ -322,7 +322,7 @@ def analyze() -> None:
         check_call(f"gprof2dot -f pstats {quote(input_file)} | dot -T png >{quote(output)}", shell=True)
 
 
-@main.command("create-checkpoint", short_help="sync the full node up to specified height and save its state")
+@main.command("create-checkpoint", help="sync the full node up to specified height and save its state")
 @click.argument("file", type=click.Path(), required=True)
 @click.argument("out-file", type=click.Path(), required=True)
 @click.option("--height", type=int, required=True, help="Sync node up to this height")

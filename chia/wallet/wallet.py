@@ -425,7 +425,7 @@ class Wallet:
                                 break
                     else:
                         change_puzzle_hash = await self.get_new_puzzlehash()
-                    primaries.append(Payment(change_puzzle_hash, uint64(change), []))
+                    primaries.append(Payment(change_puzzle_hash, uint64(change)))
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
