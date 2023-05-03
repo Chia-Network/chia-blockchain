@@ -906,10 +906,10 @@ class TestCATWallet:
             Program.to(1),
         )
         addr = encode_puzzle_hash(cat_puzzle.get_tree_hash(), "txch")
-        CAT_AMOUNT_0 = uint64(100)
-        CAT_AMOUNT_1 = uint64(5)
+        cat_amount_0 = uint64(100)
+        cat_amount_1 = uint64(5)
 
-        tx = await client_0.send_transaction(1, CAT_AMOUNT_0, addr)
+        tx = await client_0.send_transaction(1, cat_amount_0, addr)
         spend_bundle = tx.spend_bundle
         assert spend_bundle is not None
 
@@ -918,7 +918,7 @@ class TestCATWallet:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
         # Do the eve spend back to our wallet and add the CR layer
-        cat_coin = next(c for c in spend_bundle.additions() if c.amount == CAT_AMOUNT_0)
+        cat_coin = next(c for c in spend_bundle.additions() if c.amount == cat_amount_0)
         next_coin = Coin(
             cat_coin.name(),
             construct_cat_puzzle(
@@ -926,7 +926,7 @@ class TestCATWallet:
                 Program.to(None).get_tree_hash(),
                 our_puzzle,
             ).get_tree_hash(),
-            CAT_AMOUNT_0,
+            cat_amount_0,
         )
         eve_spend = await wallet_node_0.wallet_state_manager.main_wallet.sign_transaction(
             [
@@ -940,7 +940,7 @@ class TestCATWallet:
                                     [
                                         51,
                                         our_puzzle.get_tree_hash(),
-                                        CAT_AMOUNT_0,
+                                        cat_amount_0,
                                         [our_puzzle.get_tree_hash()],
                                     ],
                                     [51, None, -113, None, None],
@@ -969,14 +969,14 @@ class TestCATWallet:
                                 (
                                     1,
                                     [
-                                        [51, inner_puzhash, CAT_AMOUNT_1],
-                                        [51, bytes32([0] * 32), CAT_AMOUNT_0 - CAT_AMOUNT_1],
+                                        [51, inner_puzhash, cat_amount_1],
+                                        [51, bytes32([0] * 32), cat_amount_0 - cat_amount_1],
                                     ],
                                 ),
                                 None,
                             ],
                             LineageProof(
-                                cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), CAT_AMOUNT_0
+                                cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_amount_0
                             ).to_program(),
                             next_coin.name(),
                             coin_as_list(next_coin),
@@ -998,5 +998,5 @@ class TestCATWallet:
 
         await time_out_assert(20, check_wallets, 2, wallet_node_0)
         cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
-        await time_out_assert(20, cat_wallet.get_confirmed_balance, CAT_AMOUNT_1)
+        await time_out_assert(20, cat_wallet.get_confirmed_balance, cat_amount_1)
         assert not full_node_api.full_node.subscriptions.has_ph_subscription(puzzlehash_unhardened)
