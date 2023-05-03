@@ -22,6 +22,8 @@ class ProposalInfo(Streamable):
     current_innerpuz: Optional[Program]
     timer_coin: Optional[Coin]  # if this is None then the proposal has finished
     singleton_block_height: uint32  # Block height that current proposal singleton coin was created in
+    passed: Optional[bool]
+    closed: Optional[bool]
 
 
 @streamable

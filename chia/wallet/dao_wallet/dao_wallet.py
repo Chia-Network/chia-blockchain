@@ -61,9 +61,9 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_rules_from_puzzle,
     get_update_proposal_puzzle,
     uncurry_proposal,
+    uncurry_proposal_validator,
     uncurry_spend_p2_singleton,
     uncurry_treasury,
-    uncurry_proposal_validator,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -285,7 +285,7 @@ class DAOWallet(WalletProtocol):
         coin_spend: CoinSpend,
         block_height: uint32,  # this is included in CoinState, pass it in from WSM
         name: Optional[str] = None,
-    ):
+    ) -> DAOWallet:
         """
         Create a DID wallet from a transfer
         :param wallet_state_manager: Wallet state manager
@@ -1862,9 +1862,13 @@ class DAOWallet(WalletProtocol):
         else:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
+            is_yes_vote = 0
+            votes_added = 0
             votes_added = 0
             current_innerpuz = get_finished_state_puzzle(singleton_id)
-            ended = True
+            closed_puzzle = get_finished_state_puzzle(singleton_id)
+            if current_coin.puzzle_hash == closed_puzzle.get_tree_hash():
+                ended = True
 
         new_total_votes = TOTAL_VOTES.as_int() + votes_added
         if new_total_votes < self.dao_info.filter_below_vote_amount:
@@ -1874,6 +1878,11 @@ class DAOWallet(WalletProtocol):
             new_yes_votes = YES_VOTES.as_int() + votes_added
         else:
             new_yes_votes = YES_VOTES.as_int()
+
+        required_yes_votes = (self.dao_rules.attendance_required * self.dao_rules.pass_percentage) // 10000
+        yes_votes_needed = max(0, required_yes_votes - new_yes_votes)
+
+        passed = True if yes_votes_needed == 0 else False
 
         index = 0
         for current_info in new_dao_info.proposals_list:
@@ -1892,6 +1901,8 @@ class DAOWallet(WalletProtocol):
                     current_innerpuz,
                     current_info.timer_coin,
                     block_height,
+                    passed,
+                    ended,
                 )
                 new_dao_info.proposals_list[index] = new_proposal_info
                 await self.save_info(new_dao_info)
@@ -1950,6 +1961,8 @@ class DAOWallet(WalletProtocol):
             current_innerpuz,
             timer_coin,  # if this is None then the proposal has finished
             block_height,  # block height that current proposal singleton coin was created in
+            passed,
+            ended,
         )
         new_dao_info.proposals_list.append(new_proposal_info)
         await self.save_info(new_dao_info)
@@ -2054,7 +2067,9 @@ class DAOWallet(WalletProtocol):
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
-        self.log.info(f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}.")
+        self.log.info(
+            f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}."
+        )
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if not singleton_id:
             raise ValueError("Received a non singleton coin for dao wallet")

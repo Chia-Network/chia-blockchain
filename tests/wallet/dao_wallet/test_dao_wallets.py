@@ -579,6 +579,10 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     wallet_2_start_bal = await wallet_2.get_confirmed_balance()
 
+    # check the proposal info
+    assert not dao_wallet_0.dao_info.proposals_list[0].closed
+    assert dao_wallet_0.dao_info.proposals_list[0].passed
+
     # Close the first proposal
     close_sb = await dao_wallet_0.create_proposal_close_spend(prop.proposal_id, fee=uint64(100))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, close_sb.name())
@@ -591,3 +595,10 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     time_out_assert(20, wallet_2.get_confirmed_balance, wallet_2_start_bal + proposal_amount)
     time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, xch_funds - proposal_amount)
+
+    assert dao_wallet_0.dao_info.proposals_list[0].closed
+    assert dao_wallet_0.dao_info.proposals_list[0].passed
+    assert dao_wallet_1.dao_info.proposals_list[0].closed
+    assert dao_wallet_1.dao_info.proposals_list[0].passed
+    assert dao_wallet_2.dao_info.proposals_list[0].closed
+    assert dao_wallet_2.dao_info.proposals_list[0].passed
