@@ -516,7 +516,7 @@ class MempoolManager:
 
         return None, potential, [item.name for item in conflicts]
 
-    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], Set[MempoolItem]]:
+    def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[MempoolItem]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), the set of existing MempoolItems with conflicting spends (if any).
@@ -530,15 +530,15 @@ class MempoolManager:
             removal = record.coin
             # 1. Checks if it's been spent already
             if record.spent:
-                return Err.DOUBLE_SPEND, set()
+                return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
             items: List[MempoolItem] = self.mempool.get_items_by_coin_id(removal.name())
             conflicts.update(items)
 
         if len(conflicts) > 0:
-            return Err.MEMPOOL_CONFLICT, conflicts
+            return Err.MEMPOOL_CONFLICT, list(conflicts)
         # 5. If coins can be spent return list of unspents as we see them in local storage
-        return None, set()
+        return None, []
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """Returns a full SpendBundle if it's inside one the mempools"""
@@ -663,7 +663,7 @@ def optional_max(a: Optional[T], b: Optional[T]) -> Optional[T]:
 
 
 def can_replace(
-    conflicting_items: Set[MempoolItem],
+    conflicting_items: List[MempoolItem],
     removal_names: Set[bytes32],
     new_item: MempoolItem,
 ) -> bool:

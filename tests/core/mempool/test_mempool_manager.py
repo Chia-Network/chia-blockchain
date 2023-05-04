@@ -778,7 +778,7 @@ coins = make_test_coins()
 )
 def test_can_replace(existing_items: List[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
     removals = set(c.name() for c in new_item.spend_bundle.removals())
-    assert can_replace(set(existing_items), removals, new_item) == expected
+    assert can_replace(existing_items, removals, new_item) == expected
 
 
 @pytest.mark.asyncio
