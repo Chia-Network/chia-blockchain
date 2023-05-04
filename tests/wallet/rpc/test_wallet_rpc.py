@@ -346,13 +346,18 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
-    expected_balance = await wallet_rpc_client.get_farmed_amount()
-    assert expected_balance["farmed_amount"] == 4000000000000
-    assert expected_balance["farmer_reward_amount"] == 500000000000
-    assert expected_balance["fee_amount"] == 0
-    assert expected_balance["pool_reward_amount"] == 3500000000000
-    assert expected_balance["last_height_farmed"] == 2
-    assert expected_balance["success"]
+    result = await wallet_rpc_client.get_farmed_amount()
+
+    expected_result = {
+        "farmed_amount": 4000000000000,
+        "farmer_reward_amount": 500000000000,
+        "fee_amount": 0,
+        "last_height_farmed": 2,
+        "pool_reward_amount": 3500000000000,
+        "success": True,
+    }
+
+    assert result == expected_result
 
 
 @pytest.mark.asyncio
