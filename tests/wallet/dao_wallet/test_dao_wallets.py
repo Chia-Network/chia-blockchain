@@ -319,6 +319,9 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     await time_out_assert(10, dao_wallet_1.get_balance_by_asset_type, xch_funds)
     await time_out_assert(10, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
 
+    assert dao_wallet_0.dao_info.assets == [None, cat_id]
+    assert dao_wallet_1.dao_info.assets == [None, cat_id]
+
 
 @pytest.mark.parametrize(
     "trusted",

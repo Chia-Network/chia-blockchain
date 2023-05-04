@@ -45,6 +45,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
+    get_asset_id_from_puzzle,
     get_curry_vals_from_proposal_puzzle,
     get_finished_state_puzzle,
     get_innerpuz_from_lockup_puzzle,
@@ -161,6 +162,7 @@ class DAOWallet(WalletProtocol):
             None,
             uint32(0),
             filter_amount,
+            [],
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -202,6 +204,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
 
@@ -240,6 +243,7 @@ class DAOWallet(WalletProtocol):
             None,  # current innerpuz
             uint32(0),
             filter_amount,
+            [],
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -269,6 +273,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
 
@@ -360,6 +365,7 @@ class DAOWallet(WalletProtocol):
             inner_puzzle,
             block_height,
             uint64(1),  # TODO: how should we deal with filter integer? Just update it later?
+            [],
         )
 
         info_as_string = json.dumps(dao_info.to_json_dict())
@@ -415,6 +421,7 @@ class DAOWallet(WalletProtocol):
             None,
             uint32(0),
             filter_amount,
+            [],
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -455,6 +462,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
         # breakpoint()
@@ -567,6 +575,14 @@ class DAOWallet(WalletProtocol):
         singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
         if singleton_id:
             await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
+        else:
+            # funding coin
+            asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal)
+            if asset_id not in self.dao_info.assets:
+                new_asset_list = self.dao_info.assets.copy()
+                new_asset_list.append(asset_id)
+                dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
+                await self.save_info(dao_info)
         return
 
     async def is_spend_retrievable(self, coin_id: bytes32) -> bool:
@@ -679,6 +695,7 @@ class DAOWallet(WalletProtocol):
             current_inner_puz,  # current innerpuz
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
 
         future_parent = LineageProof(
@@ -826,6 +843,7 @@ class DAOWallet(WalletProtocol):
             None,
             uint32(0),
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
         new_cat_wallet = None
@@ -864,6 +882,7 @@ class DAOWallet(WalletProtocol):
             None,
             uint32(0),
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
 
         await self.save_info(dao_info)
@@ -941,6 +960,7 @@ class DAOWallet(WalletProtocol):
             dao_treasury_puzzle,
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
         return full_spend
@@ -1807,6 +1827,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
 
@@ -2090,6 +2111,7 @@ class DAOWallet(WalletProtocol):
             new_innerpuz,  # current innerpuz
             block_height,  # block_height: uint32
             self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
         future_parent = LineageProof(

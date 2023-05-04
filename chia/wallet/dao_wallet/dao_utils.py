@@ -463,6 +463,18 @@ def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:
     return prog.at("rrfrrrrrf")
 
 
+def get_asset_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
+    mod, curried_args = puzzle.uncurry()
+    if mod == MOD:
+        return None
+    elif mod == CAT_MOD:
+        return bytes32(curried_args.at("rf").as_atom())
+    elif mod == SINGLETON_MOD:
+        return bytes32(curried_args.at("frf").as_atom())
+    else:
+        raise ValueError("DAO received coin with unknown puzzle")
+
+
 def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
     try:
         mod, curried_args = proposal_validator_program.uncurry()
