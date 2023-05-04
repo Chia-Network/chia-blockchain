@@ -580,6 +580,21 @@ class DAOWallet(WalletProtocol):
         cat_tail_hash: bytes32 = cat_wallet.cat_info.limitations_program_hash
         return cat_tail_hash
 
+    async def adjust_filter_level(self, new_filter_level: uint64) -> bytes32:
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,
+            self.dao_info.cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            self.dao_info.current_treasury_coin,
+            self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
+            new_filter_level,
+        )
+        await self.save_info(dao_info)
+        return
+
     async def resync_treasury_state(self) -> None:
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: Any = self.wallet_state_manager.wallet_node
@@ -764,6 +779,136 @@ class DAOWallet(WalletProtocol):
                 parent_info = ccparent
 
         return parent_info
+
+    @staticmethod
+    async def generate_new_dao_spend(
+        wallet_state_manager: Any,
+        standard_wallet: Wallet,
+        dao_rules: DAORules,
+        amount_of_cats_to_create: Optional[uint64],
+        cat_tail_hash: Optional[bytes32] = None,
+        fee: uint64 = uint64(0),
+    ) -> Optional[SpendBundle]:
+        """
+        Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
+        and eve coins.
+        The eve spend has to be completed in a separate tx using 'submit_eve_spend' once the number of blocks required
+        by dao_rules.oracle_spend_delay has passed.
+        This must be called under the wallet state manager lock
+        """
+
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create < 0:
+            raise ValueError("amount_of_cats must be >= 0, or None")
+        if (amount_of_cats_to_create is None or amount_of_cats_to_create == 0) and cat_tail_hash is None:
+            raise ValueError("amount_of_cats must be > 0 or cat_tail_hash must be specified")
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0 and cat_tail_hash is not None:
+            raise ValueError("cannot create voting cats and use existing cat_tail_hash")
+
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0:
+            coins = await standard_wallet.select_coins(uint64(amount_of_cats_to_create + fee + 1))
+        else:
+            coins = await standard_wallet.select_coins(uint64(fee + 1))
+
+        if coins is None:
+            return None
+        # origin is normal coin which creates launcher coin
+        origin = coins.copy().pop()
+
+        genesis_launcher_puz = SINGLETON_LAUNCHER
+        # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
+
+        if cat_tail_hash is None:
+            assert amount_of_cats_to_create is not None
+            different_coins = await standard_wallet.select_coins(
+                uint64(amount_of_cats_to_create), exclude=[origin]
+            )
+            cat_origin = different_coins.copy().pop()
+            assert origin.name() != cat_origin.name()
+            cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
+
+        assert cat_tail_hash is not None
+
+        new_cat_wallet = None
+        # This will also mint the coins
+        if amount_of_cats_to_create is not None and different_coins is not None:
+            cat_tail_info = {
+                "identifier": "genesis_by_id_or_singleton",
+                "treasury_id": launcher_coin.name(),
+                "coins": different_coins,
+            }
+            new_cat_wallet = await CATWallet.create_new_cat_wallet(
+                wallet_state_manager,
+                standard_wallet,
+                cat_tail_info,
+                amount_of_cats_to_create,
+            )
+            assert new_cat_wallet is not None
+        else:
+            for wallet in wallet_state_manager.wallets:
+                if wallet_state_manager.wallets[wallet].type() == WalletType.CAT:
+                    if wallet_state_manager.wallets[wallet].cat_info.limitations_program_hash == cat_tail_hash:
+                        new_cat_wallet = wallet_state_manager.wallets[wallet]
+
+        assert new_cat_wallet is not None
+
+        assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
+
+        dao_treasury_puzzle = get_treasury_puzzle(dao_rules, launcher_coin.name(), cat_tail_hash)
+        full_treasury_puzzle = curry_singleton(launcher_coin.name(), dao_treasury_puzzle)
+        full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
+
+        announcement_set: Set[Announcement] = set()
+        announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
+        announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
+
+        tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
+            uint64(1),
+            genesis_launcher_puz.get_tree_hash(),
+            fee,
+            origin.name(),
+            coins,
+            None,
+            False,
+            announcement_set,
+            memos=[new_cat_wallet.cat_info.limitations_program_hash],
+        )
+
+        genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
+
+        launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+
+        if tx_record is None or tx_record.spend_bundle is None:
+            return None
+
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+
+        treasury_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=dao_treasury_puzzle.get_tree_hash(),
+            amount=uint64(1),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=standard_wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=bytes32(token_bytes()),
+            memos=[],
+        )
+        regular_record = dataclasses.replace(tx_record, spend_bundle=None)
+        await wallet_state_manager.add_pending_transaction(regular_record)
+        await wallet_state_manager.add_pending_transaction(treasury_record)
+
+        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
+        await wallet_state_manager.add_interested_coin_ids([eve_coin.name(), launcher_coin.name()])
+        return full_spend
 
     async def generate_new_dao(
         self,
@@ -1041,7 +1186,7 @@ class DAOWallet(WalletProtocol):
     async def generate_new_proposal(
         self,
         proposed_puzzle: Program,
-        vote_amount: uint64,
+        vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
     ) -> SpendBundle:
@@ -1055,8 +1200,13 @@ class DAOWallet(WalletProtocol):
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
 
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        # breakpoint()
 
+        if vote_amount is None:
+            dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+                id=self.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
+            )
+            vote_amount = await dao_cat_wallet.get_spendable_balance()
+        assert vote_amount is not None
         assert cat_wallet.cat_info.my_tail
         cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
         dao_proposal_puzzle = get_proposal_puzzle(
@@ -1213,7 +1363,7 @@ class DAOWallet(WalletProtocol):
     async def generate_proposal_vote_spend(
         self,
         proposal_id: bytes32,
-        vote_amount: uint64,
+        vote_amount: Optional[uint64],
         is_yes_vote: bool,
         fee: uint64 = uint64(0),
         push: bool = True,
@@ -1238,6 +1388,8 @@ class DAOWallet(WalletProtocol):
         assert dao_cat_wallet is not None
         assert proposal_info.current_innerpuz is not None
         curry_vals = get_curry_vals_from_proposal_puzzle(proposal_info.current_innerpuz)
+        if vote_amount is None:
+            vote_amount = await dao_cat_wallet.get_votable_balance(proposal_id)
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(vote_amount, proposal_id, True, curry_vals=curry_vals)
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
