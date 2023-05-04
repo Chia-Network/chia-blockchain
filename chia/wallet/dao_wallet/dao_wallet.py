@@ -2071,6 +2071,9 @@ class DAOWallet(WalletProtocol):
         )  # get proposal solution from full singleton solution
         new_innerpuz = get_new_puzzle_from_treasury_solution(puzzle, solution)
         child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        if child_coin.puzzle_hash != self.dao_info.current_treasury_coin.puzzle_hash:
+            # update dao rules
+            self.dao_rules = get_treasury_rules_from_puzzle(new_innerpuz)
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32
             self.dao_info.cat_wallet_id,

@@ -353,7 +353,30 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     # ) = curried_args
     if solution.first() != Program.to(0):
         # Proposal Spend
-        return puzzle_reveal
+        mod, curried_args = solution.at("rrrf").uncurry()
+        if mod == DAO_UPDATE_PROPOSAL_MOD:
+            (
+                DAO_TREASURY_MOD_HASH,
+                DAO_PROPOSAL_VALIDATOR,
+                proposal_timelock,
+                soft_close_length,
+                attendance_required,
+                pass_percentage,
+                self_destruct_length,
+                oracle_spend_delay,
+            ) = curried_args.as_iter()
+            return DAO_TREASURY_MOD.curry(
+                DAO_TREASURY_MOD_HASH,
+                DAO_PROPOSAL_VALIDATOR,
+                proposal_timelock,
+                soft_close_length,
+                attendance_required,
+                pass_percentage,
+                self_destruct_length,
+                oracle_spend_delay,
+            )
+        else:
+            return puzzle_reveal
     else:
         # Oracle Spend - treasury is unchanged
         return puzzle_reveal
