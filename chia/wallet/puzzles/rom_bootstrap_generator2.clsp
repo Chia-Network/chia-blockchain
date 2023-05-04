@@ -4,6 +4,9 @@
 ; simplify the consensus rules
 (mod (block_decompresser_program (historical_blocks_tree))
 
+    (defconstant null ()
+	)
+
     (defun sha256tree
            (TREE)
            (if (l TREE)
@@ -27,5 +30,5 @@
         (c (recurse coin_spends) block-level-extras)
     )
 
-    (process-decompressor (a block_decompresser_program (list () historical_blocks_tree))))
+    (process-decompressor (a block_decompresser_program (list null historical_blocks_tree))))
 )

@@ -703,7 +703,7 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-@click.option("-m", "--metadata", help="The new whole metadata in json format", type=str, required=True)
+@click.option("-d", "--metadata", help="The new whole metadata in json format", type=str, required=True)
 @click.option(
     "--reuse",
     help="Reuse existing address for the change.",
@@ -839,7 +839,7 @@ def did_message_spend_cmd(
 @click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
 @click.option("-ta", "--target-address", help="Target recipient wallet address", type=str, required=True)
 @click.option(
-    "-r", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
+    "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
 )
 @click.option(
     "-m",
@@ -856,7 +856,7 @@ def did_message_spend_cmd(
     is_flag=True,
     default=False,
 )
-def did_trasnfer_did(
+def did_transfer_did(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
