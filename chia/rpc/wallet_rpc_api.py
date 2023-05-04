@@ -899,8 +899,9 @@ class WalletRpcApi:
             for tr in transactions
         ]
         # Format for clawback transactions
+        clawback_types = {TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.INCOMING_CLAWBACK_SEND.value}
         for tx in txs:
-            if tx["type"] == TransactionType.INCOMING_CLAWBACK.value and tx["spend_bundle"] is not None:
+            if tx["type"] in clawback_types and tx["spend_bundle"] is not None:
                 spend_bundle: SpendBundle = SpendBundle.from_json_dict(tx["spend_bundle"])
                 puzzle = Program.from_bytes(bytes(spend_bundle.coin_spends[0].puzzle_reveal))
                 solution = Program.from_bytes(bytes(spend_bundle.coin_spends[0].solution))

@@ -298,7 +298,7 @@ class TestWalletSimulator:
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
         txs = await api_0.get_transactions(
-            dict(type_filter={"types": [TransactionType.INCOMING_CLAWBACK.value]}, wallet_id=1)
+            dict(type_filter={"types": [TransactionType.INCOMING_CLAWBACK_SEND.value]}, wallet_id=1)
         )
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
@@ -328,8 +328,8 @@ class TestWalletSimulator:
                         dict(
                             type_filter={
                                 "types": [
-                                    TransactionType.INCOMING_CLAWBACK.value,
-                                    TransactionType.OUTGOING_CLAWBACK.value,
+                                    TransactionType.INCOMING_CLAWBACK_SEND.value,
+                                    TransactionType.OUTGOING_CLAWBACK_RETRIEVE.value,
                                 ]
                             },
                             wallet_id=1,

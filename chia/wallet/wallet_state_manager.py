@@ -774,7 +774,9 @@ class WalletStateManager:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(
-                    TransactionType.OUTGOING_CLAIM if metadata.is_recipient else TransactionType.OUTGOING_CLAWBACK
+                    TransactionType.OUTGOING_CLAWBACK_CLAIM
+                    if metadata.is_recipient
+                    else TransactionType.OUTGOING_CLAWBACK_RETRIEVE
                 ),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
@@ -1177,7 +1179,11 @@ class WalletStateManager:
                 wallet_id=uint32(1),
                 sent_to=[],
                 trade_id=None,
-                type=uint32(TransactionType.INCOMING_CLAWBACK),
+                type=uint32(
+                    TransactionType.INCOMING_CLAWBACK_RECEIVE
+                    if is_recipient
+                    else TransactionType.INCOMING_CLAWBACK_SEND
+                ),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
             )
@@ -1818,6 +1824,10 @@ class WalletStateManager:
                 TransactionType.OUTGOING_TX,
                 TransactionType.OUTGOING_TRADE,
                 TransactionType.INCOMING_TRADE,
+                TransactionType.OUTGOING_CLAWBACK_RETRIEVE,
+                TransactionType.OUTGOING_CLAWBACK_CLAIM,
+                TransactionType.INCOMING_CLAWBACK_SEND,
+                TransactionType.INCOMING_CLAWBACK_RECEIVE,
             ]:
                 await self.tx_store.tx_reorged(record)
 
