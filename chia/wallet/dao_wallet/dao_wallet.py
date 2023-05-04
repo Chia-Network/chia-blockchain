@@ -693,6 +693,9 @@ class DAOWallet(WalletProtocol):
 
         # get existing xch funds for treasury
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
+        await self.wallet_state_manager.add_interested_puzzle_hashes(
+            [self.dao_info.current_treasury_coin.puzzle_hash], [self.id()]
+        )
 
         # Resync the wallet from when the treasury was created to get the existing funds
         # TODO: Maybe split this out as an option for users since it may be slow?
@@ -2071,8 +2074,11 @@ class DAOWallet(WalletProtocol):
         )  # get proposal solution from full singleton solution
         new_innerpuz = get_new_puzzle_from_treasury_solution(puzzle, solution)
         child_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        assert isinstance(child_coin, Coin)
+        assert isinstance(self.dao_info.current_treasury_coin, Coin)
         if child_coin.puzzle_hash != self.dao_info.current_treasury_coin.puzzle_hash:
             # update dao rules
+            assert isinstance(new_innerpuz, Program)
             self.dao_rules = get_treasury_rules_from_puzzle(new_innerpuz)
         dao_info = DAOInfo(
             self.dao_info.treasury_id,  # treasury_id: bytes32

@@ -588,6 +588,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, close_sb.name())
     await full_node_api.process_spend_bundles(bundles=[close_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # Give the wallet nodes a second and farm enough blocks so we can close the next proposal
     await asyncio.sleep(1)
@@ -597,12 +598,12 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     time_out_assert(20, wallet_2.get_confirmed_balance, wallet_2_start_bal + proposal_amount)
     time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, xch_funds - proposal_amount)
 
-    assert dao_wallet_0.dao_info.proposals_list[0].closed
-    assert dao_wallet_0.dao_info.proposals_list[0].passed
-    assert dao_wallet_1.dao_info.proposals_list[0].closed
-    assert dao_wallet_1.dao_info.proposals_list[0].passed
-    assert dao_wallet_2.dao_info.proposals_list[0].closed
-    assert dao_wallet_2.dao_info.proposals_list[0].passed
+    async def get_proposal_state(wallet, index):
+        return wallet.dao_info.proposals_list[index].passed, wallet.dao_info.proposals_list[index].closed
+
+    time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_0, 0])
+    time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_1, 0])
+    time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_2, 0])
 
     # close the update proposal
     prop = dao_wallet_0.dao_info.proposals_list[1]
@@ -620,10 +621,20 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     close_sb = await dao_wallet_0.create_proposal_close_spend(prop.proposal_id)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, close_sb.name())
     await full_node_api.process_spend_bundles(bundles=[close_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # Give the wallet nodes a second and farm enough blocks so we can close the next proposal
     await asyncio.sleep(1)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    assert dao_wallet_0.dao_rules == new_dao_rules
+    async def get_dao_rules(wallet):
+        return wallet.dao_rules
+
+    time_out_assert(20, get_dao_rules, new_dao_rules, dao_wallet_0)
+    time_out_assert(20, get_dao_rules, new_dao_rules, dao_wallet_1)
+    time_out_assert(20, get_dao_rules, new_dao_rules, dao_wallet_2)
+
+    time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_0, 1])
+    time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_1, 1])
+    time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_2, 1])
