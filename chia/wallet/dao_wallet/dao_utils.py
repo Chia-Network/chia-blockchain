@@ -488,6 +488,20 @@ def uncurry_lockup(lockup_puzzle: Program) -> Program:
     return curried_args
 
 
+def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
+    try:
+        mod, curried_args = puzzle.uncurry()
+    except ValueError as e:
+        log.debug("Cannot uncurry spend puzzle: error: %s", e)
+        raise e
+    if mod == SPEND_P2_SINGLETON_MOD:
+        return "spend", curried_args
+    elif mod == DAO_UPDATE_PROPOSAL_MOD:
+        return "update", curried_args
+    else:
+        raise ValueError("Unrecognised proposal type")
+
+
 def uncurry_spend_p2_singleton(spend_puzzle: Program) -> Program:
     try:
         mod, curried_args = spend_puzzle.uncurry()

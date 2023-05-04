@@ -173,7 +173,7 @@
   (c
     (list ASSERT_MY_PUZZLEHASH (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash))
     (c
-      (list CREATE_COIN treasury_inner_puzhash ONE)
+      (list CREATE_COIN treasury_inner_puzhash ONE (list (f (r TREASURY_SINGLETON_STRUCT))))
       (loop_through_list
         (sum_create_coins CONDITIONS)
         P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH

@@ -52,6 +52,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_new_puzzle_from_treasury_solution,
     get_p2_singleton_puzhash,
     get_p2_singleton_puzzle,
+    get_proposal_args,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
     get_proposal_validator,
@@ -62,7 +63,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_update_proposal_puzzle,
     uncurry_proposal,
     uncurry_proposal_validator,
-    uncurry_spend_p2_singleton,
     uncurry_treasury,
 )
 
@@ -359,7 +359,7 @@ class DAOWallet(WalletProtocol):
             current_coin,
             inner_puzzle,
             block_height,
-            1,  # TODO: how should we deal with filter integer? Just update it later?
+            uint64(1),  # TODO: how should we deal with filter integer? Just update it later?
         )
 
         info_as_string = json.dumps(dao_info.to_json_dict())
@@ -1357,13 +1357,16 @@ class DAOWallet(WalletProtocol):
             self_destruct_length,
             oracle_spend_delay,
         ) = curried_args
-        current_block = await self.wallet_state_manager.blockchain.get_peak_block()
-        current_height = current_block.height
-        # TODO: how do we know this is really the latest height?
-        if proposal_info.singleton_block_height + proposal_timelock.as_int() < current_height:
-            raise ValueError("This proposal is not ready to be closed")
+        proposal_state = await self.get_proposal_state(proposal_id)
+        if not proposal_state["closable"]:
+            raise ValueError(f"This proposal is not ready to be closed. proposal_id: {proposal_id}")
+        if proposal_state["passed"]:
+            self.log.info(f"Closing passed proposal: {proposal_id}")
+        else:
+            self.log.info(f"Closing failed proposal: {proposal_id}")
         assert proposal_info.current_innerpuz is not None
         full_proposal_puzzle = curry_singleton(proposal_id, proposal_info.current_innerpuz)
+        assert proposal_info.current_coin.puzzle_hash == full_proposal_puzzle.get_tree_hash()
 
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -1476,134 +1479,169 @@ class DAOWallet(WalletProtocol):
         )
         # p2_singleton_parent_amount_list  ; for xch this is just a list of (coin_parent coin_amount)
         # p2_singleton_tailhash_parent_amount_list   ; list of ((asset (parent amount) (parent amount)... ) (asset (parent amount)... )... ),
-        curried_args = uncurry_spend_p2_singleton(puzzle_reveal)
-        (
-            _,
-            _,
-            CONDITIONS,
-            LIST_OF_TAILHASH_CONDITIONS,
-            P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
-        ) = curried_args.as_iter()
-
-        sum = 0
-
-        # p2_singleton solution is:
-        # singleton_inner_puzhash
-        # delegated_puzzle
-        # delegated_solution
-        # my_id
-        # my_puzhash
-        # list_of_parent_amounts
-        # my_amount
-        coin_spends = []
-        xch_parent_amount_list = []
-        tailhash_parent_amount_list = []
-        treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
-        p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
         cat_spend_bundle = None
-        p2_singleton_sb = None
-        for condition_statement in CONDITIONS.as_iter():
-            if condition_statement.first().as_int() == 51:
-                sum += condition_statement.rest().rest().first().as_int()
-        if sum > 0:
-            xch_coins = await self.select_coins_for_asset_type(uint64(sum))
-            for xch_coin in xch_coins:
-                xch_parent_amount_list.append([xch_coin.parent_coin_info, xch_coin.amount])
-                solution = Program.to(
-                    [
-                        treasury_inner_puzhash,
-                        0,
-                        0,
-                        xch_coin.name(),
-                        0,
-                        0,
-                        xch_coin.amount,
-                    ]
-                )
-                coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
-            p2_singleton_sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
-        for tail_hash_conditions_pair in LIST_OF_TAILHASH_CONDITIONS.as_iter():
-            tail_hash: bytes32 = tail_hash_conditions_pair.first().as_atom()
-            conditions: Program = tail_hash_conditions_pair.rest().first()
-            sum_of_conditions = 0
-            sum_of_coins = 0
-            spendable_cat_list = []
-            for condition in conditions.as_iter():
-                if condition.first().as_int() == 51:
-                    sum_of_conditions += condition.rest().rest().first().as_int()
-            cat_coins = await self.select_coins_for_asset_type(uint64(sum), tail_hash)
-            parent_amount_list = []
-            for cat_coin in cat_coins:
-                sum_of_coins += cat_coin.amount
-                parent_amount_list.append([cat_coin.parent_coin_info, cat_coin.amount])
-                lineage_proof = await self.fetch_cat_lineage_proof(cat_coin)
-                # singleton_inner_puzhash
-                # delegated_puzzle
-                # delegated_solution
-                # my_id
-                # my_puzhash  ; only needed for merging, set to 0 otherwise
-                if cat_coin == cat_coins[-1]:  # the last coin is the one that makes the conditions
-                    change_condition = Program.to(
-                        [51, p2_singleton_puzzle.get_tree_hash(), sum_of_coins - sum_of_conditions]
-                    )
-                    delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
-                    solution = Program.to(
-                        [
-                            treasury_inner_puzhash,
-                            delegated_puzzle,
-                            0,
-                            cat_coin.name(),
-                            0,
-                        ]
-                    )
-                else:
-                    solution = Program.to(
-                        [
-                            treasury_inner_puzhash,
-                            0,
-                            0,
-                            cat_coin.name(),
-                            0,
-                        ]
-                    )
-                new_spendable_cat = SpendableCAT(
-                    cat_coin,
-                    tail_hash,
-                    p2_singleton_puzzle,
-                    solution,
-                    lineage_proof=lineage_proof,
-                )
-                spendable_cat_list.append(new_spendable_cat)
-            # create or merge with other CAT spends
-            if cat_spend_bundle is None:
-                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-            else:
-                cat_spend_bundle = cat_spend_bundle.aggregate(
-                    [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)]
-                )
-            tailhash_parent_amount_list.append([tail_hash, parent_amount_list])
+        delegated_puzzle_sb = None
+        proposal_type, curried_args = get_proposal_args(puzzle_reveal)
+        if proposal_type == "spend":
+            # (
+            #  treasury_solution,
+            #  cat_spend_bundle,
+            #  delegated_solution,
+            #  delegated_puzzle_sb
+            # ) = await self.get_delegated_solution_for_spend_proposal(
+            #     curried_args,
+            #     full_proposal_puzzle,
+            #     PROPOSED_PUZ_HASH,
+            #     validator_solution,
+            #     puzzle_reveal,
+            # )
+            (
+                _,
+                _,
+                CONDITIONS,
+                LIST_OF_TAILHASH_CONDITIONS,
+                P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
+            ) = curried_args.as_iter()
+            sum = 0
 
-        delegated_solution = Program.to(
-            [
-                xch_parent_amount_list,
-                tailhash_parent_amount_list,
-                treasury_inner_puzhash,
-            ]
-        )
-        # proposal_flag  ; if this is set then we are closing a proposal
-        # (announcement_source delegated_puzzle_hash announcement_args)
-        # proposal_validator_solution
-        # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
-        # delegated_solution  ; this is not secure unless the delegated puzzle secures it
-        treasury_solution = Program.to(
-            [
-                1,
-                [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0],
-                validator_solution,
-                puzzle_reveal,
-                delegated_solution,
-            ]
-        )
+            # p2_singleton solution is:
+            # singleton_inner_puzhash
+            # delegated_puzzle
+            # delegated_solution
+            # my_id
+            # my_puzhash
+            # list_of_parent_amounts
+            # my_amount
+            coin_spends = []
+            xch_parent_amount_list = []
+            tailhash_parent_amount_list = []
+            treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
+            p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
+            for condition_statement in CONDITIONS.as_iter():
+                if condition_statement.first().as_int() == 51:
+                    sum += condition_statement.rest().rest().first().as_int()
+            if sum > 0:
+                xch_coins = await self.select_coins_for_asset_type(uint64(sum))
+                for xch_coin in xch_coins:
+                    xch_parent_amount_list.append([xch_coin.parent_coin_info, xch_coin.amount])
+                    solution = Program.to(
+                        [
+                            treasury_inner_puzhash,
+                            0,
+                            0,
+                            xch_coin.name(),
+                            0,
+                            0,
+                            xch_coin.amount,
+                        ]
+                    )
+                    coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
+                delegated_puzzle_sb = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
+            for tail_hash_conditions_pair in LIST_OF_TAILHASH_CONDITIONS.as_iter():
+                tail_hash: bytes32 = tail_hash_conditions_pair.first().as_atom()
+                conditions: Program = tail_hash_conditions_pair.rest().first()
+                sum_of_conditions = 0
+                sum_of_coins = 0
+                spendable_cat_list = []
+                for condition in conditions.as_iter():
+                    if condition.first().as_int() == 51:
+                        sum_of_conditions += condition.rest().rest().first().as_int()
+                cat_coins = await self.select_coins_for_asset_type(uint64(sum), tail_hash)
+                parent_amount_list = []
+                for cat_coin in cat_coins:
+                    sum_of_coins += cat_coin.amount
+                    parent_amount_list.append([cat_coin.parent_coin_info, cat_coin.amount])
+                    lineage_proof = await self.fetch_cat_lineage_proof(cat_coin)
+                    # singleton_inner_puzhash
+                    # delegated_puzzle
+                    # delegated_solution
+                    # my_id
+                    # my_puzhash  ; only needed for merging, set to 0 otherwise
+                    if cat_coin == cat_coins[-1]:  # the last coin is the one that makes the conditions
+                        change_condition = Program.to(
+                            [51, p2_singleton_puzzle.get_tree_hash(), sum_of_coins - sum_of_conditions]
+                        )
+                        delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
+                        solution = Program.to(
+                            [
+                                treasury_inner_puzhash,
+                                delegated_puzzle,
+                                0,
+                                cat_coin.name(),
+                                0,
+                            ]
+                        )
+                    else:
+                        solution = Program.to(
+                            [
+                                treasury_inner_puzhash,
+                                0,
+                                0,
+                                cat_coin.name(),
+                                0,
+                            ]
+                        )
+                    new_spendable_cat = SpendableCAT(
+                        cat_coin,
+                        tail_hash,
+                        p2_singleton_puzzle,
+                        solution,
+                        lineage_proof=lineage_proof,
+                    )
+                    spendable_cat_list.append(new_spendable_cat)
+                # create or merge with other CAT spends
+                if cat_spend_bundle is None:
+                    cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
+                else:
+                    cat_spend_bundle = cat_spend_bundle.aggregate(
+                        [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)]
+                    )
+                tailhash_parent_amount_list.append([tail_hash, parent_amount_list])
+
+            delegated_solution = Program.to(
+                [
+                    xch_parent_amount_list,
+                    tailhash_parent_amount_list,
+                    treasury_inner_puzhash,
+                ]
+            )
+            # proposal_flag  ; if this is set then we are closing a proposal
+            # (announcement_source delegated_puzzle_hash announcement_args)
+            # proposal_validator_solution
+            # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+            # delegated_solution  ; this is not secure unless the delegated puzzle secures it
+            treasury_solution = Program.to(
+                [
+                    1,
+                    [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0],
+                    validator_solution,
+                    puzzle_reveal,
+                    delegated_solution,
+                ]
+            )
+        elif proposal_type == "update":
+            (
+                _,
+                PROPOSAL_VALIDATOR,
+                PROPOSAL_LENGTH,
+                PROPOSAL_SOFTCLOSE_LENGTH,
+                ATTENDANCE_REQUIRED,
+                PASS_MARGIN,
+                PROPOSAL_SELF_DESTRUCT_TIME,
+                ORACLE_SPEND_DELAY,
+            ) = curried_args.as_iter()
+            coin_spends = []
+            treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
+            delegated_solution = Program.to([])
+            treasury_solution = Program.to(
+                [
+                    1,
+                    [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0],
+                    validator_solution,
+                    puzzle_reveal,
+                    delegated_solution,
+                ]
+            )
 
         assert self.dao_info.current_treasury_coin is not None
         parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)
@@ -1630,9 +1668,9 @@ class DAOWallet(WalletProtocol):
             full_spend = SpendBundle.aggregate([spend_bundle])
         if cat_spend_bundle is not None:
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
-        if p2_singleton_sb is not None:
-            full_spend = full_spend.aggregate([full_spend, p2_singleton_sb])
-        # breakpoint()
+        if delegated_puzzle_sb is not None:
+            full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -2023,7 +2061,8 @@ class DAOWallet(WalletProtocol):
     ) -> None:
         if self.dao_info.singleton_block_height <= block_height:
             # TODO: what do we do here?
-            return
+            # return
+            pass
         puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
         if puzzle is None:
             raise ValueError("get_innerpuzzle_from_puzzle failed")
@@ -2067,6 +2106,7 @@ class DAOWallet(WalletProtocol):
         We are being notified of a singleton state transition. A Singleton has been spent.
         Returns True iff the spend is a valid transition spend for the singleton, False otherwise.
         """
+
         self.log.info(
             f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}."
         )
