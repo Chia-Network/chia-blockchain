@@ -846,10 +846,10 @@ class TestCATWallet:
     )
     @pytest.mark.asyncio
     async def test_cat_change_detection(
-        self, self_hostname: str, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool
+        self, self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool
     ) -> None:
         num_blocks = 1
-        full_nodes, wallets, bt = two_wallet_nodes_services
+        full_nodes, wallets, bt = one_wallet_and_one_simulator_services
         full_node_api: FullNodeSimulator = full_nodes[0]._api
         full_node_server = full_node_api.full_node.server
         wallet_service_0 = wallets[0]
