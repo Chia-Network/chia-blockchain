@@ -6,13 +6,19 @@
 |         :---:          |          :---:         |
 | ![GitHub Latest Rlease)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain?&label=release&logo=github) | ![GitHub Latest Pre-Release)](https://img.shields.io/github/v/release/Chia-Network/chia-blockchain?include_prereleases&label=pre-release&logo=github) |
 
-![YouTube Channel Views](https://img.shields.io/youtube/channel/views/UChFkJ3OAUvnHZdiQISWdWPA?style=social)
-
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Chia-Network/chia-blockchain?logo=GitHub)
 
 ![GitHub all releases](https://img.shields.io/github/downloads/Chia-Network/chia-blockchain/total?logo=GitHub)
 
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
+
+[![YouTube](https://img.shields.io/badge/subscribers-8.78k-red?logo=youtube&style=flat)](https://www.youtube.com/@Chia-Network)
+
+[![Chia Discord](https://dcbadge.vercel.app/api/server/chia?style=flat&theme=full-presence)](https://discord.gg/chia)
+
+<!-- ![Discord Shield](https://discordapp.com/api/guilds/1034523881404370984/widget.png?style=shield)
+
+[![Discord](https://img.shields.io/discord/1034523881404370984.svg?label=Discord&logo=discord&colorB=1e2b2f)](https://discord.gg/chia) -->
 
 Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
 * [Proof of space and time](https://docs.google.com/document/d/1tmRIb7lgi4QfKkNaxuKOBHRmwbVlGL4f7EsBDr_5xZE/edit) based consensus which allows anyone to farm with commodity hardware
