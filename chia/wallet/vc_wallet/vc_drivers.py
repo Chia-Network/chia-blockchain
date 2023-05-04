@@ -148,19 +148,6 @@ def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tup
         return None
 
 
-def solve_tp_covenant_adapter(
-    covenant_solutions: List[Program], lineage_proof: LineageProof, inner_solution: Program
-) -> Program:
-    solution: Program = Program.to(
-        [
-            covenant_solutions,
-            lineage_proof.to_program(),
-            inner_solution,
-        ]
-    )
-    return solution
-
-
 ##################################
 # Update w/ DID Transfer Program #
 ##################################

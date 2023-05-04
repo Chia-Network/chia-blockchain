@@ -699,6 +699,9 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             if error is None:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
                 if test_syncing:
+                    assert all(
+                        CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program())) for spend in cr_cat_spends
+                    )
                     new_crcats = [crcat for spend in cr_cat_spends for crcat in CRCAT.get_next_from_coin_spend(spend)]
                     vc = VerifiedCredential.get_next_from_coin_spend(auth_spend)
                 else:

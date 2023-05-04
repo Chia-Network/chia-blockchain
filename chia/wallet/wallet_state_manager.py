@@ -1799,3 +1799,15 @@ class WalletStateManager:
                 ), f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
                 return wallet
         raise ValueError("DataLayerWallet not available")
+
+    async def get_or_create_vc_wallet(self) -> VCWallet:
+        for _, wallet in self.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
+
+        return vc_wallet

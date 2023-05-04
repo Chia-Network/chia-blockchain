@@ -3296,17 +3296,8 @@ class WalletRpcApi:
         puzhash: Optional[bytes32] = None
         if parsed_request.target_address is not None:
             puzhash = decode_puzzle_hash(parsed_request.target_address)
-        # get VC wallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.VC:
-                assert isinstance(wallet, VCWallet)
-                vc_wallet: VCWallet = wallet
-                break
-        else:
-            # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(
-                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
-            )
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
         vc_record, tx_list = await vc_wallet.launch_new_vc(did_id, puzhash, parsed_request.fee)
         for tx in tx_list:
             await self.service.wallet_state_manager.add_pending_transaction(tx)
@@ -3383,17 +3374,7 @@ class WalletRpcApi:
 
         parsed_request = VCSpend.from_json_dict(request)
 
-        # get VC wallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.VC:
-                assert isinstance(wallet, VCWallet)
-                vc_wallet: VCWallet = wallet
-                break
-        else:
-            # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(
-                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
-            )
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
         txs = await vc_wallet.generate_signed_transaction(
             parsed_request.vc_id,
             parsed_request.fee,
@@ -3416,17 +3397,7 @@ class WalletRpcApi:
         :param request: 'proofs' is a dictionary of key/value pairs
         :return:
         """
-        # get VC wallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.VC:
-                assert isinstance(wallet, VCWallet)
-                vc_wallet: VCWallet = wallet
-                break
-        else:
-            # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(
-                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
-            )
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         await vc_wallet.store.add_vc_proofs(VCProofs(request["proofs"]))
 
@@ -3445,17 +3416,7 @@ class WalletRpcApi:
             root: bytes32
 
         parsed_request = VCGetProofsForRoot.from_json_dict(request)
-        # get VC wallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.VC:
-                assert isinstance(wallet, VCWallet)
-                vc_wallet: VCWallet = wallet
-                break
-        else:
-            # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(
-                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
-            )
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(parsed_request.root)
         if vc_proofs is None:
@@ -3477,17 +3438,7 @@ class WalletRpcApi:
             reuse_puzhash: Optional[bool] = None
 
         parsed_request = VCRevoke.from_json_dict(request)
-        # get VC wallet
-        for _, wallet in self.service.wallet_state_manager.wallets.items():
-            if WalletType(wallet.type()) == WalletType.VC:
-                assert isinstance(wallet, VCWallet)
-                vc_wallet: VCWallet = wallet
-                break
-        else:
-            # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(
-                self.service.wallet_state_manager, self.service.wallet_state_manager.main_wallet
-            )
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         txs = await vc_wallet.revoke_vc(
             parsed_request.vc_parent_id,
