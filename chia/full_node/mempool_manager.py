@@ -524,19 +524,17 @@ class MempoolManager:
         having duplicate removals.
         """
         assert self.peak is not None
-        conflicts: Set[MempoolItem] = set()
-
+        removals_ids = []
         for record in removals.values():
             removal = record.coin
             # 1. Checks if it's been spent already
             if record.spent:
                 return Err.DOUBLE_SPEND, []
-            # 2. Checks if there's a mempool conflict
-            items: List[MempoolItem] = self.mempool.get_items_by_coin_id(removal.name())
-            conflicts.update(items)
-
+            removals_ids.append(removal.name())
+        # 2. Checks if there are mempool conflicts
+        conflicts = self.mempool.get_items_by_coin_ids(removals_ids)
         if len(conflicts) > 0:
-            return Err.MEMPOOL_CONFLICT, list(conflicts)
+            return Err.MEMPOOL_CONFLICT, conflicts
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, []
 
