@@ -339,6 +339,24 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.asyncio
+async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    #   wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    await full_node_api.farm_blocks_to_wallet(2, wallet)
+
+    expected_balance = await wallet_rpc_client.get_farmed_amount()
+    assert expected_balance["farmed_amount"] == 4000000000000
+    assert expected_balance["farmer_reward_amount"] == 500000000000
+    assert expected_balance["fee_amount"] == 0
+    assert expected_balance["pool_reward_amount"] == 3500000000000
+    assert expected_balance["last_height_farmed"] == 2
+    assert expected_balance["success"]
+
+
+@pytest.mark.asyncio
 async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
