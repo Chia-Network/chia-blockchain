@@ -342,7 +342,6 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
 async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment):
     env = wallet_rpc_environment
     wallet: Wallet = env.wallet_1.wallet
-    #   wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
