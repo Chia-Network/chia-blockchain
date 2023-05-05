@@ -534,9 +534,9 @@ class WalletStateManager:
         if self.log.level == logging.DEBUG:
             self.log.debug(f"set_sync_mode enter {await self.blockchain.get_finished_sync_up_to()}-{target_height}")
         async with self.lock:
+            self._sync_target = target_height
             start_time = time.time()
             start_height = await self.blockchain.get_finished_sync_up_to()
-            self._sync_target = target_height
             self.log.info(f"set_sync_mode syncing - range: {start_height}-{target_height}")
             self.state_changed("sync_changed")
             try:
@@ -546,7 +546,6 @@ class WalletStateManager:
                     f"set_sync_mode failed - range: {start_height}-{target_height}, seconds: {time.time() - start_time}"
                 )
             finally:
-                self._sync_target = None
                 self.state_changed("sync_changed")
                 if self.log.level == logging.DEBUG:
                     self.log.debug(
@@ -554,6 +553,7 @@ class WalletStateManager:
                         f"get_finished_sync_up_to: {await self.blockchain.get_finished_sync_up_to()}, "
                         f"seconds: {time.time() - start_time}"
                     )
+                self._sync_target = None
 
     async def get_confirmed_spendable_balance_for_wallet(
         self, wallet_id: int, unspent_records: Optional[Set[WalletCoinRecord]] = None
