@@ -1124,7 +1124,7 @@ class DAOWallet(WalletProtocol):
         eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
         inner_puz = self.dao_info.current_treasury_innerpuz
         assert inner_puz
-        inner_sol = Program.to([0])
+        inner_sol = Program.to([0, 0, 0, 0, 0, 0, 0])
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
@@ -1230,7 +1230,6 @@ class DAOWallet(WalletProtocol):
             )
             vote_amount = await dao_cat_wallet.get_spendable_balance()
         assert vote_amount is not None
-        assert cat_wallet.cat_info.my_tail
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
         assert cat_tail_hash
         dao_proposal_puzzle = get_proposal_puzzle(
@@ -1824,6 +1823,12 @@ class DAOWallet(WalletProtocol):
             treasury_solution = Program.to(
                 [
                     0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
                 ]
             )
 
