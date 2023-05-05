@@ -952,14 +952,16 @@ class WalletStateManager:
                 if wallet.dao_info.treasury_id == singleton_id:
                     return WalletIdentifier.create(wallet)
 
+        # TODO: fetch innerpuzzle from coin_spend
+        inner_puzzle = None
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
         dao_wallet = await DAOWallet.create_new_did_wallet_from_coin_spend(
             self,
             self.main_wallet,
             coin_spend.coin.name(),
-            inner_puzzle: Program,
+            inner_puzzle,
             coin_spend,
-            block_height: uint32,  # this is included in CoinState, pass it in from WSM
+            coin_spend.spent_height,  # this is included in CoinState, pass it in from WSM
         )
         return None
 

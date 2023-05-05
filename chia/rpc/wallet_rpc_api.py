@@ -2257,9 +2257,26 @@ class WalletRpcApi:
     async def dao_get_treasury_balance(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
         # TODO: how do we know all the asset types we have?
         return {
 
+        }
+
+    async def dao_get_proposals(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        return {
+            "success": True
+        }
+
+    async def dao_exit_lockup(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        return {
+            "success": True
         }
 
     async def dao_create_proposal(self, request) -> EndpointResult:
