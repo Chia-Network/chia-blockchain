@@ -588,7 +588,7 @@ wallet:
   # Example: {fingerprint1:[{"decorator": "CLAWBACK", "clawback_timelock": 3600}, {"decorator": "decorator2", ...}, ...]}
   puzzle_decorators: {}
   auto_claim:
-    enabled: True
+    enabled: False
     tx_fee: 0
     min_amount: 0
     batch_size: 50

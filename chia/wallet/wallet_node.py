@@ -49,7 +49,7 @@ from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.puzzles.clawback.metadata import ClawbackAutoClaimSettings
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
@@ -247,23 +247,17 @@ class WalletNode:
                     self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
             save_config(self.root_path, "config.yaml", config)
 
-    def set_auto_claim(self, auto_claim_config: ClawbackAutoClaimSettings) -> Dict[str, Any]:
+    def set_auto_claim(self, auto_claim_config: AutoClaimSettings) -> Dict[str, Any]:
         if auto_claim_config.batch_size < 1:
             auto_claim_config = dataclasses.replace(auto_claim_config, batch_size=uint16(50))
-        # Update in memory config
-        self.config["auto_claim"] = {}
-        self.config["auto_claim"]["enabled"] = auto_claim_config.enabled
-        self.config["auto_claim"]["tx_fee"] = int(auto_claim_config.tx_fee)
-        self.config["auto_claim"]["min_amount"] = int(auto_claim_config.min_amount)
-        self.config["auto_claim"]["batch_size"] = int(auto_claim_config.batch_size)
-        # Update config file
-        with lock_and_load_config(self.root_path, "config.yaml") as config:
-            config["wallet"]["auto_claim"] = {}
-            config["wallet"]["auto_claim"]["enabled"] = auto_claim_config.enabled
-            config["wallet"]["auto_claim"]["tx_fee"] = int(auto_claim_config.tx_fee)
-            config["wallet"]["auto_claim"]["min_amount"] = int(auto_claim_config.min_amount)
-            config["wallet"]["auto_claim"]["batch_size"] = int(auto_claim_config.batch_size)
-            save_config(self.root_path, "config.yaml", config)
+        auto_claim_config_json = auto_claim_config.to_json_dict()
+        if self.config["auto_claim"] != auto_claim_config_json:
+            # Update in memory config
+            self.config["auto_claim"] = auto_claim_config_json
+            # Update config file
+            with lock_and_load_config(self.root_path, "config.yaml") as config:
+                config["wallet"]["auto_claim"] = self.config["auto_claim"]
+                save_config(self.root_path, "config.yaml", config)
         return auto_claim_config.to_json_dict()
 
     async def reset_sync_db(self, db_path: Union[Path, str], fingerprint: int) -> bool:

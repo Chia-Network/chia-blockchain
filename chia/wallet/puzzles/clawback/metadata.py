@@ -6,15 +6,23 @@ from enum import IntEnum
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 
 
 @streamable
 @dataclass(frozen=True)
 class ClawbackMetadata(Streamable):
     time_lock: uint64
-    is_recipient: bool
     sender_puzzle_hash: bytes32
     recipient_puzzle_hash: bytes32
+
+    async def is_recipient(self, puzzle_store: WalletPuzzleStore) -> bool:
+        if await puzzle_store.puzzle_hash_exists(self.sender_puzzle_hash):
+            return False
+        elif await puzzle_store.puzzle_hash_exists(self.recipient_puzzle_hash):
+            return True
+        else:
+            raise ValueError("Both sender and recipient puzzle hashes not found in puzzle store")
 
 
 class ClawbackVersion(IntEnum):
@@ -23,7 +31,7 @@ class ClawbackVersion(IntEnum):
 
 @streamable
 @dataclass(frozen=True)
-class ClawbackAutoClaimSettings(Streamable):
+class AutoClaimSettings(Streamable):
     enabled: bool = True
     tx_fee: uint64 = uint64(0)
     min_amount: uint64 = uint64(0)

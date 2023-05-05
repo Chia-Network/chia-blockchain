@@ -17,7 +17,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.merkle_utils import build_merkle_tree
-from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.wallet_types import RemarkDataType
 
 P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
 P2_CURRIED_PUZZLE_HASH = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
@@ -136,7 +136,7 @@ def match_clawback_puzzle(
             if (
                 condition.opcode == ConditionOpcode.REMARK
                 and len(condition.vars) == 2
-                and condition.vars[0] == bytes(PuzzleDecoratorType.CLAWBACK.name, "utf-8")
+                and int.from_bytes(condition.vars[0], "big", signed=True) == RemarkDataType.CLAWBACK
             ):
                 return ClawbackMetadata.from_bytes(VersionedBlob.from_bytes(condition.vars[1]).blob)
     return None

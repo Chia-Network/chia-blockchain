@@ -63,7 +63,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
-from chia.wallet.puzzles.clawback.metadata import ClawbackAutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_record import TradeRecord
@@ -137,7 +137,7 @@ class WalletRpcApi:
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
             "/spend_clawback_coins": self.spend_clawback_coins,
-            "/get_coins_by_type": self.get_coins_by_type,
+            "/get_coins": self.get_coins,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -576,7 +576,7 @@ class WalletRpcApi:
         :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
         :return:
         """
-        return self.service.set_auto_claim(ClawbackAutoClaimSettings.from_json_dict(request))
+        return self.service.set_auto_claim(AutoClaimSettings.from_json_dict(request))
 
     async def get_auto_claim(self, request) -> EndpointResult:
         """
@@ -584,12 +584,10 @@ class WalletRpcApi:
         :param request: None
         :return:
         """
-        return {
-            "enabled": self.service.wallet_state_manager.config.get("auto_claim", {}).get("enabled", True),
-            "tx_fee": self.service.wallet_state_manager.config.get("auto_claim", {}).get("tx_fee", 0),
-            "min_amount": self.service.wallet_state_manager.config.get("auto_claim", {}).get("min_amount", 0),
-            "batch_size": self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50),
-        }
+        auto_claim_settings = AutoClaimSettings.from_json_dict(
+            self.service.wallet_state_manager.config.get("auto_claim", {})
+        )
+        return auto_claim_settings.to_json_dict()
 
     ##########################################################################################
     # Wallet Management
@@ -910,7 +908,6 @@ class WalletRpcApi:
                 if clawback_metadata is not None:
                     tx["metadata"] = clawback_metadata.to_json_dict()
                     tx["metadata"]["coin_id"] = Coin.from_json_dict(tx["additions"][0]).name().hex()
-                    del tx["metadata"]["is_recipient"]
 
         return {
             "transactions": txs,
@@ -1039,7 +1036,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {"transaction": transaction, "transaction_id": tr.name}
 
-    async def get_coins_by_type(self, request) -> EndpointResult:
+    async def get_coins(self, request) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
         coin_type = CoinType(request["coin_type"])
         start = request.get("start", 0)
@@ -1108,10 +1105,10 @@ class WalletRpcApi:
             metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
             coins[coin_record.coin] = metadata
             if len(coins) >= batch_size:
-                tx_id_list.extend((await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee)))
+                tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
                 coins = {}
         if len(coins) > 0:
-            tx_id_list.extend((await self.service.wallet_state_manager.claim_clawback_coins(coins, tx_fee)))
+            tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
         return {
             "success": True,
             "transaction_ids": [tx.hex() for tx in tx_id_list],

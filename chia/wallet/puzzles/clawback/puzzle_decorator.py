@@ -12,7 +12,7 @@ from chia.wallet.puzzles.clawback.drivers import create_merkle_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.wallet_types import RemarkDataType
 
 
 class ClawbackPuzzleDecorator:
@@ -48,11 +48,11 @@ class ClawbackPuzzleDecorator:
             if MOD != uncurried.mod:
                 raise ValueError("Clawback only supports primitive inner P2 puzzle.")
             recipient_puzhash = primaries[0].puzzle_hash
-            metadata = ClawbackMetadata(self.time_lock, False, inner_puzzle.get_tree_hash(), recipient_puzhash)
+            metadata = ClawbackMetadata(self.time_lock, inner_puzzle.get_tree_hash(), recipient_puzhash)
             remark_condition = Program.to(
                 [
                     ConditionOpcode.REMARK.value,
-                    PuzzleDecoratorType.CLAWBACK.name,
+                    RemarkDataType.CLAWBACK,
                     bytes(VersionedBlob(ClawbackVersion.V1.value, bytes(metadata))),
                 ]
             ).as_python()

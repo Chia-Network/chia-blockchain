@@ -717,17 +717,17 @@ class WalletStateManager:
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
             metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
-            if coin.coin.amount >= min_amount and metadata.is_recipient:
+            if coin.coin.amount >= min_amount and await metadata.is_recipient(self.puzzle_store):
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata.time_lock:
                     clawback_coins[coin.coin] = metadata
                     if len(clawback_coins) >= self.config.get("auto_claim", {}).get("btach_size", 50):
-                        await self.claim_clawback_coins(clawback_coins, tx_fee)
+                        await self.spend_clawback_coins(clawback_coins, tx_fee)
                         clawback_coins = {}
         if len(clawback_coins) > 0:
-            await self.claim_clawback_coins(clawback_coins, tx_fee)
+            await self.spend_clawback_coins(clawback_coins, tx_fee)
 
-    async def claim_clawback_coins(self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64) -> List[bytes32]:
+    async def spend_clawback_coins(self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64) -> List[bytes32]:
         assert len(clawback_coins) > 0
         txs: List[TransactionRecord] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
@@ -736,7 +736,8 @@ class WalletStateManager:
         for coin, metadata in clawback_coins.items():
             recipient_puzhash: bytes32 = metadata.recipient_puzzle_hash
             sender_puzhash: bytes32 = metadata.sender_puzzle_hash
-            if metadata.is_recipient:
+            is_recipient: bool = await metadata.is_recipient(self.puzzle_store)
+            if is_recipient:
                 derivation_record: Optional[
                     DerivationRecord
                 ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
@@ -747,7 +748,7 @@ class WalletStateManager:
                 continue
             if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
                 await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                    recipient_puzhash if metadata.is_recipient else sender_puzhash
+                    recipient_puzhash if is_recipient else sender_puzhash
                 )
             inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             inner_solution: Program = self.main_wallet.make_solution(
@@ -775,7 +776,7 @@ class WalletStateManager:
                 trade_id=None,
                 type=uint32(
                     TransactionType.OUTGOING_CLAWBACK_CLAIM
-                    if metadata.is_recipient
+                    if is_recipient
                     else TransactionType.OUTGOING_CLAWBACK_RETRIEVE
                 ),
                 name=spend_bundle.name(),
@@ -1148,7 +1149,6 @@ class WalletStateManager:
             # For the recipient we need to manually subscribe the merkle coin
             await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
         if is_recipient is not None:
-            metadata = dataclasses.replace(metadata, is_recipient=is_recipient)
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
