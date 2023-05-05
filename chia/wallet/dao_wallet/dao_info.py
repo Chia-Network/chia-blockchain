@@ -22,6 +22,8 @@ class ProposalInfo(Streamable):
     current_innerpuz: Optional[Program]
     timer_coin: Optional[Coin]  # if this is None then the proposal has finished
     singleton_block_height: uint32  # Block height that current proposal singleton coin was created in
+    passed: Optional[bool]
+    closed: Optional[bool]
 
 
 @streamable
@@ -36,6 +38,7 @@ class DAOInfo(Streamable):
     current_treasury_innerpuz: Optional[Program]
     singleton_block_height: uint32  # the block height that the current treasury singleton was created in
     filter_below_vote_amount: uint64  # we ignore proposals with fewer votes than this - defaults to 1
+    assets: List[Optional[bytes32]]
 
 
 @streamable

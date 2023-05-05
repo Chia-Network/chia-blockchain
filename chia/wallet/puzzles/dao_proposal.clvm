@@ -291,6 +291,8 @@
         	      (f (r SINGLETON_STRUCT))
         	    )
         	  )
+	    (c
+	      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_ids_or_proposal_timelock_length)
             ; We are trying to close the proposal, so check whether it passed or failed
             (if
               (all
@@ -337,6 +339,7 @@
             	    )
             	  )
             	)
+	      )
             )
           )
         )

@@ -353,7 +353,30 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     # ) = curried_args
     if solution.first() != Program.to(0):
         # Proposal Spend
-        return puzzle_reveal
+        mod, curried_args = solution.at("rrrf").uncurry()
+        if mod == DAO_UPDATE_PROPOSAL_MOD:
+            (
+                DAO_TREASURY_MOD_HASH,
+                DAO_PROPOSAL_VALIDATOR,
+                proposal_timelock,
+                soft_close_length,
+                attendance_required,
+                pass_percentage,
+                self_destruct_length,
+                oracle_spend_delay,
+            ) = curried_args.as_iter()
+            return DAO_TREASURY_MOD.curry(
+                DAO_TREASURY_MOD_HASH,
+                DAO_PROPOSAL_VALIDATOR,
+                proposal_timelock,
+                soft_close_length,
+                attendance_required,
+                pass_percentage,
+                self_destruct_length,
+                oracle_spend_delay,
+            )
+        else:
+            return puzzle_reveal
     else:
         # Oracle Spend - treasury is unchanged
         return puzzle_reveal
@@ -440,6 +463,18 @@ def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:
     return prog.at("rrfrrrrrf")
 
 
+def get_asset_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
+    mod, curried_args = puzzle.uncurry()
+    if mod == MOD:
+        return None
+    elif mod == CAT_MOD:
+        return bytes32(curried_args.at("rf").as_atom())
+    elif mod == SINGLETON_MOD:
+        return bytes32(curried_args.at("frf").as_atom())
+    else:
+        raise ValueError("DAO received coin with unknown puzzle")
+
+
 def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
     try:
         mod, curried_args = proposal_validator_program.uncurry()
@@ -486,6 +521,20 @@ def uncurry_lockup(lockup_puzzle: Program) -> Program:
     if mod != DAO_LOCKUP_MOD:
         raise ValueError("Not a dao cat lockup mod.")
     return curried_args
+
+
+def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
+    try:
+        mod, curried_args = puzzle.uncurry()
+    except ValueError as e:
+        log.debug("Cannot uncurry spend puzzle: error: %s", e)
+        raise e
+    if mod == SPEND_P2_SINGLETON_MOD:
+        return "spend", curried_args
+    elif mod == DAO_UPDATE_PROPOSAL_MOD:
+        return "update", curried_args
+    else:
+        raise ValueError("Unrecognised proposal type")
 
 
 def uncurry_spend_p2_singleton(spend_puzzle: Program) -> Program:
