@@ -15,14 +15,14 @@ dependencies = [
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.6",
+    "chia_rs==0.2.7",
     "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.0.1",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
-    "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
+    "concurrent-log-handler==0.9.23",  # Concurrently log and rotate logs
     "cryptography==39.0.1",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.12.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
@@ -35,7 +35,7 @@ dependencies = [
     "dnslib==0.9.23",  # dns lib
     "typing-extensions==4.5.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.4.0",
-    "packaging==23.0",
+    "packaging==23.1",
     "psutil==5.9.4",
 ]
 
@@ -45,7 +45,8 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage",
+    # >=7.2.4 for https://github.com/nedbat/coveragepy/issues/1604
+    "coverage>=7.2.4",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",

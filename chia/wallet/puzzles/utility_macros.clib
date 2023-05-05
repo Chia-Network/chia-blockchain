@@ -1,4 +1,7 @@
 (
+  ; assert takes a list of parameters
+  ; all items in the list are required to be non-nil
+  ; except for the final item which is returned
   (defmacro assert items
       (if (r items)
           (list if (f items) (c assert (r items)) (q . (x)))

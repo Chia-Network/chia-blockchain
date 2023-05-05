@@ -566,7 +566,7 @@ class TestWalletSimulator:
 
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
 
-        primaries = [Payment(ph, uint64(1000000000 + i), []) for i in range(60)]
+        primaries = [Payment(ph, uint64(1000000000 + i)) for i in range(60)]
         tx_split_coins = await wallet.generate_signed_transaction(uint64(1), ph, uint64(0), primaries=primaries)
         assert tx_split_coins.spend_bundle is not None
 

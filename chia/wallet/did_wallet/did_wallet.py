@@ -899,7 +899,7 @@ class DIDWallet:
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
                 Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
-                Payment(innermessage, uint64(0), []),
+                Payment(innermessage, uint64(0)),
             ],
         )
         innersol = Program.to([1, p2_solution])
