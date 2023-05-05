@@ -350,21 +350,21 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     result = await wallet_rpc_client.get_farmed_amount()
 
     expected_result = {
-        "farmed_amount": 4000000000000,
-        "farmer_reward_amount": 500000000000,
+        "farmed_amount": 4_000_000_000_000,
+        "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
         "last_height_farmed": 2,
-        "pool_reward_amount": 3500000000000,
+        "pool_reward_amount": 3_500_000_000_000,
         "success": True,
     }
 
     assert result == expected_result
 
-    our_ph = await wallet.get_new_puzzlehash()
+    fee_amount = 100
     tx = await wallet.generate_signed_transaction(
         amount=uint64(5),
-        puzzle_hash=our_ph,
-        fee=uint64(100),
+        puzzle_hash=bytes32([0] * 32),
+        fee=uint64(fee_amount),
     )
     await wallet.push_transaction(tx)
 
@@ -373,7 +373,7 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     result = await wallet_rpc_client.get_farmed_amount()
-    assert result["fee_amount"] == 100
+    assert result["fee_amount"] == fee_amount
 
 
 @pytest.mark.asyncio
