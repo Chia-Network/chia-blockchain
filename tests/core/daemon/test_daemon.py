@@ -27,6 +27,10 @@ from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 
 
+def raise_() -> None:
+    raise ValueError("Testing")
+
+
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
 @dataclass
 class Service:
@@ -467,7 +471,7 @@ async def test_is_running_with_services_and_connections(
 
 
 @pytest.mark.asyncio
-async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keychain):
+async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keychain, monkeypatch):
     ws, keychain = daemon_connection_and_temp_keychain
 
     # When: the keychain has a master passphrase set
@@ -488,6 +492,11 @@ async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keycha
     empty_passphrase_response_data = {
         "success": False,
         "error": None,
+    }
+
+    exception_response_data = {
+        "success": False,
+        "error": "validation exception",
     }
 
     # When: using the correct passphrase
@@ -512,6 +521,12 @@ async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keycha
     await ws.send_str(create_payload("validate_keyring_passphrase", {"key": ""}, "test", "daemon"))
     # Expect: validation failure
     assert_response(await ws.receive(), empty_passphrase_response_data)
+
+    monkeypatch.setattr(Keychain, "master_passphrase_is_valid", raise_)
+    await ws.send_str(
+        create_payload("validate_keyring_passphrase", {"key": "the correct passphrase"}, "test", "daemon")
+    )
+    assert_response(await ws.receive(), exception_response_data)
 
 
 @pytest.mark.asyncio
@@ -1049,7 +1064,6 @@ async def test_remove_keyring_passphrase_ws(
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
     )
 
-    # remove with wrong passphrase
     payload = create_payload(
         method,
         parameter,
@@ -1060,3 +1074,81 @@ async def test_remove_keyring_passphrase_ws(
     response = await ws.receive()
 
     assert_response(response, response_data_dict)
+
+
+@pytest.mark.parametrize(
+    "method, parameter, response_data_dict",
+    [
+        (
+            "unlock_keyring",
+            {"key": "wrong passphrase"},
+            {"success": False, "error": "bad passphrase"},
+        ),
+        (
+            "unlock_keyring",
+            {"key": True},
+            {"success": False, "error": "missing key"},
+        ),
+        (
+            "unlock_keyring",
+            {},
+            {"success": False, "error": "missing key"},
+        ),
+        (
+            "unlock_keyring",
+            {"key": "this is a passphrase"},
+            {"success": True, "error": None},
+        ),
+    ],
+    ids=["wrong current passphrase", "incorrect type", "missing data", "correct"],
+)
+@pytest.mark.asyncio
+async def test_unlock_keyring(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    method: str,
+    parameter: Dict[str, Any],
+    response_data_dict: Dict[str, Any],
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    keychain.set_master_passphrase(
+        current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
+    )
+
+    payload = create_payload(
+        method,
+        parameter,
+        "service_name",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, response_data_dict)
+
+
+@pytest.mark.asyncio
+async def test_unlock_keyring_exceptions(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], monkeypatch
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    keychain.set_master_passphrase(
+        current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
+    )
+
+    monkeypatch.setattr(Keychain, "master_passphrase_is_valid", raise_)
+    # remove with wrong passphrase
+    payload = create_payload(
+        "unlock_keyring",
+        {"key": "this is a passphrase"},
+        "service_name",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(
+        response,
+        {"success": False, "error": "validation exception"},
+    )
