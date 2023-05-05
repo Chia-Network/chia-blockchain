@@ -65,6 +65,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_proposal_validator,
     uncurry_treasury,
+    singleton_struct_for_id,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -899,10 +900,26 @@ class DAOWallet(WalletProtocol):
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
+        launcher_proof = LineageProof(
+            bytes32(launcher_coin.parent_coin_info),
+            None,
+            uint64(launcher_coin.amount),
+        )
         if tx_record is None or tx_record.spend_bundle is None:
             return None
+        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
 
-        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+        inner_sol = Program.to([0, 0, 0, 0, 0, singleton_struct_for_id(launcher_coin.name())])
+        fullsol = Program.to(
+            [
+                launcher_proof.to_program(),
+                eve_coin.amount,
+                inner_sol,
+            ]
+        )
+        eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
+        eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb, eve_spend_bundle])
 
         treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -926,7 +943,6 @@ class DAOWallet(WalletProtocol):
         await wallet_state_manager.add_pending_transaction(regular_record)
         await wallet_state_manager.add_pending_transaction(treasury_record)
 
-        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
         await wallet_state_manager.add_interested_coin_ids([eve_coin.name(), launcher_coin.name()])
         return full_spend
 
@@ -1067,7 +1083,23 @@ class DAOWallet(WalletProtocol):
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb])
+        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
+        dao_info = DAOInfo(
+            launcher_coin.name(),
+            cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            eve_coin,
+            dao_treasury_puzzle,
+            self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
+        )
+        await self.save_info(dao_info)
+        eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin)
+
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb, eve_spend])
 
         treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -1087,44 +1119,38 @@ class DAOWallet(WalletProtocol):
             name=bytes32(token_bytes()),
             memos=[],
         )
+        # breakpoint()
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
-        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            eve_coin,
-            dao_treasury_puzzle,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-        )
-        await self.save_info(dao_info)
         return full_spend
 
-    async def generate_treasury_eve_spend(self, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def generate_treasury_eve_spend(self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)) -> TransactionRecord:
         """
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
         """
         if self.dao_info.current_treasury_innerpuz is None:
             raise ValueError("generate_treasury_eve_spend called with nil self.dao_info.current_treasury_innerpuz")
-        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
-        full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
+        full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, inner_puz)
+        # full_treasury_puzzle_hash = full_treasury_puzzle.get_tree_hash()
         launcher_id, launcher_proof = self.dao_info.parent_info[0]
         assert launcher_proof
-        eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
-        inner_puz = self.dao_info.current_treasury_innerpuz
+        # eve_coin = Coin(launcher_id, full_treasury_puzzle_hash, uint64(1))
+        # inner_puz = self.dao_info.current_treasury_innerpuz
         assert inner_puz
-        inner_sol = Program.to([0, 0, 0, 0, 0, 0, 0])
+        # proposal_flag  ; if this is set then we are closing a proposal
+        # (@ proposal_announcement (announcement_source delegated_puzzle_hash announcement_args spend_or_update_flag))
+        # proposal_validator_solution
+        # delegated_puzzle_reveal  ; this is the reveal of the puzzle announced by the proposal
+        # delegated_solution  ; this is not secure unless the delegated puzzle secures it
+        # my_singleton_struct
+
+        inner_sol = Program.to([0, 0, 0, 0, 0, singleton_struct_for_id(launcher_id)])
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
@@ -1135,28 +1161,28 @@ class DAOWallet(WalletProtocol):
         eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
         eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
 
-        assert self.dao_info.current_treasury_innerpuz
-        eve_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=self.dao_info.current_treasury_innerpuz.get_tree_hash(),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=eve_spend_bundle,
-            additions=eve_spend_bundle.additions(),
-            removals=eve_spend_bundle.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
-            memos=[],
-        )
-        regular_record = dataclasses.replace(eve_record, spend_bundle=None)
-        await self.wallet_state_manager.add_pending_transaction(regular_record)
-        await self.wallet_state_manager.add_pending_transaction(eve_record)
+        # assert self.dao_info.current_treasury_innerpuz
+        # eve_record = TransactionRecord(
+        #     confirmed_at_height=uint32(0),
+        #     created_at_time=uint64(int(time.time())),
+        #     to_puzzle_hash=self.dao_info.current_treasury_innerpuz.get_tree_hash(),
+        #     amount=uint64(1),
+        #     fee_amount=fee,
+        #     confirmed=False,
+        #     sent=uint32(10),
+        #     spend_bundle=eve_spend_bundle,
+        #     additions=eve_spend_bundle.additions(),
+        #     removals=eve_spend_bundle.removals(),
+        #     wallet_id=self.id(),
+        #     sent_to=[],
+        #     trade_id=None,
+        #     type=uint32(TransactionType.INCOMING_TX.value),
+        #     name=bytes32(token_bytes()),
+        #     memos=[],
+        # )
+        # regular_record = dataclasses.replace(eve_record, spend_bundle=None)
+        # await self.wallet_state_manager.add_pending_transaction(regular_record)
+        # await self.wallet_state_manager.add_pending_transaction(eve_record)
 
         next_proof = LineageProof(
             eve_coin.parent_coin_info,
@@ -1170,7 +1196,7 @@ class DAOWallet(WalletProtocol):
         dao_info = dataclasses.replace(self.dao_info, current_treasury_coin=next_coin)
         await self.save_info(dao_info)
         await self.wallet_state_manager.singleton_store.add_spend(self.id(), eve_coin_spend)
-        return eve_record
+        return eve_spend_bundle
 
     # This has to be in the wallet because we are taking an ID and then searching our stored proposals for that ID
     def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:

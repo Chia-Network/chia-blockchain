@@ -100,20 +100,20 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
     for i in range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    async with wallet_node_0.wallet_state_manager.lock:
-        await dao_wallet_0.generate_treasury_eve_spend()
-    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-    tx_record = tx_queue[0]
-    await full_node_api.process_transaction_records(records=[tx_record])
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-
-    eve_coin = tx_record.removals[0]
-    await time_out_assert(
-        60,
-        dao_wallet_0.is_spend_retrievable,
-        True,
-        eve_coin.name(),
-    )
+    # async with wallet_node_0.wallet_state_manager.lock:
+    #     await dao_wallet_0.generate_treasury_eve_spend()
+    # tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    # tx_record = tx_queue[0]
+    # await full_node_api.process_transaction_records(records=[tx_record])
+    # await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    #
+    # eve_coin = tx_record.removals[0]
+    # await time_out_assert(
+    #     60,
+    #     dao_wallet_0.is_spend_retrievable,
+    #     True,
+    #     eve_coin.name(),
+    # )
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
@@ -256,12 +256,12 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
     for i in range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    async with wallet_node_0.wallet_state_manager.lock:
-        await dao_wallet_0.generate_treasury_eve_spend()
-    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-    tx_record = tx_queue[0]
-    await full_node_api.process_transaction_records(records=[tx_record])
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    # async with wallet_node_0.wallet_state_manager.lock:
+    #     await dao_wallet_0.generate_treasury_eve_spend()
+    # tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    # tx_record = tx_queue[0]
+    # await full_node_api.process_transaction_records(records=[tx_record])
+    # await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
@@ -404,12 +404,12 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     for i in range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    async with wallet_node_0.wallet_state_manager.lock:
-        await dao_wallet_0.generate_treasury_eve_spend()
-    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-    tx_record = tx_queue[0]
-    await full_node_api.process_transaction_records(records=[tx_record])
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    # async with wallet_node_0.wallet_state_manager.lock:
+    #     await dao_wallet_0.generate_treasury_eve_spend()
+    # tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    # tx_record = tx_queue[0]
+    # await full_node_api.process_transaction_records(records=[tx_record])
+    # await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]

@@ -53,6 +53,11 @@ DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
 log = logging.Logger(__name__)
 
 
+def singleton_struct_for_id(id: bytes32) -> Program:
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (id, SINGLETON_LAUNCHER_HASH)))
+    return singleton_struct
+
+
 def create_new_proposal_puzzle(
     proposal_id: bytes32,
     cat_tail_hash: bytes32,

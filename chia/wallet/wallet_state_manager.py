@@ -954,6 +954,7 @@ class WalletStateManager:
 
         # TODO: fetch innerpuzzle from coin_spend
         inner_puzzle = None
+        breakpoint()
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
         dao_wallet = await DAOWallet.create_new_did_wallet_from_coin_spend(
             self,
