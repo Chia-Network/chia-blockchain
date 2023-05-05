@@ -1688,6 +1688,6 @@ async def test_complex_nft_offer(
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )
-    assert await basic_nft_wallet_maker.get_nft_count() == 3
-    assert await basic_nft_wallet_taker.get_nft_count() == 0
+    await time_out_assert(20, get_nft_count, 3, basic_nft_wallet_maker)
+    await time_out_assert(20, get_nft_count, 0, basic_nft_wallet_taker)
     assert await basic_nft_wallet_maker.nft_store.get_nft_by_id(nft_to_offer_asset_id_maker) is not None
