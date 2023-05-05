@@ -228,18 +228,7 @@ class DataLayerWallet:
 
         assert spend.coin.name() == launcher_id, "coin_id should always match the launcher_id here"
 
-        await self.new_launcher_spend(spend, peer, height)
-
-    async def new_launcher_spend(
-        self,
-        launcher_spend: CoinSpend,
-        peer: WSChiaConnection,
-        height: uint32,
-    ) -> None:
-        launcher_id: bytes32 = launcher_spend.coin.name()
-        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
-            launcher_spend.solution.to_program()
-        )
+        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(spend.solution.to_program())
         new_singleton = Coin(launcher_id, full_puzhash, amount)
 
         singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
@@ -274,7 +263,7 @@ class DataLayerWallet:
                 )
             )
 
-        await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin)
+        await self.wallet_state_manager.dl_store.add_launcher(spend.coin)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
 
