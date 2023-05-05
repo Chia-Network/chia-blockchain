@@ -21,7 +21,7 @@ from chia.server.outbound_message import NodeType
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from chia.util.keychain import Keychain, KeyData
+from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
@@ -890,7 +890,7 @@ async def test_keyring_status_ws(
     response = await ws.receive()
 
     expected_response = {
-        "can_save_passphrase": True,
+        "can_save_passphrase": supports_os_passphrase_storage(),
         "can_set_passphrase_hint": True,
         "is_keyring_locked": False,
         "passphrase_hint": "",
