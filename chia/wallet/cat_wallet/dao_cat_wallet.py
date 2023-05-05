@@ -653,7 +653,7 @@ class DAOCATWallet:
         self,
         proposal_id: Optional[bytes32] = None,
         include_free_cats: bool = True,
-    ) -> int:
+    ) -> uint64:
         balance = 0
         for coin in self.dao_cat_info.locked_coins:
             if proposal_id is not None:
@@ -670,7 +670,7 @@ class DAOCATWallet:
             cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
             cat_balance = await cat_wallet.get_spendable_balance()
             balance += cat_balance
-        return balance
+        return uint64(balance)
 
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []

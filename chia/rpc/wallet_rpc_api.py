@@ -2259,25 +2259,19 @@ class WalletRpcApi:
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         # TODO: how do we know all the asset types we have?
-        return {
-
-        }
+        return {}
 
     async def dao_get_proposals(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        return {
-            "success": True
-        }
+        return {"success": True}
 
     async def dao_exit_lockup(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        return {
-            "success": True
-        }
+        return {"success": True}
 
     async def dao_create_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2293,7 +2287,9 @@ class WalletRpcApi:
                     asset_conditions_list.append([bytes32(bytes.from_hex(entry[0])), decode_info_value(entry[1])])
             proposed_puzzle = get_spend_p2_singleton_puzzle(
                 dao_wallet.dao_info.treasury_id,
-                decode_info_value(request["xch_conditions"]),  # this is a string "((51 0xpuzhash 200) (51 0xpuzhash amount))"
+                decode_info_value(
+                    request["xch_conditions"]
+                ),  # this is a string "((51 0xpuzhash 200) (51 0xpuzhash amount))"
                 asset_conditions_list,
             )
         elif request["proposal_type"] == "update":

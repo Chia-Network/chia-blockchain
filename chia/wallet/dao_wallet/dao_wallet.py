@@ -307,8 +307,6 @@ class DAOWallet(WalletProtocol):
         self.wallet_state_manager = wallet_state_manager
         if name is None:
             name = self.generate_wallet_name()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
 
@@ -597,7 +595,7 @@ class DAOWallet(WalletProtocol):
         cat_tail_hash: bytes32 = cat_wallet.cat_info.limitations_program_hash
         return cat_tail_hash
 
-    async def adjust_filter_level(self, new_filter_level: uint64) -> bytes32:
+    async def adjust_filter_level(self, new_filter_level: uint64) -> None:
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             self.dao_info.cat_wallet_id,
@@ -608,9 +606,9 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_treasury_innerpuz,
             self.dao_info.singleton_block_height,
             new_filter_level,
+            self.dao_info.assets,
         )
         await self.save_info(dao_info)
-        return
 
     async def resync_treasury_state(self) -> None:
         parent_coin_id: bytes32 = self.dao_info.treasury_id
@@ -841,9 +839,7 @@ class DAOWallet(WalletProtocol):
 
         if cat_tail_hash is None:
             assert amount_of_cats_to_create is not None
-            different_coins = await standard_wallet.select_coins(
-                uint64(amount_of_cats_to_create), exclude=[origin]
-            )
+            different_coins = await standard_wallet.select_coins(uint64(amount_of_cats_to_create), exclude=[origin])
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
             cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
@@ -1129,7 +1125,9 @@ class DAOWallet(WalletProtocol):
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
         return full_spend
 
-    async def generate_treasury_eve_spend(self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def generate_treasury_eve_spend(
+        self, inner_puz: Program, eve_coin: Coin, fee: uint64 = uint64(0)
+    ) -> SpendBundle:
         """
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
@@ -1251,7 +1249,7 @@ class DAOWallet(WalletProtocol):
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
 
         if vote_amount is None:
-            dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+            dao_cat_wallet = self.wallet_state_manager.get_wallet(
                 id=self.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
             )
             vote_amount = await dao_cat_wallet.get_spendable_balance()
@@ -1439,7 +1437,10 @@ class DAOWallet(WalletProtocol):
         curry_vals = get_curry_vals_from_proposal_puzzle(proposal_info.current_innerpuz)
         if vote_amount is None:
             vote_amount = await dao_cat_wallet.get_votable_balance(proposal_id)
-        dao_cat_spend = await dao_cat_wallet.create_vote_spend(vote_amount, proposal_id, is_yes_vote, curry_vals=curry_vals)
+        assert vote_amount is not None
+        dao_cat_spend = await dao_cat_wallet.create_vote_spend(
+            vote_amount, proposal_id, is_yes_vote, curry_vals=curry_vals
+        )
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -1846,17 +1847,7 @@ class DAOWallet(WalletProtocol):
                 ]
             )
         else:
-            treasury_solution = Program.to(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0
-                ]
-            )
+            treasury_solution = Program.to([0, 0, 0, 0, 0, 0, 0])
 
         assert self.dao_info.current_treasury_coin is not None
         parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)

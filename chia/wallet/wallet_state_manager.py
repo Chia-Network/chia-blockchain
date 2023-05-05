@@ -962,7 +962,7 @@ class WalletStateManager:
             coin_spend.coin.name(),
             inner_puzzle,
             coin_spend,
-            coin_spend.spent_height,  # this is included in CoinState, pass it in from WSM
+            coin_state.spent_height,  # this is included in CoinState, pass it in from WSM
         )
         return None
 
