@@ -1080,8 +1080,9 @@ class DAOWallet(WalletProtocol):
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         # breakpoint()
 
-        assert cat_wallet.cat_info.my_tail
-        cat_tail_hash = cat_wallet.cat_info.my_tail.get_tree_hash()
+        # GW: This was looking for wallet.cat_info.my_tail but this isn't always present for some reason
+        cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+        assert cat_tail_hash
         dao_proposal_puzzle = get_proposal_puzzle(
             proposal_id=launcher_coin.name(),
             cat_tail_hash=cat_tail_hash,
@@ -1261,7 +1262,7 @@ class DAOWallet(WalletProtocol):
         assert dao_cat_wallet is not None
         assert proposal_info.current_innerpuz is not None
         curry_vals = get_curry_vals_from_proposal_puzzle(proposal_info.current_innerpuz)
-        dao_cat_spend = await dao_cat_wallet.create_vote_spend(vote_amount, proposal_id, True, curry_vals=curry_vals)
+        dao_cat_spend = await dao_cat_wallet.create_vote_spend(vote_amount, proposal_id, is_yes_vote, curry_vals=curry_vals)
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -1295,7 +1296,7 @@ class DAOWallet(WalletProtocol):
         inner_sol = Program.to(
             [
                 vote_amounts,
-                1,
+                1 if is_yes_vote else 0,
                 vote_coins,
                 previous_votes,
                 lockup_inner_puzhashes,
