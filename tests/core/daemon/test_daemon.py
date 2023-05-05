@@ -823,3 +823,240 @@ async def test_unexpected_json(
     message = json.loads(response.data.strip())
     assert message["data"]["success"] is False
     assert message["data"]["error"].startswith("'command'")
+
+
+@pytest.mark.asyncio
+async def test_unknown_command(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    unknown = "unknown_command"
+    payload = create_payload(unknown, {}, "service_name", "daemon")
+
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, {"success": False, "error": f"unknown_command {unknown}"})
+
+
+@pytest.mark.asyncio
+async def test_commands_with_no_data(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    commands_with_data = [
+        "start_service",
+        "stop_service",
+        "start_plotting",
+        "stop_plotting",
+        "is_running",
+        "register_service",
+    ]
+
+    for command in commands_with_data:
+        payload = create_payload(command, {}, "service_name", "daemon")
+
+        await ws.send_str(payload)
+        response = await ws.receive()
+
+        assert_response(response, {"success": False, "error": f'{command} requires "data"'})
+
+
+@pytest.mark.asyncio
+async def test_running_services_ws(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    payload = create_payload("running_services", {}, "service_name", "daemon")
+
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, {**success_response_data, "running_services": []})
+
+
+@pytest.mark.asyncio
+async def test_keyring_status_ws(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    payload = create_payload("keyring_status", {}, "service_name", "daemon")
+
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    expected_response = {
+        "can_save_passphrase": True,
+        "can_set_passphrase_hint": True,
+        "is_keyring_locked": False,
+        "passphrase_hint": "",
+        "passphrase_requirements": {"is_optional": True, "min_length": 8},
+        "success": True,
+        "user_passphrase_is_set": False,
+    }
+    # check for error response
+    assert_response(response, expected_response)
+
+
+@pytest.mark.parametrize(
+    "method, parameter, response_data_dict",
+    [
+        (
+            "set_keyring_passphrase",
+            {
+                "passphrase_hint": "this is a hint",
+                "save_passphrase": False,
+            },
+            {"success": False, "error": "missing new_passphrase"},
+        ),
+        (
+            "set_keyring_passphrase",
+            {
+                "passphrase_hint": "this is a hint",
+                "save_passphrase": False,
+                "new_passphrase": True,
+            },
+            {"success": False, "error": "missing new_passphrase"},
+        ),
+        (
+            "set_keyring_passphrase",
+            {
+                "passphrase_hint": "this is a hint",
+                "new_passphrase": "this is a passphrase",
+            },
+            {"success": True, "error": None},
+        ),
+    ],
+    ids=["no passphrase", "incorrect type", "correct"],
+)
+@pytest.mark.asyncio
+async def test_set_keyring_passphrase_ws(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    method: str,
+    parameter: Dict[str, Any],
+    response_data_dict: Dict[str, Any],
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    payload = create_payload(method, parameter, "service_name", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, response_data_dict)
+
+
+@pytest.mark.parametrize(
+    "method, parameter, response_data_dict",
+    [
+        (
+            "set_keyring_passphrase",
+            {
+                "save_passphrase": False,
+                "new_passphrase": "another new passphrase",
+            },
+            {"success": False, "error": "missing current_passphrase"},
+        ),
+        (
+            "set_keyring_passphrase",
+            {
+                "save_passphrase": False,
+                "current_passphrase": "none",
+                "new_passphrase": "another new passphrase",
+            },
+            {"success": False, "error": "current passphrase is invalid"},
+        ),
+        (
+            "set_keyring_passphrase",
+            {
+                "save_passphrase": False,
+                "current_passphrase": False,
+                "new_passphrase": "another new passphrase",
+            },
+            {"success": False, "error": "missing current_passphrase"},
+        ),
+        (
+            "set_keyring_passphrase",
+            {
+                "save_passphrase": False,
+                "current_passphrase": "this is a passphrase",
+                "new_passphrase": "another new passphrase",
+            },
+            {"success": True, "error": None},
+        ),
+    ],
+    ids=["no current passphrase", "incorrect current passphrase", "incorrect type", "correct"],
+)
+@pytest.mark.asyncio
+async def test_set_keyring_passphrase_existing_ws(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    method: str,
+    parameter: Dict[str, Any],
+    response_data_dict: Dict[str, Any],
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    keychain.set_master_passphrase(
+        current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
+    )
+
+    payload = create_payload(method, parameter, "service_name", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, response_data_dict)
+
+
+@pytest.mark.parametrize(
+    "method, parameter, response_data_dict",
+    [
+        (
+            "remove_keyring_passphrase",
+            {"current_passphrase": "wrong passphrase"},
+            {"success": False, "error": "current passphrase is invalid"},
+        ),
+        (
+            "remove_keyring_passphrase",
+            {"current_passphrase": True},
+            {"success": False, "error": "missing current_passphrase"},
+        ),
+        (
+            "remove_keyring_passphrase",
+            {},
+            {"success": False, "error": "missing current_passphrase"},
+        ),
+        (
+            "remove_keyring_passphrase",
+            {"current_passphrase": "this is a passphrase"},
+            {"success": True, "error": None},
+        ),
+    ],
+    ids=["wrong current passphrase", "incorrect type", "missing current passphrase", "correct"],
+)
+@pytest.mark.asyncio
+async def test_remove_keyring_passphrase_ws(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    method: str,
+    parameter: Dict[str, Any],
+    response_data_dict: Dict[str, Any],
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    keychain.set_master_passphrase(
+        current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
+    )
+
+    # remove with wrong passphrase
+    payload = create_payload(
+        method,
+        parameter,
+        "service_name",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, response_data_dict)
