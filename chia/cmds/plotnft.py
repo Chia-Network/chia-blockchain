@@ -20,12 +20,12 @@ def validate_fee(ctx: click.Context, param: click.Parameter, value: str) -> str:
     return value
 
 
-@click.group("plotnft", short_help="Manage your plot NFTs")
+@click.group("plotnft", help="Manage your plot NFTs")
 def plotnft_cmd() -> None:
     pass
 
 
-@plotnft_cmd.command("show", short_help="Show plotnft information")
+@plotnft_cmd.command("show", help="Show plotnft information")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -43,9 +43,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"id": id}, show))
 
 
-@plotnft_cmd.command(
-    "get_login_link", short_help="Create a login link for a pool. To get the launcher id, use plotnft show."
-)
+@plotnft_cmd.command("get_login_link", help="Create a login link for a pool. To get the launcher id, use plotnft show.")
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
 def get_login_link_cmd(launcher_id: str) -> None:
     import asyncio
@@ -55,7 +53,7 @@ def get_login_link_cmd(launcher_id: str) -> None:
     asyncio.run(get_login_link(launcher_id))
 
 
-@plotnft_cmd.command("create", short_help="Create a plot NFT")
+@plotnft_cmd.command("create", help="Create a plot NFT")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=False)
@@ -105,7 +103,7 @@ def create_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create))
 
 
-@plotnft_cmd.command("join", short_help="Join a plot NFT to a Pool")
+@plotnft_cmd.command("join", help="Join a plot NFT to a Pool")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
@@ -136,7 +134,7 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, join_pool))
 
 
-@plotnft_cmd.command("leave", short_help="Leave a pool and return to self-farming")
+@plotnft_cmd.command("leave", help="Leave a pool and return to self-farming")
 @click.option("-y", "--yes", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
@@ -166,7 +164,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, self_pool))
 
 
-@plotnft_cmd.command("inspect", short_help="Get Detailed plotnft information as JSON")
+@plotnft_cmd.command("inspect", help="Get Detailed plotnft information as JSON")
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
@@ -185,7 +183,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, inspect_cmd))
 
 
-@plotnft_cmd.command("claim", short_help="Claim rewards from a plot NFT")
+@plotnft_cmd.command("claim", help="Claim rewards from a plot NFT")
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
@@ -216,7 +214,7 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
 
 @plotnft_cmd.command(
     "change_payout_instructions",
-    short_help="Change the payout instructions for a pool. To get the launcher id, use plotnft show.",
+    help="Change the payout instructions for a pool. To get the launcher id, use plotnft show.",
 )
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
 @click.option("-a", "--address", help="New address for payout instructions", type=str, required=True)

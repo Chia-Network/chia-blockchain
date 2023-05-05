@@ -22,6 +22,8 @@ repos:
     rev: v4.3.0
     hooks:
     -   id: check-yaml
+    -   id: mixed-line-ending
+        args: ["--fix=lf"]
     -   id: end-of-file-fixer
         exclude: ".*?(.hex|.clsp|.clvm|.clib)"
     -   id: trailing-whitespace

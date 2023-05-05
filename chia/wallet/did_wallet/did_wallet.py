@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -29,6 +29,7 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -52,6 +53,11 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 class DIDWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("DIDWallet", None)
+
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -580,13 +586,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_inner_puzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ],
+            primaries=[Payment(new_inner_puzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             coin_announcements={coin.name()},
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -696,13 +696,7 @@ class DIDWallet:
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_did_puzhash,
-                    "amount": uint64(coin.amount),
-                    "memos": [new_puzhash],
-                }
-            ],
+            primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             coin_announcements={coin.name()},
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -785,13 +779,7 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ],
+            primaries=[Payment(new_innerpuzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
         )
@@ -902,12 +890,8 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                },
-                {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
+                Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
+                Payment(innermessage, uint64(0)),
             ],
         )
         innersol = Program.to([1, p2_solution])
@@ -1325,13 +1309,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ]
+            primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])]
         )
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
@@ -1482,9 +1460,3 @@ class DIDWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = DIDWallet()

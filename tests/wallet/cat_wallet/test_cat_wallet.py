@@ -204,7 +204,7 @@ class TestCATWallet:
 
         await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
+        assert len(memos[tx_id]) == 2  # One for tx, one for change
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
         for i in range(1, num_blocks):
@@ -222,7 +222,7 @@ class TestCATWallet:
         coin = coins.pop()
         tx_id = coin.name().hex()
         memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
+        assert len(memos[tx_id]) == 2
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
@@ -605,7 +605,7 @@ class TestCATWallet:
         for tx in txs:
             if tx.amount == 30:
                 memos = tx.get_memos()
-                assert len(memos) == 1
+                assert len(memos) == 2  # One for tx, one for change
                 assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
                 assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
