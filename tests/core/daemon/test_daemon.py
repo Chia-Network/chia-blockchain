@@ -824,6 +824,57 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
     assert message["data"]["error"].startswith("Expecting property name")
 
 
+@pytest.mark.parametrize(
+    "method, parameter, response_data_dict",
+    [
+        (
+            "register_service",
+            {
+                "fred": "barney",
+            },
+            {"success": False},
+        ),
+        (
+            "register_service",
+            {
+                "service": "chia_plotter",
+            },
+            {"success": True, "service": "chia_plotter", "queue": []},
+        ),
+        ("unknown_command", {}, {"success": False, "error": "unknown_command unknown_command"}),
+        ("running_services", {}, {"success": True, "running_services": []}),
+        (
+            "keyring_status",
+            {},
+            {
+                "can_save_passphrase": supports_os_passphrase_storage(),
+                "can_set_passphrase_hint": True,
+                "is_keyring_locked": False,
+                "passphrase_hint": "",
+                "passphrase_requirements": {"is_optional": True, "min_length": 8},
+                "success": True,
+                "user_passphrase_is_set": False,
+            },
+        ),
+    ],
+    ids=["no service name", "chia_plotter", "unknown command", "running_services", "keyring_status"],
+)
+@pytest.mark.asyncio
+async def test_misc_daemon_ws(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    method: str,
+    parameter: Dict[str, Any],
+    response_data_dict: Dict[str, Any],
+) -> None:
+    ws, _ = daemon_connection_and_temp_keychain
+
+    payload = create_payload(method, parameter, "service_name", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, response_data_dict)
+
+
 @pytest.mark.asyncio
 async def test_unexpected_json(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
@@ -838,21 +889,6 @@ async def test_unexpected_json(
     message = json.loads(response.data.strip())
     assert message["data"]["success"] is False
     assert message["data"]["error"].startswith("'command'")
-
-
-@pytest.mark.asyncio
-async def test_unknown_command(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
-) -> None:
-    ws, _ = daemon_connection_and_temp_keychain
-
-    unknown = "unknown_command"
-    payload = create_payload(unknown, {}, "service_name", "daemon")
-
-    await ws.send_str(payload)
-    response = await ws.receive()
-
-    assert_response(response, {"success": False, "error": f"unknown_command {unknown}"})
 
 
 @pytest.mark.asyncio
@@ -877,44 +913,6 @@ async def test_commands_with_no_data(
         response = await ws.receive()
 
         assert_response(response, {"success": False, "error": f'{command} requires "data"'})
-
-
-@pytest.mark.asyncio
-async def test_running_services_ws(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
-) -> None:
-    ws, _ = daemon_connection_and_temp_keychain
-
-    payload = create_payload("running_services", {}, "service_name", "daemon")
-
-    await ws.send_str(payload)
-    response = await ws.receive()
-
-    assert_response(response, {**success_response_data, "running_services": []})
-
-
-@pytest.mark.asyncio
-async def test_keyring_status_ws(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
-) -> None:
-    ws, _ = daemon_connection_and_temp_keychain
-
-    payload = create_payload("keyring_status", {}, "service_name", "daemon")
-
-    await ws.send_str(payload)
-    response = await ws.receive()
-
-    expected_response = {
-        "can_save_passphrase": supports_os_passphrase_storage(),
-        "can_set_passphrase_hint": True,
-        "is_keyring_locked": False,
-        "passphrase_hint": "",
-        "passphrase_requirements": {"is_optional": True, "min_length": 8},
-        "success": True,
-        "user_passphrase_is_set": False,
-    }
-    # check for error response
-    assert_response(response, expected_response)
 
 
 @pytest.mark.parametrize(
