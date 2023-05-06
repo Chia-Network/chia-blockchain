@@ -30,7 +30,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
@@ -82,10 +82,9 @@ from chia.wallet.wallet_coin_store import HashFilter
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
-
-# Timeout for response from wallet/full node for sending a transaction
 from chia.wallet.wallet_transaction_store import TypeFilter
 
+# Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
 MAX_DERIVATION_INDEX_DELTA = 1000
 MAX_NFT_CHUNK_SIZE = 25
@@ -876,12 +875,7 @@ class WalletRpcApi:
             to_puzzle_hash = decode_puzzle_hash(to_address)
         type_filter = None
         if "type_filter" in request:
-            include = request["type_filter"].get("include", True)
-            types = [uint8(t) for t in request["type_filter"].get("types", [])]
-            if include:
-                type_filter = TypeFilter.includes(types)
-            else:
-                type_filter = TypeFilter.excludes(types)
+            type_filter = TypeFilter.from_json_dict(request["type_filter"])
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
             wallet_id,

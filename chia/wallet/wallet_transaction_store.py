@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
+from enum import IntEnum
 from typing import Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -18,19 +19,24 @@ from chia.wallet.util.transaction_type import TransactionType
 log = logging.getLogger(__name__)
 
 
+class FilterMode(IntEnum):
+    include = 1
+    exclude = 2
+
+
 @streamable
 @dataclasses.dataclass(frozen=True)
 class TypeFilter(Streamable):
     values: List[uint8]
-    is_include: bool
+    mode: uint8  # FilterMode
 
     @classmethod
-    def includes(cls, values: List[uint8]):
-        return cls(values, True)
+    def include(cls, values: List[TransactionType]):
+        return cls([uint8(t.value) for t in values], uint8(FilterMode.include))
 
     @classmethod
-    def excludes(cls, values: List[uint8]):
-        return cls(values, False)
+    def exclude(cls, values: List[TransactionType]):
+        return cls([uint8(t.value) for t in values], uint8(FilterMode.exclude))
 
 
 def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
@@ -305,7 +311,7 @@ class WalletTransactionStore:
             type_filter_str = ""
         else:
             type_filter_str = (
-                f"AND type {'' if type_filter.is_include else 'NOT'} "
+                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
                 f"IN ({','.join([str(x) for x in type_filter.values])})"
             )
 

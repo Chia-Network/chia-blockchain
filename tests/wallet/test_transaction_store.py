@@ -486,11 +486,26 @@ async def test_get_transactions_between_confirmed() -> None:
         # test type filter (coinbase reward)
         await store.add_transaction_record(tr6)
         assert await store.get_transactions_between(
-            1, 0, 1, reverse=True, type_filter=TypeFilter.includes([uint8(TransactionType.COINBASE_REWARD.value)])
+            1, 0, 1, reverse=True, type_filter=TypeFilter.include([TransactionType.COINBASE_REWARD])
         ) == [tr6]
         assert await store.get_transactions_between(
-            1, 0, 1, reverse=True, type_filter=TypeFilter.excludes([uint8(TransactionType.COINBASE_REWARD.value)])
+            1, 0, 1, reverse=True, type_filter=TypeFilter.exclude([TransactionType.COINBASE_REWARD])
         ) == [tr5]
+        assert await store.get_transactions_between(1, 0, 100, reverse=True, type_filter=TypeFilter.include([])) == [
+            tr6,
+            tr5,
+            tr4,
+            tr3,
+            tr2,
+            tr1,
+        ]
+        assert await store.get_transactions_between(
+            1,
+            0,
+            100,
+            reverse=True,
+            type_filter=TypeFilter.include([TransactionType.COINBASE_REWARD, TransactionType.OUTGOING_TX]),
+        ) == [tr6, tr5, tr4, tr3, tr2, tr1]
 
 
 @pytest.mark.asyncio
