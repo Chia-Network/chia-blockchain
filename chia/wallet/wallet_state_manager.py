@@ -916,7 +916,7 @@ class WalletStateManager:
                 uncurried_nft.singleton_launcher_id.hex(),
             )
             return wallet_identifier
-        for nft_wallet in self.wallets.values():
+        for nft_wallet in self.wallets.copy().values():
             if not isinstance(nft_wallet, NFTWallet):
                 continue
             if nft_wallet.nft_wallet_info.did_id == old_did_id and old_derivation_record is not None:
