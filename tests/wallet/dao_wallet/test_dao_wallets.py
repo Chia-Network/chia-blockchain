@@ -2,11 +2,12 @@ from __future__ import annotations
 
 # mypy: ignore-errors
 import asyncio
-from typing import List
+from typing import Any, List
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -738,3 +739,99 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_0, 2])
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_1, 2])
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_2, 2])
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_dao_rpc_create_and_join(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 3
+    full_nodes, wallets, _ = two_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+    ph = await wallet_0.get_new_puzzlehash()
+    _ = await wallet_1.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+
+    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
+    api_0 = WalletRpcApi(wallet_node_0)
+    api_1 = WalletRpcApi(wallet_node_1)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    cat_amt = 300000
+    fee = 10000
+    dao_rules = DAORules(
+        proposal_timelock=uint64(10),
+        soft_close_length=uint64(5),
+        attendance_required=uint64(1000),  # 10%
+        pass_percentage=uint64(5100),  # 51%
+        self_destruct_length=uint64(20),
+        oracle_spend_delay=uint64(10),
+    )
+
+    dao_wallet_0 = await api_0.create_new_wallet(
+        dict(
+            wallet_type="dao_wallet",
+            name="DAO WALLET 1",
+            mode="new",
+            dao_rules=dao_rules,
+            amount_of_cats=cat_amt,
+            filter_amount=1,
+            fee=fee,
+        )
+    )
+    assert isinstance(dao_wallet_0, dict)
+    assert dao_wallet_0.get("success")
+    dao_wallet_0_id = dao_wallet_0["wallet_id"]
+    treasury_id = bytes32(dao_wallet_0["treasury_id"])
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(dao_wallet_0_id)
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
+    await time_out_assert(30, wallet_0.get_confirmed_balance, funds - 1 - cat_amt - fee)
+
+    dao_wallet_1 = await api_1.create_new_wallet(
+        dict(
+            wallet_type="dao_wallet",
+            name="DAO WALLET 2",
+            mode="existing",
+            treasury_id=treasury_id.hex(),
+            filter_amount=1,
+        )
+    )
+    assert isinstance(dao_wallet_1, dict)
+    assert dao_wallet_1.get("success")
