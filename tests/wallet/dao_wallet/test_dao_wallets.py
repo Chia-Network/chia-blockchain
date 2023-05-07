@@ -822,7 +822,8 @@ async def test_dao_rpc_create_and_join(self_hostname: str, two_wallet_nodes: Any
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
-    await time_out_assert(30, wallet_0.get_confirmed_balance, funds - 1 - cat_amt - fee)
+    expected_xch = funds - 1 - cat_amt - fee
+    await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch)
 
     dao_wallet_1 = await api_1.create_new_wallet(
         dict(
@@ -835,3 +836,62 @@ async def test_dao_rpc_create_and_join(self_hostname: str, two_wallet_nodes: Any
     )
     assert isinstance(dao_wallet_1, dict)
     assert dao_wallet_1.get("success")
+    dao_wallet_1_id = dao_wallet_1["wallet_id"]
+
+    # Create a cat wallet and add funds to treasury
+    new_cat_amt = 1000000000000
+    cat_wallet_0 = await api_0.create_new_wallet(
+        dict(
+            wallet_type="cat_wallet",
+            name="CAT WALLET 1",
+            mode="new",
+            amount=new_cat_amt,
+        )
+    )
+    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    await full_node_api.process_transaction_records(records=[tx for tx in tx_queue])
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    cat_wallet_0_id = cat_wallet_0["wallet_id"]
+    cat_id = bytes32.from_hexstr(cat_wallet_0["asset_id"])
+
+    while True:
+        bal = await api_0.get_wallet_balance({"wallet_id": cat_wallet_0_id})
+        if bal["wallet_balance"]["confirmed_wallet_balance"] == new_cat_amt:
+            break
+        await asyncio.sleep(1)
+
+    cat_funding_amt = 500000
+    await api_0.dao_add_funds_to_treasury(
+        dict(
+            wallet_id=dao_wallet_0_id,
+            amount=cat_funding_amt,
+            funding_wallet_id=cat_wallet_0_id,
+        )
+    )
+
+    xch_funding_amt = 200000
+    await api_0.dao_add_funds_to_treasury(
+        dict(
+            wallet_id=dao_wallet_0_id,
+            amount=xch_funding_amt,
+            funding_wallet_id=1,
+        )
+    )
+    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    await full_node_api.process_transaction_records(records=[tx for tx in tx_queue])
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    expected_xch -= xch_funding_amt + new_cat_amt
+    await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch)
+    while True:
+        bal = await api_0.get_wallet_balance({"wallet_id": cat_wallet_0_id})
+        if bal["wallet_balance"]["confirmed_wallet_balance"] == new_cat_amt - cat_funding_amt:
+            break
+        await asyncio.sleep(1)
+
+    balances = await api_1.dao_get_treasury_balance({"wallet_id": dao_wallet_1_id})
+    assert balances["balances"][None] == xch_funding_amt
+    assert balances["balances"][cat_id] == cat_funding_amt

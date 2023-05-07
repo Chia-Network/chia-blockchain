@@ -187,6 +187,7 @@ class WalletRpcApi:
             "/dao_close_proposal": self.dao_close_proposal,
             "/dao_exit_lockup": self.dao_exit_lockup,
             "/dao_adjust_filter_level": self.dao_adjust_filter_level,
+            "/dao_add_funds_to_treasury": self.dao_add_funds_to_treasury,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_count_nfts": self.nft_count_nfts,
@@ -701,6 +702,9 @@ class WalletRpcApi:
             else:  # undefined did_type
                 pass
         elif request["wallet_type"] == "dao_wallet":
+            name = None
+            if request["name"]:
+                name = request["name"]
             if request["mode"] == "new":
                 if request["dao_rules"]:
                     dao_rules = request["dao_rules"]
@@ -714,18 +718,18 @@ class WalletRpcApi:
                         uint64(request["amount_of_cats"]),
                         dao_rules,
                         uint64(request["filter_amount"]),
-                        None,
+                        name,
                         uint64(request.get("fee", 0)),
                     )
             elif request["mode"] == "existing":
-                async with self.service.wallet_state_manager.lock:
-                    dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-                        wallet_state_manager,
-                        main_wallet,
-                        bytes32.from_hexstr(request["treasury_id"]),
-                        uint64(request["filter_amount"]),
-                        None,
-                    )
+                # async with self.service.wallet_state_manager.lock:
+                dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+                    wallet_state_manager,
+                    main_wallet,
+                    bytes32.from_hexstr(request["treasury_id"]),
+                    uint64(request["filter_amount"]),
+                    name,
+                )
             return {
                 "success": True,
                 "type": dao_wallet.type(),
@@ -2263,12 +2267,28 @@ class WalletRpcApi:
             "dao_info": dao_wallet.dao_info,
         }
 
+    async def dao_add_funds_to_treasury(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        funding_wallet_id = uint32(request["funding_wallet_id"])
+        wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
+        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:
+            raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
+        funding_tx = await dao_wallet.create_add_money_to_treasury_spend(
+            amount=uint64(request.get("amount")), fee=uint64(request.get("fee", 0)), funding_wallet_id=funding_wallet_id
+        )
+        return {"success": True, "tx_id": funding_tx.name}
+
     async def dao_get_treasury_balance(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        # TODO: how do we know all the asset types we have?
-        return {}
+        asset_list = dao_wallet.dao_info.assets
+        balances = {}
+        for asset_id in asset_list:
+            balance = await dao_wallet.get_balance_by_asset_type(asset_id=asset_id)
+            balances[asset_id] = balance
+        return {"success": True, "balances": balances}
 
     async def dao_get_proposals(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
