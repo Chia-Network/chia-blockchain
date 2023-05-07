@@ -395,8 +395,9 @@ class WalletNode:
         self.wallet_state_manager.state_changed("sync_changed")
 
         # Populate the balance caches for all wallets
-        for wallet_id in self.wallet_state_manager.wallets:
-            await self.get_balance(wallet_id)
+        async with self.wallet_state_manager.lock:
+            for wallet_id in self.wallet_state_manager.wallets:
+                await self._update_balance_cache(wallet_id)
 
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
@@ -1608,29 +1609,33 @@ class WalletNode:
         for peer in full_nodes:
             await peer.send_message(msg)
 
+    async def _update_balance_cache(self, wallet_id: uint32) -> None:
+        assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"
+        wallet = self.wallet_state_manager.wallets[wallet_id]
+        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        balance = await wallet.get_confirmed_balance(unspent_records)
+        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+        spendable_balance = await wallet.get_spendable_balance(unspent_records)
+        pending_change = await wallet.get_pending_change_balance()
+        max_send_amount = await wallet.get_max_send_amount(unspent_records)
+
+        unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
+            wallet_id
+        )
+        self._balance_cache[wallet_id] = Balance(
+            confirmed_wallet_balance=balance,
+            unconfirmed_wallet_balance=pending_balance,
+            spendable_balance=spendable_balance,
+            pending_change=pending_change,
+            max_send_amount=max_send_amount,
+            unspent_coin_count=uint32(len(unspent_records)),
+            pending_coin_removal_count=uint32(len(unconfirmed_removals)),
+        )
+
     async def get_balance(self, wallet_id: uint32) -> Balance:
         self.log.debug(f"get_balance - wallet_id: {wallet_id}")
         if not self.wallet_state_manager.sync_mode:
             self.log.debug(f"get_balance - Updating cache for {wallet_id}")
             async with self.wallet_state_manager.lock:
-                wallet = self.wallet_state_manager.wallets[wallet_id]
-                unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
-                balance = await wallet.get_confirmed_balance(unspent_records)
-                pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
-                spendable_balance = await wallet.get_spendable_balance(unspent_records)
-                pending_change = await wallet.get_pending_change_balance()
-                max_send_amount = await wallet.get_max_send_amount(unspent_records)
-
-                unconfirmed_removals: Dict[
-                    bytes32, Coin
-                ] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(wallet_id)
-                self._balance_cache[wallet_id] = Balance(
-                    confirmed_wallet_balance=balance,
-                    unconfirmed_wallet_balance=pending_balance,
-                    spendable_balance=spendable_balance,
-                    pending_change=pending_change,
-                    max_send_amount=max_send_amount,
-                    unspent_coin_count=uint32(len(unspent_records)),
-                    pending_coin_removal_count=uint32(len(unconfirmed_removals)),
-                )
+                await self._update_balance_cache(wallet_id)
         return self._balance_cache.get(wallet_id, Balance())
