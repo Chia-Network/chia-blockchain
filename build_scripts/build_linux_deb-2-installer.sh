@@ -56,8 +56,10 @@ CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
+cp -r dist/library "dist/$CLI_DEB_BASE/opt/chia"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
+
 ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
 dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
