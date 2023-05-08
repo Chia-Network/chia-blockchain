@@ -77,7 +77,7 @@ async def async_main(service_config: Dict[str, Any]) -> int:
         # testnet10 is 1031258 blocks behind mainnet
         testnet10_offset = 1031258
         if "SOFT_FORK2_HEIGHT" not in overrides:
-            overrides["SOFT_FORK2_HEIGHT"] = 4000000 - testnet10_offset
+            overrides["SOFT_FORK2_HEIGHT"] = 3886635 - testnet10_offset
         if "SOFT_FORK_HEIGHT" not in overrides:
             overrides["SOFT_FORK_HEIGHT"] = 3630000 - testnet10_offset
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)

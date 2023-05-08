@@ -72,7 +72,7 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
       SOFT_FORK_HEIGHT: 2598742
-      SOFT_FORK2_HEIGHT: 2968742
+      SOFT_FORK2_HEIGHT: 2855377
   config:
     mainnet:
       address_prefix: "xch"
