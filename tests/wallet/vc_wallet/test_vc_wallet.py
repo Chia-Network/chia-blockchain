@@ -110,3 +110,6 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     vc_record_revoked: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_revoked is None
+    assert (
+        len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
+    )
