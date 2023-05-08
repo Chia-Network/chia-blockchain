@@ -17,6 +17,7 @@ cd ../build_scripts
 for i in "${licenses[@]}"; do
   dirname="dist/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
   mkdir -p "$dirname"
+  echo "$dirname"
   cp "$i" "$dirname"
 done
 
