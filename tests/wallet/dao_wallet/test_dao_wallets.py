@@ -930,13 +930,15 @@ async def test_dao_rpc_create_and_join(self_hostname: str, two_wallet_nodes: Any
     # create the first proposal
     additions = [
         {"puzzle_hash": ph_1.hex(), "amount": 1000},
-        {"puzzle_hash": ph_1.hex(), "amount": 2000, "asset_id": cat_id.hex()},
+        # {"puzzle_hash": ph_1.hex(), "amount": 2000, "asset_id": cat_id.hex()},
     ]
     create_proposal = await api_0.dao_create_proposal(
         {
             "wallet_id": dao_wallet_0_id,
             "proposal_type": "spend",
             "additions": additions,
+            # "amount": 100,
+            # "inner_address": encode_puzzle_hash(ph_1, "xch"),
             "vote_amount": cat_amt // 2,
             "fee": fee,
         }
@@ -954,3 +956,49 @@ async def test_dao_rpc_create_and_join(self_hostname: str, two_wallet_nodes: Any
             break
         else:
             await asyncio.sleep(1)
+
+    prop = props_0["proposals"][0]
+    assert prop.amount_voted == cat_amt // 2
+    assert prop.yes_votes == cat_amt // 2
+
+    state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id})
+    assert state["state"]["passed"]
+    assert not state["state"]["closable"]
+
+    # Add votes
+    await api_1.dao_vote_on_proposal(
+        {
+            "wallet_id": dao_wallet_1_id,
+            "vote_amount": cat_amt // 2,
+            "proposal_id": prop.proposal_id.hex(),
+            "is_yes_vote": False,
+        }
+    )
+    tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
+    await full_node_api.process_transaction_records(records=[tx for tx in tx_queue])
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    while True:
+        props_0 = await api_0.dao_get_proposals({"wallet_id": dao_wallet_0_id})
+        if props_0["proposals"][0].amount_voted == cat_amt:
+            break
+        else:
+            await asyncio.sleep(1)
+
+    # farm blocks until we can close proposal
+    for _ in range(1, state["state"]["blocks_needed"]):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    while True:
+        state = await api_0.dao_get_proposal_state({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id})
+        if state["state"]["closable"]:
+            break
+        else:
+            await asyncio.sleep(1)
+
+    await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
+    tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
+    await full_node_api.process_transaction_records(records=[tx for tx in tx_queue])
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))

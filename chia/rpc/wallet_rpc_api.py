@@ -189,6 +189,7 @@ class WalletRpcApi:
             "/dao_adjust_filter_level": self.dao_adjust_filter_level,
             "/dao_add_funds_to_treasury": self.dao_add_funds_to_treasury,
             "/dao_send_to_lockup": self.dao_send_to_lockup,
+            "/dao_get_proposal_state": self.dao_get_proposal_state,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_count_nfts": self.nft_count_nfts,
@@ -2314,6 +2315,13 @@ class WalletRpcApi:
         proposal_list = dao_wallet.dao_info.proposals_list
         return {"success": True, "proposals": proposal_list}
 
+    async def dao_get_proposal_state(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        state = await dao_wallet.get_proposal_state(request["proposal_id"])
+        return {"success": True, "state": state}
+
     async def dao_exit_lockup(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
@@ -2398,7 +2406,7 @@ class WalletRpcApi:
         if "fee" in request:
             fee = uint64(request["fee"])
         tx = await dao_wallet.generate_proposal_vote_spend(
-            bytes32(bytes.from_hex(request["proposal_id"])),
+            bytes32.from_hexstr(request["proposal_id"]),
             vote_amount,
             request["is_yes_vote"],  # bool
             fee,
@@ -2418,12 +2426,12 @@ class WalletRpcApi:
             fee = uint64(request["fee"])
 
         tx = await dao_wallet.create_proposal_close_spend(
-            bytes32(bytes.from_hex(request["proposal_id"])),
+            bytes32.from_hexstr(request["proposal_id"]),
             fee,
             push=True,
         )
         assert tx is not None
-        return {"success": True}
+        return {"success": True, "tx_id": tx.name}
 
     ##########################################################################################
     # NFT Wallet

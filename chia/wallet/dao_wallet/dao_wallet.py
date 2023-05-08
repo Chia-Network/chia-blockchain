@@ -1925,12 +1925,12 @@ class DAOWallet(WalletProtocol):
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
-        state = await wallet_node.get_coin_state(cat_coin.parent_coin_info)
+        state = await wallet_node.get_coin_state([cat_coin.parent_coin_info], peer)
         assert state is not None
         # CoinState contains Coin, spent_height, and created_height,
-        parent_spend = await wallet_node.fetch_puzzle_solution(state.spent_height, state.coin, peer)
+        parent_spend = await wallet_node.fetch_puzzle_solution(state[0].spent_height, state[0].coin, peer)
         parent_inner_puz = get_innerpuzzle_from_cat_puzzle(parent_spend.puzzle_reveal.to_program())
-        return LineageProof(state.coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state.coin.amount)
+        return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
     async def _create_treasury_fund_transaction(
         self, funding_wallet: WalletProtocol, amount: uint64, fee: uint64 = uint64(0)
