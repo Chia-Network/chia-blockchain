@@ -1665,7 +1665,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
                 cat_puzzle,
                 Program.to(
                     [
-                        Program.to([[51, our_ph, tx_amount], [51, None, -113, None, None]]),
+                        Program.to([[51, our_ph, tx_amount, [our_ph]], [51, None, -113, None, None]]),
                         None,
                         cat_coin.name(),
                         coin_as_list(cat_coin),
