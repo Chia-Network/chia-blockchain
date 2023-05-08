@@ -49,6 +49,7 @@ echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
 
+pwd
 # Builds CLI only .deb
 # need j2 for templating the control file
 pip install j2cli

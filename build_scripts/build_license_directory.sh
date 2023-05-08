@@ -13,7 +13,7 @@ IFS=$'\n' read -rd '' -a licenses <<< "$license_list"
 # print the contents of the array
 #printf '%s\n' "${licenses[@]}"
 
-cd ..
+cd ../build_scripts
 for i in "${licenses[@]}"; do
   dirname="dist/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
   mkdir -p "$dirname"
