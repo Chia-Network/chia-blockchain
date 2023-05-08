@@ -66,6 +66,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_proposal_validator,
     uncurry_treasury,
+    create_cat_launcher_for_singleton_id,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -1231,6 +1232,19 @@ class DAOWallet(WalletProtocol):
             new_proposal_validator = get_proposal_validator(self.dao_info.current_treasury_innerpuz)
             # assert isinstance(new_proposal_validator, Program)
         puzzle = get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
+        return puzzle
+
+    async def generate_mint_proposal_innerpuz(
+        self,
+        amount_of_cats_to_create: uint64,
+        cats_new_innerpuzhash: bytes32,
+    ) -> Program:
+        cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
+        xch_conditions = [
+            [51, cat_launcher.get_tree_hash(), uint64(amount_of_cats_to_create)],  # create cat_launcher coin
+            [60, Program.to(['m', cats_new_innerpuzhash]).get_tree_hash()],  # make an announcement for the launcher to assert
+        ]
+        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), [])  # type: ignore[arg-type]
         return puzzle
 
     async def generate_new_proposal(

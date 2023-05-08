@@ -2,7 +2,7 @@
   TREASURY_SINGLETON_STRUCT
   treasury_inner_puz_hash
   parent_parent
-  puzzle_hash
+  new_puzzle_hash
   amount
 )
   (include condition_codes.clvm)
@@ -15,17 +15,23 @@
      )
   )
 
-  (list
+  (defun create_parent_conditions (parent_id new_puzzle_hash amount)
     (list
-      ASSERT_MY_PARENT_ID
-      (sha256
-        parent_parent
-        (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash)
-        ONE
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 parent_id (sha256tree (list 'm' new_puzzle_hash))))
+      (list ASSERT_MY_PARENT_ID parent_id)
+    )
+  )
+
+  (c
+    (list CREATE_COIN new_puzzle_hash amount)
+    (c
+      (list ASSERT_MY_AMOUNT amount)
+      (create_parent_conditions
+        (sha256 parent_parent (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puz_hash) ONE)
+        my_id
+        new_puzzle_hash
+        amount
       )
     )
-    (list CREATE_COIN puzzle_hash amount)
-    (list ASSERT_MY_AMOUNT amount)
-    (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list puzzle_hash amount)))
   )
 )

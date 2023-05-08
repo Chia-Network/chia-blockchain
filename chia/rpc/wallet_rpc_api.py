@@ -2383,8 +2383,11 @@ class WalletRpcApi:
             # TODO: DAORules from request
             proposed_puzzle = await dao_wallet.generate_update_proposal_innerpuz(new_rules)
         elif request["proposal_type"] == "mint":
-            # TODO: untested
-            print()
+            amount_of_cats = uint64(request["amount"])
+            mint_address = decode_puzzle_hash(request["cat_target_address"])
+            # amount_of_cats_to_create: uint64,
+            # cats_new_innerpuzhash: bytes32,
+            proposed_puzzle = await dao_wallet.generate_mint_proposal_innerpuz(amount_of_cats, mint_address)
         else:
             return {"success": False, "error": "Unknown proposal type."}
 
