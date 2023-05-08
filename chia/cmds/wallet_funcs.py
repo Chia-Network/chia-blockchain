@@ -651,11 +651,11 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if royalty_asset_dict != {}:
         fungible_asset_dict: Dict[Any, uint64] = {}
         for fungible_asset_id in fungible_assets_from_offer(offer):
-            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else network_xch.lower()
+            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else "xch"
             if fungible_asset_id_str in requested:
                 nft_royalty_currency: str = "Unknown CAT"
                 if fungible_asset_id is None:
-                    nft_royalty_currency = network_xch
+                    nft_royalty_currency = "XCH"
                 else:
                     result = await wallet_client.cat_asset_id_to_name(fungible_asset_id)
                     if result is not None:
@@ -671,7 +671,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             for nft_id, summaries in royalty_summary.items():
                 print(f"  - For {nft_id}:")
                 for summary in summaries:
-                    divisor = units["chia"] if summary["asset"] == network_xch else units["cat"]
+                    divisor = units["chia"] if summary["asset"] == "XCH" else units["cat"]
                     converted_amount = Decimal(summary["amount"]) / divisor
                     total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
                     total_amounts_requested[summary["asset"]] += summary["amount"]
@@ -682,7 +682,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             print()
             print("Total Amounts Requested:")
             for asset, amount in total_amounts_requested.items():
-                divisor = units["chia"] if asset == network_xch else units["cat"]
+                divisor = units["chia"] if asset == "XCH" else units["cat"]
                 converted_amount = Decimal(amount) / divisor
                 print(f"  - {converted_amount} {asset} ({amount} mojos)")
 
