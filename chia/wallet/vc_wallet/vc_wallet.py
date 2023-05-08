@@ -51,15 +51,15 @@ class VCWallet:
         wallet: Wallet,
         name: Optional[str] = None,
     ) -> _T_VCWallet:
-        self = cls()
-        self.wallet_state_manager = wallet_state_manager
-        self.standard_wallet = wallet
         name = "VCWallet" if name is None else name
-        self.log = logging.getLogger(name if name else __name__)
-        self.store = wallet_state_manager.vc_store
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), "")
-        await self.wallet_state_manager.add_new_wallet(self)
-        return self
+        new_wallet: _T_VCWallet = await cls.create(
+            wallet_state_manager,
+            wallet,
+            await wallet_state_manager.user_store.create_wallet(name, uint32(WalletType.VC.value), ""),
+            name,
+        )
+        await wallet_state_manager.add_new_wallet(new_wallet)
+        return new_wallet
 
     @classmethod
     async def create(
