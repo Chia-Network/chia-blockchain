@@ -136,7 +136,7 @@ def match_clawback_puzzle(
             if (
                 condition.opcode == ConditionOpcode.REMARK
                 and len(condition.vars) == 2
-                and int.from_bytes(condition.vars[0], "big", signed=True) == RemarkDataType.CLAWBACK
+                and condition.vars[0] == RemarkDataType.CLAWBACK
             ):
                 return ClawbackMetadata.from_bytes(VersionedBlob.from_bytes(condition.vars[1]).blob)
     return None

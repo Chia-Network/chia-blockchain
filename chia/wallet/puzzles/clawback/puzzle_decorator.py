@@ -16,6 +16,10 @@ from chia.wallet.util.wallet_types import RemarkDataType
 
 
 class ClawbackPuzzleDecorator:
+    """
+    This class is a wrapper for clawback puzzles. It allows us to add Clawback characteristics to the inner puzzle.
+    """
+
     time_lock: uint64
 
     @staticmethod

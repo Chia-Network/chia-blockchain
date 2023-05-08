@@ -26,6 +26,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
+    puzzle_hash_for_pk,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
@@ -174,7 +175,7 @@ class Wallet:
         return puzzle_for_pk(pubkey)
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return puzzle_for_pk(pubkey).get_tree_hash()
+        return puzzle_hash_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
