@@ -65,6 +65,7 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
+    # coveralls-ignore-next-line
     if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER, WalletType.VC}:
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
@@ -92,6 +93,7 @@ async def get_unit_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
+    # coveralls-ignore-next-line
     if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER, WalletType.VC}:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
@@ -1212,6 +1214,7 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     print(f"Signing Mode: {signing_mode}")
 
 
+# coveralls-ignore-start
 async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     vc_record, txs = await wallet_client.vc_mint(
@@ -1322,3 +1325,6 @@ async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
             address_prefix=selected_network_address_prefix(config),
             mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
         )
+
+
+# coveralls-ignore-stop

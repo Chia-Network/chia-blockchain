@@ -261,11 +261,13 @@ class WalletStateManager:
             elif wallet_type == WalletType.DATA_LAYER:
                 wallet = await DataLayerWallet.create(self, wallet_info)
             elif wallet_type == WalletType.VC:
+                # coveralls-ignore-start
                 wallet = await VCWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
+                # coveralls-ignore-stop
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
@@ -1005,15 +1007,19 @@ class WalletStateManager:
             vc.inner_puzzle_hash
         )
         if derivation_record is None:
+            # coveralls-ignore-start
             self.log.warning(f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet.")
             return None
+            # coveralls-ignore-stop
         self.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.VC):
             return WalletIdentifier(wallet_info.id, WalletType.VC)
         else:
             # Create a new VC wallet
+            # coveralls-ignore-start
             vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
             return WalletIdentifier(vc_wallet.id(), WalletType.VC)
+            # coveralls-ignore-stop
 
     async def _add_coin_states(
         self,

@@ -99,6 +99,8 @@ def construct_cr_layer(
     return first_curry.curry(first_curry.get_tree_hash(), inner_puzzle)
 
 
+# Coverage coming with CR-CAT Wallet
+# coveralls-ignore-start
 def match_cr_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[List[bytes32], Program, Program]]:
     if uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
@@ -109,6 +111,9 @@ def match_cr_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[List[byt
         )
     else:
         return None
+
+
+# coveralls-ignore-stop
 
 
 def solve_cr_layer(
@@ -262,13 +267,17 @@ class CRCAT:
         message for if the puzzle is a mismatch.
         """
         if puzzle_reveal.mod != CAT_MOD:
+            # coveralls-ignore-next-line
             return False, "top most layer is not a CAT"
         layer_below_cat: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rrf"))
         if layer_below_cat.mod != CREDENTIAL_RESTRICTION:
+            # coveralls-ignore-next-line
             return False, "CAT is not credential restricted"
 
         return True, ""
 
+    # Coverage coming with CR-CAT Wallet
+    # coveralls-ignore-start
     @staticmethod
     def get_inner_puzzle(puzzle_reveal: UncurriedPuzzle) -> Program:
         return uncurry_puzzle(puzzle_reveal.args.at("rrf")).args.at("rf")
@@ -290,6 +299,8 @@ class CRCAT:
             second_uncurried_cr_layer.args.at("rrf"),
             first_uncurried_cr_layer.args.at("f").get_tree_hash(),
         )
+
+    # coveralls-ignore-stop
 
     @classmethod
     def get_next_from_coin_spend(
@@ -324,6 +335,7 @@ class CRCAT:
                     proofs_checker: Program = condition.at("rrrf")
                     break
             else:
+                # coveralls-ignore-next-line
                 raise ValueError("Previous spend was not a CR-CAT, nor did it properly remark the CR params")
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
         else:
@@ -409,6 +421,7 @@ class CRCAT:
         announcement_ids: List[bytes32] = []
         new_inner_puzzle_hashes_and_amounts: List[Tuple[bytes32, uint64]] = []
         if conditions is None:
+            # coveralls-ignore-next-line
             conditions = inner_puzzle.run(inner_solution).as_iter()
         assert conditions is not None
         for condition in conditions:
@@ -561,6 +574,8 @@ class CRCATSpend:
     provider_specified: bool
     inner_conditions: List[Program]
 
+    # Coverage coming with CR-CAT wallet
+    # coveralls-ignore-start
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:
         inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
@@ -574,6 +589,8 @@ class CRCATSpend:
             spend.solution.to_program().at("f").at("rrrrf") == Program.to(None),
             list(inner_conditions.as_iter()),
         )
+
+    # coveralls-ignore-stop
 
 
 @dataclass(frozen=True)

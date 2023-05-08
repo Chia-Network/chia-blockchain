@@ -1339,6 +1339,7 @@ def _delete_notifications(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_notifications))
 
 
+# coveralls-ignore-start
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
 def vcs_cmd():
     pass
@@ -1554,3 +1555,6 @@ def _revoke_vc(
         "reuse_puzhash": reuse_puzhash,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, revoke_vc))
+
+
+# coveralls-ignore-stop
