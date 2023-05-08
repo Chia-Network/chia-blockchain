@@ -270,6 +270,7 @@ class WalletNode:
             "coin_of_interest_to_trade_record",
             "notifications",
             "retry_store",
+            "unacknowledged_asset_token_states",
         ]
 
         async with manage_connection(db_path) as conn:
