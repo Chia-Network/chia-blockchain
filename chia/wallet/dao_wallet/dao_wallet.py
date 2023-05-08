@@ -1559,6 +1559,8 @@ class DAOWallet(WalletProtocol):
             self_destruct_length,
             oracle_spend_delay,
         ) = curried_args
+        pass_percentage = pass_percentage.as_int()
+        attendance_required = attendance_required.as_int()
         proposal_state = await self.get_proposal_state(proposal_id)
         if not proposal_state["closable"]:
             raise ValueError(f"This proposal is not ready to be closed. proposal_id: {proposal_id}")
@@ -1641,6 +1643,12 @@ class DAOWallet(WalletProtocol):
                 TOTAL_VOTES,  # how many people responded
                 PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
             ) = curried_args.as_iter()
+
+            if TOTAL_VOTES.as_int() < attendance_required:
+                raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
+
+            if (YES_VOTES.as_int() // TOTAL_VOTES.as_int()) * 10000 < pass_percentage:
+                raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
 
             # treasury_mod_hash
             # proposal_yes_votes

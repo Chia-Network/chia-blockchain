@@ -971,7 +971,7 @@ async def test_dao_rpc_create_and_join(self_hostname: str, two_wallet_nodes: Any
             "wallet_id": dao_wallet_1_id,
             "vote_amount": cat_amt // 2,
             "proposal_id": prop.proposal_id.hex(),
-            "is_yes_vote": False,
+            "is_yes_vote": True,
         }
     )
     tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
