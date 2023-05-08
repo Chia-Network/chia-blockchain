@@ -62,10 +62,10 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
     get_update_proposal_puzzle,
+    singleton_struct_for_id,
     uncurry_proposal,
     uncurry_proposal_validator,
     uncurry_treasury,
-    singleton_struct_for_id,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -1205,17 +1205,20 @@ class DAOWallet(WalletProtocol):
 
     def generate_simple_proposal_innerpuz(
         self,
-        recipient_puzhash: bytes32,
-        amount: uint64,
-        asset_type: Optional[bytes32] = None,
+        recipient_puzhashes: List[bytes32],
+        amounts: List[uint64],
+        asset_types: List[Optional[bytes32]] = [None],
     ) -> Program:
-        if asset_type is not None:
-            conditions = []
-            asset_conditions_list = [[asset_type, [[51, recipient_puzhash, amount]]]]
-        else:
-            conditions = Program.to([[51, recipient_puzhash, amount]])
-            asset_conditions_list = []
-        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, conditions, asset_conditions_list)  # type: ignore[arg-type]
+        if len(recipient_puzhashes) != len(amounts):
+            raise ValueError("List of amounts and recipient puzzle hashes are not the same length")
+        xch_conditions = []
+        asset_conditions = []
+        for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
+            if asset_type is not None:
+                asset_conditions.append([asset_type, [[51, recipient_puzhash, amount]]])
+            else:
+                xch_conditions.append([51, recipient_puzhash, amount])
+        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), asset_conditions)  # type: ignore[arg-type]
         return puzzle
 
     async def generate_update_proposal_innerpuz(
