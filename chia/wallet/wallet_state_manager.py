@@ -1631,14 +1631,6 @@ class WalletStateManager:
         result = await self.coin_store.get_coin_records(**kwargs)
         return [await self.get_coin_record_by_wallet_record(record) for record in result.records]
 
-    async def is_addition_relevant(self, addition: Coin) -> bool:
-        """
-        Check whether we care about a new addition (puzzle_hash). Returns true if we
-        control this puzzle hash.
-        """
-        result = await self.puzzle_store.puzzle_hash_exists(addition.puzzle_hash)
-        return result
-
     async def get_wallet_for_coin(self, coin_id: bytes32) -> Optional[WalletProtocol]:
         coin_record = await self.coin_store.get_coin_record(coin_id)
         if coin_record is None:
