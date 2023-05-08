@@ -20,9 +20,6 @@ for i in "${licenses[@]}"; do
   cp "$i" "$dirname"
 done
 
-pwd
-
-cd ..
 python3 -m venv ../venv
 . ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
