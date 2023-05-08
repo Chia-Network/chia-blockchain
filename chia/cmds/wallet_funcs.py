@@ -481,13 +481,13 @@ def timestamp_to_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def print_offer_summary(cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False):
+async def print_offer_summary(cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False, network_xch = "XCH"):
     for asset_id, amount in sum_dict.items():
         description: str = ""
         unit: int = units["chia"]
         wid: str = "1" if asset_id == "xch" else ""
         mojo_amount: int = int(Decimal(amount))
-        name: str = "XCH"
+        name: str = network_xch
         if asset_id != "xch":
             name = asset_id
             if asset_id == "unknown":
@@ -633,9 +633,9 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     network_xch = AddressType.XCH.hrp(config).upper()
     print("Summary:")
     print("  OFFERED:")
-    await print_offer_summary(cat_name_resolver, offered)
+    await print_offer_summary(cat_name_resolver, offered, network_xch=network_xch)
     print("  REQUESTED:")
-    await print_offer_summary(cat_name_resolver, requested)
+    await print_offer_summary(cat_name_resolver, requested, network_xch=network_xch)
 
     print()
 
