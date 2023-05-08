@@ -2926,10 +2926,7 @@ class WalletRpcApi:
     async def get_coin_records(self, request: Dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)
 
-        if (
-            parsed_request.limit != uint32.MAXIMUM_EXCLUSIVE - 1
-            and parsed_request.limit > self.max_get_coin_records_limit
-        ):
+        if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
             raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
 
         for filter_name, filter in {
