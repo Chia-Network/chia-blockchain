@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import pytest
 from blspy import G1Element, G2Element
@@ -22,6 +22,12 @@ from chia.full_node.mempool_manager import (
     optional_max,
     optional_min,
 )
+from chia.protocols import wallet_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -32,10 +38,15 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.eligible_coin_spends import DedupCoinSpend, EligibleCoinSpends, run_for_cost
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
+from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.payment import Payment
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_node import WalletNode
 
 IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -1394,3 +1405,158 @@ async def test_bundle_coin_spends() -> None:
         eligible_for_dedup=True,
         additions=[Coin(coins[3].name(), IDENTITY_PUZZLE_HASH, coins[3].amount)],
     )
+
+
+@pytest.mark.asyncio
+async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsAndWallets, self_hostname: str) -> None:
+    def get_sb_names_by_coin_id(
+        full_node_api: FullNodeSimulator,
+        spent_coin_id: bytes32,
+    ) -> Set[bytes32]:
+        return set(
+            i.spend_bundle_name
+            for i in full_node_api.full_node.mempool_manager.mempool.get_items_by_coin_id(spent_coin_id)
+        )
+
+    async def send_to_mempool(
+        full_node: FullNodeSimulator, spend_bundle: SpendBundle, *, expecting_conflict: bool = False
+    ) -> None:
+        res = await full_node.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+        assert res is not None and ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
+        res_parsed = wallet_protocol.TransactionAck.from_bytes(res.data)
+        if expecting_conflict:
+            assert res_parsed.status == MempoolInclusionStatus.PENDING.value
+            assert res_parsed.error == "MEMPOOL_CONFLICT"
+        else:
+            assert res_parsed.status == MempoolInclusionStatus.SUCCESS.value
+
+    async def farm_a_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode, ph: bytes32) -> None:
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
+
+    async def make_setup_and_coins(
+        full_node_api: FullNodeSimulator, wallet_node: WalletNode
+    ) -> Tuple[Wallet, list[WalletCoinRecord], bytes32]:
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
+        for _ in range(2):
+            await farm_a_block(full_node_api, wallet_node, ph)
+        other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
+        tx = await wallet.generate_signed_transaction(uint64(200), phs[0], primaries=other_recipients)
+        assert tx.spend_bundle is not None
+        await send_to_mempool(full_node_api, tx.spend_bundle)
+        await farm_a_block(full_node_api, wallet_node, ph)
+        coins = list(await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1))
+        # Two blocks farmed plus 3 transactions
+        assert len(coins) == 7
+        return (wallet, coins, ph)
+
+    [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
+    server = full_node_api.full_node.server
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(server._port)), None)
+    wallet, coins, ph = await make_setup_and_coins(full_node_api, wallet_node)
+
+    # Make sure spending AB then BC would generate a conflict for the latter
+
+    tx_a = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[0].coin})
+    tx_b = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[1].coin})
+    tx_c = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[2].coin})
+    assert tx_a.spend_bundle is not None
+    assert tx_b.spend_bundle is not None
+    assert tx_c.spend_bundle is not None
+    ab_bundle = SpendBundle.aggregate([tx_a.spend_bundle, tx_b.spend_bundle])
+    await send_to_mempool(full_node_api, ab_bundle)
+    # BC should conflict here (on B)
+    bc_bundle = SpendBundle.aggregate([tx_b.spend_bundle, tx_c.spend_bundle])
+    await send_to_mempool(full_node_api, bc_bundle, expecting_conflict=True)
+    await farm_a_block(full_node_api, wallet_node, ph)
+
+    # Make sure DE and EF would aggregate on E when E is eligible for deduplication
+
+    # Create a coin with the identity puzzle hash
+    tx = await wallet.generate_signed_transaction(uint64(200), IDENTITY_PUZZLE_HASH, coins={coins[3].coin})
+    assert tx.spend_bundle is not None
+    await send_to_mempool(full_node_api, tx.spend_bundle)
+    await farm_a_block(full_node_api, wallet_node, ph)
+    # Grab the coin we created and make an eligible coin out of it
+    coins_with_identity_ph = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+        False, IDENTITY_PUZZLE_HASH
+    )
+    sb = spend_bundle_from_conditions(
+        [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 110]], coins_with_identity_ph[0].coin
+    )
+    await send_to_mempool(full_node_api, sb)
+    await farm_a_block(full_node_api, wallet_node, ph)
+    # Grab the eligible coin to spend as E in DE and EF transactions
+    e_coin = (await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, IDENTITY_PUZZLE_HASH))[
+        0
+    ].coin
+    e_coin_id = e_coin.name()
+    # Restrict spending E with an announcement to consume
+    message = b"Identical spend aggregation test"
+    e_announcement = Announcement(e_coin_id, message)
+    # Create transactions D and F that consume an announcement created by E
+    tx_d = await wallet.generate_signed_transaction(
+        uint64(100), ph, fee=uint64(0), coins={coins[4].coin}, coin_announcements_to_consume={e_announcement}
+    )
+    tx_f = await wallet.generate_signed_transaction(
+        uint64(150), ph, fee=uint64(0), coins={coins[5].coin}, coin_announcements_to_consume={e_announcement}
+    )
+    assert tx_d.spend_bundle is not None
+    assert tx_f.spend_bundle is not None
+    # Create transaction E now that spends e_coin to create another eligible
+    # coin as well as the announcement consumed by D and F
+    conditions: List[List[Any]] = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message],
+    ]
+    sb_e = spend_bundle_from_conditions(conditions, e_coin)
+    # Send DE and EF combinations to the mempool
+    sb_de = SpendBundle.aggregate([tx_d.spend_bundle, sb_e])
+    sb_de_name = sb_de.name()
+    await send_to_mempool(full_node_api, sb_de)
+    sb_ef = SpendBundle.aggregate([sb_e, tx_f.spend_bundle])
+    sb_ef_name = sb_ef.name()
+    await send_to_mempool(full_node_api, sb_ef)
+    # Send also a transaction EG that spends E differently from DE and EF,
+    # so that it doesn't get deduplicated on E with them
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, e_coin.amount - 1],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message],
+    ]
+    sb_e2 = spend_bundle_from_conditions(conditions, e_coin)
+    g_coin = coins[6].coin
+    g_coin_id = g_coin.name()
+    tx_g = await wallet.generate_signed_transaction(
+        uint64(13), ph, coins={g_coin}, coin_announcements_to_consume={e_announcement}
+    )
+    assert tx_g.spend_bundle is not None
+    sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
+    sb_e2g_name = sb_e2g.name()
+    await send_to_mempool(full_node_api, sb_e2g)
+
+    # Make sure our coin IDs to spend bundles mappings are correct
+    assert get_sb_names_by_coin_id(full_node_api, coins[4].coin.name()) == {sb_de_name}
+    assert get_sb_names_by_coin_id(full_node_api, e_coin_id) == {sb_de_name, sb_ef_name, sb_e2g_name}
+    assert get_sb_names_by_coin_id(full_node_api, coins[5].coin.name()) == {sb_ef_name}
+    assert get_sb_names_by_coin_id(full_node_api, g_coin_id) == {sb_e2g_name}
+
+    await farm_a_block(full_node_api, wallet_node, ph)
+
+    # Make sure sb_de and sb_ef coins, including the deduplicated one, are removed
+    # from the coin IDs to spend bundles mappings with the creation of a new block
+    assert get_sb_names_by_coin_id(full_node_api, coins[4].coin.name()) == set()
+    assert get_sb_names_by_coin_id(full_node_api, e_coin_id) == set()
+    assert get_sb_names_by_coin_id(full_node_api, coins[5].coin.name()) == set()
+    assert get_sb_names_by_coin_id(full_node_api, g_coin_id) == set()
+
+    # Make sure coin G remains because E2G was removed as E got spent differently (by DE and EF)
+    coins_set = await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1)
+    assert g_coin in (c.coin for c in coins_set)
+    # Only the newly created eligible coin is left now
+    eligible_coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+        False, IDENTITY_PUZZLE_HASH
+    )
+    assert len(eligible_coins) == 1
+    assert eligible_coins[0].coin.amount == 42
