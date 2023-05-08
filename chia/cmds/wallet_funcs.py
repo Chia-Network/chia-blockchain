@@ -630,7 +630,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
-    network_xch = Address.NFT.hrp(config).upper()
+    network_xch = AddressType.NFT.hrp(config).upper()
     print("Summary:")
     print("  OFFERED:")
     await print_offer_summary(cat_name_resolver, offered)
@@ -651,7 +651,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if royalty_asset_dict != {}:
         fungible_asset_dict: Dict[Any, uint64] = {}
         for fungible_asset_id in fungible_assets_from_offer(offer):
-            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else network_xch.lower())
+            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else network_xch.lower()
             if fungible_asset_id_str in requested:
                 nft_royalty_currency: str = "Unknown CAT"
                 if fungible_asset_id is None:
