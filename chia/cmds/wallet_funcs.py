@@ -630,6 +630,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
+    network_xch = Address.NFT.hrp(config).upper()
     print("Summary:")
     print("  OFFERED:")
     await print_offer_summary(cat_name_resolver, offered)
@@ -650,11 +651,11 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if royalty_asset_dict != {}:
         fungible_asset_dict: Dict[Any, uint64] = {}
         for fungible_asset_id in fungible_assets_from_offer(offer):
-            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else "xch"
+            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else network_xch.lower())
             if fungible_asset_id_str in requested:
                 nft_royalty_currency: str = "Unknown CAT"
                 if fungible_asset_id is None:
-                    nft_royalty_currency = "XCH"
+                    nft_royalty_currency = network_xch
                 else:
                     result = await wallet_client.cat_asset_id_to_name(fungible_asset_id)
                     if result is not None:
@@ -670,7 +671,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             for nft_id, summaries in royalty_summary.items():
                 print(f"  - For {nft_id}:")
                 for summary in summaries:
-                    divisor = units["chia"] if summary["asset"] == "XCH" else units["cat"]
+                    divisor = units["chia"] if summary["asset"] == network_xch else units["cat"]
                     converted_amount = Decimal(summary["amount"]) / divisor
                     total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
                     total_amounts_requested[summary["asset"]] += summary["amount"]
@@ -681,11 +682,11 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             print()
             print("Total Amounts Requested:")
             for asset, amount in total_amounts_requested.items():
-                divisor = units["chia"] if asset == "XCH" else units["cat"]
+                divisor = units["chia"] if asset == network_xch else units["cat"]
                 converted_amount = Decimal(amount) / divisor
                 print(f"  - {converted_amount} {asset} ({amount} mojos)")
 
-    print(f"Included Fees: {Decimal(offer.fees()) / units['chia']} XCH, {offer.fees()} mojos")
+    print(f"Included Fees: {Decimal(offer.fees()) / units['chia']} {network_xch}, {offer.fees()} mojos")
 
     if not examine_only:
         print()
