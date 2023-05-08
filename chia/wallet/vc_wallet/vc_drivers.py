@@ -76,7 +76,7 @@ VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
 
 # Standard brick puzzle uses the mods above
 STANDARD_BRICK_PUZZLE: Program = load_clvm_maybe_recompile(
-    "standard_vc_backdoor_brick_puzzle.clsp",
+    "standard_vc_backdoor_puzzle.clsp",
     package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
     include_standard_libraries=True,
 ).curry(
