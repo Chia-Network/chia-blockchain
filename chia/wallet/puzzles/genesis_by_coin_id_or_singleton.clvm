@@ -5,7 +5,7 @@
 ; The genesis_id is curried in, making this lineage_check program unique and giving the CAT it's uniqueness
 (mod (
       GENESIS_ID
-      SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
+      MINT_LAUNCHER_PUZZLE_HASH
       Truths
       parent_is_cat
       lineage_proof
@@ -21,30 +21,23 @@
     (include cat_truths.clib)
     (include curry-and-treehash.clinc)
 
-    (defun calculate_singleton_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-       (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
-                                        inner_puzzle_hash
-                                        (sha256tree SINGLETON_STRUCT)
-       )
-    )
-
     (if delta
-        (x)
-        (if (= (my_parent_cat_truth Truths) GENESIS_ID)
-          ()
-          (if
-            (=
-              (my_parent_cat_truth Truths)
-              (sha256
-                parent_parent_id
-                (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash)
-                parent_amount
-              )
+      (x)
+      (if (= (my_parent_cat_truth Truths) GENESIS_ID)
+        ()
+        (if
+          (=
+            (my_parent_cat_truth Truths)
+            (sha256
+              parent_parent_id
+              MINT_LAUNCHER_PUZZLE_HASH
+              parent_amount
             )
-            ()
-            (x)
           )
+          ()
+          (x)
         )
+      )
     )
 
 )

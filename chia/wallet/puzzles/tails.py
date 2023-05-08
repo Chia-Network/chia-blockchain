@@ -15,6 +15,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_id
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import SINGLETON_LAUNCHER, SINGLETON_MOD
 from chia.wallet.lineage_proof import LineageProof
@@ -204,7 +205,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
     def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
         if uncurried_mod == GENESIS_BY_ID_OR_SINGLETON_MOD:
             genesis_id = curried_args.first()
-            return True, [genesis_id]
+            return True, [genesis_id.as_atom()]
         else:
             return False, []
 
@@ -236,12 +237,11 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         cat_inner: Program = await wallet.get_new_inner_puzzle()
         # GENESIS_ID
         # TREASURY_SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
+        launcher_puzhash = create_cat_launcher_for_singleton_id(tail_info["treasury_id"]).get_tree_hash()
         tail: Program = cls.construct(
             [
                 Program.to(origin_id),
-                Program.to(
-                    (SINGLETON_MOD.get_tree_hash(), (tail_info["treasury_id"], SINGLETON_LAUNCHER.get_tree_hash()))
-                ),
+                launcher_puzhash,
             ]
         )
 

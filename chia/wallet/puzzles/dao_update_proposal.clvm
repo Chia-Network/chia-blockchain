@@ -28,7 +28,7 @@
           (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
           (sha256 ONE PROPOSAL_LENGTH)
           (sha256tree PROPOSAL_VALIDATOR)
-	  (sha256 ONE TREASURY_MOD_HASH)
+          (sha256 ONE TREASURY_MOD_HASH)
       )
       ONE
     )

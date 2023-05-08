@@ -11,13 +11,6 @@
 
   (include condition_codes.clvm)
 
-  ; (defun merge_list (list_a list_b)
-  ;   (if list_a
-  ;     (c (f list_a) (merge_list (r list_a) list_b))
-  ;     list_b
-  ;   )
-  ; )
-
   (defun loop_through_list (SPEND_AMOUNT P2_SINGLETON_PUZHASH p2_calculated p2_singleton_list total output)
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT p2_calculated)

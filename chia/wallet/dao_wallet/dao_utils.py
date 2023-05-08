@@ -41,6 +41,7 @@ DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
 DAO_RESALE_PREVENTION_HASH: bytes32 = DAO_RESALE_PREVENTION.get_tree_hash()
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clvm")
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
+DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clvm")
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clvm")
 P2_CONDITIONS_MOD_HASH: bytes32 = P2_CONDITIONS_MOD.get_tree_hash()
 DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clvm")
@@ -56,6 +57,11 @@ log = logging.Logger(__name__)
 def singleton_struct_for_id(id: bytes32) -> Program:
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (id, SINGLETON_LAUNCHER_HASH)))
     return singleton_struct
+
+
+def create_cat_launcher_for_singleton_id(id: bytes32) -> Program:
+    singleton_struct = singleton_struct_for_id(id)
+    return DAO_CAT_LAUNCHER.curry(singleton_struct)
 
 
 def create_new_proposal_puzzle(
@@ -555,8 +561,8 @@ def uncurry_spend_p2_singleton(spend_puzzle: Program) -> Program:
 
 
 def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
-    puzzle = DAO_CAT_TAIL.curry(genesis_coin_id, singleton_struct)
+    dao_cat_launcher = create_cat_launcher_for_singleton_id(treasury_id).get_tree_hash()
+    puzzle = DAO_CAT_TAIL.curry(genesis_coin_id, dao_cat_launcher)
     return puzzle
 
 

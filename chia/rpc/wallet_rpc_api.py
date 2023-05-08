@@ -190,6 +190,7 @@ class WalletRpcApi:
             "/dao_add_funds_to_treasury": self.dao_add_funds_to_treasury,
             "/dao_send_to_lockup": self.dao_send_to_lockup,
             "/dao_get_proposal_state": self.dao_get_proposal_state,
+            "/dao_free_coins_from_finished_proposal": self.dao_free_coins_from_finished_proposal,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_count_nfts": self.nft_count_nfts,
@@ -2326,6 +2327,16 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
+        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOWallet)
+        assert dao_cat_wallet is not None
+        if "coins" in request:
+            coins = request["coins"]
+        else:
+            coins = []
+            for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                if lci.active_votes == []:
+                    coins.append(lci.coin)
+        tx = await dao_cat_wallet.exit_vote_state(coins)
         return {"success": True}
 
     async def dao_create_proposal(self, request) -> EndpointResult:
@@ -2432,6 +2443,12 @@ class WalletRpcApi:
         )
         assert tx is not None
         return {"success": True, "tx_id": tx.name}
+
+    async def dao_free_coins_from_finished_proposal(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        return {"success": True}
 
     ##########################################################################################
     # NFT Wallet

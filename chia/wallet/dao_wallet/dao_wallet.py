@@ -1647,7 +1647,7 @@ class DAOWallet(WalletProtocol):
             if TOTAL_VOTES.as_int() < attendance_required:
                 raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
 
-            if (YES_VOTES.as_int() // TOTAL_VOTES.as_int()) * 10000 < pass_percentage:
+            if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage:
                 raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
 
             # treasury_mod_hash

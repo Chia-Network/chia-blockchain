@@ -1,0 +1,31 @@
+(mod (
+  TREASURY_SINGLETON_STRUCT
+  treasury_inner_puz_hash
+  parent_parent
+  puzzle_hash
+  amount
+)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+     )
+  )
+
+  (list
+    (list
+      ASSERT_MY_PARENT_ID
+      (sha256
+        parent_parent
+        (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash)
+        ONE
+      )
+    )
+    (list CREATE_COIN puzzle_hash amount)
+    (list ASSERT_MY_AMOUNT amount)
+    (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list puzzle_hash amount)))
+  )
+)
