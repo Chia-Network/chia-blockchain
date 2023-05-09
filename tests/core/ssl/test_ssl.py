@@ -28,7 +28,6 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             server.log,
             True,
             server.received_message_callback,
-            self_hostname,
             None,
             bytes32(b"\x00" * 32),
             100,

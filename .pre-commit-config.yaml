@@ -39,6 +39,13 @@ repos:
         pass_filenames: false
 -   repo: local
     hooks:
+    -   id: chialispp
+        name: Pretty print chialisp files
+        entry: ./activated.py python tools/chialispp.py .
+        language: python
+        pass_filenames: false
+-   repo: local
+    hooks:
     -   id: mypy
         name: mypy
         entry: ./activated.py mypy

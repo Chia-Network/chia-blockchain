@@ -34,8 +34,7 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
-from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import CoinState
+from chia.protocols.wallet_protocol import CoinState, NewPeakWallet
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -549,9 +548,9 @@ class WalletStateManager:
         if self.log.level == logging.DEBUG:
             self.log.debug(f"set_sync_mode enter {await self.blockchain.get_finished_sync_up_to()}-{target_height}")
         async with self.lock:
+            self._sync_target = target_height
             start_time = time.time()
             start_height = await self.blockchain.get_finished_sync_up_to()
-            self._sync_target = target_height
             self.log.info(f"set_sync_mode syncing - range: {start_height}-{target_height}")
             self.state_changed("sync_changed")
             try:
@@ -561,7 +560,6 @@ class WalletStateManager:
                     f"set_sync_mode failed - range: {start_height}-{target_height}, seconds: {time.time() - start_time}"
                 )
             finally:
-                self._sync_target = None
                 self.state_changed("sync_changed")
                 if self.log.level == logging.DEBUG:
                     self.log.debug(
@@ -569,6 +567,7 @@ class WalletStateManager:
                         f"get_finished_sync_up_to: {await self.blockchain.get_finished_sync_up_to()}, "
                         f"seconds: {time.time() - start_time}"
                     )
+                self._sync_target = None
 
     async def get_confirmed_spendable_balance_for_wallet(
         self, wallet_id: int, unspent_records: Optional[Set[WalletCoinRecord]] = None
@@ -1365,9 +1364,12 @@ class WalletStateManager:
                                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
                                         coin.puzzle_hash
                                     )
-                                    if derivation_record is None:
+                                    if derivation_record is None:  # not change
                                         to_puzzle_hash = coin.puzzle_hash
                                         amount += coin.amount
+                                    elif wallet_identifier.type == WalletType.CAT:
+                                        # We subscribe to change for CATs since they didn't hint previously
+                                        await self.add_interested_coin_ids([coin.name()])
 
                                 if to_puzzle_hash is None:
                                     to_puzzle_hash = additions[0].puzzle_hash
@@ -1920,7 +1922,7 @@ class WalletStateManager:
 
         return filtered
 
-    async def new_peak(self, peak: wallet_protocol.NewPeakWallet) -> None:
+    async def new_peak(self, peak: NewPeakWallet) -> None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.POOLING_WALLET:
                 assert isinstance(wallet, PoolWallet)
