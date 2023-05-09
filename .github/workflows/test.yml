@@ -3,18 +3,18 @@ name: 🧪 test
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - long_lived/**
-    - main
-    - release/**
+      - long_lived/**
+      - main
+      - release/**
     tags:
-    - '**'
+      - "**"
   pull_request:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - '**'
+      - "**"
   workflow_dispatch: null
 
 concurrency:
@@ -33,7 +33,7 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Generate matrix configuration
         id: configure
@@ -100,11 +100,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
+          - name: "3.9"
+            action: "3.9"
+            apt: "3.9"
+            install_sh: "3.9"
+            matrix: "3.9"
 
     steps:
       - uses: actions/checkout@v3
@@ -158,7 +158,7 @@ jobs:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
           set -o pipefail
-          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          diff-cover --compare-branch=${{ env.compare-branch }} --include 'chia/**' --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports
