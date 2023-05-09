@@ -1242,9 +1242,12 @@ class DAOWallet(WalletProtocol):
         cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
         xch_conditions = [
             [51, cat_launcher.get_tree_hash(), uint64(amount_of_cats_to_create)],  # create cat_launcher coin
-            [60, Program.to(['m', cats_new_innerpuzhash]).get_tree_hash()],  # make an announcement for the launcher to assert
+            [
+                60,
+                Program.to(["m", cats_new_innerpuzhash]).get_tree_hash(),
+            ],  # make an announcement for the launcher to assert
         ]
-        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), [])  # type: ignore[arg-type]
+        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), [])
         return puzzle
 
     async def generate_new_proposal(
@@ -1476,7 +1479,9 @@ class DAOWallet(WalletProtocol):
         lockup_inner_puzhashes = []
         assert dao_cat_spend is not None
         for spend in dao_cat_spend.coin_spends:
-            vote_amounts.append(Program.from_bytes(bytes(spend.solution)).at("frrrrrrf"))  # this is the vote_amount field of the solution
+            vote_amounts.append(
+                Program.from_bytes(bytes(spend.solution)).at("frrrrrrf")
+            )  # this is the vote_amount field of the solution
             # breakpoint()
             vote_coins.append(spend.coin.name())
             previous_votes.append(
@@ -1574,8 +1579,6 @@ class DAOWallet(WalletProtocol):
             self_destruct_length,
             oracle_spend_delay,
         ) = curried_args
-        pass_percentage = pass_percentage.as_int()
-        attendance_required = attendance_required.as_int()
         proposal_state = await self.get_proposal_state(proposal_id)
         if not proposal_state["closable"]:
             raise ValueError(f"This proposal is not ready to be closed. proposal_id: {proposal_id}")
@@ -1659,10 +1662,10 @@ class DAOWallet(WalletProtocol):
                 PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
             ) = curried_args.as_iter()
 
-            if TOTAL_VOTES.as_int() < attendance_required:
+            if TOTAL_VOTES.as_int() < attendance_required.as_int():
                 raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
 
-            if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage:
+            if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage.as_int():
                 raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
 
             # treasury_mod_hash

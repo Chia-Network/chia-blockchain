@@ -241,7 +241,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         tail: Program = cls.construct(
             [
                 Program.to(origin_id),
-                launcher_puzhash,
+                Program.to(launcher_puzhash),
             ]
         )
 
