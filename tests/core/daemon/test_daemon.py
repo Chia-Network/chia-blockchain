@@ -27,7 +27,7 @@ from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 
 
-def raise_() -> None:
+def raise_(*args, **kwargs) -> None:
     raise ValueError("Testing")
 
 
