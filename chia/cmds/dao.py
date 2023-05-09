@@ -1,221 +1,782 @@
 from __future__ import annotations
 
-import json
-from typing import Any, Optional
+from typing import Optional
 
 import click
 
-from chia.util.hash import std_hash
-
-dao1 = "84e0c0eafaa95a34c293f278ac52e45ce537bab5e752a00e6959a13ae103b65a"
-dao2 = "0d6ba19b62531ccb0deb8804313eca283c69560f66f1b7b8a2c1592ae8c35c6b"
-
-prop1 = "ca02a7bbd898b4cdf99e60c923abcf116f3cc8224a790f395c36953f207cf09a"
-prop2 = "deb0e38ced1e41de6f92e70e80c418d2d356afaaa99e26f5939dbc7d3ef4772a"
-
-
-def set(var: str, val: Any) -> None:
-    with open("state.json", "r") as f:
-        state = json.load(f)
-    state[var] = val
-    with open("state.json", "w") as f:
-        json.dump(state, f)
-
-
-def get(var: str) -> Optional[Any]:
-    with open("state.json", "r") as f:
-        state = json.load(f)
-    if var in state:
-        return state[var]
-    return None
-
-
-def remove(var: str) -> None:
-    with open("state.json", "r") as f:
-        state = json.load(f)
-    del state[var]
-    with open("state.json", "w") as f:
-        json.dump(state, f)
-
-
-def add_dao(dao_id: str, dao_name: str) -> None:
-    daos = get("daos")
-    if daos is None:
-        daos = []
-    daos.append({"dao_id": dao_id, "dao_name": dao_name})
-    set("daos", daos)
-
-
-def add_proposal(prop_id: str, prop_name: str, type: str) -> None:
-    proposals = get("proposals")
-    if proposals is None:
-        proposals = []
-    proposals.append({"prop_id": prop_id, "prop_name": prop_name, "type": type})
-    set("proposals", proposals)
+from chia.cmds.cmds_util import execute_with_wallet
+from chia.cmds.plotnft import validate_fee
 
 
 @click.group("dao", short_help="Create, manage or show state of DAOs", no_args_is_help=True)
 @click.pass_context
-def dao_cmd(
-    ctx: click.Context,
-    # rpc_port: Optional[int],
-    # connections: bool,
-    # add_connection: str,
-    # remove_connection: str,
-    # node_type: str,
-) -> None:
-    print("")
-    # asyncio.run(
-    #     dao_async(
-    #         node_type,
-    #         rpc_port,
-    #         ctx.obj["root_path"],
-    #         connections,
-    #         add_connection,
-    #         remove_connection,
-    #     )
-    # )
-
-
-# voting_power
-# attendance_percentage
-# proposal_lockup_time
-
-
-# @dao_cmd.group("", short_help="", no_args_is_help=True)
-# def dao_() -> None:
-#     pass
-
-# ----------------------------------------------------------------------------------------
-
-
-@dao_cmd.command("add", short_help="Make your Chia client aware of a new DAO", no_args_is_help=True)
-@click.argument("dao_id", type=str, nargs=1, required=True)
-@click.argument("dao_name", type=str, nargs=1, required=False, default="")
-def dao_add(dao_id: str, dao_name: str) -> None:
-    print(f"Adding DAO {dao_id} with name '{dao_name}'")
-    add_dao(dao_id, dao_name)
-
-
-# ----------------------------------------------------------------------------------------
-
-
-@dao_cmd.command("create", short_help="Create, manage or show state of DAOs", no_args_is_help=True)
-@click.argument("initial_voting_power", type=str, nargs=1, required=True)
-@click.argument("attendance_percentage", type=str, nargs=1, required=True)
-@click.argument("proposal_lockup_time", type=str, nargs=1, required=True)
-@click.argument("dao_name", type=str, nargs=1, required=True)
-def dao_create(initial_voting_power: str, attendance_percentage: str, proposal_lockup_time: str, dao_name: str) -> None:
-    print(
-        f"Creating new DAO '{dao_name}' with:"
-        f"    initial_voting_power={initial_voting_power}"
-        f"    attendance_percentage={attendance_percentage}"
-        f"    proposal_lockup_time={proposal_lockup_time}"
-        f"Note that this name is stored only locally."
-    )
-    # asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
-    dao_id = std_hash(f"{initial_voting_power} {attendance_percentage} {proposal_lockup_time}")
-    add_dao(str(dao_id), dao_name)
-
-
-# ----------------------------------------------------------------------------------------
-
-
-@dao_cmd.command("list", short_help="List and summarize state of all DAOs known to us", no_args_is_help=False)
-def dao_list() -> None:
-    # print(f"'Meta DAO'              {dao1}")
-    # print(f"'Chia Corporate DAO'    {dao2}")
-    daos = get("daos")
-    if daos is None:
-        print("No known DAOs")
-        return
-    print(f"{' '*25} DAO ID {' '*25}         Votes  Name")
-    for dao in daos:
-        print(f"{dao['dao_id']}   1000   '{dao['dao_name']}' ")
-
-
-# ----------------------------------------------------------------------------------------
-
-
-@dao_cmd.command("vote", short_help="Vote on a proposal belonging to a specific DAO", no_args_is_help=True)
-@click.argument("dao_id", type=str, nargs=1, required=True)
-@click.argument("proposal_id", type=str, nargs=1, required=True)
-@click.argument("number_of_votes", type=str, nargs=1, required=True)
-def dao_vote(dao_id: str, proposal_id: str, number_of_votes: str) -> None:
-    # TODO: Proposal id like xxxx:yyyy
-    print(f"Transaction pending to add {number_of_votes} votes to proposal {proposal_id}")
-
-
-# ----------------------------------------------------------------------------------------
-
-
-@dao_cmd.group("proposal", short_help="Create and add a proposal to a DAO", no_args_is_help=True)
-def dao_proposal() -> None:
+def dao_cmd(ctx: click.Context) -> None:
     pass
 
 
-# TODO: Do we need a way to manually add proposals? They should be picked up via hints
+# ----------------------------------------------------------------------------------------
+# ADD
 
 
-@dao_proposal.command("create", short_help="Create a new proposal for a certain DAO_ID")
-@click.argument("dao_id", type=str, nargs=1, required=True)
-@click.argument("prop_name", type=str, nargs=1, required=True)
-@click.argument("spend_amount", type=int, nargs=1, required=True)
-@click.argument("address", type=str, nargs=1, required=True)
-@click.argument("proposal_lockup_time", type=int, nargs=1, required=True)
-def create_proposal(dao_id: str, prop_name: str, spend_amount: int, address: str, proposal_lockup_time: int) -> None:
-    """Proposal Spend creation. Types:
-    - S: Spend   Spend some of the Treasury's assets
-    - U: Update  Update Treasury parameters
-    """
-    print(f"Creating proposal '{prop_name}' for DAO {dao_id} with name to spend {spend_amount} to {address} ...")
-    # TODO: print(closing on {date})
-    type = "SPEND"
-    prop_id = std_hash(f"{type} {spend_amount} {address} {proposal_lockup_time}")
-    add_proposal(str(prop_id), prop_name, type)
+@dao_cmd.command("add", short_help="Create a wallet for an existing DAO", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-n", "--name", help="Set the DAO wallet name", type=str)
+@click.option(
+    "-t",
+    "--treasury-id",
+    help="The Treasury ID of the DAO you want to track",
+    type=str,
+    required=True,
+)
+@click.option(
+    "-fa",
+    "--filter-amount",
+    help="The minimum number of votes a proposal needs before the wallet will recognise it",
+    type=int,
+    default=1,
+    show_default=True,
+)
+def dao_add_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    treasury_id: str,
+    filter_amount: int,
+    name: Optional[str],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import add_dao_wallet
+
+    extra_params = {
+        "name": name,
+        "treasury_id": treasury_id,
+        "filter_amount": filter_amount,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_dao_wallet))
 
 
-@dao_proposal.command("list", short_help="List proposals for a certain DAO")
-@click.argument("dao_id", type=str, nargs=1, required=True)
-def list_proposals(dao_id: str) -> None:
-    print(f"Listing proposals for DAO {dao_id} with 1000 total possible votes:")
-    # print(f"    'Free Lunch'                       {prop1}")
-    # print(f"    'XCH 10,000 for the Tree lobby'    {prop2}")
-    ps = get("proposals")
-    if ps is None:
-        print("    No Proposals")
-        return
+# ----------------------------------------------------------------------------------------
+# CREATE
 
-    print(f"{' '*25} Proposal ID {' '*25}       TYPE FOR AGAINST Name")
-    for p in ps:
-        print(f"{p['prop_id']}   {p['type']} 10%  15%   '{p['prop_name']}' ")
+
+@dao_cmd.command("create", short_help="Create a new DAO wallet and treasury", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option("-n", "--name", help="Set the DAO wallet name", type=str)
+@click.option(
+    "-pt",
+    "--proposal-timelock",
+    help="The minimum number of blocks before a proposal can close",
+    type=int,
+    default=1000,
+    show_default=True,
+)
+@click.option(
+    "-sc",
+    "--soft-close",
+    help="The number of blocks a proposal must remain unspent before closing",
+    type=int,
+    default=20,
+    show_default=True,
+)
+@click.option(
+    "-ar",
+    "--attendance-required",
+    help="The minimum number of votes a proposal must receive to be accepted",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-pp",
+    "--pass-percentage",
+    help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
+    type=int,
+    default=5000,
+    show_default=True,
+)
+@click.option(
+    "-sd",
+    "--self-destruct",
+    help="The number of blocks required before a proposal can be automatically removed",
+    type=int,
+    default=10000,
+    show_default=True,
+)
+@click.option(
+    "-od",
+    "--oracle-delay",
+    help="The number of blocks required between oracle spends of the treasury",
+    type=int,
+    default=50,
+    show_default=True,
+)
+@click.option(
+    "-fa",
+    "--filter-amount",
+    help="The minimum number of votes a proposal needs before the wallet will recognise it",
+    type=int,
+    default=1,
+    show_default=True,
+)
+@click.option(
+    "-ca",
+    "--cat-amount",
+    help="The number of DAO CATs (in mojos) to create when initializing the DAO",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_create_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    proposal_timelock: int,
+    attendance_required: int,
+    pass_percentage: int,
+    self_destruct: int,
+    oracle_delay: int,
+    filter_amount: int,
+    cat_amount: int,
+    name: Optional[str],
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import create_dao_wallet
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "name": name,
+        "proposal_timelock": proposal_timelock,
+        "attendance_required": attendance_required,
+        "pass_percentage": pass_percentage,
+        "self_destruct_length": self_destruct,
+        "oracle_spend_delay": oracle_delay,
+        "filter_amount": filter_amount,
+        "amount_of_cats": cat_amount,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_dao_wallet))  # ignore: type
+
+
+# ----------------------------------------------------------------------------------------
+# TREASURY FUNDS
+
+
+@dao_cmd.command("add-funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-f",
+    "--funding-wallet-id",
+    help="The ID of the wallet to send funds from",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-a",
+    "--amount",
+    help="The amount of funds to send",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_add_funds_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    funding_wallet_id: int,
+    amount: int,
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import add_funds_to_treasury
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "funding_wallet_id": funding_wallet_id,
+        "amount": amount,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_funds_to_treasury))
+
+
+@dao_cmd.command("get-balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+def dao_get_balance_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+) -> None:
+    import asyncio
+
+    from .dao_funcs import get_treasury_balance
+
+    extra_params = {
+        "wallet_id": wallet_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_treasury_balance))
+
+
+# ----------------------------------------------------------------------------------------
+# LIST/SHOW PROPOSALS
+
+
+@dao_cmd.command("list-proposals", short_help="List proposals for the DAO", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-c",
+    "--include-closed",
+    help="Include previously closed proposals",
+    is_flag=True,
+)
+def dao_list_proposals_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    include_closed: Optional[bool],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import list_proposals
+
+    if not include_closed:
+        include_closed = False
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "include_closed": include_closed,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_proposals))
+
+
+@dao_cmd.command("show-proposal", short_help="Show the details of a specific proposal", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-p",
+    "--proposal_id",
+    help="The ID of the proposal to fetch",
+    type=str,
+    required=True,
+)
+def dao_show_proposal_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    proposal_id: str,
+) -> None:
+    import asyncio
+
+    from .dao_funcs import show_proposal
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "proposal_id": proposal_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, show_proposal))
+
+
+# ----------------------------------------------------------------------------------------
+# VOTE
+
+
+@dao_cmd.command("vote", short_help="Vote on a DAO proposal", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-p",
+    "--proposal-id",
+    help="The ID of the proposal you are voting on",
+    type=str,
+    required=True,
+)
+@click.option(
+    "-a",
+    "--vote-amount",
+    help="The number of votes you want to cast",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-n",
+    "--vote-no",
+    help="Use this option to vote against a proposal. If not present then the vote is for the proposal",
+    is_flag=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_vote_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    proposal_id: str,
+    amount: int,
+    vote_no: Optional[bool],
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import vote_on_proposal
+
+    is_yes_vote = False if vote_no else True
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "proposal_id": proposal_id,
+        "vote_amount": amount,
+        "is_yes_vote": is_yes_vote,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, vote_on_proposal))
+
+
+# ----------------------------------------------------------------------------------------
+# CLOSE PROPOSALS
+
+
+@dao_cmd.command("close-proposal", short_help="Close a DAO proposal", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-p",
+    "--proposal-id",
+    help="The ID of the proposal you are voting on",
+    type=str,
+    required=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_close_proposal_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    proposal_id: str,
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import close_proposal
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "proposal_id": proposal_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, close_proposal))
+
+
+# ----------------------------------------------------------------------------------------
+# LOCKUP COINS
+
+
+@dao_cmd.command("lockup-coins", short_help="Lock DAO CATs for voting", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-a",
+    "--amount",
+    help="The amount of new cats the proposal will mint",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_lockup_coins_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    amount: int,
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import lockup_coins
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "amount": amount,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, lockup_coins))
+
+
+@dao_cmd.command("release-coins", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_release_coins_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import release_coins
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, release_coins))
+
+
+# ----------------------------------------------------------------------------------------
+# CREATE PROPOSALS
+
+
+@dao_cmd.group("create-proposal", short_help="Create and add a proposal to a DAO", no_args_is_help=True)
+@click.pass_context
+def dao_proposal(ctx: click.Context) -> None:
+    pass
+
+
+@dao_proposal.command("spend", short_help="Create a proposal to spend DAO funds", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-t",
+    "--to-address",
+    help="The address the proposal will send funds to",
+    type=str,
+    required=False,
+    default=None,
+)
+@click.option(
+    "-a",
+    "--amount",
+    help="The amount of funds the proposal will send",
+    type=float,
+    required=False,
+    default=None,
+)
+@click.option(
+    "-id",
+    "--asset-id",
+    help="The asset id of the funds the proposal will send. Leave blank for xch",
+    type=str,
+    required=False,
+    default=None,
+)
+@click.option(
+    "-j",
+    "--from-json",
+    help="Path to a json file containing a list of additions, for use in proposals with multiple spends",
+    type=str,
+    required=False,
+    default=None,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_create_spend_proposal_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    to_address: Optional[str],
+    amount: Optional[float],
+    asset_id: Optional[str],
+    from_json: Optional[str],
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import create_spend_proposal
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "to_address": to_address,
+        "amount": amount,
+        "asset_id": asset_id,
+        "from_json": from_json,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_spend_proposal))
+
+
+@dao_proposal.command("update", short_help="Create a proposal to change the DAO rules", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-pt",
+    "--proposal-timelock",
+    help="The new minimum number of blocks before a proposal can close",
+    type=int,
+    default=None,
+    required=False,
+)
+@click.option(
+    "-sc",
+    "--soft-close",
+    help="The number of blocks a proposal must remain unspent before closing",
+    type=int,
+    default=None,
+    required=False,
+)
+@click.option(
+    "-ar",
+    "--attendance-required",
+    help="The minimum number of votes a proposal must receive to be accepted",
+    type=int,
+    default=None,
+    required=False,
+)
+@click.option(
+    "-pp",
+    "--pass-percentage",
+    help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
+    type=int,
+    default=None,
+    required=False,
+)
+@click.option(
+    "-sd",
+    "--self-destruct",
+    help="The number of blocks required before a proposal can be automatically removed",
+    type=int,
+    default=None,
+    required=False,
+)
+@click.option(
+    "-od",
+    "--oracle-delay",
+    help="The number of blocks required between oracle spends of the treasury",
+    type=int,
+    default=None,
+    required=False,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_create_update_proposal_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    proposal_timelock: Optional[int],
+    attendance_required: Optional[int],
+    pass_percentage: Optional[int],
+    self_destruct: Optional[int],
+    oracle_delay: Optional[int],
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import create_update_proposal
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "proposal_timelock": proposal_timelock,
+        "attendance_required": attendance_required,
+        "pass_percentage": pass_percentage,
+        "self_destruct_length": self_destruct,
+        "oracle_spend_delay": oracle_delay,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_update_proposal))
+
+
+@dao_proposal.command("mint", short_help="Create a proposal to mint new DAO CATs", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-a",
+    "--amount",
+    help="The amount of new cats the proposal will mint",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_create_mint_proposal_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    amount: int,
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import create_mint_proposal
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+        "amount": amount,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_mint_proposal))
 
 
 # ----------------------------------------------------------------------------------------
 
-
-@dao_proposal.command("mint", short_help="Create more voting tokens (CATs) for this DAO")
-@click.argument("dao_id", type=str, nargs=1, required=True)
-@click.argument("amount", type=str, nargs=1, required=True)
-def dao_mint_voting_tokens(dao_id: str, name: str, puzzle_params: str) -> None:
-    """
-    Create a proposal of type "D" to mint more voting tokens.
-       - D: Dangerous  This proposal type may attempt to both modify the
-                       Treasury rules, AND spend money from the Treasury.
-                       USE CAUTION.
-
-       No tokens are created unless and until this proposal passes.
-    """
-    print(f"Creating proposal for DAO {dao1} with name '{name}' and puzzle params ...")
-
-
-# ----------------------------------------------------------------------------------------
-
-# dao_cmd.add_command(dao_)
-dao_cmd.add_command(dao_add)
-dao_cmd.add_command(dao_create)
-dao_cmd.add_command(dao_list)
-dao_cmd.add_command(dao_vote)
+dao_cmd.add_command(dao_add_cmd)
+dao_cmd.add_command(dao_create_cmd)
+dao_cmd.add_command(dao_add_funds_cmd)
+dao_cmd.add_command(dao_get_balance_cmd)
+dao_cmd.add_command(dao_list_proposals_cmd)
+dao_cmd.add_command(dao_show_proposal_cmd)
+dao_cmd.add_command(dao_vote_cmd)
+dao_cmd.add_command(dao_close_proposal_cmd)
+dao_cmd.add_command(dao_lockup_coins_cmd)
+dao_cmd.add_command(dao_release_coins_cmd)
 dao_cmd.add_command(dao_proposal)
 
 
