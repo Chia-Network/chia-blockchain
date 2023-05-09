@@ -25,8 +25,7 @@ from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
-from chia.server.server import ssl_context_for_root, ssl_context_for_server
-from chia.ssl.create_ssl import get_mozilla_ca_crt
+from chia.server.server import ssl_context_for_server
 from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
@@ -42,7 +41,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import ClientSession, WSMsgType, web
+    from aiohttp import WSMsgType, web
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
@@ -52,21 +51,6 @@ except ModuleNotFoundError:
 log = logging.getLogger(__name__)
 
 service_plotter = "chia_plotter"
-
-
-async def fetch(url: str):
-    async with ClientSession() as session:
-        try:
-            mozilla_root = get_mozilla_ca_crt()
-            ssl_context = ssl_context_for_root(mozilla_root, log=log)
-            response = await session.get(url, ssl=ssl_context)
-            if not response.ok:
-                log.warning("Response not OK.")
-                return None
-            return await response.text()
-        except Exception as e:
-            log.error(f"Exception while fetching {url}, exception: {e}")
-            return None
 
 
 class PlotState(str, Enum):

@@ -220,27 +220,15 @@ class DataLayerWallet:
         if await self.wallet_state_manager.dl_store.get_launcher(launcher_id) is not None:
             self.log.info(f"Spend of launcher {launcher_id} has already been processed")
             return None
-        if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
-            await self.new_launcher_spend(spend, peer, height)
-        else:
+        if spend is None or height is None:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id, peer)
-            launcher_spend = await fetch_coin_spend_for_coin_state(launcher_state, peer)
-            await self.new_launcher_spend(launcher_spend, peer)
+            spend = await fetch_coin_spend_for_coin_state(launcher_state, peer)
+            assert launcher_state.spent_height is not None
+            height = uint32(launcher_state.spent_height)
 
-    async def new_launcher_spend(
-        self,
-        launcher_spend: CoinSpend,
-        peer: WSChiaConnection,
-        height: Optional[uint32] = None,
-    ) -> None:
-        launcher_id: bytes32 = launcher_spend.coin.name()
-        if height is None:
-            coin_state = await self.get_launcher_coin_state(launcher_id, peer)
-            height = None if coin_state.spent_height is None else uint32(coin_state.spent_height)
-            assert height is not None
-        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
-            launcher_spend.solution.to_program()
-        )
+        assert spend.coin.name() == launcher_id, "coin_id should always match the launcher_id here"
+
+        full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(spend.solution.to_program())
         new_singleton = Coin(launcher_id, full_puzhash, amount)
 
         singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
@@ -275,7 +263,7 @@ class DataLayerWallet:
                 )
             )
 
-        await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin)
+        await self.wallet_state_manager.dl_store.add_launcher(spend.coin)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
 
