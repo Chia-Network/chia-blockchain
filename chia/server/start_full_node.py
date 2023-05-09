@@ -74,12 +74,11 @@ async def async_main(service_config: Dict[str, Any]) -> int:
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     if network_id == "testnet10":
-        # testnet10 is 1031258 blocks behind mainnet
-        testnet10_offset = 1031258
+        # activate softforks immediately on testnet
         if "SOFT_FORK2_HEIGHT" not in overrides:
-            overrides["SOFT_FORK2_HEIGHT"] = 3886635 - testnet10_offset
+            overrides["SOFT_FORK2_HEIGHT"] = 0
         if "SOFT_FORK_HEIGHT" not in overrides:
-            overrides["SOFT_FORK_HEIGHT"] = 3630000 - testnet10_offset
+            overrides["SOFT_FORK_HEIGHT"] = 0
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
