@@ -69,7 +69,7 @@ class Mempool:
             # TODO: In the future, for the "fee_per_cost" field, opt for
             # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
             self._db_conn.execute(
-                f"""CREATE TABLE tx(
+                """CREATE TABLE tx(
                 name BLOB,
                 cost INT NOT NULL,
                 fee INT NOT NULL,
