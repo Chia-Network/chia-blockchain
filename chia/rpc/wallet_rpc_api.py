@@ -3426,7 +3426,7 @@ class WalletRpcApi:
 
         vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(parsed_request.root)
         if vc_proofs is None:
-            raise ValueError("no proofs found for specified root")
+            raise ValueError("no proofs found for specified root")  # pragma: no cover
         return {"proofs": vc_proofs.key_value_pairs}
 
     async def vc_revoke(self, request) -> Dict:

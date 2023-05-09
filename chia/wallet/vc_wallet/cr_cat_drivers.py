@@ -270,7 +270,8 @@ class CRCAT:
         if layer_below_cat.mod != CREDENTIAL_RESTRICTION:
             return False, "CAT is not credential restricted"  # pragma: no cover
 
-        return True, ""
+        # Coverage coming with CR-CAT Wallet
+        return True, ""  # pragma: no cover
 
     # Coverage coming with CR-CAT Wallet
     @staticmethod
